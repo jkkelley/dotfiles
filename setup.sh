@@ -11,8 +11,8 @@ SKILLS_SRC="$DOTFILES/claude/skills"
 
 # Defaults — overridden by --dest at runtime
 DEST_BASE="$HOME/.claude"
-AGENTS_DST="$DEST_BASE/agents"
-SKILLS_DST="$DEST_BASE/skills"
+AGENTS_DST="$HOME/.claude/agents"
+SKILLS_DST="$HOME/.claude/skills"
 
 # Set by the install-type prompt: "link" or "copy"
 INSTALL_TYPE="link"
@@ -35,9 +35,10 @@ DESCRIPTION
   to install, and confirm before anything is written.
 
 OPTIONS
-  --dest <path>   Base project directory to install into.
-                  Agents and skills are placed under <path>/.claude/
-                  Default: \$HOME  (installs into ~/.claude/ globally)
+  --dest <path>   Exact directory to install into.
+                  Agents are placed under <path>/agents/
+                  Skills are placed under <path>/skills/
+                  Default: ~/.claude/
 
   --help, -h      Show this message and exit
 
@@ -81,8 +82,9 @@ FLAT LIST FILE FORMAT  (used when dropping a file path in mode 3)
     argocd-gitops solutions-architect
 
 EXAMPLES
-  ./setup.sh                              # interactive, installs into ~/.claude/
-  ./setup.sh --dest ~/projects/myapp     # interactive, installs into ~/projects/myapp/.claude/
+  ./setup.sh                                            # installs into ~/.claude/
+  ./setup.sh --dest ~/projects/myapp/.claude            # installs into that project's .claude/
+  ./setup.sh --dest ~/projects/myapp/.claude/skills     # skills only into that exact dir
 EOF
 }
 
@@ -288,17 +290,18 @@ main() {
       --dest)
         if [[ -z "${2:-}" ]]; then
           _red "--dest requires a path argument."
-          _yellow "Hint: ./setup.sh --dest ~/projects/myapp"
+          _yellow "Hint: ./setup.sh --dest ~/projects/myapp/.claude"
           exit 1
         fi
-        DEST_BASE="$2"
-        AGENTS_DST="$DEST_BASE/.claude/agents"
-        SKILLS_DST="$DEST_BASE/.claude/skills"
+        DEST_BASE="${2%/}"       # strip trailing slash
+        AGENTS_DST="$DEST_BASE/agents"
+        SKILLS_DST="$DEST_BASE/skills"
         shift 2 ;;
       --dest=*)
         DEST_BASE="${1#--dest=}"
-        AGENTS_DST="$DEST_BASE/.claude/agents"
-        SKILLS_DST="$DEST_BASE/.claude/skills"
+        DEST_BASE="${DEST_BASE%/}"   # strip trailing slash
+        AGENTS_DST="$DEST_BASE/agents"
+        SKILLS_DST="$DEST_BASE/skills"
         shift ;;
       *)
         _red "Unknown option: '$1'"
