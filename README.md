@@ -13,14 +13,14 @@ A library of Claude Code agents and skills — clone it, run `setup.sh`, and dro
 The library covers the full engineering stack — from low-level infrastructure to frontend UI, from CI/CD pipelines to API design and security review.
 
 | Domain | Agents | Skills |
-|---|---|---|
-| Backend & APIs | `backend-dev`, `api-designer` | backend-patterns, api-design-checklist |
-| Frontend | `frontend-guru`, `cypress-tester` | frontend-checklist, cypress-patterns |
-| Infrastructure | `k8s-master`, `terraform-master`, `networking-guru` | kubectl-runbook, terraform-patterns, networking-runbook |
-| Cloud & Architecture | `solutions-architect` | cloud-arch-patterns |
-| CI/CD & GitOps | `jenkins-ci`, `argocd-gitops` | jenkinsfile-snippets, argocd-runbook |
-| Code Review | `polyglot-code-reviewer`, `git-code-reviewer` | code-review-checklist, git-review-checklist |
-| Tooling | `sandbox-orchestrator`, `tech-writer` | container-design, container-sandbox, context-compaction, test-writer |
+| --- | --- | --- |
+| Backend & APIs | `backend-dev`, `api-designer` | `backend-patterns`, `api-design-checklist` |
+| Frontend | `frontend-guru`, `cypress-tester` | `frontend-checklist`, `cypress-patterns` |
+| Infrastructure | `k8s-master`, `terraform-master`, `networking-guru` | `kubectl-runbook`, `terraform-patterns`, `networking-runbook` |
+| Cloud & Architecture | `solutions-architect` | `cloud-arch-patterns` |
+| CI/CD & GitOps | `jenkins-ci`, `argocd-gitops` | `jenkinsfile-snippets`, `argocd-runbook` |
+| Code Review | `polyglot-code-reviewer`, `git-code-reviewer` | `code-review-checklist`, `git-review-checklist` |
+| Tooling | `sandbox-orchestrator`, `tech-writer` | `container-design`, `container-sandbox`, `context-compaction`, `test-writer` |
 
 ## Getting started
 
