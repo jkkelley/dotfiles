@@ -316,7 +316,7 @@ main() {
   _bold "\nClaude Dotfiles Setup"
   echo "────────────────────────────────────────────────────────────"
   printf "  Repo             : %s\n" "$DOTFILES"
-  printf "  Destination      : %s/.claude/\n" "$DEST_BASE"
+  printf "  Destination      : %s/\n" "$DEST_BASE"
   printf "  Agents available : %d  (%s)\n" "${#AVAIL_AGENTS[@]}" "${AVAIL_AGENTS[*]}"
   printf "  Skills available : %d  (%s)\n" "${#AVAIL_SKILLS[@]}" "${AVAIL_SKILLS[*]}"
   echo "────────────────────────────────────────────────────────────"
@@ -396,7 +396,7 @@ main() {
   echo
   local action; [[ "$INSTALL_TYPE" == "copy" ]] && action="Copy" || action="Symlink"
   _bold "Ready to ${action,,}:"
-  printf "  Destination : %s/.claude/\n" "$DEST_BASE"
+  printf "  Destination : %s/\n" "$DEST_BASE"
   [[ ${#SEL_AGENTS[@]} -gt 0 ]] && printf "  Agents      : %s\n" "${SEL_AGENTS[*]}"
   [[ ${#SEL_SKILLS[@]} -gt 0 ]] && printf "  Skills      : %s\n" "${SEL_SKILLS[*]}"
   echo
@@ -410,7 +410,7 @@ main() {
   install_selections SEL_AGENTS SEL_SKILLS
 
   echo
-  _bold "Done. Items installed into ${DEST_BASE}/.claude/"
+  _bold "Done. Items installed into ${DEST_BASE}/"
 }
 
 main "$@"
