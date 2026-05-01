@@ -396,9 +396,10 @@ main() {
   echo
   local action; [[ "$INSTALL_TYPE" == "copy" ]] && action="Copy" || action="Symlink"
   _bold "Ready to ${action,,}:"
-  printf "  Destination : %s/\n" "$DEST_BASE"
-  [[ ${#SEL_AGENTS[@]} -gt 0 ]] && printf "  Agents      : %s\n" "${SEL_AGENTS[*]}"
-  [[ ${#SEL_SKILLS[@]} -gt 0 ]] && printf "  Skills      : %s\n" "${SEL_SKILLS[*]}"
+  [[ ${#SEL_AGENTS[@]} -gt 0 ]] && printf "  Agents → %s/agents/\n" "$DEST_BASE"
+  [[ ${#SEL_AGENTS[@]} -gt 0 ]] && printf "           %s\n" "${SEL_AGENTS[*]}"
+  [[ ${#SEL_SKILLS[@]} -gt 0 ]] && printf "  Skills → %s/skills/\n" "$DEST_BASE"
+  [[ ${#SEL_SKILLS[@]} -gt 0 ]] && printf "           %s\n" "${SEL_SKILLS[*]}"
   echo
   printf "Proceed? [y/N]: "
   read -r confirm
