@@ -1,7 +1,6 @@
 # dotfiles
 
-A library of Claude Code agents and skills for engineering teams.
-Clone it, run `setup.sh`, and drop domain experts into any project in minutes.
+A library of Claude Code agents and skills — clone it, run `setup.sh`, and drop domain experts into any project in minutes.
 
 ## How it works
 
