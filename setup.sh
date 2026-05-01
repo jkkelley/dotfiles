@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
 # setup.sh — install Claude agents and skills from this dotfiles repo
 #
-# Symlinks selected agents and skills into ~/.claude/
+# Symlinks or copies selected agents and skills into a target .claude/ directory.
 # Run with --help for full usage.
 set -euo pipefail
 
 DOTFILES="$(cd "$(dirname "$0")" && pwd)"
 AGENTS_SRC="$DOTFILES/claude/agents"
 SKILLS_SRC="$DOTFILES/claude/skills"
-AGENTS_DST="$HOME/.claude/agents"
-SKILLS_DST="$HOME/.claude/skills"
+
+# Defaults — overridden by --dest at runtime
+DEST_BASE="$HOME/.claude"
+AGENTS_DST="$DEST_BASE/agents"
+SKILLS_DST="$DEST_BASE/skills"
+
+# Set by the install-type prompt: "link" or "copy"
+INSTALL_TYPE="link"
 
 # ── colour helpers ─────────────────────────────────────────────────────────────
 _red()    { printf '\033[0;31m%s\033[0m\n' "$*" >&2; }
@@ -21,13 +27,28 @@ _bold()   { printf '\033[1m%s\033[0m\n' "$*"; }
 usage() {
   cat <<EOF
 USAGE
-  ./setup.sh [--help]
+  ./setup.sh [--dest <path>] [--help]
 
 DESCRIPTION
-  Symlinks Claude agents and/or skills from this dotfiles repo into ~/.claude/.
-  Runs interactively — no arguments required.
+  Installs Claude agents and/or skills from this dotfiles repo into a target
+  .claude/ directory. Runs interactively — choose symlink or copy, pick what
+  to install, and confirm before anything is written.
 
-MODES  (chosen at runtime)
+OPTIONS
+  --dest <path>   Base project directory to install into.
+                  Agents and skills are placed under <path>/.claude/
+                  Default: \$HOME  (installs into ~/.claude/ globally)
+
+  --help, -h      Show this message and exit
+
+INSTALL TYPES  (chosen at runtime)
+  Symlink   Live link back to this repo. Changes here are reflected instantly.
+            Best for personal machines where the dotfiles repo stays in place.
+
+  Copy      Full copies of the files at the destination. Safe to commit into
+            your project's own version control. No dependency on this repo.
+
+SELECTION MODES  (chosen at runtime)
   1  Full suite   Install every agent and skill found in the repo
   2  From file    Read an install.conf specifying which to install
   3  Manual       Type names or drop a file path at each prompt
@@ -59,8 +80,9 @@ FLAT LIST FILE FORMAT  (used when dropping a file path in mode 3)
     api-designer
     argocd-gitops solutions-architect
 
-OPTIONS
-  --help, -h    Show this message and exit
+EXAMPLES
+  ./setup.sh                              # interactive, installs into ~/.claude/
+  ./setup.sh --dest ~/projects/myapp     # interactive, installs into ~/projects/myapp/.claude/
 EOF
 }
 
@@ -214,34 +236,43 @@ parse_config() {
   fi
 }
 
-# ── linking ────────────────────────────────────────────────────────────────────
-_link() {
+# ── install item (symlink or copy) ─────────────────────────────────────────────
+# _install_item SRC DST
+#
+# Backs up DST if it exists as a real file (not a symlink), then either
+# symlinks or copies SRC to DST depending on INSTALL_TYPE.
+_install_item() {
   local src="$1" dst="$2"
   if [[ -e "$dst" && ! -L "$dst" ]]; then
     _yellow "  Backing up: $dst → ${dst}.bak"
     mv "$dst" "${dst}.bak"
   fi
-  ln -sfn "$src" "$dst"
+  if [[ "$INSTALL_TYPE" == "copy" ]]; then
+    cp -r "$src" "$dst"
+  else
+    ln -sfn "$src" "$dst"
+  fi
 }
 
 install_selections() {
   local -n _agents_sel="$1"
   local -n _skills_sel="$2"
+  local verb; [[ "$INSTALL_TYPE" == "copy" ]] && verb="Copying" || verb="Linking"
 
   if [[ ${#_agents_sel[@]} -gt 0 ]]; then
-    _bold "\nLinking agents..."
+    _bold "\n${verb} agents..."
     mkdir -p "$AGENTS_DST"
     for name in "${_agents_sel[@]}"; do
-      _link "$AGENTS_SRC/${name}.md" "$AGENTS_DST/${name}.md"
+      _install_item "$AGENTS_SRC/${name}.md" "$AGENTS_DST/${name}.md"
       _green "  ✓ agent: $name"
     done
   fi
 
   if [[ ${#_skills_sel[@]} -gt 0 ]]; then
-    _bold "\nLinking skills..."
+    _bold "\n${verb} skills..."
     mkdir -p "$SKILLS_DST"
     for name in "${_skills_sel[@]}"; do
-      _link "$SKILLS_SRC/${name}" "$SKILLS_DST/${name}"
+      _install_item "$SKILLS_SRC/${name}" "$SKILLS_DST/${name}"
       _green "  ✓ skill: $name"
     done
   fi
@@ -249,15 +280,32 @@ install_selections() {
 
 # ── main ───────────────────────────────────────────────────────────────────────
 main() {
-  case "${1:-}" in
-    --help|-h) usage; exit 0 ;;
-    "")        ;;
-    *)
-      _red "Unknown option: '$1'"
-      _yellow "Hint: run './setup.sh --help' for usage."
-      exit 1
-      ;;
-  esac
+  # ── parse args ──
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --help|-h)
+        usage; exit 0 ;;
+      --dest)
+        if [[ -z "${2:-}" ]]; then
+          _red "--dest requires a path argument."
+          _yellow "Hint: ./setup.sh --dest ~/projects/myapp"
+          exit 1
+        fi
+        DEST_BASE="$2"
+        AGENTS_DST="$DEST_BASE/.claude/agents"
+        SKILLS_DST="$DEST_BASE/.claude/skills"
+        shift 2 ;;
+      --dest=*)
+        DEST_BASE="${1#--dest=}"
+        AGENTS_DST="$DEST_BASE/.claude/agents"
+        SKILLS_DST="$DEST_BASE/.claude/skills"
+        shift ;;
+      *)
+        _red "Unknown option: '$1'"
+        _yellow "Hint: run './setup.sh --help' for usage."
+        exit 1 ;;
+    esac
+  done
 
   discover_agents
   discover_skills
@@ -265,9 +313,26 @@ main() {
   _bold "\nClaude Dotfiles Setup"
   echo "────────────────────────────────────────────────────────────"
   printf "  Repo             : %s\n" "$DOTFILES"
+  printf "  Destination      : %s/.claude/\n" "$DEST_BASE"
   printf "  Agents available : %d  (%s)\n" "${#AVAIL_AGENTS[@]}" "${AVAIL_AGENTS[*]}"
   printf "  Skills available : %d  (%s)\n" "${#AVAIL_SKILLS[@]}" "${AVAIL_SKILLS[*]}"
   echo "────────────────────────────────────────────────────────────"
+  echo
+
+  # ── install type ──
+  echo "Install type:"
+  echo "  [1] Symlink — live link to this repo (changes here reflect instantly)"
+  echo "  [2] Copy    — full copy of files, safe to commit to version control"
+  printf "\nChoice [1/2]: "
+  read -r type_choice
+  case "$type_choice" in
+    1) INSTALL_TYPE="link" ;;
+    2) INSTALL_TYPE="copy" ;;
+    *)
+      _red "Invalid choice: '$type_choice'"
+      _yellow "Hint: enter 1 for symlink or 2 for copy."
+      exit 1 ;;
+  esac
   echo
 
   echo "Installation mode:"
@@ -326,9 +391,11 @@ main() {
   fi
 
   echo
-  _bold "Ready to link:"
-  [[ ${#SEL_AGENTS[@]} -gt 0 ]] && printf "  Agents : %s\n" "${SEL_AGENTS[*]}"
-  [[ ${#SEL_SKILLS[@]} -gt 0 ]] && printf "  Skills : %s\n" "${SEL_SKILLS[*]}"
+  local action; [[ "$INSTALL_TYPE" == "copy" ]] && action="Copy" || action="Symlink"
+  _bold "Ready to ${action,,}:"
+  printf "  Destination : %s/.claude/\n" "$DEST_BASE"
+  [[ ${#SEL_AGENTS[@]} -gt 0 ]] && printf "  Agents      : %s\n" "${SEL_AGENTS[*]}"
+  [[ ${#SEL_SKILLS[@]} -gt 0 ]] && printf "  Skills      : %s\n" "${SEL_SKILLS[*]}"
   echo
   printf "Proceed? [y/N]: "
   read -r confirm
@@ -340,7 +407,7 @@ main() {
   install_selections SEL_AGENTS SEL_SKILLS
 
   echo
-  _bold "Done. Items linked into ~/.claude/"
+  _bold "Done. Items installed into ${DEST_BASE}/.claude/"
 }
 
 main "$@"
