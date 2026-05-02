@@ -1,4 +1,3 @@
-```markdown
 ---
 name: <PROJECT_SLUG>
 domain: <DOMAIN_SLUG>
@@ -20,6 +19,5 @@ The next concrete step.
 ## Notes
 
 Free-form context. Captured ideas, links, decisions.
-```
 
 The `status` field accepts one of: `starting`, `in-progress`, `blocked`, `paused`, `done`, `abandoned`.
