@@ -23,5 +23,3 @@ What this domain is NOT. Helps the planner refuse drift.
 ## Constraints
 
 Time, budget, anything that bounds the domain.
-
-The `time-profile` field accepts one of: `weekday-business-hours`, `evenings`, `weekends`, `weekends-and-evenings`, `anytime`.
