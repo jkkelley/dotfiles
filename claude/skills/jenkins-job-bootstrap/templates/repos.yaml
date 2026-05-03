@@ -1,0 +1,31 @@
+# Manifest of GitHub repos that homelab Jenkins should manage as multibranch pipelines.
+#
+# Goes in: jenkins-shared-lib/jobs/repos.yaml
+# Consumed by: jobs/seed-job.groovy (Job DSL)
+#
+# To add a new repo:
+#   1. Append an entry under `repos:` (just the name is required)
+#   2. Commit + push to jenkins-shared-lib main
+#   3. Click "Build Now" on the seed-multibranch-jobs job
+#
+# Skill: jenkins-job-bootstrap
+
+defaults:
+  github_org: <your-github-username>
+  # Same "Username with password" credential used by updateGitOpsManifest.
+  # Stored at System / Global scope as <your-github-username>/<PAT>.
+  scm_credentials_id: <your-credential-id>
+  script_path: jenkins/Jenkinsfile
+  builds_to_keep: 20
+  branches_to_keep: 20
+  scan_interval_minutes: 60
+
+repos:
+  - name: <repo-name-1>
+    description: <one-line repo description>
+
+  - name: <repo-name-2>
+    description: <one-line repo description>
+
+  # Add additional entries one line at a time:
+  # - name: <another-repo>
