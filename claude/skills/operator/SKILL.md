@@ -42,7 +42,7 @@ When invoked, parse the user's prompt for:
 1. **Domain hint** — look for a domain name followed by `:` (e.g., `weekend-business:`), or a domain mentioned naturally (e.g., "the work north-star"). Match against existing directories under `$OPERATOR_REPO/domains/`. If ambiguous, ask the user to clarify.
 2. **Intent** — match the prompt's verb and structure to one of the intents below.
 
-Intents are documented in subsequent sections. (Filled in by later tasks.)
+Intents documented below: (a) capture, (b) plan, (c) status, (d) new-project, (e) close, (f) new-domain, (g) edit north-star, (h) agenda, (i) triage. Bootstrap is implicit and runs before any of these on first use.
 
 ## Bootstrap (implicit, runs when `$OPERATOR_REPO` does not exist)
 
