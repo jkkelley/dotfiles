@@ -462,3 +462,60 @@ Example invocations:
 
 - **`agenda.md` missing or empty:** print *"No agenda yet — run `/standup` to generate one."* and stop.
 - **Frontmatter unparseable:** print the file content unchanged with a warning header.
+
+## Intent (i): triage inbox
+
+**Trigger phrasing:** "triage", "let's triage", "go through the inbox", "triage <item>".
+
+### Two modes — picked from the prompt
+
+- **Full** — *"hey operator, let's triage the inbox"* → walk all unactioned items.
+- **Targeted** — *"hey operator, triage the yelp idea"* → pull just items whose text matches the substring "yelp".
+
+### Behavior
+
+1. Run pull-on-read.
+2. Parse: `target` is either `all` or the substring/id from the prompt.
+3. Spawn `operator-triage` subagent. Pass:
+
+   ```
+   OPERATOR_REPO is set to <path>. Target: <all|substring>.
+   ```
+
+4. Receive per-item suggestions.
+5. **For each item**, present to the user:
+
+   ```
+   [<id>] "<text>"
+   Suggested: <ACTION>
+   <reasoning>
+
+   Apply [y]es / [n]o / [e]dit / [s]kip?
+   ```
+
+   - `y` → apply the suggested action (see below)
+   - `n` → ask the user which action they want instead, then apply
+   - `e` → for NEW_PROJECT or APPEND, let the user edit the proposed slug or target project; then apply
+   - `s` → leave in inbox (defer), move to next item
+
+6. Apply actions:
+   - **TRASH** — remove the line from `inbox.md`.
+   - **NEW_PROJECT** — same flow as intent (d): build a draft card from `references/project-card-template.md`, populate from the capture, ask "ship it?", write file. Remove line from inbox.
+   - **APPEND** — append the capture text as a `## Notes` bullet in the target project card, prefixed with the capture's date. Remove line from inbox. Update `last-touched` on the target card.
+   - **DEFER / skip** — no change.
+
+7. **One commit at the end** (not per item) summarizing actions:
+
+   ```bash
+   git -C "$OPERATOR_REPO" add -A
+   git -C "$OPERATOR_REPO" commit -m "triage: <N> items — <N_new> new, <N_append> appended, <N_trash> trashed"
+   git -C "$OPERATOR_REPO" push
+   ```
+
+8. If the user aborts mid-triage (Ctrl-C, or says "stop"), commit whatever was applied so far with a partial-triage message.
+
+### Edge cases
+
+- **Inbox empty:** print *"Inbox is empty — nothing to triage."* and stop.
+- **Targeted match: no items:** print *"No inbox items match '<substring>'."* and stop.
+- **Targeted match: multiple items:** list all matches with ids, ask the user to pick one or say "all of them".
