@@ -224,3 +224,42 @@ Example invocations:
    ```
 
 10. Output: `Domain '<slug>' created with north-star at domains/<slug>/north-star.md`.
+
+## Intent (d): start a new project
+
+**Trigger phrasing:** "new project", "started a new project", "create a project", "add a project".
+
+Example invocations:
+- *"hey operator, weekend-business: started a new project called gohighlevel-niche-templates, building per-vertical SaaS templates I can sell to leads."*
+- *"hey operator, work: new project — migration-X"*
+
+### Behavior
+
+1. Run pull-on-read.
+2. Parse from the prompt:
+   - **domain** (required) — must match an existing directory under `$OPERATOR_REPO/domains/`. If missing or unrecognized, ask: *"Which domain? (existing: <list>)"*.
+   - **project name / slug** (required) — slugs must be lowercase, hyphenated.
+   - **gist** — any free-form text after the project name.
+3. If `$OPERATOR_REPO/domains/<domain>/projects/<slug>.md` already exists, stop and tell the user.
+4. Build a draft project card by reading `references/project-card-template.md` from this skill's directory and substituting:
+   - `<PROJECT_SLUG>` → the slug
+   - `<DOMAIN_SLUG>` → the domain
+   - `<YYYY-MM-DD>` → today's date in both `created` and `last-touched`
+5. If a gist was provided:
+   - Place it under the `## Notes` section verbatim.
+   - If the gist contains a clear next-step verb-phrase (e.g., starts with "build", "design", "research", "scrape", "draft"), copy that sentence to the `## Next action` section. Otherwise leave Next action empty.
+6. **Show the draft to the user, ask "ship it?"**
+7. On confirm:
+
+   ```bash
+   # Write the card
+   git -C "$OPERATOR_REPO" add domains/<domain>/projects/<slug>.md
+   git -C "$OPERATOR_REPO" commit -m "project: create <domain>/<slug>"
+   git -C "$OPERATOR_REPO" push
+   ```
+
+8. Output: `Project '<slug>' created at domains/<domain>/projects/<slug>.md`.
+
+### On reject
+
+If the user rejects the draft, ask: *"Edit the draft inline, or discard?"*. On "edit," accept their corrections, re-show, and re-confirm. On "discard," do nothing — no file written.
