@@ -50,13 +50,29 @@ Triggered automatically before performing any intent if the path resolved from `
 
 ### Step 1: Detect remote state
 
-Run:
+First, verify `gh` is authenticated:
 
 ```bash
-gh repo view "$(gh api user --jq .login)/operator" --json name 2>/dev/null
+gh auth status >/dev/null 2>&1
 ```
 
-If the command exits 0, the repo exists on GitHub (Flavor 2). Otherwise it does not (Flavor 1). If `gh` itself fails (not authenticated), tell the user: *"`gh` is not authenticated. Run `gh auth login`, then retry."* and stop.
+If this exits non-zero, tell the user: *"`gh` is not authenticated. Run `gh auth login`, then retry."* and stop. Do NOT proceed to scaffold.
+
+Get the GitHub username:
+
+```bash
+gh api user --jq .login
+```
+
+If this exits non-zero, tell the user: *"`gh` API call failed (network or token issue). Try again later."* and stop.
+
+With auth confirmed and `<user>` known, check whether the operator repo already exists on GitHub:
+
+```bash
+gh repo view "<user>/operator" --json name >/dev/null 2>&1
+```
+
+If this exits 0, the repo exists on GitHub → **Flavor 2**. Otherwise → **Flavor 1**. (Auth failures are no longer possible at this point because we checked first.)
 
 ### Flavor 1: Brand-new setup (remote does not exist)
 
@@ -74,9 +90,19 @@ On confirmation:
 
 2. Write `README.md` by copying the contents of `references/operator-repo-readme.md` (use the Read tool to fetch the template from this skill's directory, then Write it into `$OPERATOR_REPO/README.md`).
 
-3. Write empty `inbox.md` with a single `# Inbox` heading.
+3. Write `inbox.md` with this body:
 
-4. Write empty `agenda.md` with a single `# Agenda\n\n_(none yet — run the planner)_` body.
+   ```markdown
+   # Inbox
+   ```
+
+4. Write `agenda.md` with this body (literal multi-line content, NOT escaped):
+
+   ```markdown
+   # Agenda
+
+   _(none yet — run the planner)_
+   ```
 
 5. Create `domains/` directory (empty).
 
