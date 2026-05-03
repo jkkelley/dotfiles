@@ -336,3 +336,46 @@ Example invocations:
    ```
 
 8. Output: `Project '<slug>' is now <status>` (and `(moved to archive)` if applicable).
+
+## Intent (g): edit / refine a north-star
+
+**Trigger phrasing:** "edit north-star", "refine north-star", "<domain> north-star: ...", "walk me through the <domain> north-star", "let's review <domain>".
+
+### Two modes — picked from the prompt
+
+#### Direct mode (default)
+
+For small targeted edits, e.g.:
+
+- *"hey operator, weekend-business north-star: add a constraint that we're MN-only for the first 90 days"*
+- *"hey operator, work north-star, change the time-profile to evenings"*
+
+Behavior:
+
+1. Run pull-on-read.
+2. Parse: target domain (required), edit instruction.
+3. Read `$OPERATOR_REPO/domains/<domain>/north-star.md`.
+4. Apply the edit using the Edit tool — interpret the instruction as: append (default for "add"), replace section (for "change <section>"), or update frontmatter field.
+5. Show the diff with `git -C "$OPERATOR_REPO" diff -- domains/<domain>/north-star.md`.
+6. Ask "ship it?"
+7. On confirm, commit + push:
+
+   ```bash
+   git -C "$OPERATOR_REPO" add domains/<domain>/north-star.md
+   git -C "$OPERATOR_REPO" commit -m "north-star: <domain> — <one-line summary of edit>"
+   git -C "$OPERATOR_REPO" push
+   ```
+
+#### Walkthrough mode
+
+Triggered by phrases: "walk me through", "refine", "let's review".
+
+Walk each section in order: Mission → Why this matters → Success criteria → Out of scope → Constraints. For each:
+
+1. Read the current section content aloud (echo it).
+2. Ask: *"Keep, change, or replace? (Or 'skip' to leave as-is.)"*
+3. On `change` or `replace`, accept the new content and apply via Edit tool.
+
+After the last section, also ask: *"Update time-profile? (current: <value>)"*.
+
+At the end of the walkthrough, run `git diff` to show all changes, ask "ship it?", and commit with a message like `north-star: <domain> — full refresh`.
