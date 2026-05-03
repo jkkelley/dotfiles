@@ -425,3 +425,40 @@ Example invocations:
    ```
 
 7. Display the subagent output to the user (the parent chat sees it).
+
+## Intent (h): show today's agenda
+
+**Trigger phrasing:** "what's on the agenda", "show me the agenda", "agenda", "what did I plan".
+
+### Behavior
+
+1. Run pull-on-read.
+2. Read `$OPERATOR_REPO/agenda.md`.
+3. Parse the frontmatter for `generated` and `mode`. Compute age:
+
+   ```bash
+   generated_epoch=$(date -d "$generated" +%s)
+   now_epoch=$(date +%s)
+   age_seconds=$((now_epoch - generated_epoch))
+   ```
+
+4. Format age as a human-readable string: `<n>m ago` for < 60min, `<n>h ago` for < 24h, `<n>d ago` for >= 1 day.
+5. Count pending inbox items: `grep -c '^- \[' "$OPERATOR_REPO/inbox.md" || echo 0`.
+6. Print:
+
+   ```
+   Last planned: <YYYY-MM-DD HH:MM> (<age string>)
+   Mode: <mode>
+   Inbox: <N> pending captures
+
+   <agenda body>
+   ```
+
+7. If `age_seconds > 43200` (12h), append the line: *"Agenda is from <age string> — run `/standup` again?"*.
+
+8. No git changes — read-only intent.
+
+### Edge cases
+
+- **`agenda.md` missing or empty:** print *"No agenda yet — run `/standup` to generate one."* and stop.
+- **Frontmatter unparseable:** print the file content unchanged with a warning header.
