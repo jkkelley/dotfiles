@@ -140,3 +140,44 @@ Then resume the original intent.
 - **`$OPERATOR_REPO` parent doesn't exist:** create it with `mkdir -p "$(dirname "$OPERATOR_REPO")"` before init/clone.
 - **Path exists but is not a git repo:** stop, ask user to either delete or move the directory.
 - **Path exists and is a git repo but no remote:** continue; the next push-on-write will fail with a useful message.
+
+## Intent (a): capture an idea
+
+**Trigger phrasing:** any prompt where the user is dropping a thought without asking for action — phrases like "idea —", "capture —", "btw —", "by the way —", "thought —", or simply a domain prefix followed by free text.
+
+Example invocations:
+- *"hey operator, weekend-business: idea — scrape Yelp reviews for restaurant niches"*
+- *"hey operator, capture: try LangGraph for the planner"*
+- *"hey operator, work: thought — pair with Marcus on the migration"*
+
+### Behavior
+
+1. Run pull-on-read: `git -C "$OPERATOR_REPO" pull --rebase` (warn but continue on failure).
+2. Parse domain hint from the prompt (text before a `:` matching an existing domain). If none, the capture goes to a domain-less section of `inbox.md`.
+3. Generate a 6-character id from `sha256(timestamp + text)`:
+
+   ```bash
+   id=$(printf '%s%s' "$(date -Iseconds)" "$captured_text" | sha256sum | head -c 6)
+   ```
+
+4. Append a line to `$OPERATOR_REPO/inbox.md` in the format:
+
+   ```
+   - [<id>] <YYYY-MM-DD HH:MM> :: [<domain>] <text>
+   ```
+
+   If no domain hint, omit the `[<domain>] ` prefix.
+
+5. Commit and push:
+
+   ```bash
+   git -C "$OPERATOR_REPO" add inbox.md
+   git -C "$OPERATOR_REPO" commit -m "capture: <id>"
+   git -C "$OPERATOR_REPO" push
+   ```
+
+6. Output to user: `Captured to inbox: [<id>] <text>`
+
+### Strict rule
+
+Do NOT ask any follow-up questions on capture. Capture friction is the enemy. If the prompt is ambiguous about the domain, append without a domain prefix and let triage handle it later.
