@@ -43,3 +43,74 @@ When invoked, parse the user's prompt for:
 2. **Intent** — match the prompt's verb and structure to one of the intents below.
 
 Intents are documented in subsequent sections. (Filled in by later tasks.)
+
+## Bootstrap (implicit, runs when `$OPERATOR_REPO` does not exist)
+
+Triggered automatically before performing any intent if the path resolved from `$OPERATOR_REPO` does not exist on disk. Do NOT require the user to type a magic command.
+
+### Step 1: Detect remote state
+
+Run:
+
+```bash
+gh repo view "$(gh api user --jq .login)/operator" --json name 2>/dev/null
+```
+
+If the command exits 0, the repo exists on GitHub (Flavor 2). Otherwise it does not (Flavor 1). If `gh` itself fails (not authenticated), tell the user: *"`gh` is not authenticated. Run `gh auth login`, then retry."* and stop.
+
+### Flavor 1: Brand-new setup (remote does not exist)
+
+Tell the user concisely: *"No operator repo yet. I'll scaffold one and create a private GitHub repo. Proceed?"* Wait for confirmation.
+
+On confirmation:
+
+1. Create the local directory:
+
+   ```bash
+   mkdir -p "$OPERATOR_REPO"
+   cd "$OPERATOR_REPO"
+   git init -b main
+   ```
+
+2. Write `README.md` by copying the contents of `references/operator-repo-readme.md` (use the Read tool to fetch the template from this skill's directory, then Write it into `$OPERATOR_REPO/README.md`).
+
+3. Write empty `inbox.md` with a single `# Inbox` heading.
+
+4. Write empty `agenda.md` with a single `# Agenda\n\n_(none yet — run the planner)_` body.
+
+5. Create `domains/` directory (empty).
+
+6. Initial commit:
+
+   ```bash
+   git add .
+   git commit -m "Initial scaffold"
+   ```
+
+7. Create remote and push:
+
+   ```bash
+   gh repo create operator --private --source=. --push
+   ```
+
+8. After scaffold completes, tell the user: *"Operator repo created at `$OPERATOR_REPO` and pushed to GitHub. Want to create your first domain now? (e.g., 'work', 'weekend-business', 'personal')"* — if yes, dispatch to intent (f).
+
+9. Then resume the original intent the user invoked.
+
+### Flavor 2: New machine (remote exists)
+
+Tell the user: *"No operator repo on this machine, but found `<user>/operator` on GitHub. Clone it to `$OPERATOR_REPO`?"* Wait for confirmation.
+
+On confirmation:
+
+```bash
+gh repo clone "$(gh api user --jq .login)/operator" "$OPERATOR_REPO"
+```
+
+Then resume the original intent.
+
+### Edge cases
+
+- **`$OPERATOR_REPO` parent doesn't exist:** create it with `mkdir -p "$(dirname "$OPERATOR_REPO")"` before init/clone.
+- **Path exists but is not a git repo:** stop, ask user to either delete or move the directory.
+- **Path exists and is a git repo but no remote:** continue; the next push-on-write will fail with a useful message.
