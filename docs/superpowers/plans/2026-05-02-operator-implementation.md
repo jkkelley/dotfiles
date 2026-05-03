@@ -711,7 +711,7 @@ You are a focused subagent that reads the user's operator data repo and returns 
 
 The parent skill provides:
 
-- `OPERATOR_REPO` — absolute path to the data repo (e.g., `/home/luna/projects/operator`)
+- `OPERATOR_REPO` — absolute path to the data repo (e.g., `/home/<user>/projects/operator`)
 - `mode` — one of `stratified`, `focus`, `list`
 - `now` — ISO timestamp of the current local time (you may also call `date -Iseconds` yourself if not provided)
 
