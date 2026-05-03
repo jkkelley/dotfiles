@@ -181,3 +181,46 @@ Example invocations:
 ### Strict rule
 
 Do NOT ask any follow-up questions on capture. Capture friction is the enemy. If the prompt is ambiguous about the domain, append without a domain prefix and let triage handle it later.
+
+## Intent (f): create a new domain
+
+**Trigger phrasing:** "create a new domain", "new domain", "add a domain", "make a domain".
+
+Example invocations:
+- *"hey operator, create a new domain called consulting"*
+- *"hey operator, new domain: weekend-business — selling SaaS templates to local businesses"*
+
+### Behavior
+
+1. Run pull-on-read.
+2. Parse the domain slug (required) from the prompt. Slugs must be lowercase, hyphenated, no spaces.
+3. If the slug already exists at `$OPERATOR_REPO/domains/<slug>/`, tell the user and stop.
+4. Build a draft north-star by reading `references/north-star-template.md` from this skill's directory and substituting:
+   - `<DOMAIN_SLUG>` → the parsed slug
+   - `<YYYY-MM-DD>` → today's date (`date -I`)
+5. If the user provided a one-line mission in the prompt, populate the Mission section. If the user mentioned a `time-profile` value (matching one of the enum values), substitute it; otherwise leave the default `anytime` and ask in step 7 if they want to change it.
+6. **Show the draft to the user, ask "ship it?"**
+7. If the time-profile is still `anytime`, also ask: *"Time profile? (anytime / weekday-business-hours / evenings / weekends / weekends-and-evenings)"* — accept the answer.
+8. On confirm:
+
+   ```bash
+   mkdir -p "$OPERATOR_REPO/domains/<slug>/projects"
+   mkdir -p "$OPERATOR_REPO/domains/<slug>/archive"
+   ```
+
+   Write the populated north-star to `$OPERATOR_REPO/domains/<slug>/north-star.md`. Touch `.gitkeep` files in the empty `projects/` and `archive/` directories so git tracks them:
+
+   ```bash
+   touch "$OPERATOR_REPO/domains/<slug>/projects/.gitkeep"
+   touch "$OPERATOR_REPO/domains/<slug>/archive/.gitkeep"
+   ```
+
+9. Commit and push:
+
+   ```bash
+   git -C "$OPERATOR_REPO" add domains/<slug>
+   git -C "$OPERATOR_REPO" commit -m "domain: create <slug>"
+   git -C "$OPERATOR_REPO" push
+   ```
+
+10. Output: `Domain '<slug>' created with north-star at domains/<slug>/north-star.md`.
