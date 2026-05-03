@@ -297,3 +297,42 @@ Example invocations:
 ### Output cap
 
 If a domain has more than 12 active projects, show the 12 most recently touched and append `... and N more (run with --all to see all)`. (The user does not literally pass `--all`; they would say "show me all weekend-business projects" — at which point you uncap.)
+
+## Intent (e): close a project
+
+**Trigger phrasing:** "is done", "is paused", "is blocked", "is abandoned", "mark as <status>", "pause <project>", "archive <project>".
+
+Example invocations:
+- *"hey operator, mn-sos-scraper is paused"*
+- *"hey operator, gohighlevel-niche-templates is done"*
+- *"hey operator, mark yelp-scraper as blocked"*
+
+### Behavior
+
+1. Run pull-on-read.
+2. Parse: project slug (required), target status (required, one of `starting`, `in-progress`, `blocked`, `paused`, `done`, `abandoned`).
+3. Locate the project file via `find` (same approach as intent c). If not found, fuzzy-match and suggest.
+4. **For target status `paused` or `blocked`:** ask the user *"What would unblock this?"* — accept a one-line answer. Append it to the `## Notes` section as:
+
+   ```
+   - <YYYY-MM-DD> Paused/Blocked: <answer>
+   ```
+
+5. Update frontmatter via the Edit tool:
+   - `status: <new-status>`
+   - `last-touched: <today>`
+6. **For target status `done` or `abandoned`:** move the file to `domains/<domain>/archive/<slug>.md`:
+
+   ```bash
+   git -C "$OPERATOR_REPO" mv domains/<domain>/projects/<slug>.md domains/<domain>/archive/<slug>.md
+   ```
+
+7. Commit and push:
+
+   ```bash
+   git -C "$OPERATOR_REPO" add -A
+   git -C "$OPERATOR_REPO" commit -m "project: <slug> -> <status>"
+   git -C "$OPERATOR_REPO" push
+   ```
+
+8. Output: `Project '<slug>' is now <status>` (and `(moved to archive)` if applicable).
