@@ -379,3 +379,49 @@ Walk each section in order: Mission → Why this matters → Success criteria �
 After the last section, also ask: *"Update time-profile? (current: <value>)"*.
 
 At the end of the walkthrough, run `git diff` to show all changes, ask "ship it?", and commit with a message like `north-star: <domain> — full refresh`.
+
+## Intent (b): plan / "what should I work on?"
+
+**Trigger phrasing:** "what should I work on", "what's next", "plan", "/standup", "what's on my plate".
+
+Example invocations:
+- *"hey operator, what should I work on?"* → stratified (default)
+- *"hey operator, what's the one thing right now, max focus"* → focus
+- *"hey operator, what's live across everything"* → list
+
+### Behavior
+
+1. Run pull-on-read.
+2. Parse mode from prompt:
+   - "max focus", "focus mode", "one thing", "the one thing" → `focus`
+   - "list", "what's live", "give me a list", "everything" → `list`
+   - default → `stratified`
+3. Spawn the `operator-planner` subagent via the Agent tool. Pass:
+
+   ```
+   OPERATOR_REPO is set to <path>. Mode: <mode>. Current time: <ISO timestamp>.
+   ```
+
+   Tell the subagent to read the repo and return the recommendation in the requested mode's format.
+
+4. Receive the subagent's markdown output.
+5. Write the output to `$OPERATOR_REPO/agenda.md` with a frontmatter header:
+
+   ```markdown
+   ---
+   generated: <ISO timestamp>
+   mode: <mode>
+   ---
+
+   <subagent output>
+   ```
+
+6. Commit and push:
+
+   ```bash
+   git -C "$OPERATOR_REPO" add agenda.md
+   git -C "$OPERATOR_REPO" commit -m "agenda: <mode> @ <YYYY-MM-DD HH:MM>"
+   git -C "$OPERATOR_REPO" push
+   ```
+
+7. Display the subagent output to the user (the parent chat sees it).
