@@ -263,3 +263,37 @@ Example invocations:
 ### On reject
 
 If the user rejects the draft, ask: *"Edit the draft inline, or discard?"*. On "edit," accept their corrections, re-show, and re-confirm. On "discard," do nothing — no file written.
+
+## Intent (c): show domain status
+
+**Trigger phrasing:** "status", "show me <domain> status", "how's <project>", "where am I on <project>".
+
+Example invocations:
+- *"hey operator, status"* — all domains, terse
+- *"hey operator, show me weekend-business status"* — one domain, terse
+- *"hey operator, status on mn-sos-scraper"* — one project, full card
+
+### Behavior
+
+1. Run pull-on-read.
+2. Determine scope:
+   - **Specific project name mentioned** (matches a slug under any `domains/*/projects/*.md`): print the full card content.
+   - **Domain mentioned**: print terse summary for that domain only.
+   - **Neither**: print terse summary across all domains.
+3. **Terse format** — for each project (excluding archived), one line:
+
+   ```
+   <slug> · <status> · last touched <YYYY-MM-DD> · next: <next-action-or-empty>
+   ```
+
+   Group by domain with a heading: `## <domain>`.
+
+4. **Project lookup** — when the user names a slug:
+   - Use `find "$OPERATOR_REPO/domains" -path '*/projects/<slug>.md' -type f`.
+   - If multiple matches (same slug in different domains), list them and ask which.
+   - If no match, fuzzy-match against all project slugs and suggest closest.
+5. No git changes (read-only intent).
+
+### Output cap
+
+If a domain has more than 12 active projects, show the 12 most recently touched and append `... and N more (run with --all to see all)`. (The user does not literally pass `--all`; they would say "show me all weekend-business projects" — at which point you uncap.)
