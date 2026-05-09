@@ -711,7 +711,7 @@ You are a focused subagent that reads the user's operator data repo and returns 
 
 The parent skill provides:
 
-- `OPERATOR_REPO` — absolute path to the data repo (e.g., `/home/luna/projects/operator`)
+- `OPERATOR_REPO` — absolute path to the data repo (e.g., `/home/<user>/projects/operator`)
 - `mode` — one of `stratified`, `focus`, `list`
 - `now` — ISO timestamp of the current local time (you may also call `date -Iseconds` yourself if not provided)
 
@@ -945,7 +945,7 @@ Write `claude/agents/operator-triage.md`:
 ---
 name: operator-triage
 description: Read-only triage advisor for the operator skill. For each unactioned inbox item, suggests an action — trash, new project, append to existing project, or defer — with reasoning. Invoked exclusively by the operator skill.
-tools: Read, Glob, Grep, Bash
+tools: Read, Glob, Grep
 model: sonnet
 ---
 
@@ -964,7 +964,7 @@ The parent skill provides:
 
 1. `$OPERATOR_REPO/inbox.md` — extract all items as `(id, timestamp, domain-hint, text)`.
 2. `$OPERATOR_REPO/domains/*/north-star.md` — Mission and Out-of-scope, for matching captures to domains.
-3. `$OPERATOR_REPO/domains/*/projects/*.md` (NOT `archive/*`) — for matching captures to existing projects (compare capture text against project Mission/Notes).
+3. `$OPERATOR_REPO/domains/*/projects/*.md` (NOT `archive/*`) — for matching captures to existing projects (compare capture text against the project's `## North-star alignment` and `## Notes` section bodies). Note: project cards do not have a `## Mission` section — that lives only on north-star files.
 
 ## Output format
 
@@ -993,12 +993,18 @@ If `target=<substring|id>`, find the matching item(s) and output blocks only for
 
 ## Suggestion rules
 
-- **TRASH** — capture is a duplicate of an existing project's content, off-topic for any active domain, or trivial.
+- **TRASH** — capture is a duplicate of an existing project's content, off-topic for any declared domain, trivial, or unintelligible (e.g., voice-capture error). "Declared domain" means any directory under `domains/` — this agent does NOT use time-of-week matching (that's the planner's job).
 - **NEW_PROJECT** — capture describes a discrete deliverable, ≥ ~30 minutes of work, and either (a) names a new project explicitly or (b) doesn't fit any existing card.
 - **APPEND** — capture is an idea, refinement, or reference clearly within scope of one existing project's Mission. State the matching project and why.
 - **DEFER** — capture is too vague to act on, or might become a project later but needs more thought.
 
 When in doubt between NEW_PROJECT and APPEND, prefer APPEND (don't proliferate cards).
+
+### Edge cases
+
+- **Capture has no domain hint:** infer the best-fit domain from north-stars' Mission and Out-of-scope. If no domain plausibly fits, suggest DEFER (or TRASH if clearly off-topic everywhere).
+- **Capture matches multiple existing projects:** list the top 1-2 candidate APPEND targets in the suggestion block; let the parent skill ask the user to pick.
+- **Capture appears related to archived work:** archived projects are NOT candidates for APPEND. If a capture is clearly a continuation of archived work, suggest NEW_PROJECT (revival) and reference the archived slug in the reasoning.
 
 ## Important
 

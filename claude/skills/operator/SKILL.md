@@ -42,7 +42,7 @@ When invoked, parse the user's prompt for:
 1. **Domain hint** — look for a domain name followed by `:` (e.g., `weekend-business:`), or a domain mentioned naturally (e.g., "the work north-star"). Match against existing directories under `$OPERATOR_REPO/domains/`. If ambiguous, ask the user to clarify.
 2. **Intent** — match the prompt's verb and structure to one of the intents below.
 
-Intents are documented in subsequent sections. (Filled in by later tasks.)
+Intents documented below: (a) capture, (b) plan, (c) status, (d) new-project, (e) close, (f) new-domain, (g) edit north-star, (h) agenda, (i) triage. Bootstrap is implicit and runs before any of these on first use.
 
 ## Bootstrap (implicit, runs when `$OPERATOR_REPO` does not exist)
 
@@ -379,3 +379,143 @@ Walk each section in order: Mission → Why this matters → Success criteria �
 After the last section, also ask: *"Update time-profile? (current: <value>)"*.
 
 At the end of the walkthrough, run `git diff` to show all changes, ask "ship it?", and commit with a message like `north-star: <domain> — full refresh`.
+
+## Intent (b): plan / "what should I work on?"
+
+**Trigger phrasing:** "what should I work on", "what's next", "plan", "/standup", "what's on my plate".
+
+Example invocations:
+- *"hey operator, what should I work on?"* → stratified (default)
+- *"hey operator, what's the one thing right now, max focus"* → focus
+- *"hey operator, what's live across everything"* → list
+
+### Behavior
+
+1. Run pull-on-read.
+2. Parse mode from prompt:
+   - "max focus", "focus mode", "one thing", "the one thing" → `focus`
+   - "list", "what's live", "give me a list", "everything" → `list`
+   - default → `stratified`
+3. Spawn the `operator-planner` subagent via the Agent tool. Pass:
+
+   ```
+   OPERATOR_REPO is set to <path>. Mode: <mode>. Current time: <ISO timestamp>.
+   ```
+
+   Tell the subagent to read the repo and return the recommendation in the requested mode's format.
+
+4. Receive the subagent's markdown output.
+5. Write the output to `$OPERATOR_REPO/agenda.md` with a frontmatter header:
+
+   ```markdown
+   ---
+   generated: <ISO timestamp>
+   mode: <mode>
+   ---
+
+   <subagent output>
+   ```
+
+6. Commit and push:
+
+   ```bash
+   git -C "$OPERATOR_REPO" add agenda.md
+   git -C "$OPERATOR_REPO" commit -m "agenda: <mode> @ <YYYY-MM-DD HH:MM>"
+   git -C "$OPERATOR_REPO" push
+   ```
+
+7. Display the subagent output to the user (the parent chat sees it).
+
+## Intent (h): show today's agenda
+
+**Trigger phrasing:** "what's on the agenda", "show me the agenda", "agenda", "what did I plan".
+
+### Behavior
+
+1. Run pull-on-read.
+2. Read `$OPERATOR_REPO/agenda.md`.
+3. Parse the frontmatter for `generated` and `mode`. Compute age:
+
+   ```bash
+   generated_epoch=$(date -d "$generated" +%s)
+   now_epoch=$(date +%s)
+   age_seconds=$((now_epoch - generated_epoch))
+   ```
+
+4. Format age as a human-readable string: `<n>m ago` for < 60min, `<n>h ago` for < 24h, `<n>d ago` for >= 1 day.
+5. Count pending inbox items: `grep -c '^- \[' "$OPERATOR_REPO/inbox.md" || echo 0`.
+6. Print:
+
+   ```
+   Last planned: <YYYY-MM-DD HH:MM> (<age string>)
+   Mode: <mode>
+   Inbox: <N> pending captures
+
+   <agenda body>
+   ```
+
+7. If `age_seconds > 43200` (12h), append the line: *"Agenda is from <age string> — run `/standup` again?"*.
+
+8. No git changes — read-only intent.
+
+### Edge cases
+
+- **`agenda.md` missing or empty:** print *"No agenda yet — run `/standup` to generate one."* and stop.
+- **Frontmatter unparseable:** print the file content unchanged with a warning header.
+
+## Intent (i): triage inbox
+
+**Trigger phrasing:** "triage", "let's triage", "go through the inbox", "triage <item>".
+
+### Two modes — picked from the prompt
+
+- **Full** — *"hey operator, let's triage the inbox"* → walk all unactioned items.
+- **Targeted** — *"hey operator, triage the yelp idea"* → pull just items whose text matches the substring "yelp".
+
+### Behavior
+
+1. Run pull-on-read.
+2. Parse: `target` is either `all` or the substring/id from the prompt.
+3. Spawn `operator-triage` subagent. Pass:
+
+   ```
+   OPERATOR_REPO is set to <path>. Target: <all|substring>.
+   ```
+
+4. Receive per-item suggestions.
+5. **For each item**, present to the user:
+
+   ```
+   [<id>] "<text>"
+   Suggested: <ACTION>
+   <reasoning>
+
+   Apply [y]es / [n]o / [e]dit / [s]kip?
+   ```
+
+   - `y` → apply the suggested action (see below)
+   - `n` → ask the user which action they want instead, then apply
+   - `e` → for NEW_PROJECT or APPEND, let the user edit the proposed slug or target project; then apply
+   - `s` → leave in inbox (defer), move to next item
+
+6. Apply actions:
+   - **TRASH** — remove the line from `inbox.md`.
+   - **NEW_PROJECT** — same flow as intent (d): build a draft card from `references/project-card-template.md`, populate from the capture, ask "ship it?", write file. Remove line from inbox.
+   - **APPEND** — append the capture text as a `## Notes` bullet in the target project card, prefixed with the capture's date. Remove line from inbox. Update `last-touched` on the target card.
+   - **DEFER / skip** — no change.
+
+7. **One commit at the end** (not per item) summarizing actions:
+
+   ```bash
+   git -C "$OPERATOR_REPO" add -A
+   git -C "$OPERATOR_REPO" commit -m "triage: <N> items — <N_new> new, <N_append> appended, <N_trash> trashed"
+   git -C "$OPERATOR_REPO" push
+   ```
+
+8. If the user aborts mid-triage (Ctrl-C, or says "stop"), commit whatever was applied so far with a partial-triage message.
+
+### Edge cases
+
+- **Inbox empty:** print *"Inbox is empty — nothing to triage."* and stop.
+- **Targeted match: no items:** print *"No inbox items match '<substring>'."* and stop.
+- **Targeted match: multiple items:** list all matches with ids, ask the user to pick one or say "all of them".

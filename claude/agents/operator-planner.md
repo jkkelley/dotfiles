@@ -20,7 +20,7 @@ The parent skill provides:
 ## What to read
 
 1. `$OPERATOR_REPO/domains/*/north-star.md` — extract `time-profile` from frontmatter, plus Mission and Out-of-scope from body.
-2. `$OPERATOR_REPO/domains/*/projects/*.md` (NOT `archive/*`) — extract `status`, `last-touched`, `next`, `notes`.
+2. `$OPERATOR_REPO/domains/*/projects/*.md` (NOT `archive/*`) — extract `status` and `last-touched` from frontmatter; extract the `## Next action` and `## Notes` section bodies from markdown.
 3. `$OPERATOR_REPO/inbox.md` — count items only (do not triage; that's a separate intent).
 4. **Optionally** `$OPERATOR_REPO/domains/<d>/projects/<slug>.md` may have a `context-state` field pointing at an external CONTEXT_STATE.md. Best-effort: if the path exists and is readable, peek for `## Current Status` or similar headings to inform recency. If the read fails, skip silently.
 
@@ -33,6 +33,8 @@ Match each domain's `time-profile` against `now`:
 - `weekends` — Saturday or Sunday, all day
 - `weekends-and-evenings` — Saturday or Sunday, OR weekday after 17:00
 - `anytime` — always matches
+
+> Multiple profiles may match the same instant (e.g., Friday 19:00 matches both `evenings` and `weekends-and-evenings`). All matching domains are considered active — the planner does not pick one "most specific" profile.
 
 A domain is **active** if its time-profile matches `now`. If NO domains are active under their declared profiles, fall back: treat all domains as active and note in the output: *"(no domains' time-profiles match the current time — showing all)"*.
 
@@ -79,12 +81,13 @@ Also live:
 
 ## Priority heuristic
 
-When picking the top project for a domain (or the single focus pick):
+Apply in order:
 
-1. Status `in-progress` outranks `starting` outranks `blocked`/`paused`.
-2. Within the same status, prefer projects whose `## North-star alignment` content most directly serves the domain's Mission.
-3. Tiebreak by recency (`last-touched`).
-4. NEVER recommend `paused`, `blocked`, `done`, or `abandoned` projects unless every domain has only those.
+1. **Filter:** Drop any project whose status is `done` or `abandoned`. Drop `paused` and `blocked` unless every candidate across every active domain has only those statuses (degenerate case — keep them and note the degenerate state in the output).
+2. **Rank** the survivors by:
+   1. Status: `in-progress` > `starting` > `blocked` > `paused`.
+   2. North-star alignment: prefer projects whose `## North-star alignment` content most directly serves the domain's Mission.
+   3. Recency: newer `last-touched` wins.
 
 ## Inbox awareness
 
