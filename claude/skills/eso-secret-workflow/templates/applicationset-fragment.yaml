@@ -1,0 +1,71 @@
+# applicationset-fragment.yaml — Cluster generator + Templated ARN Discovery
+#
+# Merge this fragment into your ApplicationSet in homelab-gitops.
+#
+# HOW THE ARN INJECTION WORKS:
+# ApplicationSet template expressions ({{...}}) are substituted in the
+# ApplicationSet manifest itself — NOT in files at the sync source path.
+# The role-arn annotation is injected via a Kustomize patch embedded
+# directly in this ApplicationSet template. This is the only correct way
+# to pass a runtime-constructed value into a k8s resource via ApplicationSet.
+#
+# The base serviceaccount.yaml at apps/{NAMESPACE}/eso/ has NO role-arn
+# annotation. The patch below adds it at sync time with the correct ARN.
+#
+# NAMING CONSTRAINT: values.esoRoleName MUST match the Terraform output
+# `eso_role_name` exactly (convention: {NAMESPACE}-eso-role).
+#
+# Replace NAMESPACE with the target namespace (e.g. prospector, monitoring).
+
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: NAMESPACE-eso
+  namespace: argocd
+spec:
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            # Opt-in label — set on the ArgoCD cluster secret alongside aws_account_id.
+            # Set with: kubectl label secret <cluster-secret> -n argocd NAMESPACE/managed=true
+            NAMESPACE/managed: "true"
+        values:
+          namespace: NAMESPACE
+          # Must match Terraform local.role_name = "${var.namespace}-eso-role"
+          # Account-agnostic string — safe to store in Git.
+          esoRoleName: NAMESPACE-eso-role
+
+  template:
+    metadata:
+      name: "NAMESPACE-eso-{{name}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/YOUR_ORG/homelab-gitops.git
+        targetRevision: HEAD
+        path: apps/NAMESPACE/eso
+        kustomize:
+          patches:
+            # This patch is part of the ApplicationSet manifest — {{...}} IS substituted here.
+            # aws_account_id comes from bootstrap.sh annotation on the cluster secret.
+            # esoRoleName comes from values above — account-agnostic, safe in Git.
+            - target:
+                kind: ServiceAccount
+                name: NAMESPACE-eso-sa
+              patch: |
+                - op: add
+                  path: /metadata/annotations
+                  value: {}
+                - op: add
+                  path: /metadata/annotations/eks.amazonaws.com~1role-arn
+                  value: "arn:aws:iam::{{metadata.annotations.aws_account_id}}:role/{{values.esoRoleName}}"
+      destination:
+        server: "{{server}}"
+        namespace: "{{values.namespace}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
