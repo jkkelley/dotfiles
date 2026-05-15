@@ -36,16 +36,19 @@ docs/git/daily-prs/2026/05/20260515_git_prs.md
 
 ## File Format
 
+Each URL must be separated by a blank line so they render as separate lines in Markdown.
+
 ```markdown
 # Daily PRs — 2026-05-15
 
 https://github.com/<your-github-username>/<repo>/pull/5
+
 https://github.com/<your-github-username>/<repo>/pull/12
 ```
 
 ## Rules
 
-- One URL per line, no labels or extra formatting
+- One URL per entry, blank line between each, no labels or extra formatting
 - Never overwrite or edit existing entries
 - Always append — even if the PR was already logged (duplicates are better than data loss; the user can clean up)
 - Always commit and push after appending
