@@ -12,7 +12,7 @@ Appends one or more PR URLs to the daily log file in `~/projects/knowledge-base`
 ## Log Location
 
 ```
-~/projects/knowledge-base/docs/git/daily-prs/YYYY/MM/YYYYMMDD_git_prs.md
+~/projects/knowledge-base/docs/git/daily-prs/YYYY/MM/YYYYMMDD_git_prs.txt
 ```
 
 Example for 2026-05-15:
@@ -36,19 +36,17 @@ docs/git/daily-prs/2026/05/20260515_git_prs.md
 
 ## File Format
 
-Use HTML anchor tags — bare URLs get shortened by GitHub for public repos. Two trailing spaces after each anchor for a hard line break, no blank lines between entries.
+Plain text files — no Markdown, no GitHub autolink shortening. One URL per line.
 
-```markdown
-# Daily PRs — 2026-05-15
-
-<a href="https://github.com/<your-github-username>/<repo>/pull/5">https://github.com/<your-github-username>/<repo>/pull/5</a>  
-<a href="https://github.com/<your-github-username>/<repo>/pull/12">https://github.com/<your-github-username>/<repo>/pull/12</a>
+```
+https://github.com/<your-github-username>/<repo>/pull/5
+https://github.com/<your-github-username>/<repo>/pull/12
 ```
 
 ## Rules
 
-- HTML anchor per entry: `<a href="url">url</a>`
-- Two trailing spaces after each entry (hard line break), no blank lines between entries
+- Files use `.txt` extension, not `.md`
+- One bare URL per line, no blank lines, no formatting
 
 - Never overwrite or edit existing entries
 - Always append — even if the PR was already logged (duplicates are better than data loss; the user can clean up)
