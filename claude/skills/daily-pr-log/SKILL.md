@@ -36,19 +36,18 @@ docs/git/daily-prs/2026/05/20260515_git_prs.md
 
 ## File Format
 
-Use explicit Markdown links `[url](url)` — bare URLs get shortened by GitHub to `owner/repo#N`. Each entry separated by a blank line.
+Bare URLs, one per line. End each line with two trailing spaces for a hard line break — no blank lines between entries.
 
 ```markdown
 # Daily PRs — 2026-05-15
 
-[https://github.com/<your-github-username>/<repo>/pull/5](https://github.com/<your-github-username>/<repo>/pull/5)
-
-[https://github.com/<your-github-username>/<repo>/pull/12](https://github.com/<your-github-username>/<repo>/pull/12)
+https://github.com/<your-github-username>/<repo>/pull/5  
+https://github.com/<your-github-username>/<repo>/pull/12
 ```
 
 ## Rules
 
-- One URL per entry, explicit `[url](url)` format, blank line between each
+- Bare URL per line, two trailing spaces at end of each line (hard line break), no blank lines between entries
 
 - Never overwrite or edit existing entries
 - Always append — even if the PR was already logged (duplicates are better than data loss; the user can clean up)
