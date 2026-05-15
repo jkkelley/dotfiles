@@ -7,7 +7,7 @@ description: Use when the user says "add to the PR log", "log this PR", or provi
 
 ## Overview
 
-Appends one or more PR URLs to the daily log file in `~/projects/knowledge-base`. Files are organized by year and month. The directory structure is scaffolded automatically if it doesn't exist yet.
+Appends one or more PR URLs to the daily log file in `~/projects/knowledge-base`. Files are plain `.txt`, organized by year and month. Directory structure is scaffolded automatically.
 
 ## Log Location
 
@@ -17,39 +17,44 @@ Appends one or more PR URLs to the daily log file in `~/projects/knowledge-base`
 
 Example for 2026-05-15:
 ```
-docs/git/daily-prs/2026/05/20260515_git_prs.md
+docs/git/daily-prs/2026/05/20260515_git_prs.txt
+```
+
+## File Format
+
+```
+Daily PRs — YYYY-MM-DD
+
+PR Counter for today: N
+
+https://github.com/<your-github-username>/<repo>/pull/5
+https://github.com/<your-github-username>/<repo>/pull/12
 ```
 
 ## Steps
 
 1. **Resolve today's date** — get `YYYY`, `MM`, `YYYYMMDD` from the current date
 2. **Scaffold the directory** — create `docs/git/daily-prs/YYYY/MM/` if it does not exist
-3. **Create the file** if it does not exist, with this header:
-   ```markdown
-   # Daily PRs — YYYY-MM-DD
+3. **Create the file** if it does not exist with this structure:
    ```
-4. **Append** each PR URL on its own line — never overwrite existing content
-5. **Commit and push** to `knowledge-base` main:
+   Daily PRs — YYYY-MM-DD
+
+   PR Counter for today: 0
+
+   ```
+4. **Append** the URL on a new line at the end of the file
+5. **Increment the counter** — read the current `PR Counter for today: N` value, replace with `N+1`
+6. **Commit and push** to `knowledge-base` main:
    ```
    docs: log PR(s) for YYYY-MM-DD
    ```
 
-## File Format
-
-Plain text files — no Markdown, no GitHub autolink shortening. One URL per line.
-
-```
-https://github.com/<your-github-username>/<repo>/pull/5
-https://github.com/<your-github-username>/<repo>/pull/12
-```
-
 ## Rules
 
 - Files use `.txt` extension, not `.md`
-- One bare URL per line, no blank lines, no formatting
-
-- Never overwrite or edit existing entries
-- Always append — even if the PR was already logged (duplicates are better than data loss; the user can clean up)
+- One bare URL per line, no blank lines between URLs, no formatting
+- Never overwrite or edit existing URL entries
+- Always update the counter when appending
 - Always commit and push after appending
 
 ## Do NOT log these PRs
