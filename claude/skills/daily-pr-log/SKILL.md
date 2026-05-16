@@ -33,7 +33,7 @@ https://github.com/<your-github-username>/<repo>/pull/12
 
 ## Steps
 
-1. **Resolve today's date** — get `YYYY`, `MM`, `YYYYMMDD` from the current date
+1. **Resolve today's date** — run `date +%Y-%m-%d` via Bash to get the actual current date. Never rely on the session date from context or memory — late-night sessions cross midnight and context dates go stale. Extract `YYYY`, `MM`, `YYYYMMDD` from the command output.
 2. **Scaffold the directory** — create `docs/git/daily-prs/YYYY/MM/` if it does not exist
 3. **Create the file** if it does not exist with this structure:
    ```
