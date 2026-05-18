@@ -13,7 +13,7 @@ Appends new issue entries to the monthly issue log file in `~/projects/knowledge
 ~/projects/knowledge-base/docs/projects/<project>/issues/
   YYYY/
     MM/
-      YYYYMMDD_ISSUE_LOG.md   ← one file per month, named for the date first created
+      YYYYMMDD_ISSUE_LOG.md   ← one file per day (YYYYMMDD = today's date, never reuse a prior day's file)
 ```
 
 ## Steps
@@ -22,13 +22,14 @@ Appends new issue entries to the monthly issue log file in `~/projects/knowledge
 
 2. **Identify the project** — infer from context or ask. Common values: `prospector`.
 
-3. **Find or create the monthly file:**
+3. **Find or create today's file:**
    ```bash
    TARGET_DIR=~/projects/knowledge-base/docs/projects/<project>/issues/YYYY/MM
+   TARGET_FILE=$TARGET_DIR/YYYYMMDD_ISSUE_LOG.md
    ```
-   - If the directory does not exist: `mkdir -p $TARGET_DIR`
-   - If the directory exists and contains a `*_ISSUE_LOG.md` file: use that file
-   - If the directory exists but has no file yet: create `$TARGET_DIR/YYYYMMDD_ISSUE_LOG.md`
+   - If the directory does not exist: `mkdir -p $TARGET_DIR`, then create `TARGET_FILE`
+   - If the directory exists and `YYYYMMDD_ISSUE_LOG.md` (today's date) already exists: use it
+   - If the directory exists but has no file matching today's date: create `TARGET_FILE` with the header — even if older files from the same month exist. **Never reuse a file from a previous day.**
 
 4. **Determine the next ISSUE number** — grep across all existing issue files to find the highest current number, then increment:
    ```bash
