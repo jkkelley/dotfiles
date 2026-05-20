@@ -71,6 +71,10 @@ Do not begin work until the scope is confirmed.
    ```
 3. Verify it is up (`podman ps --filter name=ministack_local`) before continuing.
 4. If Ministack fails to start or Terraform errors against it, **stop and report the exact error to the user**. Do not proceed, do not imply success.
+5. After testing completes (pass or fail), tear down Ministack — leaving it running holds port 4566 open and consumes system resources:
+   ```bash
+   podman stop ministack_local && podman rm ministack_local
+   ```
 
 ---
 

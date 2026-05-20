@@ -103,6 +103,8 @@ If any command fails, **stop and report the exact error to the user**. Do not gu
 
 ### Step 6 — Teardown
 
+**This step is mandatory — do not skip it.** Leaving Ministack running holds port 4566 open and consumes system resources. Always stop and remove the container when testing is done, regardless of whether the tests passed or failed.
+
 ```bash
 podman stop ministack_local && podman rm ministack_local
 ```
