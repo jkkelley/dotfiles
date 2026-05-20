@@ -10,6 +10,7 @@ description: Run all dependency-heavy tasks (npm, go, pip) in isolated Podman co
 ## 1. Choosing the Sandbox
 - **Small Tasks:** Use the **Single-Use Container** (Podman).
 - **Cluster Tasks:** Use the **Kind Sandbox** (Kind + Podman).
+- **Terraform Tasks:** Use the **Ministack Sandbox** (see section below).
 
 ## 2. Dependency Management (The "No-Clutter" Way)
 
@@ -18,6 +19,58 @@ Instead of `npm install`, tell the agent to run:
 ```bash
 podman run --rm -v .:/app:Z -w /app node:20-slim sh -c "npm install && npm test"
 ```
+
+## Terraform / Ministack Sandbox
+
+**RULE:** Never run `terraform apply` against real AWS without first validating against a local Ministack instance. No exceptions.
+
+### Gitignore Pre-Flight — Run Before Anything Else
+
+When working in a Terraform repo, verify these entries exist in `.gitignore`. If any are missing, add them immediately. These files must never be committed:
+
+```
+test/
+**/.terraform/
+*.tfvars
+*.tfstate.backup
+**/.terraform.lock.hcl
+```
+
+```bash
+REQUIRED=("test/" "**/.terraform/" "*.tfvars" "*.tfstate.backup" "**/.terraform.lock.hcl")
+for entry in "${REQUIRED[@]}"; do
+  grep -qxF "$entry" .gitignore 2>/dev/null || echo "$entry" >> .gitignore
+done
+```
+
+Commit `.gitignore` if it was modified before continuing.
+
+### Start Ministack
+
+```bash
+podman run -d \
+  --name ministack_local \
+  -p 4566:4566 \
+  -v $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:Z \
+  ministackorg/ministack:full
+```
+
+Verify it is up before running Terraform:
+
+```bash
+podman ps --filter name=ministack_local --format "{{.Status}}"
+# Must show "Up"
+```
+
+If the container fails to start, **stop and report the exact error to the user**. Do not proceed and do not attempt to test against real AWS.
+
+### Teardown
+
+```bash
+podman stop ministack_local && podman rm ministack_local
+```
+
+---
 
 ## Lifecycle Management
 - **Pre-flight:** Always run `./scripts/verify-readiness.sh` before starting a cluster.

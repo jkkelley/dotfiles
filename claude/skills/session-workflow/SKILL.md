@@ -51,6 +51,27 @@ Do not begin work until the scope is confirmed.
 - If the plan specifies no commands, run whatever is appropriate for the language/framework.
 - Do not skip this step. Do not claim success without running something.
 
+**If the session involves Terraform files** (any `.tf` file added or modified):
+
+1. Check `.gitignore` for required entries before running anything — add any that are missing:
+   ```
+   test/
+   **/.terraform/
+   *.tfvars
+   *.tfstate.backup
+   **/.terraform.lock.hcl
+   ```
+2. Start Ministack before running `terraform plan` or `terraform apply`:
+   ```bash
+   podman run -d \
+     --name ministack_local \
+     -p 4566:4566 \
+     -v $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:Z \
+     ministackorg/ministack:full
+   ```
+3. Verify it is up (`podman ps --filter name=ministack_local`) before continuing.
+4. If Ministack fails to start or Terraform errors against it, **stop and report the exact error to the user**. Do not proceed, do not imply success.
+
 ---
 
 ## Step 3 — Verify
