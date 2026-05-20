@@ -22,11 +22,11 @@ podman run --rm -v .:/app:Z -w /app node:20-slim sh -c "npm install && npm test"
 
 ## Terraform / Ministack Sandbox
 
-**RULE:** Never run `terraform apply` against real AWS without first validating against a local Ministack instance. No exceptions.
+**RULE:** Use Ministack any time Terraform files are written or modified, unless the user explicitly says not to. This includes `terraform validate` — syntax-only checks are not enough. No exceptions.
 
-### Gitignore Pre-Flight — Run Before Anything Else
+### Step 1 — Gitignore Pre-Flight
 
-When working in a Terraform repo, verify these entries exist in `.gitignore`. If any are missing, add them immediately. These files must never be committed:
+Before anything else, verify these entries exist in `.gitignore`. If any are missing, add them. These files must never be committed:
 
 ```
 test/
@@ -45,7 +45,7 @@ done
 
 Commit `.gitignore` if it was modified before continuing.
 
-### Start Ministack
+### Step 2 — Start Ministack
 
 ```bash
 podman run -d \
@@ -55,16 +55,53 @@ podman run -d \
   ministackorg/ministack:full
 ```
 
-Verify it is up before running Terraform:
+Verify it is up before continuing:
 
 ```bash
 podman ps --filter name=ministack_local --format "{{.Status}}"
 # Must show "Up"
 ```
 
-If the container fails to start, **stop and report the exact error to the user**. Do not proceed and do not attempt to test against real AWS.
+If the container fails to start, **stop and report the exact error to the user**. Do not proceed.
 
-### Teardown
+### Step 3 — Seed a Throwaway terraform.tfvars
+
+Variables without defaults will cause `terraform validate` and `terraform plan` to fail with missing-value errors. Create a temporary `terraform.tfvars` with fake seed values for the test run. This file goes in the module root, never in source code — it is already covered by the `*.tfvars` gitignore entry and will never be committed.
+
+Fake values go in this file, not into `variables.tf` defaults or hardcoded into resources:
+
+```hcl
+# terraform.tfvars — ministack test seed, never commit
+aws_region   = "us-east-1"
+account_id   = "000000000000"
+domain       = "test.example.com"
+cluster_name = "test-cluster"
+```
+
+Adapt the keys to match whatever variables the module actually declares. If a variable has a default, skip it. Only seed what's required.
+
+### Step 4 — Point Terraform at Ministack
+
+Set these environment variables before running any Terraform commands:
+
+```bash
+export AWS_ACCESS_KEY_ID=test
+export AWS_SECRET_ACCESS_KEY=test
+export AWS_DEFAULT_REGION=us-east-1
+export AWS_ENDPOINT_URL=http://localhost:4566
+```
+
+### Step 5 — Validate
+
+```bash
+terraform init -backend=false
+terraform validate
+terraform plan    # optional but recommended — catches provider-level errors validate misses
+```
+
+If any command fails, **stop and report the exact error to the user**. Do not guess at a fix and re-run silently.
+
+### Step 6 — Teardown
 
 ```bash
 podman stop ministack_local && podman rm ministack_local
