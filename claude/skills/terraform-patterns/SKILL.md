@@ -236,6 +236,102 @@ inputs = {
 }
 ```
 
+## Local Testing with Ministack — REQUIRED Before Any Terraform Change
+
+**This is mandatory.** Every time Terraform files are added or modified, you MUST complete all steps below before committing or applying anywhere real. Do not skip any step. Do not imply the code works if you have not run it against Ministack.
+
+### Step 0 — Gitignore Pre-Flight
+
+Before anything else, verify these entries exist in `.gitignore`. If any are missing, add them. Do not proceed without this check — these files must never be committed.
+
+Required entries:
+```
+test/
+**/.terraform/
+*.tfvars
+*.tfstate.backup
+**/.terraform.lock.hcl
+```
+
+Check and add in one pass:
+```bash
+REQUIRED=(
+  "test/"
+  "**/.terraform/"
+  "*.tfvars"
+  "*.tfstate.backup"
+  "**/.terraform.lock.hcl"
+)
+for entry in "${REQUIRED[@]}"; do
+  grep -qxF "$entry" .gitignore 2>/dev/null || echo "$entry" >> .gitignore
+done
+```
+
+If `.gitignore` was modified, commit it before continuing.
+
+### Step 1 — Start Ministack
+
+```bash
+podman run -d \
+  --name ministack_local \
+  -p 4566:4566 \
+  -v $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:Z \
+  ministackorg/ministack:full
+```
+
+Verify it is ready before proceeding:
+
+```bash
+podman ps --filter name=ministack_local --format "{{.Status}}"
+# Must show "Up" before continuing
+```
+
+If the container fails to start, **stop and report the error to the user**. Do not attempt to work around it or test against real AWS.
+
+### Step 2 — Configure Terraform to Target Ministack
+
+Add an endpoint override to your provider block for local testing:
+
+```hcl
+provider "aws" {
+  region                      = "us-east-1"
+  access_key                  = "test"
+  secret_key                  = "test"
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  skip_requesting_account_id  = true
+
+  endpoints {
+    s3       = "http://localhost:4566"
+    iam      = "http://localhost:4566"
+    ec2      = "http://localhost:4566"
+    dynamodb = "http://localhost:4566"
+    # add any other services your module uses
+  }
+}
+```
+
+Use a `terraform.tfvars` or a separate `locals_test.tf` for test overrides — never commit endpoint rewrites into your production provider config.
+
+### Step 3 — Run and Verify
+
+```bash
+terraform init
+terraform validate
+terraform plan
+terraform apply -auto-approve   # local/test only — never use this flag against real infra
+```
+
+If the plan or apply fails, **report the exact error to the user**. Do not guess at a fix and re-run silently. Surface the full error output.
+
+### Step 4 — Teardown
+
+```bash
+podman stop ministack_local && podman rm ministack_local
+```
+
+---
+
 ## CI/CD Pipeline Pattern
 
 ```bash
@@ -257,7 +353,6 @@ terraform apply tfplan
 | `count` with list (order shifts = destroy/recreate) | `for_each` with map/set |
 | No state backend (local tfstate) | S3/GCS/TFC remote backend |
 | No state locking | DynamoDB/GCS locking |
-| Not committing `.terraform.lock.hcl` | Always commit lockfile |
 | Hardcoded region/account IDs | Variables + data sources |
 | Monolithic root with 200+ resources | Split into modules |
 | `terraform apply -auto-approve` in prod CI | Plan review gate |
