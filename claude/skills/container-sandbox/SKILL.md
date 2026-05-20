@@ -93,11 +93,17 @@ export AWS_ENDPOINT_URL=http://localhost:4566
 
 ### Step 5 — Validate
 
+`terraform plan` against Ministack runs a real plan simulation against the mock AWS API endpoints — it produces the same plan output you'd get against real AWS for supported services.
+
 ```bash
 terraform init -backend=false
 terraform validate
-terraform plan    # optional but recommended — catches provider-level errors validate misses
+terraform plan -out=test/ministack.tfplan
 ```
+
+The plan is saved to `test/ministack.tfplan`. This path is covered by the `test/` gitignore entry so it will never be committed. Running again overwrites the same file — no stale plans accumulate.
+
+Tell the user: **"Plan saved to `test/ministack.tfplan`. Run `terraform show test/ministack.tfplan` to review it."**
 
 If any command fails, **stop and report the exact error to the user**. Do not guess at a fix and re-run silently.
 

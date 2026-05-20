@@ -315,14 +315,19 @@ Use a `terraform.tfvars` or a separate `locals_test.tf` for test overrides — n
 
 ### Step 3 — Run and Verify
 
+`terraform plan` against Ministack runs a real plan simulation against the mock AWS API endpoints — it produces the same plan output you'd get against real AWS for supported services.
+
 ```bash
-terraform init
+terraform init -backend=false
 terraform validate
-terraform plan
-terraform apply -auto-approve   # local/test only — never use this flag against real infra
+terraform plan -out=test/ministack.tfplan
 ```
 
-If the plan or apply fails, **report the exact error to the user**. Do not guess at a fix and re-run silently. Surface the full error output.
+The plan is saved to `test/ministack.tfplan`. This path is covered by the `test/` gitignore entry so it will never be committed. Running again overwrites the same file — no stale plans accumulate.
+
+Tell the user: **"Plan saved to `test/ministack.tfplan`. Run `terraform show test/ministack.tfplan` to review it."**
+
+If any command fails, **report the exact error to the user**. Do not guess at a fix and re-run silently. Surface the full error output.
 
 ### Step 4 — Teardown
 
