@@ -61,19 +61,35 @@ Do not begin work until the scope is confirmed.
    *.tfstate.backup
    **/.terraform.lock.hcl
    ```
-2. Start Ministack before running `terraform plan` or `terraform apply`:
+2. Detect a free port in 30000-65000 and start Ministack on it — never hardcode 4566, multiple sessions may be running simultaneously:
    ```bash
+   MINISTACK_PORT=$(python3 -c "
+   import socket, random
+   for p in random.sample(range(30000, 65001), 200):
+       try:
+           with socket.socket() as s:
+               s.bind(('127.0.0.1', p))
+               print(p)
+               break
+       except OSError:
+           continue
+   ")
+   [ -z "$MINISTACK_PORT" ] && { echo "ERROR: No free port in 30000-65000"; exit 1; }
    podman run -d \
-     --name ministack_local \
-     -p 4566:4566 \
+     --name ministack_${MINISTACK_PORT} \
+     -p ${MINISTACK_PORT}:4566 \
      -v $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:Z \
      ministackorg/ministack:full
+   export AWS_ACCESS_KEY_ID=test
+   export AWS_SECRET_ACCESS_KEY=test
+   export AWS_DEFAULT_REGION=us-east-1
+   export AWS_ENDPOINT_URL=http://localhost:${MINISTACK_PORT}
    ```
-3. Verify it is up (`podman ps --filter name=ministack_local`) before continuing.
+3. Verify it is up (`podman ps --filter name=ministack_${MINISTACK_PORT}`) before continuing.
 4. If Ministack fails to start or Terraform errors against it, **stop and report the exact error to the user**. Do not proceed, do not imply success.
-5. After testing completes (pass or fail), tear down Ministack — leaving it running holds port 4566 open and consumes system resources:
+5. After testing completes (pass or fail), tear down Ministack — leaving it running holds the port open and consumes system resources:
    ```bash
-   podman stop ministack_local && podman rm ministack_local
+   podman stop ministack_${MINISTACK_PORT} && podman rm ministack_${MINISTACK_PORT}
    ```
 
 ---

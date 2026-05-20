@@ -47,10 +47,32 @@ Commit `.gitignore` if it was modified before continuing.
 
 ### Step 2 — Start Ministack
 
+Multiple Claude sessions may run simultaneously. Never hardcode port 4566 — always detect a free port in the high range first so sessions don't collide or kill each other's containers.
+
+```bash
+# Find a free port in 30000-65000
+MINISTACK_PORT=$(python3 -c "
+import socket, random
+for p in random.sample(range(30000, 65001), 200):
+    try:
+        with socket.socket() as s:
+            s.bind(('127.0.0.1', p))
+            print(p)
+            break
+    except OSError:
+        continue
+")
+if [ -z "$MINISTACK_PORT" ]; then
+  echo "ERROR: No free port found in range 30000-65000. Cannot start Ministack."
+  exit 1
+fi
+echo "Starting Ministack on port $MINISTACK_PORT"
+```
+
 ```bash
 podman run -d \
-  --name ministack_local \
-  -p 4566:4566 \
+  --name ministack_${MINISTACK_PORT} \
+  -p ${MINISTACK_PORT}:4566 \
   -v $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock:Z \
   ministackorg/ministack:full
 ```
@@ -58,7 +80,7 @@ podman run -d \
 Verify it is up before continuing:
 
 ```bash
-podman ps --filter name=ministack_local --format "{{.Status}}"
+podman ps --filter name=ministack_${MINISTACK_PORT} --format "{{.Status}}"
 # Must show "Up"
 ```
 
@@ -88,7 +110,7 @@ Set these environment variables before running any Terraform commands:
 export AWS_ACCESS_KEY_ID=test
 export AWS_SECRET_ACCESS_KEY=test
 export AWS_DEFAULT_REGION=us-east-1
-export AWS_ENDPOINT_URL=http://localhost:4566
+export AWS_ENDPOINT_URL=http://localhost:${MINISTACK_PORT}
 ```
 
 ### Step 5 — Validate
@@ -109,10 +131,10 @@ If any command fails, **stop and report the exact error to the user**. Do not gu
 
 ### Step 6 — Teardown
 
-**This step is mandatory — do not skip it.** Leaving Ministack running holds port 4566 open and consumes system resources. Always stop and remove the container when testing is done, regardless of whether the tests passed or failed.
+**This step is mandatory — do not skip it.** Leaving Ministack running holds the port open and consumes system resources. Always stop and remove the container when testing is done, regardless of whether the tests passed or failed.
 
 ```bash
-podman stop ministack_local && podman rm ministack_local
+podman stop ministack_${MINISTACK_PORT} && podman rm ministack_${MINISTACK_PORT}
 ```
 
 ---
