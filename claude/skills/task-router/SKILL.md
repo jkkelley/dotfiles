@@ -173,14 +173,27 @@ git pull
 Ask: "Delete local branch `feat/<branch>`?"
 If yes: `git branch -d feat/<branch>`
 
-Then move to the next pending task and repeat from Step 1.
+**Mark the task complete in the master plan file** — flip the task's checkbox from `- [ ]` to `- [x]` and save. This is the durable state record. `TaskUpdate` handles in-session tracking; the plan file checkbox handles cross-session persistence so any future router session can read the plan and know exactly which tasks are done.
+
+Then move to the next unchecked task in the plan and repeat from Step 1.
 
 ---
 
 ## Step 5 — Task Tracking
 
-Use `TaskCreate` to register all tasks at the start of the session.
-Use `TaskUpdate` to mark each task `in_progress` before starting it and `completed` after the PR merges and branch is deleted.
+**Two layers, both required:**
+
+**In-session (TaskCreate / TaskUpdate):**
+- At session start: `TaskCreate` one entry per task in the plan
+- Before starting a task: `TaskUpdate` → `in_progress`
+- After PR merges and branch is deleted: `TaskUpdate` → `completed`
+- This drives the in-session task list UI and keeps the current session oriented
+
+**Cross-session (plan file checkboxes):**
+- Plan files use `- [ ]` / `- [x]` checkbox syntax
+- After each merge, flip the completed task's checkbox to `- [x]` in the plan file and save
+- This is the source of truth across sessions — if a new router session starts mid-project, it reads the plan file checkboxes to know what's done, not the task list (which is gone)
+- Never rely on memory or TaskList alone to determine which tasks are complete
 
 ---
 
