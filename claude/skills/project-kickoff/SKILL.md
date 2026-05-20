@@ -145,11 +145,11 @@ Format: `## Project Kickoff — <project-name>` followed by ordered sections.
 - [ ] Run `superpowers:brainstorming` skill
 - [ ] Run `superpowers:writing-plans` skill
 - [ ] Confirm plan file saved to `~/.claude/plans/<plan-name>.md`
-- [ ] If the plan has 3 or more tasks: invoke `task-router` skill to coordinate execution
+- [ ] If the plan has 2 or more tasks: invoke `task-router` skill to coordinate execution
 
 ### 6. First Session
 - [ ] If single task: use `session-workflow` skill
-- [ ] If 3+ tasks: use `task-router` skill
+- [ ] If 2+ tasks: use `task-router` skill
 ```
 
 Fill in every `<placeholder>` from the interview answers before outputting.
