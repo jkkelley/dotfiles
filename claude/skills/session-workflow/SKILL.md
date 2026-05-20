@@ -12,6 +12,7 @@ One task. One session. Always ends with test → verify → commit → checkpoin
 - User says "session-mode", "use session workflow", "begin session workflow"
 - User says "start session N" or "session N"
 - User invokes `/session-workflow`
+- Used by sessions dispatched from **task-router** via handoff documents — each handoff doc represents one session governed by this skill
 
 ## Red Flags
 
