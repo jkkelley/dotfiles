@@ -5,7 +5,7 @@ description: Enforces work → test → verify → checkpoint → stop for multi
 
 # Session Workflow
 
-One task. One session. Always ends with test → verify → commit → checkpoint → stop.
+One task. One session. Always ends with test → verify → commit → PR → checkpoint → stop.
 
 ## When This Applies
 
@@ -23,6 +23,8 @@ One task. One session. Always ends with test → verify → commit → checkpoin
 | "The verification is close enough" | Run the actual command. Approximate is not verified. |
 | "I'll checkpoint at the start of the next session" | Checkpoint happens at the END of this session. |
 | "This is too simple to need a checkpoint" | Simple sessions compound into complex drift. Always checkpoint. |
+| "I'll just commit to main for now" | No. Every session has its own feature branch. No exceptions. |
+| "I'll open the PR at the end of the project" | No. A PR is opened at the end of every session. |
 
 ---
 
@@ -30,7 +32,16 @@ One task. One session. Always ends with test → verify → commit → checkpoin
 
 1. Read the current plan file. Look in `~/.claude/plans/` or ask the user for the path if ambiguous.
 2. Identify which session/task is next. Confirm with the user if unclear.
-3. State in one sentence what this session will accomplish. Nothing more.
+3. **Create the session feature branch** — never work on `main`:
+   ```bash
+   git checkout -b feat/session-<name>
+   # e.g., feat/session-infra, feat/session-site-build, feat/session-jenkins
+   ```
+   If the branch already exists, check it out: `git checkout feat/session-<name>`
+4. State in one sentence what this session will accomplish. Tell the user:
+   - The session name (e.g., **Session: infra**)
+   - The feature branch it will run on (e.g., `feat/session-infra`)
+   - Nothing more.
 
 Do not begin work until the scope is confirmed.
 
@@ -42,6 +53,7 @@ Do not begin work until the scope is confirmed.
 - Do not touch anything scoped to a future session.
 - Read relevant files before writing — follow existing patterns.
 - The session's scope must be fully complete. No half-finished implementations.
+- All commits go on the session feature branch. **Never commit directly to `main`.**
 
 ---
 
@@ -102,12 +114,25 @@ Do not begin work until the scope is confirmed.
 
 ---
 
-## Step 4 — Commit & Push
+## Step 4 — Commit & Push & PR
+
+Every session ends with a PR — not just the last one.
 
 1. Stage the files changed in this session (specific files, not `git add .`).
 2. Write a commit message scoped to this session's work.
-3. Push the branch.
-4. If the plan marks this session as the last one: open a PR.
+3. Push the feature branch:
+   ```bash
+   git push -u origin feat/session-<name>
+   ```
+4. Open a PR from `feat/session-<name>` → `main`:
+   ```bash
+   gh pr create \
+     --title "feat(<scope>): Session: <name> — <one-line summary>" \
+     --head feat/session-<name> \
+     --base main \
+     --body "..."
+   ```
+5. Give the PR URL to the user. This is mandatory — do not skip.
 
 ---
 
@@ -124,14 +149,15 @@ The checkpoint must capture:
 
 ## Step 6 — Stop & Hand Off
 
-Output a short "Session N complete" summary:
-- What was done
-- What was verified
-- What the next session will work on (exact task from the plan)
+Output a short summary with these four things, in this order:
 
-**Stop. Do not begin the next session's work.**
+1. **Session complete:** what was done and what was verified
+2. **PR:** the URL from Step 4
+3. **Next session name** and the exact phrase to say to start it, e.g.:
+   > **Next:** Session: site-build — say *start session site-build* to begin.
+4. **Stop.** Do not begin the next session's work.
 
-If the user explicitly asks to continue into the next session in the same conversation, repeat Steps 2–6 for the new session before stopping again.
+If the user explicitly asks to continue into the next session in the same conversation, repeat Steps 1–6 for the new session (including a new feature branch and new PR) before stopping again.
 
 ---
 
@@ -140,4 +166,8 @@ If the user explicitly asks to continue into the next session in the same conver
 - **One session = one task.** If the task feels small, that's fine. Don't expand scope.
 - **No verification, no done.** Running the code/tests is mandatory.
 - **Checkpoint is not optional.** `context-compaction` runs at the end of every session.
+- **Never commit to `main`.** Every session runs on `feat/session-<name>`. No exceptions.
+- **Every session gets a PR.** Open it at the end of every session, not just the last one.
+- **Always give the PR URL.** The user must receive the link before the session stops.
+- **Always name the next session.** Tell the user the next session name and the exact phrase to start it.
 - **Stop after hand-off.** Do not continue into the next session unprompted.
