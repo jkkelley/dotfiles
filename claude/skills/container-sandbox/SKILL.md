@@ -16,8 +16,25 @@ description: Run all dependency-heavy tasks (npm, go, pip) in isolated Podman co
 
 ### Node.js (npm)
 Instead of `npm install`, tell the agent to run:
+
+**Step 1 — check for a project golden image first.**
+Look in the project's `CLAUDE.md`, `Dockerfile`, or pipeline config for a GHCR base image tagged `:latest-amd64`. If one exists, prefer it over upstream — it will be already patched, non-root, and have `dumb-init`.
+
 ```bash
-podman run --rm -v .:/app:Z -w /app node:20-slim sh -c "npm install && npm test"
+# Log in once per session (username resolved dynamically — no hardcoding)
+GHCR_USER=$(gh api user --jq .login)
+gh auth token | podman login ghcr.io -u "$GHCR_USER" --password-stdin
+
+# Run with the project golden image
+# --userns=keep-id maps host UID into the container so volume-mounted files are writable
+podman run --rm --userns=keep-id -v .:/app:Z -w /app \
+  ghcr.io/${GHCR_USER}/<project>-base:latest-amd64 \
+  sh -c "npm install && npm test"
+```
+
+**Fallback** — if no golden image exists or GHCR auth is unavailable:
+```bash
+podman run --rm -v .:/app:Z -w /app node:24-alpine sh -c "npm install && npm test"
 ```
 
 ## Terraform / Ministack Sandbox
@@ -221,7 +238,9 @@ When the project already has a working backend image (`<service>:dev`):
            condition: service_healthy
 
      frontend:
-       image: docker.io/node:20-alpine
+       # Prefer the project golden image (:latest-amd64) if available; fall back to node:24-alpine
+       image: ghcr.io/${GHCR_USER}/<project>-base:latest-amd64
+       user: "0"   # run as root in dev compose — avoids UID mismatch with volume mounts
        volumes:
          - ./myapp-fe:/app:Z
        working_dir: /app
@@ -286,8 +305,8 @@ When there is no pre-built backend image, create a zero-dependency Node.js mock:
 
 2. **Create `test/mock-api/Dockerfile`**:
    ```dockerfile
-   FROM node:20-alpine
-   WORKDIR /app
+   # Prefer the project golden image (:latest-amd64) if available; fall back to node:24-alpine
+   FROM ghcr.io/${GHCR_USER}/<project>-base:latest-amd64
    COPY server.mjs .
    EXPOSE 9090
    CMD ["node", "server.mjs"]

@@ -17,6 +17,101 @@ description: >
 
 ---
 
+## ⚡ HOMELAB CLUSTER OVERRIDE — Read This Before Anything Else
+
+> Verified 2026-05-26 against the live homelab cluster. These facts override the generic
+> patterns below. Do NOT follow the generic naming or bootstrap steps for this cluster.
+
+**Before proceeding — ask the user these two questions (do not guess or use cached values):**
+1. *"What is your AWS account ID?"* → store as `{AWS_ACCOUNT_ID}`
+2. *"What AWS profile should I use?"* → store as `{AWS_PROFILE}`
+
+**Retrieve the cluster OIDC issuer URL from SSM** (never hardcode it):
+```bash
+aws ssm get-parameter \
+  --name /infra/cluster/oidc-issuer-url \
+  --region us-east-2 \
+  --query 'Parameter.Value' \
+  --output text \
+  --profile {AWS_PROFILE}
+```
+This returns the public OIDC discovery endpoint. Use it as `{OIDC_ISSUER_URL}` in IAM trust policies.
+If the parameter does not exist yet, ask the user to provide the URL and create it first:
+```bash
+aws ssm put-parameter \
+  --name /infra/cluster/oidc-issuer-url \
+  --value "https://YOUR-OIDC-URL" \
+  --type String \
+  --region us-east-2 \
+  --profile {AWS_PROFILE}
+```
+
+### What is actually deployed
+
+| Fact | Value |
+|---|---|
+| ESO version | v2.4.1 (Helm chart `external-secrets-2.4.1`) |
+| API version | `external-secrets.io/v1` — **not** `v1beta1` |
+| SSM region | `us-east-2` — all homelab SSM parameters live here |
+| Working reference | `prospector` namespace — copy its manifests as the canonical template |
+
+### Actual naming convention (deviates from generic skill below)
+
+```
+IAM role name:       {NAMESPACE}-eso-role        ← same as generic
+ESO ServiceAccount:  {NAMESPACE}-ssm-sa          ← NOT {NAMESPACE}-eso-sa
+SecretStore name:    aws-ssm                      ← same as generic
+SSM path prefix:     /{NAMESPACE}/               ← same as generic
+```
+
+### Role ARN injection — no ApplicationSet templating needed
+
+The role ARN is **hardcoded directly in `serviceaccount.yaml`**, not injected by an ApplicationSet.
+The ArgoCD cluster secret uses annotation key `eso_role_arn` (not `aws_account_id`).
+Skip Flow A step 3 (ApplicationSet wiring) entirely — it is not used on this cluster.
+
+```yaml
+# serviceaccount.yaml — exact pattern from prospector
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {NAMESPACE}-ssm-sa
+  namespace: {NAMESPACE}
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::{AWS_ACCOUNT_ID}:role/{NAMESPACE}-eso-role
+```
+
+```yaml
+# secretstore.yaml — exact pattern from prospector
+apiVersion: external-secrets.io/v1
+kind: SecretStore
+metadata:
+  name: aws-ssm
+  namespace: {NAMESPACE}
+spec:
+  provider:
+    aws:
+      service: ParameterStore
+      region: us-east-2
+      auth:
+        jwt:
+          serviceAccountRef:
+            name: {NAMESPACE}-ssm-sa
+```
+
+### Bootstrap prereq — already done
+
+The OIDC provider is registered and working (proven by prospector and job-hunter).
+Skip Flow A step 1 (bootstrap check) — the cluster is already bootstrapped.
+
+### Trust policy `sub` condition for new IAM roles
+
+```
+system:serviceaccount:{NAMESPACE}:{NAMESPACE}-ssm-sa
+```
+
+---
+
 ## Concepts
 
 | Term | What it is |
