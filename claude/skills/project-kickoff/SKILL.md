@@ -115,7 +115,7 @@ Format: `## Project Kickoff — <project-name>` followed by ordered sections.
 ### 2. Repository
 - [ ] Create GitHub repo
       ```bash
-      gh repo create jkkelley/<project-name> --private --clone
+      gh repo create <your-org>/<project-name> --private --clone
       cd ~/projects/<project-name>
       ```
 - [ ] Initialize CLAUDE.md
@@ -139,7 +139,7 @@ Format: `## Project Kickoff — <project-name>` followed by ordered sections.
 
 ### 4. CI/CD (if applicable)
 - [ ] Add Jenkins multibranch pipeline
-      Use `jenkins-job-bootstrap` skill with `repo: jkkelley/<project-name>`
+      Use `jenkins-job-bootstrap` skill with `repo: <your-org>/<project-name>`
 
 ### 5. Brainstorm & Plan
 - [ ] Run `superpowers:brainstorming` skill
@@ -159,28 +159,28 @@ If a section doesn't apply (e.g. no AWS, no K8s), omit it entirely — don't inc
 
 ## Homelab Standing Rules (always apply)
 
-Every new project on the homelab cluster is Vault-first from day one:
+Every new project on the cluster is Vault-first from day one:
 
 **Secret handling:**
 - No AWS account IDs, role ARNs, bucket names, or credentials go in any git file
-- All env-specific values live in HashiCorp Vault at `secret/homelab/<category>/<key>`
-- Manifests use AVP placeholders: `<path:secret/data/homelab/roles#role-name>`
-- Pipelines use `withVaultSecrets()` and `withVaultAwsCreds()` from jenkins-shared-lib
-- Vault path hierarchy: `secret/homelab/aws/`, `secret/homelab/roles/`, `secret/homelab/buckets/`, `secret/homelab/github/`, `secret/homelab/argocd/`, `secret/homelab/<project>/`
+- All env-specific values live in HashiCorp Vault at `secret/<cluster-prefix>/<category>/<key>`
+- Manifests use AVP placeholders: `<path:secret/data/<cluster-prefix>/roles#role-name>`
+- Pipelines use `withVaultSecrets()` and `withVaultAwsCreds()` from your Jenkins shared library
+- Vault path hierarchy: `secret/<cluster-prefix>/aws/`, `secret/<cluster-prefix>/roles/`, `secret/<cluster-prefix>/buckets/`, `secret/<cluster-prefix>/<project>/`
 
 **IAM prereqs:**
-- If a new component needs AWS IAM permissions, create the IAM role in Terraform (self-hosted-oidc/terraform/iam/) *before* deploying the component to the cluster
+- If a new component needs AWS IAM permissions, create the IAM role in Terraform *before* deploying the component to the cluster
 
 **Runbook rule:**
-- Every new infrastructure component deployed to the cluster gets a runbook at `https://github.com/jkkelley/local-k8s-docs/runbooks/<component-name>/` with a `README.md` (what it covers, when to use it) and `<component>_runbook.md` (the runbook). Feature branch, PR to main.
+- Every new infrastructure component deployed to the cluster gets a runbook in your cluster runbook repo under `runbooks/<component-name>/` with a `README.md` (what it covers, when to use it) and `<component>_runbook.md` (the runbook). Feature branch, PR to main.
 
-Add these three items to the kickoff checklist output whenever the project targets the homelab cluster:
+Add these three items to the kickoff checklist output whenever the project targets a Kubernetes cluster:
 
 ```markdown
-### 0. Homelab Prereqs
-- [ ] IAM role(s) created in Terraform (self-hosted-oidc/terraform/iam/) before any cluster deployment
-- [ ] Vault paths planned: `secret/homelab/<project>/` keys identified
-- [ ] Runbook stub created in local-k8s-docs/runbooks/<component>/ (can be filled in post-deploy)
+### 0. Cluster Prereqs
+- [ ] IAM role(s) created in Terraform before any cluster deployment
+- [ ] Vault paths planned: `secret/<cluster-prefix>/<project>/` keys identified
+- [ ] Runbook stub created in runbook repo under runbooks/<component>/ (can be filled in post-deploy)
 ```
 
 ---

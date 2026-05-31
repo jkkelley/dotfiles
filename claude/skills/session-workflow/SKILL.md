@@ -174,10 +174,10 @@ When a project spans multiple sessions, each session gets its own plan file:
 - Plan ends with an "Output for Session N+1" section stating what the next session expects
 - Session ends with: PR opened, context-compaction run, CONTEXT_STATE.md updated
 
-**Standing rules that apply to every session in a homelab project:**
-1. No hardcoded AWS account IDs, role ARNs, bucket names, or credentials in any git file — all values come from Vault at `secret/homelab/`
+**Standing rules that apply to every session in a multi-session cluster project:**
+1. No hardcoded AWS account IDs, role ARNs, bucket names, or credentials in any git file — all values come from Vault at `secret/<cluster-prefix>/`
 2. IAM roles (Terraform) are created before any cluster work that depends on them
-3. Any new infrastructure component deployed to the cluster gets a runbook committed to `https://github.com/jkkelley/local-k8s-docs/runbooks/<component>/` with a `README.md` and the runbook `.md` file
+3. Any new infrastructure component deployed to the cluster gets a runbook committed to your cluster runbook repo under `runbooks/<component>/` with a `README.md` and the runbook `.md` file
 4. Last session of any multi-session project produces an architecture diagram and a Project Brief handoff document
 
 ---

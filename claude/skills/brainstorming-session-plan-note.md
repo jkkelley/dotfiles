@@ -13,9 +13,9 @@ After presenting a design and getting approval, the skill should ask:
 
 ## Homelab standing rules to inject into every session plan
 
-1. No hardcoded AWS account IDs, role ARNs, bucket names, or credentials in any git file — all values from Vault at `secret/homelab/`
+1. No hardcoded AWS account IDs, role ARNs, bucket names, or credentials in any git file — all values from Vault at `secret/<cluster-prefix>/`
 2. IAM roles (Terraform) created before any cluster work that depends on them
-3. Any new infra component deployed to the cluster gets a runbook at `https://github.com/jkkelley/local-k8s-docs/runbooks/<component>/`
+3. Any new infra component deployed to the cluster gets a runbook in your cluster runbook repo under `runbooks/<component>/`
 4. Last session of any multi-session project: architecture diagram + Project Brief handoff doc
 
 ## Action required
