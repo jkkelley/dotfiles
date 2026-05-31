@@ -157,6 +157,34 @@ If a section doesn't apply (e.g. no AWS, no K8s), omit it entirely — don't inc
 
 ---
 
+## Homelab Standing Rules (always apply)
+
+Every new project on the homelab cluster is Vault-first from day one:
+
+**Secret handling:**
+- No AWS account IDs, role ARNs, bucket names, or credentials go in any git file
+- All env-specific values live in HashiCorp Vault at `secret/homelab/<category>/<key>`
+- Manifests use AVP placeholders: `<path:secret/data/homelab/roles#role-name>`
+- Pipelines use `withVaultSecrets()` and `withVaultAwsCreds()` from jenkins-shared-lib
+- Vault path hierarchy: `secret/homelab/aws/`, `secret/homelab/roles/`, `secret/homelab/buckets/`, `secret/homelab/github/`, `secret/homelab/argocd/`, `secret/homelab/<project>/`
+
+**IAM prereqs:**
+- If a new component needs AWS IAM permissions, create the IAM role in Terraform (self-hosted-oidc/terraform/iam/) *before* deploying the component to the cluster
+
+**Runbook rule:**
+- Every new infrastructure component deployed to the cluster gets a runbook at `https://github.com/jkkelley/local-k8s-docs/runbooks/<component-name>/` with a `README.md` (what it covers, when to use it) and `<component>_runbook.md` (the runbook). Feature branch, PR to main.
+
+Add these three items to the kickoff checklist output whenever the project targets the homelab cluster:
+
+```markdown
+### 0. Homelab Prereqs
+- [ ] IAM role(s) created in Terraform (self-hosted-oidc/terraform/iam/) before any cluster deployment
+- [ ] Vault paths planned: `secret/homelab/<project>/` keys identified
+- [ ] Runbook stub created in local-k8s-docs/runbooks/<component>/ (can be filled in post-deploy)
+```
+
+---
+
 ## Step 3 — Save to Knowledge Base
 
 After outputting the checklist, ask:

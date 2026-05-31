@@ -30,7 +30,7 @@ One task. One session. Always ends with test → verify → commit → PR → ch
 
 ## Step 0 — Orient
 
-1. Read the current plan file. Look in `~/.claude/plans/` or ask the user for the path if ambiguous.
+1. Read the current plan file. Look first in `<project-root>/claude-plans/<branch-name>.md`, then `~/.claude/plans/`, or ask the user for the path if ambiguous.
 2. Identify which session/task is next. Confirm with the user if unclear.
 3. **Create the session feature branch** — never work on `main`:
    ```bash
@@ -158,6 +158,27 @@ Output a short summary with these four things, in this order:
 4. **Stop.** Do not begin the next session's work.
 
 If the user explicitly asks to continue into the next session in the same conversation, repeat Steps 1–6 for the new session (including a new feature branch and new PR) before stopping again.
+
+---
+
+## Session-Based Planning Convention
+
+When a project spans multiple sessions, each session gets its own plan file:
+
+**Naming:**
+- Plan file: `<branch-name>.md` saved to the project's `claude-plans/` directory
+- Feature branch: `feat/<branch>` — all work goes here, never directly to main
+
+**Structure:**
+- Every plan starts with the full Session Map table (all sessions listed)
+- Plan ends with an "Output for Session N+1" section stating what the next session expects
+- Session ends with: PR opened, context-compaction run, CONTEXT_STATE.md updated
+
+**Standing rules that apply to every session in a homelab project:**
+1. No hardcoded AWS account IDs, role ARNs, bucket names, or credentials in any git file — all values come from Vault at `secret/homelab/`
+2. IAM roles (Terraform) are created before any cluster work that depends on them
+3. Any new infrastructure component deployed to the cluster gets a runbook committed to `https://github.com/jkkelley/local-k8s-docs/runbooks/<component>/` with a `README.md` and the runbook `.md` file
+4. Last session of any multi-session project produces an architecture diagram and a Project Brief handoff document
 
 ---
 

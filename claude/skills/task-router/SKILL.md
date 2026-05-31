@@ -22,6 +22,16 @@ Coordinate multi-task projects. One Claude session holds the plan and routes wor
 
 ---
 
+## Session Plan Routing
+
+When a user says `start plan feat/<name>` or `start session feat/<name>`:
+1. Read `claude-plans/<name>.md` in the current project directory
+2. Load the Session Map from the plan header — this tells you where you are in the overall project
+3. Begin executing the tasks in that plan file from the first unchecked `- [ ]` item
+4. Apply the homelab standing rules: Vault-first, IAM-prereqs-first, runbook-for-every-component (see `project-kickoff` skill for the full rules)
+
+---
+
 ## Step 0 — Orient
 
 1. Read the master plan file. Confirm its location with the user if unclear.
