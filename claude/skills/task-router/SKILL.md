@@ -133,9 +133,12 @@ Print the PR URL, then **STOP. Do not proceed to the next task.**
 ## Step N+3: Post-merge (after user confirms merged)
 
     git checkout main
-    git pull
+    git pull origin main
 
-Ask the user: "Delete local branch `feat/<branch>`?"
+Ask: "Ready to log this PR with daily-pr-log? (yes / no)" — do not log automatically.
+If yes: invoke `daily-pr-log` with the PR URL.
+
+Ask: "Ready to clean up the branch? (yes / no)" — do not delete automatically.
 If yes: `git branch -d feat/<branch>`
 
 ---
@@ -159,14 +162,16 @@ If none: omit this section.
 At the PR open moment, do all of the following before stopping:
 
 1. Announce: `"PR #N is open — <title> — <url>. Please review and merge when ready."`
-2. Call the **daily-pr-log** skill to append the URL to today's log
-3. If the handoff doc has a non-empty "Bugs found" section, surface it:
+2. If the handoff doc has a non-empty "Bugs found" section, surface it:
    ```
    Issues found during this task:
    - [issue] → [fix]
    - [issue] → [fix]
    Which of these do you want me to log?
    ```
+3. Ask: `"Ready to log this PR with daily-pr-log? (yes / no)"` — **do not log automatically**
+   - If yes: invoke the `daily-pr-log` skill with the PR URL. Confirm once logged.
+   - If no: acknowledge and move on.
 4. **STOP.** Do not proceed to the next task.
 
 ---
@@ -177,11 +182,12 @@ When the user confirms the PR is merged:
 
 ```bash
 git checkout main
-git pull
+git pull origin main
 ```
 
-Ask: "Delete local branch `feat/<branch>`?"
-If yes: `git branch -d feat/<branch>`
+Ask: `"Ready to clean up the branch? (yes / no)"` — **do not delete automatically**
+- If yes: `git branch -d feat/<branch>`
+- If no: leave the branch in place.
 
 **Mark the task complete in the master plan file** — flip the task's checkbox from `- [ ]` to `- [x]` and save. This is the durable state record. `TaskUpdate` handles in-session tracking; the plan file checkbox handles cross-session persistence so any future router session can read the plan and know exactly which tasks are done.
 
@@ -217,3 +223,5 @@ Then move to the next unchecked task in the plan and repeat from Step 1.
 | "The user will remember to tell me the branch is merged" | Wait for explicit confirmation before pulling main. |
 | "This task is small, I can skip the handoff doc structure" | Small tasks still need the PR gate and bug section. |
 | "I'll put real values in to make it easier" | Never. PLACEHOLDER_* always. The real values incident will repeat. |
+| "I'll just log the PR automatically" | No. Always ask first. `daily-pr-log` is a gate, not a default action. |
+| "I'll clean up the branch after merge without asking" | No. Always ask before `git branch -d`. The user decides when to clean up. |

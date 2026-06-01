@@ -147,7 +147,45 @@ The checkpoint must capture:
 
 ---
 
-## Step 6 — Stop & Hand Off
+## Step 6 — Close-Out Gate
+
+This step runs after the checkpoint. Do not skip any part of it.
+
+### 6a — Hand PR to user for review
+Tell the user:
+> "PR is open at [URL] and the session is checkpointed. Review the PR on GitHub when you're ready, then come back here."
+
+Wait for the user to confirm they have reviewed the PR.
+
+### 6b — Log gate (ask first, do not log automatically)
+Once the user confirms they've reviewed, ask:
+> "Ready to log this PR with daily-pr-log? (yes / no)"
+
+- If **yes**: invoke the `daily-pr-log` skill with the PR URL. Confirm once logged.
+- If **no**: acknowledge and note they can run `daily-pr-log` manually at any time.
+
+### 6c — Merge confirmation
+Tell the user:
+> "Merge the PR on GitHub when you're ready, then let me know."
+
+Wait for the user to confirm the PR has been merged.
+
+### 6d — Branch cleanup (ask first, do not run automatically)
+Once the user confirms the PR is merged, ask:
+> "Ready to clean up the branch and pull main? (yes / no)"
+
+- If **yes**: run the following in order:
+  ```bash
+  git checkout main
+  git branch -d feat/session-<name>
+  git pull origin main
+  ```
+  Confirm: "`feat/session-<name>` deleted, `main` is up to date."
+- If **no**: acknowledge and leave the branch in place.
+
+---
+
+## Step 7 — Stop & Hand Off
 
 Output a short summary with these four things, in this order:
 
@@ -157,7 +195,7 @@ Output a short summary with these four things, in this order:
    > **Next:** Session: site-build — say *start session site-build* to begin.
 4. **Stop.** Do not begin the next session's work.
 
-If the user explicitly asks to continue into the next session in the same conversation, repeat Steps 1–6 for the new session (including a new feature branch and new PR) before stopping again.
+If the user explicitly asks to continue into the next session in the same conversation, repeat Steps 1–7 for the new session (including a new feature branch and new PR) before stopping again.
 
 ---
 
@@ -190,5 +228,7 @@ When a project spans multiple sessions, each session gets its own plan file:
 - **Never commit to `main`.** Every session runs on `feat/session-<name>`. No exceptions.
 - **Every session gets a PR.** Open it at the end of every session, not just the last one.
 - **Always give the PR URL.** The user must receive the link before the session stops.
+- **Never log automatically.** Always ask the user before invoking `daily-pr-log`. This is a gate, not an assumption.
+- **Never clean up the branch automatically.** Always ask the user before running `git checkout main && git branch -d && git pull`. This is a gate, not an assumption.
 - **Always name the next session.** Tell the user the next session name and the exact phrase to start it.
 - **Stop after hand-off.** Do not continue into the next session unprompted.
