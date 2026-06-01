@@ -1,6 +1,6 @@
 ---
 name: plan-scaffold
-description: Scaffold a new project workspace inside the claude-plans repo. Creates the full directory structure (CLAUDE.md, README, issues.md, sessions-table, CONTEXT_STATE stub, per-subproject dirs), updates the root README.md project tables, then asks whether to commit/push, sync to S3, or both. Optionally chains into project-kickoff. Use when the user says "plan-scaffold", "scaffold a new project", "set up a project workspace", or after brainstorming when ready to lay down the planning structure.
+description: Scaffold a new project workspace inside the claude-plans repo. Creates the full directory structure (project-specific CLAUDE.md additions, README, issues.md, sessions-table, CONTEXT_STATE stub, .claudeignore symlink, .claude/settings.local.json, per-subproject dirs), updates the root README.md project tables, then asks whether to commit/push, sync to S3, or both. Optionally chains into project-kickoff. Use when the user says "plan-scaffold", "scaffold a new project", "set up a project workspace", or after brainstorming when ready to lay down the planning structure.
 ---
 
 # plan-scaffold
@@ -27,15 +27,39 @@ brainstorming → plan-scaffold → (optional) project-kickoff
 - **One question per message.** Never bundle questions.
 - **No assumptions.** If an answer implies a follow-up, ask it next turn.
 - **Don't scaffold until all questions are answered.**
-- **Root claude-plans/ stays clean.** Only directories at root — no loose files beyond README.md, CLAUDE.md, .gitignore, .claudeignore.
-- **No PII in this skill file.** Paths and usernames are resolved at runtime (see Step 0).
+- **Root claude-plans/ stays clean.** Only directories live at root — no loose files beyond README.md, CLAUDE.md, .gitignore, .claudeignore.
+- **No PII in this skill file.** All paths, usernames, and account values are resolved at runtime (see Step 0) or collected from the user during the interview.
+- **No placeholders in generated files.** Every value in every scaffolded file must be real — filled in from Step 0 or the interview. If a value is unknown, ask. Never write `<ACCOUNT_ID>` or `<AWS_PROFILE>` into a file.
+
+---
+
+## Directory Hierarchy — How It Works
+
+The claude-plans repo is a three-level tree. Every Claude session started from inside it automatically inherits context from every level above:
+
+```
+claude-plans/                  ← ROOT — CLAUDE.md (12 rules + workflow), .claudeignore, .gitignore
+└── <project>/                 ← PROJECT — project-specific CLAUDE.md additions, README, issues, sessions
+    └── <subproject>/          ← SUBPROJECT — plan, implementation-plan, sessions-table
+```
+
+**CLAUDE.md inheritance:** Claude Code loads CLAUDE.md from ALL parent directories automatically.
+- Root `claude-plans/CLAUDE.md` contains the 12 rules + workflow profile — loaded for every session in every project.
+- Per-project `CLAUDE.md` contains ONLY project-specific additions (repos, paths, project rules). It does NOT repeat the 12 rules.
+- Per-subproject has no CLAUDE.md — it inherits from both above.
+- **Never copy or symlink the root CLAUDE.md into a project.** The hierarchy handles it.
+
+**.claudeignore inheritance:** Each project symlinks to the root `.claudeignore`.
+- `<project>/.claudeignore` → `../.claudeignore`
+- Change the root once, all projects follow.
+
+**settings.local.json scoping:** Each project has its own `.claude/settings.local.json` with permissions scoped to that project's repos and tools. Sessions started from within a project directory pick up only that project's permissions — no bleed from other projects.
 
 ---
 
 ## Step 0 — Discover Runtime Context
 
 Before asking anything, resolve these values silently by running shell commands.
-Never hardcode them — they vary per machine and user.
 
 ```bash
 # Local root of the claude-plans repo
@@ -44,51 +68,80 @@ PLANS_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/Documents/
 # GitHub remote URL for the claude-plans repo
 GITHUB_REMOTE=$(git -C "$PLANS_ROOT" remote get-url origin 2>/dev/null || echo "unknown")
 
-# GitHub username (derived from remote or gh CLI)
+# GitHub username
 GITHUB_USER=$(gh api user --jq .login 2>/dev/null || echo "unknown")
+
+# Today's date
+TODAY=$(date +%Y-%m-%d)
 ```
 
 If `PLANS_ROOT` cannot be resolved (not inside the repo), tell the user:
-> "Run this from inside the claude-plans repo, or cd there first: `cd ~/Documents/claude-plans`"
+> "Run this from inside the claude-plans repo: `cd ~/Documents/claude-plans && claude`"
 Then stop.
 
 ---
 
 ## Step 1 — Interview (one question per turn)
 
-Ask these in order. Stop after each and wait for the answer.
+Ask these in order. Stop after each and wait for the answer before continuing.
 
-1. **Project name** — becomes the directory name and slug (lowercase, hyphens). Example: `homelab-observability`
-2. **One-line description** — what is this project doing or fixing?
-3. **Subprojects / workstreams** — are there multiple independent tracks inside this project? (yes / no)
-   - If yes: list them one per line. Each becomes a subdirectory with its own plan and sessions table.
-   - If no: the project root IS the working directory; no subdirectories created.
-4. **Repos involved** — list the GitHub repos this project will touch (e.g. `homelab-gitops`, `prospector-be`). One per line. "none yet" is fine.
-5. **Start date** — today's date is shown; confirm or override. Format: YYYY-MM-DD.
+**Q1. Project name**
+> "What should we call this project? This becomes the directory name — lowercase, hyphens. Example: `homelab-observability`"
+
+**Q2. One-line description**
+> "One sentence: what is this project doing or fixing?"
+
+**Q3. Subprojects / workstreams**
+> "Are there multiple independent tracks inside this project that each need their own plan and sessions table? (yes / no)"
+- If yes: "List them one per line — each becomes a subdirectory."
+- If no: project root is the working dir; no subdirectories.
+
+**Q4. Repos involved**
+> "Which GitHub repos will this project touch? List them one per line. 'none yet' is fine."
+
+**Q5. Local paths for each repo**
+> (Ask for EACH repo listed in Q4, one at a time)
+> "What is the local path to `<repo>` on this machine? Example: `~/projects/homelab-gitops`"
+- Skip if Q4 was "none yet".
+
+**Q6. S3 backup**
+> "Does this project need S3 backup? The root README has a backup section — should this project also sync to S3? (yes / no)"
+- If yes, continue to Q7 and Q8.
+- If no, skip to Q9.
+
+**Q7. AWS Account ID** *(only if Q6 = yes)*
+> "What is your AWS Account ID? This fills the S3 bucket name in the project README."
+
+**Q8. AWS CLI profile** *(only if Q6 = yes)*
+> "What AWS CLI profile should be used for S3 sync? Example: `my-admin-profile`"
+
+**Q9. Pre-allowed permissions**
+> "Any tools you know you'll need pre-allowed in `.claude/settings.local.json` for this project? Common ones: `Bash(kubectl *)`, `Bash(terraform *)`, `Bash(docker *)`. List them, or say 'none' to start minimal.
+> Note: run the `fewer-permission-prompts` skill after your first session to auto-expand this."
+
+**Q10. Start date**
+> "Start date for this project? (confirm today: `<TODAY>`, or enter a different YYYY-MM-DD)"
 
 ---
 
 ## Step 2 — Scaffold the Directory
 
-Create the following structure under `$PLANS_ROOT/<project-name>/`.
-Use the answers from the interview to fill in every value — no placeholders in generated files.
+Create the following under `$PLANS_ROOT/<project-name>/`.
+All values come from Step 0 or the interview — no placeholders, no guessing.
 
-### Always created
+### Directory tree
 
 ```
 <project-name>/
-├── CLAUDE.md
+├── .claudeignore              ← symlink to ../.claudeignore
+├── .claude/
+│   └── settings.local.json   ← project-scoped permissions
+├── CLAUDE.md                  ← project-specific additions ONLY (not the 12 rules)
 ├── README.md
 ├── issues.md
 ├── sessions-table.md
-└── CONTEXT_STATE.md
-```
-
-### Per subproject (if subprojects were listed)
-
-```
-<project-name>/
-└── <subproject-name>/
+├── CONTEXT_STATE.md
+└── <subproject>/              ← one per subproject, if any
     ├── plan.md
     ├── implementation-plan.md
     └── sessions-table.md
@@ -96,21 +149,178 @@ Use the answers from the interview to fill in every value — no placeholders in
 
 ### File contents
 
-**CLAUDE.md** — copy the 12-rule template exactly from `$PLANS_ROOT/CLAUDE.md` (the root one). Do not modify it.
+---
 
-**README.md** — generate with:
-- Project name + description at top
-- "Local only. Never committed." note (if sensitive) or omit if it's fine to push
-- Repos Involved table (from interview answer)
-- Standing Rules section (8 rules from the helm-vault-migration README pattern — no hardcoding, restate generically)
-- Session Close-Out Sequence section (the 10-step close-out sequence)
-- Backup section — S3 sync commands using `$PLANS_ROOT` as the local path and `$GITHUB_REMOTE` as the remote reference note
+#### `.claudeignore` — symlink
 
-**issues.md** — empty log with format header:
+```bash
+ln -sf ../.claudeignore "$PLANS_ROOT/<project-name>/.claudeignore"
+```
+
+Do not create a new file. The root `.claudeignore` is the source of truth.
+
+---
+
+#### `.claude/settings.local.json`
+
+Scaffold with:
+- Core always-useful permissions (git, gh, aws s3 sync)
+- Any tools the user listed in Q9
+- A comment block explaining what this file does and the directory hierarchy it belongs to
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(gh pr *)",
+      "Bash(gh repo *)",
+      "Bash(aws s3 sync *)"
+      <additional entries from Q9>
+    ]
+  }
+}
+```
+
+> **Note to Claude**: JSON does not support comments. Do not add comment lines — the hierarchy note goes in the project README and CLAUDE.md instead.
+
+After creating, tell the user:
+> "Permissions pre-seeded with git, gh, and aws s3. Run `fewer-permission-prompts` after your first session to auto-expand based on what you actually used."
+
+---
+
+#### `CLAUDE.md` — project-specific additions only
+
+Do NOT copy or repeat the 12 rules. They are inherited from `$PLANS_ROOT/CLAUDE.md` automatically.
+
+```markdown
+# Project: <project-name>
+
+> Part of: claude-plans/ at <PLANS_ROOT>
+> GitHub: <GITHUB_REMOTE>
+> This file adds project-specific context on top of the root CLAUDE.md (12 rules + workflow).
+
+## Project Context
+
+**Description:** <one-line description from Q2>
+**Started:** <start-date>
+
+## Repos Involved
+
+| Repo | Local Path |
+|------|------------|
+| <repo> | `<local-path>` |
+
+## Subprojects
+
+| Subproject | Directory | Status |
+|------------|-----------|--------|
+| <subproject> | `<subproject>/` | not started |
+
+*(If no subprojects, omit this section.)*
+
+## Project-Specific Rules
+
+*Add any rules that override or extend the root 12-rule set for this project specifically.*
+```
+
+---
+
+#### `README.md`
+
+```markdown
+# <project-name>
+
+<one-line description>
+
+**Parent workspace:** claude-plans/ at <PLANS_ROOT>
+**GitHub:** <GITHUB_REMOTE>/tree/main/<project-name>
+
+---
+
+## Repos Involved
+
+| Repo | GitHub | Local Path |
+|------|--------|------------|
+| <repo> | `github.com/<GITHUB_USER>/<repo>` | `<local-path>` |
+
+---
+
+## Subprojects
+
+| Subproject | Directory | Status |
+|------------|-----------|--------|
+| <subproject> | `<subproject>/` | not started |
+
+*(If no subprojects, omit this section.)*
+
+---
+
+## Standing Rules
+
+Every session in this project enforces these without exception:
+
+1. No hardcoded values in git — credentials, ARNs, tokens go to Vault or secrets manager.
+2. Every session runs on a feature branch — nothing merges to main without a reviewed PR.
+3. New session starts with `git pull origin main` — after previous PR is merged.
+4. PR URL logged to `issues.md` immediately when opened.
+5. Verify success criteria before closing a session.
+6. Every non-obvious decision or deviation gets logged to `issues.md`.
+7. Read `issues.md` before starting work each session.
+8. Run context-compaction at the end of each session to update CONTEXT_STATE.md.
+
+---
+
+## Session Close-Out Sequence
+
+Runs at the end of every session — no exceptions:
+
+\`\`\`
+1. Open PR → give URL to user → log URL to issues.md
+2. Run context-compaction skill → update CONTEXT_STATE.md
+3. Commit + push changes to claude-plans repo
+4. Tell user: "Review the PR on GitHub when ready, then come back."
+5. Wait for review confirmation
+6. Ask: "Ready to log this PR with daily-pr-log? (yes / no)"  ← GATE
+7. Tell user: "Merge the PR when ready and let me know."
+8. Wait for merge confirmation
+9. Run post-merge cleanup (ask first):
+   git checkout main
+   git pull origin main
+   git branch -d <branch>
+10. Ask: "Ready to push the updated CONTEXT_STATE.md to claude-plans? (yes / no)"  ← GATE
+11. Confirm: "main is up to date, branch deleted, context saved — ready for next session."
+\`\`\`
+
+---
+
+## Backup (S3)
+
+*(Include only if Q6 = yes)*
+
+Bucket: `claude-plans-<ACCOUNT_ID>-us-east-2-an`
+Profile: `<AWS_PROFILE>`
+
+\`\`\`bash
+# Pull before starting a session
+aws s3 sync s3://claude-plans-<ACCOUNT_ID>-us-east-2-an/<project-name>/ \
+  $PLANS_ROOT/<project-name>/ --profile <AWS_PROFILE>
+
+# Push after closing a session
+aws s3 sync $PLANS_ROOT/<project-name>/ \
+  s3://claude-plans-<ACCOUNT_ID>-us-east-2-an/<project-name>/ --profile <AWS_PROFILE>
+\`\`\`
+```
+
+---
+
+#### `issues.md`
+
 ```markdown
 # Issues Log — <project-name>
 
-Read this before starting any session. Newest entries at top.
+> Part of: claude-plans/<project-name>/
+> Read this before starting any session. Newest entries at top.
 
 ---
 
@@ -134,39 +344,48 @@ Read this before starting any session. Newest entries at top.
 ---
 ```
 
-**sessions-table.md** — template shell:
+---
+
+#### `sessions-table.md`
+
 ```markdown
 # Sessions Table — <project-name>
+
+> Part of: claude-plans/<project-name>/
+> Subproject-specific files live in each subproject directory.
 
 ---
 
 ## Subprojects
 
-| Subproject | File |
+| Subproject | Sessions File |
 |---|---|
 | <subproject> | `<subproject>/sessions-table.md` |
+
+*(If no subprojects, put the sessions table directly here instead.)*
 
 ---
 
 ## How to Start a Session
 
-\`\`\`
-cd <repo-local-path>
-git checkout main && git pull origin main
+\`\`\`bash
+cd <PLANS_ROOT>
 claude -n "Session: <branch>"
 \`\`\`
 
-Then say the kick phrase listed in the subproject's sessions table.
+Paste CONTEXT_STATE.md as the opening prompt, then say the kick phrase from the subproject sessions table.
 ```
 
-(If no subprojects, the sessions table lives here directly instead of routing to subdirs.)
+---
 
-**CONTEXT_STATE.md** — stub only:
+#### `CONTEXT_STATE.md`
+
 ```markdown
 # CONTEXT_STATE.md
 
 > Feed this as the opening prompt of any new session.
-> Populate after the first session using the context-compaction skill.
+> **After your first session: run the `context-compaction` skill to populate this file.**
+> Do not edit manually unless re-validating against live infrastructure.
 
 ## Meta
 
@@ -175,22 +394,28 @@ Then say the kick phrase listed in the subproject's sessions table.
 | last_updated | <start-date> |
 | updated_by | plan-scaffold |
 | project | <project-name> |
-| repo | <PLANS_ROOT>/<project-name> |
+| local_root | <PLANS_ROOT>/<project-name> |
+| github | <GITHUB_REMOTE>/tree/main/<project-name> |
 
 ## Active Tasks
 
-_Populate after first session._
+_Populate after first session using context-compaction skill._
 
 ## Hydration Prompt
 
 _Populate after first session using context-compaction skill._
 ```
 
-**Per-subproject plan.md** — stub:
+---
+
+#### Per-subproject `plan.md`
+
 ```markdown
 # Plan — <subproject-name>
 
-> Part of project: <project-name>
+> Subproject of: <project-name>
+> Project root: <PLANS_ROOT>/<project-name>/
+> Sessions table: ./sessions-table.md
 
 ## Goal
 
@@ -205,18 +430,28 @@ _Fill in before first session._
 _Fill in before first session._
 ```
 
-**Per-subproject implementation-plan.md** — stub:
+---
+
+#### Per-subproject `implementation-plan.md`
+
 ```markdown
 # Implementation Plan — <subproject-name>
+
+> Subproject of: <project-name>
 
 _Fill in during or after brainstorming._
 ```
 
-**Per-subproject sessions-table.md**:
+---
+
+#### Per-subproject `sessions-table.md`
+
 ```markdown
 # Sessions Table — <subproject-name>
 
-**Project-specific file. Generic template lives at `../sessions-table.md`.**
+> Subproject of: <project-name>
+> Parent sessions table: ../sessions-table.md
+> Project root: <PLANS_ROOT>/<project-name>/
 
 ---
 
@@ -237,37 +472,29 @@ _Fill in during or after brainstorming._
 
 ## Step 3 — Update Root README.md
 
-Open `$PLANS_ROOT/README.md` and update the two project tables.
+Open `$PLANS_ROOT/README.md` and update both project tables.
 
-### In-Progress table
-
-Add a parent row for the new project, plus one `↳` row per subproject (if any):
+### Add to In-Progress table
 
 ```markdown
-## In-Progress Projects
-
-| Project | Directory | Started | Status |
-|---------|-----------|---------|--------|
 | <project-name> | `<project-name>/` | <start-date> | in progress |
 | ↳ <subproject> | `<project-name>/<subproject>/` | <start-date> | not started |
 ```
 
-### Completed table
+### Ensure Completed table exists
 
-Ensure this section exists (create it if missing). Do not add anything to it now.
-
-```markdown
-## Completed Projects
-
-| Project | Directory | Started | Completed | Notes |
-|---------|-----------|---------|-----------|-------|
-```
+If it doesn't exist, create it as an empty section. Do not add rows to it now.
 
 ### Moving rows to Completed
 
-When the user indicates a project is fully done (all `↳` rows are `complete`, or a solo project is `complete`):
-1. Remove the parent row and all its `↳` rows from In-Progress
-2. Add a single row to Completed with the start date, today's date as Completed, and a one-line note
+Only do this when the user explicitly confirms the project is fully done.
+1. Remove parent row and all `↳` rows from In-Progress
+2. Add one row to Completed: project name, directory, start date, today as completed date, one-line note
+
+### Updating subproject status day-to-day
+
+When a user says a subproject is starting, in progress, or complete — update its `↳` row in the In-Progress table. Do not wait to be asked. Prompt the user at the end of each session:
+> "Should I update the status for `↳ <subproject>` in the root README? Current: `<status>`. New status?"
 
 ---
 
@@ -280,8 +507,6 @@ Ask the user:
 > 3. Both
 > 4. Neither — I'll do it manually"
 
-Execute whichever they choose.
-
 **Commit + push:**
 ```bash
 git -C "$PLANS_ROOT" add <project-name>/ README.md
@@ -289,21 +514,43 @@ git -C "$PLANS_ROOT" commit -m "feat: scaffold <project-name> project workspace"
 git -C "$PLANS_ROOT" push origin main
 ```
 
-**S3 sync** — read the bucket name and profile from the Backup section of `$PLANS_ROOT/README.md`. Do not hardcode them.
+**S3 sync** — use the exact bucket and profile values collected in Q7 and Q8. If Q6 was "no", skip S3 option entirely.
 
 ---
 
-## Step 5 — project-kickoff Gate
+## Step 5 — Session Close-Out Gates
 
-After persisting, ask:
-> "Do you want to run project-kickoff to wire up infrastructure (AWS, K8s, secrets, CI/CD)? This is optional — skip it for cleanup, docs, or non-infra projects. (yes / no)"
+These gates run at the END of every working session (not just during scaffolding).
+Scaffold puts them in the project README — but also enforce them here when a session wraps up.
+
+**After PR is open:**
+1. Ask: "Ready to log this PR with daily-pr-log? (yes / no)" — never log automatically.
+
+**After user confirms PR is merged:**
+2. Ask: "Ready to run context-compaction to update CONTEXT_STATE.md? (yes / no)"
+3. Ask: "Ready to clean up the branch and pull main? (yes / no)"
+   If yes:
+   ```bash
+   git checkout main
+   git pull origin main
+   git branch -d <branch-name>
+   ```
+   Confirm: "`<branch>` deleted, main is up to date."
+4. Ask: "Ready to commit + push the updated CONTEXT_STATE.md and any plan changes to claude-plans? (yes / no)"
+
+---
+
+## Step 6 — project-kickoff Gate
+
+After Step 4, ask:
+> "Do you want to run project-kickoff to wire up infrastructure (AWS, K8s, secrets, CI/CD)? Skip this for cleanup, docs, or non-infra projects. (yes / no)"
 
 - If **yes**: invoke the `project-kickoff` skill.
-- If **no**: tell the user the workspace is ready and give them the start-of-session instructions:
-  > "Your workspace is at `$PLANS_ROOT/<project-name>/`. To start your first session:
-  > 1. Open the claude-plans repo: `claude` (from `$PLANS_ROOT`)
-  > 2. Paste the contents of `<project-name>/CONTEXT_STATE.md` to hydrate context
-  > 3. Update `CONTEXT_STATE.md` after the session using the context-compaction skill"
+- If **no**: wrap up with:
+  > "Your workspace is at `$PLANS_ROOT/<project-name>/`. First session:
+  > 1. `cd $PLANS_ROOT && claude`
+  > 2. Paste `<project-name>/CONTEXT_STATE.md` as your opening prompt
+  > 3. At end of session: run `context-compaction` to populate CONTEXT_STATE.md"
 
 ---
 
@@ -312,7 +559,22 @@ After persisting, ask:
 | Temptation | Rule |
 |---|---|
 | "I'll put the username/path directly in the skill" | Never. Resolve at runtime via git/gh commands. |
+| "I'll write `<ACCOUNT_ID>` into a scaffolded file" | Never. Collect the real value in Q7 or skip S3. |
+| "I'll copy the root CLAUDE.md into the project" | Never. Claude Code loads parent dirs automatically. Per-project CLAUDE.md = additions only. |
+| "I'll create a new .claudeignore file for the project" | Never. Symlink to `../.claudeignore`. One source of truth. |
 | "I'll create a loose file at claude-plans root" | Never. Root stays clean — dirs only. |
 | "I'll skip the Completed table if there's nothing in it" | Always create the section, even if empty. |
 | "project-kickoff is probably needed, I'll just run it" | Always ask. It's optional. |
-| "I'll move the row to Completed when the last PR merges" | Only move when the user confirms the project is done. |
+| "I'll move the row to Completed when the last PR merges" | Only move when the user explicitly confirms the project is done. |
+| "I'll log the PR automatically" | Never. Always ask first. |
+| "I'll clean up the branch after merge without asking" | Never. Always ask before `git branch -d`. |
+
+---
+
+## FLAG — Workflow Profile (future work)
+
+The user's workflow preferences, always-used skills, and session conventions currently live in:
+- Root `claude-plans/CLAUDE.md` (Workflow & Skills section)
+- This skill file (gates and close-out sequence)
+
+A future `workflow-profile` skill or document should consolidate all of this so any Claude session — even outside claude-plans — loads the user's working style automatically. Flag this as a standalone project when the current work settles.
