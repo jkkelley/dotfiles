@@ -22,6 +22,37 @@ description: >
 > Verified 2026-05-26 against the live homelab cluster. These facts override the generic
 > patterns below. Do NOT follow the generic naming or bootstrap steps for this cluster.
 
+### SSM-FIRST RULE — Mandatory for ALL homelab Vault seeding
+
+> Established 2026-06-02. No exceptions — not even for non-sensitive config values.
+
+**Every value that goes into Vault must first exist as an SSM parameter.** This applies to:
+- Secrets (API keys, passwords, PATs, tokens)
+- Config (region names, SA names, store names, resource limits, ports, hostnames, ARNs)
+
+**The two-step pattern for every Vault value:**
+```bash
+# Step 1 — SSM first (always)
+aws ssm put-parameter \
+  --name "/<project>/<key>" \
+  --value "<value>" \
+  --type SecureString \
+  --region us-east-2 \
+  --profile <AWS_PROFILE>
+
+# Step 2 — Vault reads from SSM (via vault-seed.sh)
+# Add a ssm_get() call to self-hosted-odic/scripts/vault-seed.sh for this key
+# Open a PR to self-hosted-odic before the session PR is merged
+```
+
+**vault-seed.sh never hardcodes values.** If you find yourself writing a literal value into vault-seed.sh, stop — put it in SSM first.
+
+**After any Vault seeding session:**
+1. All new values exist as SSM parameters
+2. `self-hosted-odic/scripts/vault-seed.sh` has `ssm_get()` calls for every new key
+3. PR opened to `self-hosted-odic` before or alongside the app PR
+4. `~/Documents/local-k8s-docs/runbooks/vault-recovery/vault_recovery.md` Scenario 7 is current
+
 **Before proceeding — ask the user these two questions (do not guess or use cached values):**
 1. *"What is your AWS account ID?"* → store as `{AWS_ACCOUNT_ID}`
 2. *"What AWS profile should I use?"* → store as `{AWS_PROFILE}`

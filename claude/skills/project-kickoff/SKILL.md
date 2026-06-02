@@ -171,6 +171,12 @@ Every new project on the cluster is Vault-first from day one:
 - Pipelines use `withVaultSecrets()` from your Jenkins shared library for build-time secrets
 - Vault path hierarchy: `secret/homelab/apps/<project>/`, `secret/homelab/roles/`, `secret/homelab/github/`, `secret/homelab/aws/`, `secret/homelab/services/`
 
+**SSM-first rule (mandatory — no exceptions):**
+- Every value going into Vault (secret OR config) must first be stored as an SSM parameter
+- This includes: region names, SA names, store names, resource limits, ports, hostnames, ARNs — everything
+- `vault-seed.sh` (`self-hosted-odic/scripts/vault-seed.sh`) reads all values from SSM — never hardcodes them
+- Kickoff checklist must include: (a) SSM parameters created for all planned Vault keys, (b) vault-seed.sh updated with `ssm_get()` calls for every new key, (c) PR opened to `self-hosted-odic`
+
 **IAM prereqs:**
 - If a new component needs AWS IAM permissions, create the IAM role in Terraform *before* deploying the component to the cluster
 
@@ -183,6 +189,8 @@ Add these three items to the kickoff checklist output whenever the project targe
 ### 0. Cluster Prereqs
 - [ ] IAM role(s) created in Terraform before any cluster deployment
 - [ ] Vault paths planned: `secret/<cluster-prefix>/<project>/` keys identified
+- [ ] SSM parameters created for every planned Vault key (secret AND config) before any vault kv put/patch
+- [ ] `self-hosted-odic/scripts/vault-seed.sh` updated with `ssm_get()` calls for every new key — PR opened
 - [ ] Runbook stub created in runbook repo under runbooks/<component>/ (can be filled in post-deploy)
 ```
 
