@@ -278,6 +278,16 @@ Default to surfacing uncertainty, not hiding it.
 
 *(If no subprojects, omit this section.)*
 
+## Skills In Use
+
+| Skill | When |
+|-------|------|
+| `session-workflow` | Every implementation session |
+| `context-compaction` | End of every session |
+| `container-sandbox` | Local-first testing — use before touching any shared infra. Dependency installs (npm/pip/go), running services locally, any local verification. Test here first, always. |
+| `daily-pr-log` | At session close — always ask first, never automatic |
+| `log-issue` | Any decision or deviation worth recording |
+
 ## Project-Specific Rules
 
 *Add any rules that override or extend the root 12-rule set for this project specifically.*
