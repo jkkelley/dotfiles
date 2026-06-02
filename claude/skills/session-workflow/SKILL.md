@@ -223,7 +223,7 @@ When a project spans multiple sessions, each session gets its own plan file:
 8. **SSM-first rule:** Every value seeded into Vault (secret OR config) must first exist as an SSM parameter. vault-seed.sh reads from SSM — never hardcodes values. This covers region names, SA names, resource limits, ports, hostnames, ARNs — everything without exception.
 9. **vault-seed.sh update is part of every vault-seed session:** Any session that creates or modifies Vault paths must update `vault-seed.sh` with `ssm_get()` calls for every new key, and update the SSM Parameter Inventory in `vault_seed.md`. The local-k8s-docs PR must be opened before or alongside the app PR — never left as a follow-up.
    - Local:  `~/Documents/local-k8s-docs/runbooks/vault-seed/vault-seed.sh`
-   - Remote (DR fallback): `https://raw.githubusercontent.com/jkkelley/local-k8s-docs/main/runbooks/vault-seed/vault-seed.sh`
+   - Remote (DR fallback): `https://github.com/jkkelley/local-k8s-docs/blob/main/runbooks/vault-seed/vault-seed.sh`
 
 ---
 

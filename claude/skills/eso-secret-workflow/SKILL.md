@@ -43,7 +43,7 @@ aws ssm put-parameter \
 # Step 2 — Vault reads from SSM (via vault-seed.sh)
 # Add a ssm_get() call to vault-seed.sh for this key:
 #   Local:  ~/Documents/local-k8s-docs/runbooks/vault-seed/vault-seed.sh
-#   Remote: https://raw.githubusercontent.com/jkkelley/local-k8s-docs/main/runbooks/vault-seed/vault-seed.sh
+#   Remote: https://github.com/jkkelley/local-k8s-docs/blob/main/runbooks/vault-seed/vault-seed.sh
 # Open a PR to local-k8s-docs before the session PR is merged
 ```
 
@@ -53,7 +53,7 @@ aws ssm put-parameter \
 1. All new values exist as SSM parameters
 2. `vault-seed.sh` has `ssm_get()` calls for every new key
    - Local:  `~/Documents/local-k8s-docs/runbooks/vault-seed/vault-seed.sh`
-   - Remote: `https://raw.githubusercontent.com/jkkelley/local-k8s-docs/main/runbooks/vault-seed/vault-seed.sh`
+   - Remote: `https://github.com/jkkelley/local-k8s-docs/blob/main/runbooks/vault-seed/vault-seed.sh`
 3. PR opened to `local-k8s-docs` before or alongside the app PR
 4. `~/Documents/local-k8s-docs/runbooks/vault-seed/vault_seed.md` SSM Parameter Inventory table is updated
 

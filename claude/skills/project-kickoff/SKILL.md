@@ -176,7 +176,7 @@ Every new project on the cluster is Vault-first from day one:
 - This includes: region names, SA names, store names, resource limits, ports, hostnames, ARNs — everything
 - `vault-seed.sh` reads all values from SSM — never hardcodes them
   - Local:  `~/Documents/local-k8s-docs/runbooks/vault-seed/vault-seed.sh`
-  - Remote: `https://raw.githubusercontent.com/jkkelley/local-k8s-docs/main/runbooks/vault-seed/vault-seed.sh`
+  - Remote: `https://github.com/jkkelley/local-k8s-docs/blob/main/runbooks/vault-seed/vault-seed.sh`
 - Kickoff checklist must include: (a) SSM parameters created for all planned Vault keys, (b) vault-seed.sh updated with `ssm_get()` calls for every new key, (c) PR opened to `local-k8s-docs`
 
 **IAM prereqs:**
@@ -194,7 +194,7 @@ Add these three items to the kickoff checklist output whenever the project targe
 - [ ] SSM parameters created for every planned Vault key (secret AND config) before any vault kv put/patch
 - [ ] `vault-seed.sh` updated with `ssm_get()` calls for every new key, SSM Parameter Inventory in `vault_seed.md` updated, PR opened to `local-k8s-docs`
       Local: `~/Documents/local-k8s-docs/runbooks/vault-seed/vault-seed.sh`
-      Remote (DR fallback): `https://raw.githubusercontent.com/jkkelley/local-k8s-docs/main/runbooks/vault-seed/vault-seed.sh`
+      Remote (DR fallback): `https://github.com/jkkelley/local-k8s-docs/blob/main/runbooks/vault-seed/vault-seed.sh`
 - [ ] Runbook stub created in runbook repo under runbooks/<component>/ (can be filled in post-deploy)
 ```
 
