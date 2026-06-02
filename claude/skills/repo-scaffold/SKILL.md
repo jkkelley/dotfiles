@@ -122,3 +122,21 @@ coverage/ / .nyc_output/
 ## Additional reference
 - See [scripts/scaffold.sh](scripts/scaffold.sh) — run this to do the copy + rename in one shot.
 - See [checklist.md](checklist.md) for a more detailed post-scaffold verification checklist by stack.
+
+---
+
+## Homelab K8s Checklist Addition
+
+When scaffolding a new app that deploys to the homelab cluster, add to the post-scaffold checklist:
+
+```
+- [ ] values.yaml uses AVP placeholders for ALL values except imageTag
+      Format: <path:secret/data/homelab/apps/<appname>#<key>>
+- [ ] No hardcoded ARNs, regions, SA names, store names, limits, or hostnames in any template
+- [ ] serviceaccount.yaml annotation uses {{ .Values.iamRoleArn }} — never a literal ARN
+- [ ] secretstore.yaml region uses {{ .Values.awsRegion }} — never a literal region
+- [ ] ArgoCD Application source uses plugin: { name: argocd-vault-plugin } — not helm:
+- [ ] ghcr-pull-secret wired via Vault-backed ESO ExternalSecret
+- [ ] Vault paths seeded at secret/homelab/apps/<appname>/ before first ArgoCD sync
+- [ ] imageTag left as literal "1" (or current tag) — Jenkins pipeline writes this on each build
+```

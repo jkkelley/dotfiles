@@ -519,3 +519,18 @@ Example invocations:
 - **Inbox empty:** print *"Inbox is empty — nothing to triage."* and stop.
 - **Targeted match: no items:** print *"No inbox items match '<substring>'."* and stop.
 - **Targeted match: multiple items:** list all matches with ids, ask the user to pick one or say "all of them".
+
+---
+
+## Homelab K8s Project Context
+
+When planning or estimating work on homelab Kubernetes projects, factor in the mandatory AVP + ESO infrastructure pattern:
+
+- Every new app that deploys to the cluster needs ~0.5–1 session of infrastructure wiring **before** the app runs
+- AVP (ArgoCD Vault Plugin): resolves all config values from Vault placeholders at sync time
+- ESO (External Secrets Operator): materializes runtime secrets as k8s Secrets
+- `imageTag` in values.yaml is the ONE literal value — everything else is a Vault placeholder
+- ArgoCD Applications use `plugin: argocd-vault-plugin` source, never `helm:` source
+- ghcr-pull-secret comes from Vault-backed ESO — factor this into new app setup time
+
+When triaging or estimating a new homelab K8s app project, flag this as non-negotiable infrastructure cost.

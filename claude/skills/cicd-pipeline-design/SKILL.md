@@ -185,3 +185,40 @@ restore-keys:
 ## Additional reference
 - See [platforms.md](platforms.md) for Jenkins, GitHub Actions, GitLab CI, and CircleCI platform-specific idioms, built-in variables, and config snippets.
 - See [patterns.md](patterns.md) for complete worked examples: PR ephemeral environment, matrix test fan-out, image promotion pipeline.
+
+---
+
+## Homelab K8s — AVP + ESO Secrets Contract for Pipelines
+
+When designing CI/CD pipelines for the homelab cluster (Jenkins + Kaniko + ArgoCD):
+
+### What the pipeline writes to GitOps
+
+Only `imageTag`. Nothing else. Period.
+
+```groovy
+updateGitOpsManifest(
+    overlayPath: 'helm/myapp',
+    imageName:   env.IMAGE_NAME,
+    newTag:      env.BUILD_NUMBER,   // writes imageTag: "42" via yq
+)
+```
+
+Every other key in `values.yaml` is an AVP placeholder (`<path:secret/data/...#key>`).
+If the pipeline writes any other key, it overwrites a Vault placeholder with a hardcoded value
+and breaks ArgoCD sync on the next run.
+
+### What provides secrets to the pod (not the pipeline)
+
+- **ghcr-pull-secret**: created by ESO ExternalSecret from Vault `secret/homelab/github#pat` — NOT by the pipeline
+- **App runtime secrets**: created by ESO ExternalSecrets from Vault or SSM
+- **Config values** (ARNs, regions, SA names, limits): resolved by AVP at ArgoCD sync time
+
+### ArgoCD Application source (all homelab apps)
+
+```yaml
+source:
+  path: helm/myapp
+  plugin:
+    name: argocd-vault-plugin  # NOT helm: { releaseName: ... }
+```

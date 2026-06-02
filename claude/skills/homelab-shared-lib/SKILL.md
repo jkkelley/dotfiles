@@ -330,3 +330,50 @@ pipeline {
     post { always { cleanWs() } }
 }
 ```
+
+---
+
+## Homelab AVP + ESO Contract — What the CI Pipeline Owns
+
+The Jenkins pipeline owns **exactly one value** in the GitOps repo: `imageTag`.
+
+```groovy
+// updateGitOpsManifest writes this — the only literal in values.yaml
+updateGitOpsManifest(
+    overlayPath: 'helm/myapp',
+    imageName:   env.IMAGE_NAME,
+    newTag:      env.BUILD_NUMBER,   // → imageTag: "42" written by yq
+)
+```
+
+**Everything else in `values.yaml` is an AVP placeholder.** The pipeline must never write to any other key in values.yaml. If it does, it will overwrite a Vault placeholder with a hardcoded value and break ArgoCD sync.
+
+### What AVP resolves (at ArgoCD sync time, not in the pipeline)
+
+```yaml
+# These are resolved by ArgoCD Vault Plugin — CI never touches them
+imageName:       <path:secret/data/homelab/apps/myapp#image-name>
+iamRoleArn:      <path:secret/data/homelab/roles#myapp-eso>
+awsRegion:       <path:secret/data/homelab/apps/myapp#aws-region>
+ssmSaName:       <path:secret/data/homelab/apps/myapp#ssm-sa-name>
+secretStoreName: <path:secret/data/homelab/apps/myapp#secret-store-name>
+memoryLimit:     <path:secret/data/homelab/apps/myapp#memory-limit>
+host:            <path:secret/data/homelab/apps/myapp#host>
+# ... all non-imageTag values
+```
+
+### ArgoCD Application source (all new apps use plugin, not helm)
+
+```yaml
+source:
+  path: helm/myapp
+  plugin:
+    name: argocd-vault-plugin
+# NEVER: helm: { releaseName: myapp }
+```
+
+### ghcr-pull-secret comes from ESO (Vault-backed)
+
+The pipeline does NOT create `ghcr-pull-secret`. ESO creates it at namespace deploy time
+by pulling `secret/homelab/github#pat` from Vault. The pipeline's `github-pat` Jenkins
+credential is separate and is only used for registry push during build.

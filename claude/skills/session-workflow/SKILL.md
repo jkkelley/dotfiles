@@ -213,10 +213,13 @@ When a project spans multiple sessions, each session gets its own plan file:
 - Session ends with: PR opened, context-compaction run, CONTEXT_STATE.md updated
 
 **Standing rules that apply to every session in a multi-session cluster project:**
-1. No hardcoded AWS account IDs, role ARNs, bucket names, or credentials in any git file — all values come from Vault at `secret/<cluster-prefix>/`
-2. IAM roles (Terraform) are created before any cluster work that depends on them
-3. Any new infrastructure component deployed to the cluster gets a runbook committed to your cluster runbook repo under `runbooks/<component>/` with a `README.md` and the runbook `.md` file
-4. Last session of any multi-session project produces an architecture diagram and a Project Brief handoff document
+1. No hardcoded AWS account IDs, role ARNs, bucket names, region strings, SA names, store names, resource limits, or hostnames in any git file — all values come from Vault via AVP placeholders at `<path:secret/data/homelab/...#key>`
+2. `imageTag` in `values.yaml` is the **one exception** — Jenkins `yq` writes it directly. Never make imageTag a placeholder.
+3. Every app on the homelab cluster uses `plugin: { name: argocd-vault-plugin }` as the ArgoCD Application source — not `helm: { releaseName: ... }`
+4. ghcr-pull-secret comes from a Vault-backed ESO ExternalSecret — never seeded by the pipeline
+5. IAM roles (Terraform) are created before any cluster work that depends on them
+6. Any new infrastructure component deployed to the cluster gets a runbook committed to your cluster runbook repo under `runbooks/<component>/` with a `README.md` and the runbook `.md` file
+7. Last session of any multi-session project produces an architecture diagram and a Project Brief handoff document
 
 ---
 

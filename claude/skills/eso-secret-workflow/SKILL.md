@@ -64,14 +64,15 @@ SecretStore name:    aws-ssm                      ← same as generic
 SSM path prefix:     /{NAMESPACE}/               ← same as generic
 ```
 
-### Role ARN injection — no ApplicationSet templating needed
+### Role ARN injection — TWO patterns depending on whether the app uses AVP
 
-The role ARN is **hardcoded directly in `serviceaccount.yaml`**, not injected by an ApplicationSet.
-The ArgoCD cluster secret uses annotation key `eso_role_arn` (not `aws_account_id`).
-Skip Flow A step 3 (ApplicationSet wiring) entirely — it is not used on this cluster.
+**Pattern A — Prospector-style (no AVP): hardcode ARN in serviceaccount.yaml**
+
+Prospector and any non-AVP app: the ARN goes directly in the manifest.
+Skip Flow A step 3 (ApplicationSet wiring) — not used on this cluster.
 
 ```yaml
-# serviceaccount.yaml — exact pattern from prospector
+# serviceaccount.yaml — prospector pattern (no AVP)
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -82,7 +83,7 @@ metadata:
 ```
 
 ```yaml
-# secretstore.yaml — exact pattern from prospector
+# secretstore.yaml — prospector pattern (no AVP)
 apiVersion: external-secrets.io/v1
 kind: SecretStore
 metadata:
@@ -97,6 +98,48 @@ spec:
         jwt:
           serviceAccountRef:
             name: {NAMESPACE}-ssm-sa
+```
+
+**Pattern B — AVP-enabled apps (yieldpoint-ai and all apps going forward): ARN is a placeholder**
+
+For any app whose ArgoCD Application uses `plugin: { name: argocd-vault-plugin }`,
+the ARN and region MUST come from Vault via AVP placeholder — never hardcoded.
+
+```yaml
+# values.yaml — AVP-enabled app
+iamRoleArn: <path:secret/data/homelab/roles#{NAMESPACE}-eso>
+awsRegion:  <path:secret/data/homelab/apps/{NAMESPACE}#aws-region>
+ssmSaName:  <path:secret/data/homelab/apps/{NAMESPACE}#ssm-sa-name>
+secretStoreName: <path:secret/data/homelab/apps/{NAMESPACE}#secret-store-name>
+```
+
+```yaml
+# serviceaccount.yaml — AVP-enabled app (template, no hardcoded values)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.ssmSaName }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    eks.amazonaws.com/role-arn: {{ .Values.iamRoleArn }}
+```
+
+```yaml
+# secretstore.yaml — AVP-enabled app (template, no hardcoded values)
+apiVersion: external-secrets.io/v1
+kind: SecretStore
+metadata:
+  name: {{ .Values.secretStoreName }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  provider:
+    aws:
+      service: ParameterStore
+      region: {{ .Values.awsRegion }}
+      auth:
+        jwt:
+          serviceAccountRef:
+            name: {{ .Values.ssmSaName }}
 ```
 
 ### Bootstrap prereq — already done
@@ -277,3 +320,58 @@ Use this when the namespace already has a working SecretStore and ESO ServiceAcc
 | ExternalSecret READY but pod crashes on start | Order-dependent secret missing sync wave | Switch to `externalsecret-wave.yaml` (sync-wave: "-1") |
 | Secret exists but pod gets wrong value | SSM path missing namespace prefix | Verify full path: `/{NAMESPACE}/{SECRET_NAME}` |
 | ExternalSecret READY but k8s Secret not created | `creationPolicy` misconfigured | Must be `Owner`, not `Orphan` or `Merge` |
+
+---
+
+## Homelab K8s — Canonical AVP + ESO Architecture
+
+> This is the mandatory pattern for ALL apps on the homelab cluster going forward.
+> Established during yieldpoint-ai AVP session (2026-06-02). Do not deviate.
+
+### The two-layer model
+
+| Layer | Tool | Role |
+|-------|------|------|
+| Config resolution | AVP (ArgoCD Vault Plugin) | Resolves `<path:...>` placeholders in `values.yaml` at sync time — ARNs, regions, SA names, store names, resource limits, hostnames, ports |
+| Secret materialization | ESO (External Secrets Operator) | Materializes Vault/SSM secret values as k8s Secret objects — dockerconfigjson, API keys, DB passwords |
+
+AVP and ESO are **complementary**, not alternatives. Both run in every AVP-enabled namespace.
+
+### ghcr-pull-secret: always Vault-backed ESO (Option A)
+
+GHCR credentials live in Vault at `secret/homelab/github` (`pat`, `username`). Never use SSM for these.
+
+Per namespace that needs image pull:
+1. Vault policy: `<namespace>-github-read` (reads `secret/data/homelab/github`)
+2. Vault k8s auth role: `<namespace>-vault-eso` bound to SA below
+3. SA: `<namespace>-vault-eso-sa` (in the namespace)
+4. SecretStore: vault-backed (k8s auth via SA token projected volume)
+5. ExternalSecret: materializes `ghcr-pull-secret` as `kubernetes.io/dockerconfigjson`
+
+### imageTag exception
+
+`imageTag` in `values.yaml` is the **one literal value** — Jenkins `yq` writes it directly on every build. If it becomes a placeholder, `yq` overwrites it and AVP breaks. Never make `imageTag` a placeholder.
+
+### Vault path structure
+
+```
+secret/homelab/
+  apps/<appname>/    # app config: aws-region, ssm-sa-name, secret-store-name, memory-limit, etc.
+  roles/             # IAM role ARNs shared lookup
+  github/            # GHCR pat + username (shared)
+  aws/               # AWS account-level config
+  services/          # shared service URLs
+```
+
+### Rule: nothing hardcoded in git
+
+| Value type | Mechanism |
+|------------|-----------|
+| IAM role ARNs | AVP → `secret/homelab/roles#<app>-eso` |
+| AWS region | AVP → `secret/homelab/apps/<app>#aws-region` |
+| SA names, store names | AVP → `secret/homelab/apps/<app>#ssm-sa-name` etc. |
+| Resource limits/requests | AVP → `secret/homelab/apps/<app>#memory-limit` etc. |
+| Hostnames, ports | AVP → `secret/homelab/apps/<app>#host` etc. |
+| GHCR token | ESO → Vault `secret/homelab/github#pat` |
+| App runtime secrets | ESO → Vault or SSM |
+| `imageTag` | LITERAL — Jenkins writes this |

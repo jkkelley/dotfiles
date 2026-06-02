@@ -161,12 +161,15 @@ If a section doesn't apply (e.g. no AWS, no K8s), omit it entirely — don't inc
 
 Every new project on the cluster is Vault-first from day one:
 
-**Secret handling:**
-- No AWS account IDs, role ARNs, bucket names, or credentials go in any git file
-- All env-specific values live in HashiCorp Vault at `secret/<cluster-prefix>/<category>/<key>`
-- Manifests use AVP placeholders: `<path:secret/data/<cluster-prefix>/roles#role-name>`
-- Pipelines use `withVaultSecrets()` and `withVaultAwsCreds()` from your Jenkins shared library
-- Vault path hierarchy: `secret/<cluster-prefix>/aws/`, `secret/<cluster-prefix>/roles/`, `secret/<cluster-prefix>/buckets/`, `secret/<cluster-prefix>/<project>/`
+**Secret handling (AVP + ESO — mandatory for ALL cluster apps):**
+- Nothing hardcoded in git: no ARNs, regions, SA names, store names, resource limits, hostnames, ports
+- All config values come from Vault via AVP placeholders: `<path:secret/data/homelab/apps/<app>#<key>>`
+- All runtime secrets (GHCR token, API keys, DB passwords) come from ESO ExternalSecrets pointing at Vault
+- ArgoCD Applications use `plugin: { name: argocd-vault-plugin }` — never `helm: { releaseName: ... }`
+- `imageTag` in `values.yaml` is the **one literal exception** — Jenkins `yq` writes it on every build
+- GHCR pull secret always via Vault-backed ESO (Vault `secret/homelab/github#pat`) — never SSM, never hardcoded
+- Pipelines use `withVaultSecrets()` from your Jenkins shared library for build-time secrets
+- Vault path hierarchy: `secret/homelab/apps/<project>/`, `secret/homelab/roles/`, `secret/homelab/github/`, `secret/homelab/aws/`, `secret/homelab/services/`
 
 **IAM prereqs:**
 - If a new component needs AWS IAM permissions, create the IAM role in Terraform *before* deploying the component to the cluster

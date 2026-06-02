@@ -152,3 +152,50 @@ kubectl get events -A --watch --sort-by='.lastTimestamp'
 # Force delete stuck pod
 kubectl delete pod <pod> -n <ns> --grace-period=0 --force
 ```
+
+---
+
+## Homelab K8s — AVP + ESO Troubleshooting
+
+### ImagePullBackOff on homelab cluster
+
+Always check ESO before anything else — the pod can't start if `ghcr-pull-secret` doesn't exist.
+
+```bash
+# 1. Check ExternalSecrets in the namespace
+kubectl get externalsecrets -n <ns>
+kubectl describe externalsecret ghcr-pull-secret -n <ns>
+
+# 2. Check the secret itself exists
+kubectl get secret ghcr-pull-secret -n <ns>
+
+# 3. Check the Vault-backed SecretStore
+kubectl get secretstore -n <ns>
+kubectl describe secretstore vault -n <ns>
+```
+
+### AVP placeholder not resolved (value shows literally in cluster)
+
+```bash
+# Check AVP sidecar is running in repo-server (should be 2/2)
+kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-repo-server
+
+# Tail AVP logs during a sync
+kubectl logs -n argocd -l app.kubernetes.io/name=argocd-repo-server -c avp --tail=50
+
+# Verify Vault reachable from AVP container
+kubectl exec -n argocd <repo-server-pod> -c avp -- \
+  wget -qO- http://vault.vault.svc.cluster.local:8200/v1/sys/health | head -1
+
+# Force ArgoCD to re-render (re-runs AVP substitution)
+kubectl patch application <app> -n argocd --type merge \
+  -p '{"operation":{"sync":{"revision":"HEAD","syncStrategy":{"hook":{}}}}}'
+```
+
+### Vault k8s auth roles — quick reference
+
+```bash
+kubectl exec -n vault vault-0 -- vault list auth/kubernetes/role
+kubectl exec -n vault vault-0 -- vault read auth/kubernetes/role/<role-name>
+kubectl exec -n vault vault-0 -- vault kv get secret/homelab/apps/<appname>
+```

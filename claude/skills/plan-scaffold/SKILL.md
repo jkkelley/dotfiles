@@ -291,6 +291,23 @@ Default to surfacing uncertainty, not hiding it.
 ## Project-Specific Rules
 
 *Add any rules that override or extend the root 12-rule set for this project specifically.*
+
+## Homelab K8s — AVP + ESO Pattern (if this project deploys to the homelab cluster)
+
+If this project deploys to the homelab K8s cluster, ALL of the following apply without exception:
+
+- **values.yaml uses AVP placeholders for every value except `imageTag`**
+  Format: `<path:secret/data/homelab/apps/<appname>#<key>>`
+  Nothing hardcoded: no ARNs, regions, SA names, store names, resource limits, hostnames, ports.
+
+- **`imageTag` stays literal** — Jenkins yq writes it on every build. Never make it a placeholder.
+
+- **ArgoCD Application source is `plugin:`, not `helm:`**
+  `plugin: { name: argocd-vault-plugin }` — ArgoCD injects ARGOCD_APP_NAME as the release name.
+
+- **ghcr-pull-secret via Vault-backed ESO** — Vault `secret/homelab/github#pat`, new SA + Vault k8s role + SecretStore + ExternalSecret per namespace. Never use SSM for GHCR credentials.
+
+- **Vault paths seeded before first ArgoCD sync** at `secret/homelab/apps/<appname>/`
 ```
 
 ---

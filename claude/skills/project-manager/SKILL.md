@@ -248,3 +248,20 @@ Post-mortem structure:
 ## Additional reference
 - See [templates.md](templates.md) — copy-paste templates: project charter, RAID log, status report, retro board, RACI matrix, change request.
 - See [playbooks.md](playbooks.md) — situational playbooks: project slipping, scope creep battle, stakeholder conflict, team underperforming, dependency blocked.
+
+---
+
+## Homelab K8s Infrastructure Constraint
+
+Every new app deploying to the homelab cluster carries this mandatory infrastructure cost.
+Factor it into estimates and project planning:
+
+**Pre-deploy infrastructure (before first pod runs):**
+1. Vault paths seeded: `secret/homelab/apps/<appname>/` with all config values
+2. Vault-backed ESO: Vault policy + k8s auth role + SA + SecretStore + ExternalSecret for ghcr-pull-secret
+3. AVP placeholders: ALL values in `values.yaml` except `imageTag`
+4. ArgoCD Application: `plugin: argocd-vault-plugin` source (not helm source)
+5. IAM role (Terraform) created before cluster work begins
+
+**Estimation add:** add 0.5–1 session to any new homelab app for this wiring. It's not optional.
+**Risk flag:** if someone proposes hardcoding ARNs, regions, or secrets in git for speed, that is scope creep in the wrong direction — flag it and hold the line.

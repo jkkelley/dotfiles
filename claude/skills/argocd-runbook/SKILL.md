@@ -156,3 +156,61 @@ kustomize edit set image registry/myapp:${NEW_TAG}
 git commit -am "chore: promote myapp to ${NEW_TAG}"
 git push
 ```
+
+---
+
+## ArgoCD Vault Plugin (AVP) — Homelab Pattern
+
+AVP is installed as a CMP sidecar on `argocd-repo-server` (v1.18.1, arm64).
+Vault auth: k8s auth role `argocd-repo-server` → policy `argocd-read` (reads `secret/data/homelab/*`).
+
+### Application source for AVP-enabled apps
+
+```yaml
+source:
+  path: helm/myapp
+  plugin:
+    name: argocd-vault-plugin
+# NOT helm: { releaseName: myapp }
+# ArgoCD injects ARGOCD_APP_NAME — AVP uses it as the Helm release name
+```
+
+### Placeholder format in values.yaml
+
+```yaml
+iamRoleArn:  <path:secret/data/homelab/roles#myapp-eso>
+awsRegion:   <path:secret/data/homelab/apps/myapp#aws-region>
+memoryLimit: <path:secret/data/homelab/apps/myapp#memory-limit>
+host:        <path:secret/data/homelab/apps/myapp#host>
+```
+
+`imageTag` is **never** a placeholder — Jenkins yq writes it literally.
+
+### AVP debugging
+
+```bash
+# Check AVP sidecar is running (should be 2/2)
+kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-repo-server
+
+# Tail AVP logs during sync
+kubectl logs -n argocd -l app.kubernetes.io/name=argocd-repo-server -c avp -f
+
+# Force re-sync to re-run AVP substitution
+argocd app sync <app-name> --force
+
+# Verify Vault connectivity from AVP container
+kubectl exec -n argocd <repo-server-pod> -c avp -- \
+  wget -qO- http://vault.vault.svc.cluster.local:8200/v1/sys/health
+
+# Check Vault k8s auth role
+kubectl exec -n vault vault-0 -- vault read auth/kubernetes/role/argocd-repo-server
+```
+
+### Common AVP failures
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `could not find secret` in ArgoCD sync log | Vault path wrong or key missing | `vault kv get secret/homelab/...` to verify |
+| App shows `helm:` source, no substitution | Application still uses `helm:` not `plugin:` | Change source to `plugin: {name: argocd-vault-plugin}` |
+| Placeholder literal in cluster (not resolved) | Vault auth failing silently | Check AVP container logs; verify `argocd-repo-server` k8s role |
+| Release name wrong in rendered output | `ARGOCD_APP_NAME` mismatch | ArgoCD app name must match desired Helm release name |

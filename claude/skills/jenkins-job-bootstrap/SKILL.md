@@ -76,3 +76,19 @@ curl -s -u "$JENKINS_USER:$JENKINS_TOKEN" \
 
 # expected: top-level "name" matches, "jobs" array has at least "main"
 ```
+
+---
+
+## Homelab Note: This skill is NOT applicable to this homelab
+
+All Jenkins multibranch jobs are created manually in the UI. The seed job / repos.yaml workflow
+is not set up. Never use this skill for the homelab Jenkins instance.
+
+## Homelab Note: AVP + GitOps Contract
+
+When writing a Jenkinsfile for a homelab app (yieldpoint-ai, prospector-*, job-hunter-*):
+
+- `updateGitOpsManifest` writes **only `imageTag`** in `values.yaml` — nothing else
+- All other values in `values.yaml` are AVP placeholders; the pipeline must never touch them
+- The ArgoCD Application for the app uses `plugin: { name: argocd-vault-plugin }` as its source
+- `ghcr-pull-secret` is materialized by ESO — the pipeline does NOT create or manage it
