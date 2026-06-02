@@ -353,6 +353,7 @@ Use this when the namespace already has a working SecretStore and ESO ServiceAcc
 | ARN construction resolves to wrong role | Role name deviates from `{NAMESPACE}-eso-role` | Fix Terraform var.namespace or role name |
 | `aws_account_id` annotation empty | bootstrap.sh never ran for this cluster | Run `templates/bootstrap.sh` |
 | ExternalSecret READY but pod crashes on start | Order-dependent secret missing sync wave | Switch to `externalsecret-wave.yaml` (sync-wave: "-1") |
+| `could not get secret data from provider` on Vault-backed ESO | ExternalSecret (wave -1) deployed before its SecretStore (wave 0) | Move Vault ESO ServiceAccount + Vault SecretStore to sync-wave -2 |
 | Secret exists but pod gets wrong value | SSM path missing namespace prefix | Verify full path: `/{NAMESPACE}/{SECRET_NAME}` |
 | ExternalSecret READY but k8s Secret not created | `creationPolicy` misconfigured | Must be `Owner`, not `Orphan` or `Merge` |
 

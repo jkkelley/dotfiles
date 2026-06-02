@@ -164,15 +164,39 @@ git push
 AVP is installed as a CMP sidecar on `argocd-repo-server` (v1.18.1, arm64).
 Vault auth: k8s auth role `argocd-repo-server` → policy `argocd-read` (reads `secret/data/homelab/*`).
 
+Full troubleshooting runbook: `~/Documents/local-k8s-docs/runbooks/argocd-avp/argocd_avp_runbook.md`
+
+### The correct CMP generate command
+
+`argocd-vault-plugin generate ./` does **NOT** auto-detect Helm charts — it reads all files as raw Kubernetes YAML and fails. The avp-cmp-plugin ConfigMap must use this three-stage pipeline:
+
+```yaml
+generate:
+  command:
+    - sh
+    - -c
+    - |
+      helm template "$ARGOCD_APP_NAME" . -n "$ARGOCD_APP_NAMESPACE" | argocd-vault-plugin generate - | sed -E 's/\b(replicas|containerPort|port|targetPort|number): "([0-9]+)"/\1: \2/g'
+```
+
+**Why `- |` (block literal):** The sed pattern contains `': "'` (colon-space-quote), a YAML mapping separator. A plain scalar sequence item with this pattern crashes the AVP sidecar on startup (`yaml: did not find expected key`). The block literal suppresses YAML special-character processing.
+
+**Why the sed stage:** AVP wraps every substituted Vault value in double quotes (`replicas: "2"`). Kubernetes rejects quoted strings for integer fields. The sed strips quotes from known integer field names only. Do NOT use a broad pattern like `'s/: "([0-9]+)"$/: \1/'` — it will also convert `env.value: "3000"` to an integer, which Kubernetes rejects.
+
+**Do NOT use `| int` in Helm templates** — Helm evaluates it against the placeholder string `<path:...>` before AVP runs, outputting `0`.
+
 ### Application source for AVP-enabled apps
+
+Every AVP-enabled app needs a manifest in `argocd-apps/workloads/<app>.yaml`. Without it, the Application is an orphaned imperative object and won't receive GitOps updates.
 
 ```yaml
 source:
   path: helm/myapp
   plugin:
     name: argocd-vault-plugin
-# NOT helm: { releaseName: myapp }
-# ArgoCD injects ARGOCD_APP_NAME — AVP uses it as the Helm release name
+# NOT: helm: { releaseName: myapp }
+# ARGOCD_APP_NAME is injected by ArgoCD — AVP uses it as the Helm release name
+# ARGOCD_APP_NAMESPACE is the destination namespace — required for {{ .Release.Namespace }}
 ```
 
 ### Placeholder format in values.yaml
@@ -186,6 +210,18 @@ host:        <path:secret/data/homelab/apps/myapp#host>
 
 `imageTag` is **never** a placeholder — Jenkins yq writes it literally.
 
+Numeric values (ports, replicas, resource limits) do NOT need `| int` — the sed post-processor handles them after AVP substitution.
+
+### sync-wave ordering for Vault-backed ESO
+
+| Wave | Resources |
+|------|-----------|
+| -2 | Vault ESO ServiceAccount + Vault-backed SecretStore |
+| -1 | ExternalSecret (e.g. ghcr-pull-secret) |
+|  0 | Deployment, Service, Ingress, SSM resources (default) |
+
+If ExternalSecret (wave -1) deploys before SecretStore (wave 0), ESO fails with "could not get secret data from provider".
+
 ### AVP debugging
 
 ```bash
@@ -195,12 +231,20 @@ kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-repo-server
 # Tail AVP logs during sync
 kubectl logs -n argocd -l app.kubernetes.io/name=argocd-repo-server -c avp -f
 
-# Force re-sync to re-run AVP substitution
-argocd app sync <app-name> --force
+# Force re-sync (without argocd CLI — not installed on WSL2 host)
+kubectl -n argocd annotate application <app> argocd.argoproj.io/refresh=hard --overwrite
+kubectl -n argocd patch application <app> --type merge \
+  -p '{"operation":{"initiatedBy":{"username":"admin"},"sync":{"revision":"HEAD"}}}'
+
+# Test full AVP pipeline manually in the sidecar
+REPO_POD=$(kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-repo-server -o name | head -1)
+kubectl cp ~/projects/homelab-gitops/helm/<app> argocd/${REPO_POD#pod/}:/tmp/test -c avp
+kubectl exec -n argocd $REPO_POD -c avp -- sh -c \
+  'helm template <app> /tmp/test -n <namespace> | argocd-vault-plugin generate -' \
+  | grep -E "replicas:|containerPort:|namespace:"
 
 # Verify Vault connectivity from AVP container
-kubectl exec -n argocd <repo-server-pod> -c avp -- \
-  wget -qO- http://vault.vault.svc.cluster.local:8200/v1/sys/health
+kubectl exec -n argocd $REPO_POD -c avp -- vault status
 
 # Check Vault k8s auth role
 kubectl exec -n vault vault-0 -- vault read auth/kubernetes/role/argocd-repo-server
@@ -210,7 +254,12 @@ kubectl exec -n vault vault-0 -- vault read auth/kubernetes/role/argocd-repo-ser
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
+| AVP sidecar in CrashLoopBackOff, `yaml: did not find expected key` | CMP command has `': "'` in a plain scalar sequence item | Use YAML block literal (`- \|`) for the generate command sequence item |
+| Resources deploy with literal `<path:...>` names | `avp generate ./` used instead of helm pipeline; or Application still on `helm:` source | Apply correct ConfigMap; add `argocd-apps/workloads/<app>.yaml` with `plugin:` source |
+| `cannot unmarshal string into ... of type int32` | AVP quotes all values; sed stage missing or wrong | Apply ConfigMap with sed stage; do NOT use `\| int` in templates |
+| `env.value` becomes integer, Deployment rejected | sed pattern too broad — matches `value:` field | Use field-name-targeted sed: `\b(replicas\|containerPort\|port\|targetPort\|number):` |
+| `namespace default is not permitted in project` | `helm template` missing `-n "$ARGOCD_APP_NAMESPACE"` | Add `-n "$ARGOCD_APP_NAMESPACE"` to helm template command |
+| ExternalSecret `could not get secret data from provider` | SecretStore wave 0 deploys after ExternalSecret wave -1 | Move SecretStore + its SA to wave -2 |
+| `error when patching: unrecognized type: int32` | Old Helm field manager metadata on existing resource | Delete the resource; ArgoCD recreates it cleanly |
 | `could not find secret` in ArgoCD sync log | Vault path wrong or key missing | `vault kv get secret/homelab/...` to verify |
-| App shows `helm:` source, no substitution | Application still uses `helm:` not `plugin:` | Change source to `plugin: {name: argocd-vault-plugin}` |
 | Placeholder literal in cluster (not resolved) | Vault auth failing silently | Check AVP container logs; verify `argocd-repo-server` k8s role |
-| Release name wrong in rendered output | `ARGOCD_APP_NAME` mismatch | ArgoCD app name must match desired Helm release name |
