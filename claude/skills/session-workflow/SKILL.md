@@ -221,7 +221,9 @@ When a project spans multiple sessions, each session gets its own plan file:
 6. Any new infrastructure component deployed to the cluster gets a runbook committed to your cluster runbook repo under `runbooks/<component>/` with a `README.md` and the runbook `.md` file
 7. Last session of any multi-session project produces an architecture diagram and a Project Brief handoff document
 8. **SSM-first rule:** Every value seeded into Vault (secret OR config) must first exist as an SSM parameter. vault-seed.sh reads from SSM — never hardcodes values. This covers region names, SA names, resource limits, ports, hostnames, ARNs — everything without exception.
-9. **vault-seed.sh update is part of every vault-seed session:** Any session that creates or modifies Vault paths must update `self-hosted-odic/scripts/vault-seed.sh` with `ssm_get()` calls for every new key. The vault-seed.sh PR must be opened before or alongside the app PR — never left as a follow-up.
+9. **vault-seed.sh update is part of every vault-seed session:** Any session that creates or modifies Vault paths must update `vault-seed.sh` with `ssm_get()` calls for every new key, and update the SSM Parameter Inventory in `vault_seed.md`. The local-k8s-docs PR must be opened before or alongside the app PR — never left as a follow-up.
+   - Local:  `~/Documents/local-k8s-docs/runbooks/vault-seed/vault-seed.sh`
+   - Remote (DR fallback): `https://raw.githubusercontent.com/jkkelley/local-k8s-docs/main/runbooks/vault-seed/vault-seed.sh`
 
 ---
 

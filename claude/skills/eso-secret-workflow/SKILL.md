@@ -41,17 +41,21 @@ aws ssm put-parameter \
   --profile <AWS_PROFILE>
 
 # Step 2 — Vault reads from SSM (via vault-seed.sh)
-# Add a ssm_get() call to self-hosted-odic/scripts/vault-seed.sh for this key
-# Open a PR to self-hosted-odic before the session PR is merged
+# Add a ssm_get() call to vault-seed.sh for this key:
+#   Local:  ~/Documents/local-k8s-docs/runbooks/vault-seed/vault-seed.sh
+#   Remote: https://raw.githubusercontent.com/jkkelley/local-k8s-docs/main/runbooks/vault-seed/vault-seed.sh
+# Open a PR to local-k8s-docs before the session PR is merged
 ```
 
 **vault-seed.sh never hardcodes values.** If you find yourself writing a literal value into vault-seed.sh, stop — put it in SSM first.
 
 **After any Vault seeding session:**
 1. All new values exist as SSM parameters
-2. `self-hosted-odic/scripts/vault-seed.sh` has `ssm_get()` calls for every new key
-3. PR opened to `self-hosted-odic` before or alongside the app PR
-4. `~/Documents/local-k8s-docs/runbooks/vault-recovery/vault_recovery.md` Scenario 7 is current
+2. `vault-seed.sh` has `ssm_get()` calls for every new key
+   - Local:  `~/Documents/local-k8s-docs/runbooks/vault-seed/vault-seed.sh`
+   - Remote: `https://raw.githubusercontent.com/jkkelley/local-k8s-docs/main/runbooks/vault-seed/vault-seed.sh`
+3. PR opened to `local-k8s-docs` before or alongside the app PR
+4. `~/Documents/local-k8s-docs/runbooks/vault-seed/vault_seed.md` SSM Parameter Inventory table is updated
 
 **Before proceeding — ask the user these two questions (do not guess or use cached values):**
 1. *"What is your AWS account ID?"* → store as `{AWS_ACCOUNT_ID}`
