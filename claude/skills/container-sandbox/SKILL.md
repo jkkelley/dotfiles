@@ -174,17 +174,77 @@ When a frontend feature makes API calls, spin up a `podman compose` stack with:
 
 Verify data flows end-to-end with `curl` before handing the URL to the user.
 
-### Port convention — always use high ports
+### Port convention — always probe for an open port in 30000+ before starting any container
 
-Multiple Claude Code sessions may run simultaneously. Use high ports to avoid cross-session conflicts:
+Never hardcode a low port (3000, 8000, 13000, etc.). Multiple Claude sessions and dev servers share the same host — low ports are almost always in use or will collide.
+
+**Required before every `podman run` or `podman compose up`:** run the probe below to find a port that is confirmed open, then use that port and only that port for the container mapping.
+
+```bash
+FREE_PORT=$(python3 -c "
+import socket, random
+for p in random.sample(range(30000, 65001), 200):
+    try:
+        with socket.socket() as s:
+            s.bind(('127.0.0.1', p))
+            print(p)
+            break
+    except OSError:
+        continue
+")
+[ -z "$FREE_PORT" ] && echo "ERROR: no free port found in 30000-65000" && exit 1
+echo "Using port $FREE_PORT"
+```
+
+Run the probe once per service that needs a host port. Each service gets its own `FREE_PORT` call.
 
 | Service | Host port |
 |---------|-----------|
-| Frontend (Vite) | `13000` |
-| Backend API | `18000` |
-| Mock backend | internal only (no host port) |
+| Frontend | `$FREE_PORT` — probed, confirmed open, 30000+ |
+| Backend API | `$FREE_PORT_2` — separately probed, confirmed open, 30000+ |
+| Mock backend | internal only — no host port needed |
 
-Always map `13000:<container_port>` for the frontend. Expose the backend on `18000:8000` for direct debugging during validation.
+---
+
+### Single-container preview (no compose needed) — with 30-minute auto-stop
+
+Use this pattern when you need to show the user a built frontend image without a backend dependency.
+
+**Containers are cattle. They live 30 minutes and die.** Use `--rm` so Podman cleans up automatically on stop. Schedule a background kill so the container never becomes a zombie if the session ends.
+
+```bash
+# 1. Probe for a free port
+FREE_PORT=$(python3 -c "
+import socket, random
+for p in random.sample(range(30000, 65001), 200):
+    try:
+        with socket.socket() as s:
+            s.bind(('127.0.0.1', p))
+            print(p)
+            break
+    except OSError:
+        continue
+")
+[ -z "$FREE_PORT" ] && echo "ERROR: no free port" && exit 1
+
+# 2. Give the container a unique timestamped name (no --replace needed)
+CONTAINER_NAME=preview-$(date +%s)
+
+# 3. Run detached with --rm so it self-cleans on stop
+podman run -d --rm --name "$CONTAINER_NAME" -p "${FREE_PORT}:3000" <image>
+
+# 4. Schedule auto-stop after 30 minutes in the background
+(sleep 1800 && podman stop "$CONTAINER_NAME" 2>/dev/null) &
+
+echo "Preview running at http://localhost:${FREE_PORT}"
+echo "Auto-stops in 30 minutes (container: $CONTAINER_NAME)"
+```
+
+Then verify with curl before handing the URL to the user:
+```bash
+sleep 2 && curl -s -o /dev/null -w "%{http_code}" "http://localhost:${FREE_PORT}/"
+# Must return 200 before reporting the URL
+```
 
 ---
 
