@@ -212,6 +212,17 @@ When a project spans multiple sessions, each session gets its own plan file:
 - Plan ends with an "Output for Session N+1" section stating what the next session expects
 - Session ends with: PR opened, context-compaction run, CONTEXT_STATE.md updated
 
+**MANDATORY — before starting any cluster app session, read the canonical workflow doc:**
+```
+# Local (primary)
+~/Documents/local-k8s-docs/runbooks/cluster-app-workflow/cluster_app_workflow.md
+
+# DR fallback (machine wiped / local-k8s-docs not cloned)
+gh api repos/jkkelley/local-k8s-docs/contents/runbooks/cluster-app-workflow/cluster_app_workflow.md \
+  --jq '.content' | base64 -d
+```
+This is the authoritative reference for the full SSM → Vault → AVP → ArgoCD → ESO → K8s → Jenkins stack. Do not start session work without reading it.
+
 **Standing rules that apply to every session in a multi-session cluster project:**
 1. No hardcoded AWS account IDs, role ARNs, bucket names, region strings, SA names, store names, resource limits, or hostnames in any git file — all values come from Vault via AVP placeholders at `<path:secret/data/homelab/...#key>`
 2. `imageTag` in `values.yaml` is the **one exception** — Jenkins `yq` writes it directly. Never make imageTag a placeholder.

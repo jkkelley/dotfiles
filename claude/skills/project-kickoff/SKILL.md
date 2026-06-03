@@ -159,6 +159,17 @@ If a section doesn't apply (e.g. no AWS, no K8s), omit it entirely — don't inc
 
 ## Homelab Standing Rules (always apply)
 
+**MANDATORY — before proceeding with any cluster project, read the canonical workflow doc:**
+```
+# Local (primary)
+~/Documents/local-k8s-docs/runbooks/cluster-app-workflow/cluster_app_workflow.md
+
+# DR fallback (machine wiped / local-k8s-docs not cloned)
+gh api repos/jkkelley/local-k8s-docs/contents/runbooks/cluster-app-workflow/cluster_app_workflow.md \
+  --jq '.content' | base64 -d
+```
+This is the authoritative reference for the full SSM → Vault → AVP → ArgoCD → ESO → K8s → Jenkins stack. The checklist below is derived from it — if there is any conflict, the canonical doc wins.
+
 Every new project on the cluster is Vault-first from day one:
 
 **Secret handling (AVP + ESO — mandatory for ALL cluster apps):**
