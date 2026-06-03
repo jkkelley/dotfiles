@@ -210,23 +210,48 @@ deployProduction(
 
 ## updateGitOpsManifest — GitOps image tag update
 
-Clones the GitOps config repo, runs `kustomize edit set image`, commits, and pushes. Must run inside a container with `kustomize` available.
+Clones the GitOps config repo, uses `yq` to update `imageTag` in `values.yaml`, commits, and pushes. Runs inside `gitops-builder` (`container('gitops')`).
 
 ```groovy
-container('kustomize') {
-    updateGitOpsManifest(
-        gitRepo:       'https://github.com/<your-github-username>/gitops-config', // REQUIRED
-        overlayPath:   'apps/overlays/staging/my-app',              // REQUIRED
-        imageName:     'ghcr.io/<your-github-username>/my-app',                   // REQUIRED
-        newTag:        env.IMAGE_TAG,                                // REQUIRED
-        branch:        'main',                                       // default
-        credentialsId: 'github-pat-credentials',                    // default
-        containerName: 'kustomize',                                  // default
-    )
+// No explicit container() wrapper needed — defaultContainer 'gitops' covers it.
+// Add container('gitops') only if your stage has other sh steps outside this call.
+updateGitOpsManifest(
+    gitRepo:     env.HOMELAB_GITOPS_URL,                          // REQUIRED — fetch from Vault via withVaultSecrets
+    overlayPath: 'helm/my-app',                                   // REQUIRED — path to Helm chart in homelab-gitops
+    imageName:   'ghcr.io/<your-github-username>/my-app',         // REQUIRED
+    newTag:      env.IMAGE_TAG,                                    // REQUIRED
+    branch:      'main',                                           // default
+    gitUser:     env.USERNAME,                                     // from withVaultSecrets
+    gitPat:      env.PAT,                                          // from withVaultSecrets
+)
+```
+
+**What it does:** Uses `yq e '.imageTag = "<newTag>"' -i values.yaml`, then commits `ci(gitops): roll <imageName> to tag <newTag>`. Pull-rebase before push (retry loop). Skips commit if tag already set (idempotent).
+
+**Always wrap in `withVaultSecrets`** to inject `gitRepo`, `gitUser`, and `gitPat`:
+
+```groovy
+stage('GitOps — Update Image Tag') {
+    steps {
+        script {
+            withVaultSecrets(path: 'secret/homelab/github',
+                             keys: ['pat', 'username', 'homelab-gitops-url']) {
+                updateGitOpsManifest(
+                    gitRepo:     env.HOMELAB_GITOPS_URL,
+                    branch:      'main',
+                    overlayPath: 'helm/my-app',
+                    imageName:   env.IMAGE_NAME,
+                    newTag:      env.IMAGE_TAG,
+                    gitUser:     env.USERNAME,
+                    gitPat:      env.PAT
+                )
+            }
+        }
+    }
 }
 ```
 
-**What it does:** `kustomize edit set image <imageName>=<imageName>:<newTag>` then commits `ci(gitops): roll <imageName> to tag <newTag>`. Skips commit if tag already set (idempotent).
+**⚠ kustomize is retired.** Do not use `container('kustomize')`, `kustomize edit set image`, or overlay paths like `apps/overlays/staging/my-app`. All apps use Helm charts under `helm/` in homelab-gitops.
 
 ---
 
@@ -289,44 +314,97 @@ stage('Version & Release') {
 
 ---
 
-## Full DevSecOps Pipeline Pattern
+## Full Pipeline Pattern (Helm + GitOps — current homelab standard)
+
+This is the proven pattern. Copy from here, not from old prospector examples that used `container('kustomize')`.
 
 ```groovy
 @Library('jenkins-shared-lib') _
 
-def cfg = pipelineConfig('staging')
-
 pipeline {
-    agent { label 'linux' }
+    agent {
+        kubernetes {
+            defaultContainer 'gitops'
+            serviceAccount 'jenkins-agent'
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  imagePullSecrets:
+  - name: ghcr-pull-secret
+  containers:
+  - name: gitops
+    image: ghcr.io/jkkelley/gitops-builder:latest
+    imagePullPolicy: Always
+    command: [cat]
+    tty: true
+    volumeMounts:
+    - name: kaniko-workspace
+      mountPath: /kaniko-workspace
+  volumes:
+  - name: kaniko-workspace
+    persistentVolumeClaim:
+      claimName: kaniko-workspace
+'''
+        }
+    }
+
     environment {
-        IMAGE_NAME = cfg.imageBase
-        IMAGE_TAG  = "${env.BUILD_NUMBER}"
+        IMAGE_NAME = 'ghcr.io/<your-github-username>/my-app'
+        IMAGE_TAG  = "${BUILD_NUMBER}"
         IMAGE_FULL = "${IMAGE_NAME}:${IMAGE_TAG}"
     }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        timestamps()
+    }
+
     stages {
-        stage('SAST — SonarQube')   { steps { script { sastSonarQube(projectKey: 'my-app') } } }
-        stage('SCA — Snyk')          { steps { script { scaSnyk(image: 'snyk/snyk:linux') } } }
-        stage('IaC — Checkov')       { steps { script { iacCheckov(directory: '/tf/k8s') } } }
-        stage('Build — Kaniko')      { steps { script { buildKaniko(imageFull: env.IMAGE_FULL, imageName: env.IMAGE_NAME) } } }
-        stage('Scan — Trivy')        { steps { script { imageScanTrivy(imageFull: env.IMAGE_FULL) } } }
-        stage('Version & Release')   {
+        stage('Checkout') {
+            steps { checkout scm }
+        }
+
+        stage('Build — Kaniko') {
             steps {
                 script {
-                    def ver = versionRelease(imageName: env.IMAGE_NAME, buildTag: env.IMAGE_TAG)
-                    env.IMAGE_FULL = "${env.IMAGE_NAME}:${ver}"
+                    buildKaniko(
+                        imageFull: env.IMAGE_FULL,
+                        imageName: env.IMAGE_NAME,
+                        sourceDir: "${env.WORKSPACE}/app/."
+                    )
                 }
             }
         }
-        stage('Deploy — Staging')    { steps { script { deployStaging(imageFull: env.IMAGE_FULL, deploymentName: 'my-app') } } }
-        stage('DAST — ZAP')          {
-            steps { script { dastZap(targetUrl: cfg.targetUrl, failOnHigh: cfg.zapFailOnHigh.toBoolean()) } }
-            post  { always { archiveArtifacts artifacts: 'zap-report.html', allowEmptyArchive: true } }
+
+        stage('Scan — Trivy') {
+            steps {
+                script { imageScanTrivy(imageFull: env.IMAGE_FULL, exitCode: '0') }
+            }
         }
-        stage('Deploy — Production') {
-            when  { branch 'main' }
-            steps { script { deployProduction(submitter: 'admin') } }
+
+        stage('GitOps — Update Image Tag') {
+            steps {
+                script {
+                    withVaultSecrets(path: 'secret/homelab/github',
+                                     keys: ['pat', 'username', 'homelab-gitops-url']) {
+                        updateGitOpsManifest(
+                            gitRepo:     env.HOMELAB_GITOPS_URL,
+                            branch:      'main',
+                            overlayPath: 'helm/my-app',
+                            imageName:   env.IMAGE_NAME,
+                            newTag:      env.IMAGE_TAG,
+                            gitUser:     env.USERNAME,
+                            gitPat:      env.PAT
+                        )
+                    }
+                }
+            }
         }
     }
+
     post { always { cleanWs() } }
 }
 ```
