@@ -30,6 +30,7 @@ brainstorming → plan-scaffold → (optional) project-kickoff
 - **Root claude-plans/ stays clean.** Only directories live at root — no loose files beyond README.md, CLAUDE.md, .gitignore, .claudeignore.
 - **No PII in this skill file.** All paths, usernames, and account values are resolved at runtime (see Step 0) or collected from the user during the interview.
 - **No placeholders in generated files.** Every value in every scaffolded file must be real — filled in from Step 0 or the interview. If a value is unknown, ask. Never write `<ACCOUNT_ID>` or `<AWS_PROFILE>` into a file.
+- **Nesting depth does not determine file set.** A workspace that the user calls a "project" gets the full file set (CLAUDE.md, README.md, issues.md, CONTEXT_STATE.md, .claudeignore symlink, .claude/settings.local.json) regardless of how deep it sits in the directory tree. Only use the 3-file subproject template (plan.md, implementation-plan.md, sessions-table.md) when the user explicitly confirms it is a sub-track inside a parent project that already owns the full workspace files. When in doubt, ask.
 
 ---
 
@@ -87,6 +88,12 @@ Ask these in order. Stop after each and wait for the answer before continuing.
 
 **Q1. Project name**
 > "What should we call this project? This becomes the directory name — lowercase, hyphens. Example: `homelab-observability`"
+
+**Q1b. Parent directory (if nested)**
+If the user provides a path that sits inside an existing project directory (e.g., `yieldpoint-ai/yieldpoint-ai-website-redesign`), ask:
+> "This will be nested inside `<parent>/`. Should it be a **full standalone workspace** (gets its own CLAUDE.md, README, issues.md, CONTEXT_STATE.md, .claudeignore, settings.local.json) or a **sub-track** inside the parent (gets only plan.md, implementation-plan.md, sessions-table.md)?"
+- If **full standalone workspace**: scaffold the complete file set. Adjust the .claudeignore symlink depth accordingly (see `.claudeignore` section below).
+- If **sub-track**: use the 3-file subproject template only.
 
 **Q2. One-line description**
 > "One sentence: what is this project doing or fixing?"
@@ -153,11 +160,17 @@ All values come from Step 0 or the interview — no placeholders, no guessing.
 
 #### `.claudeignore` — symlink
 
+Always target the root `.claudeignore` via `$PLANS_ROOT` — never use a relative `../` path. Relative paths silently break when a project is more than one level deep, and counting `../` manually is error-prone at any depth.
+
 ```bash
-ln -sf ../.claudeignore "$PLANS_ROOT/<project-name>/.claudeignore"
+ln -sf "$PLANS_ROOT/.claudeignore" "$PLANS_ROOT/<project-path>/.claudeignore"
 ```
 
-Do not create a new file. The root `.claudeignore` is the source of truth.
+Where `<project-path>` is the full path from `PLANS_ROOT` to the project directory, e.g.:
+- Top-level project: `ln -sf "$PLANS_ROOT/.claudeignore" "$PLANS_ROOT/my-project/.claudeignore"`
+- Nested project: `ln -sf "$PLANS_ROOT/.claudeignore" "$PLANS_ROOT/parent/my-project/.claudeignore"`
+
+The symlink will be absolute, which is fine — `$PLANS_ROOT` is a fixed path on this machine. Do not create a new `.claudeignore` file. The root is the single source of truth.
 
 ---
 
@@ -654,6 +667,8 @@ After Step 4, ask:
 | "I'll move the row to Completed when the last PR merges" | Only move when the user explicitly confirms the project is done. |
 | "I'll log the PR automatically" | Never. Always ask first. |
 | "I'll clean up the branch after merge without asking" | Never. Always ask before `git branch -d`. |
+| "It's nested inside another project dir so I'll give it the 3-file subproject treatment" | Nesting depth ≠ file set. If the user calls it a project or it needs its own standalone workspace, scaffold the full set. Ask if unsure (Q1b). |
+| "I'll use a relative `../` path for the .claudeignore symlink" | Never. Always use `$PLANS_ROOT/.claudeignore` as the absolute target — relative paths break silently at any nesting depth beyond one level. |
 
 ---
 
