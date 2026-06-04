@@ -522,6 +522,43 @@ Example invocations:
 
 ---
 
+## Intent (j): log a backlog item
+
+**Trigger phrasing:** "backlog", "add to backlog", "log a backlog item", "backlog item", "add this to the backlog".
+
+Example invocations:
+- *"hey operator, yieldpoint-ai: backlog — timeout UI flicker"*
+- *"hey operator, add this to the yieldpoint-ai backlog"*
+
+### Behavior
+
+1. Run pull-on-read.
+2. Parse domain hint. Check that `$OPERATOR_REPO/domains/<domain>/backlog/` exists. If not, tell the user and stop.
+3. Ask the following questions **one at a time** — wait for the answer before asking the next:
+   - *"What's the problem?"*
+   - *"What area? (frontend / infra / backend / content)"*
+   - *"Proposed fix? ('Unknown' is fine)"*
+   - *"Any extra notes? (or 'skip' to leave blank)"*
+   - *"Severity? (Low / Medium / High / Critical)"*
+4. Generate a slug from the problem text: lowercase, hyphenated, max 5 words.
+5. Get today's date: `date +%Y%m%d` for filename, `date -I` for frontmatter.
+6. Read the template from `references/backlog-item-template.md` and substitute all placeholders.
+   - If user said "skip" for notes, replace `<NOTES>` with `_none_`.
+7. Write `$OPERATOR_REPO/domains/<domain>/backlog/YYYYMMDD_<slug>.md` with the populated template.
+8. Append a row to `$OPERATOR_REPO/domains/<domain>/backlog/BACKLOG.md`:
+   ```
+   | YYYYMMDD | [<slug>](YYYYMMDD_<slug>.md) | <Severity> | open |
+   ```
+9. Commit and push:
+   ```bash
+   git -C "$OPERATOR_REPO" add domains/<domain>/backlog/
+   git -C "$OPERATOR_REPO" commit -m "backlog: <domain>/<slug> [<Severity>]"
+   git -C "$OPERATOR_REPO" push
+   ```
+10. Output: `Backlog item logged: YYYYMMDD_<slug>.md [<Severity>]`
+
+---
+
 ## Homelab K8s Project Context
 
 When planning or estimating work on homelab Kubernetes projects, factor in the mandatory AVP + ESO infrastructure pattern:
