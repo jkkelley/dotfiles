@@ -623,7 +623,8 @@ Example invocations:
 
 1. Read `references/help-card.md` from this skill's directory (use the Read tool to fetch it).
 2. Print the full contents to chat.
-3. Check whether `$OPERATOR_REPO/HELP_README.md` exists:
+3. Run pull-on-read: `git -C "$OPERATOR_REPO" pull --rebase` (warn but continue on failure).
+4. Check whether `$OPERATOR_REPO/HELP_README.md` exists:
    ```bash
    test -f "$OPERATOR_REPO/HELP_README.md"
    ```
@@ -633,7 +634,8 @@ Example invocations:
    git -C "$OPERATOR_REPO" commit -m "help: create HELP_README.md"
    git -C "$OPERATOR_REPO" push
    ```
-4. No other git changes — read-only intent.
+   On push failure: tell the user *"HELP_README.md created locally but push failed. Run `git -C $OPERATOR_REPO push` to retry."*
+5. No other git changes — read-only intent.
 
 ---
 
