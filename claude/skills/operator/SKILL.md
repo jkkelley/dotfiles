@@ -571,9 +571,10 @@ When a new intent is added to the operator skill:
 1. Update `claude/skills/operator/references/help-card.md` with the new intent row in both the Intents table and the Intent Categories table.
 2. Update `SKILL.md` with the new intent behavior section.
 3. Update the intent dispatch list in the `## Intent dispatch` section of `SKILL.md`.
-4. Write the updated `references/help-card.md` content to `$OPERATOR_REPO/HELP_README.md`.
-5. Commit + push the operator repo: `"help: add <intent-name> intent"`
-6. Announce to the user:
+4. Overwrite `$OPERATOR_REPO/HELP_README.md` with the full contents of `references/help-card.md` — the operator repo file is a verbatim mirror (create it if it does not exist).
+5. Commit the dotfiles repo changes (SKILL.md + references/help-card.md) on a feature branch and open a PR against main (per the dotfiles CLAUDE.md PR requirement).
+6. Commit + push the operator repo: `"help: add <intent-name> intent"`
+7. Announce to the user:
    ```
    New capability added: <intent-name>
    <one-line description>
