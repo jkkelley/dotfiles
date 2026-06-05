@@ -3,17 +3,17 @@
 
 ## Summary
 
-Two new intents added to the operator skill: `sessions` (log Claude sessions for the day) and `help` (display a reference card of all operator capabilities). A new `references/help-card.md` file becomes the single source of truth for the help card, written to both the skill directory and `$OPERATOR_REPO/HELP_README.md`. The operator `README.md` is updated to document the sessions feature.
+Two new intents added to the operator skill: `sessions` (log Claude sessions for the day) and `help` (display a reference card of all operator capabilities). A new `references/help-card.md` file becomes the single source of truth for the help card, written to both the skill directory and `$OPERATOR_REPO/HELP_README.md`. The operator `README.md` is updated as a one-time implementation step to document both the `claude-sessions/` directory structure and the `HELP_README.md`.
 
 ---
 
 ## Scope
 
 ### What this changes
-- `claude/skills/operator/SKILL.md` — two new intents added (`sessions`, `help`); update convention documented
+- `claude/skills/operator/SKILL.md` — two new intents added (`sessions`, `help`); intent dispatch list updated; data layout tree updated; update convention documented
 - `claude/skills/operator/references/help-card.md` — new file, source of truth for help content
-- `$OPERATOR_REPO/README.md` — updated to document claude-sessions
-- `$OPERATOR_REPO/HELP_README.md` — new file, written from `references/help-card.md` on first run of help intent
+- `$OPERATOR_REPO/README.md` — updated now (implementation step) to document claude-sessions and HELP_README.md
+- `$OPERATOR_REPO/HELP_README.md` — created now (implementation step) from `references/help-card.md`
 
 ### What this does NOT change
 - Existing intents a–j are untouched
@@ -78,14 +78,21 @@ User: log sessions:
   - homelab cert-manager fix @ ~/homelab
 ```
 Format: `<name> @ <directory>` per line, one session per line.
+Parsing rule: split each line on the **last** `@` — everything before it is the session name, everything after is the directory. This handles `@` characters in session names cleanly.
 
-### After capture
-1. Write rows to file (append or create)
-2. `git -C "$OPERATOR_REPO" add claude-sessions/`
-3. `git -C "$OPERATOR_REPO" commit -m "sessions: YYYY-MM-DD — N session(s) logged"`
-4. `git -C "$OPERATOR_REPO" push`
-5. Print: `"Logged N session(s) to claude-sessions/YYYY/MM/DD-claude-sessions.md and pushed to remote."`
-6. New line: `"Happy Claud'ing"`
+### Behavior
+1. Run pull-on-read: `git -C "$OPERATOR_REPO" pull --rebase` — warn but continue on failure
+2. Determine input mode from prompt (interactive vs bulk)
+3. Collect all session name + directory pairs
+4. Capture timestamp: `date +"%Y%m%d %H:%M:%S"`
+5. Resolve file path: `$OPERATOR_REPO/claude-sessions/$(date +%Y)/$(date +%m)/$(date +%d)-claude-sessions.md`
+6. Create missing directories if needed: `mkdir -p "$(dirname "$FILE")"`
+7. If file does not exist: write header + table header + rows; if file exists: append rows only
+8. `git -C "$OPERATOR_REPO" add claude-sessions/`
+9. `git -C "$OPERATOR_REPO" commit -m "sessions: YYYY-MM-DD — N session(s) logged"`
+10. `git -C "$OPERATOR_REPO" push` — on failure: commit stands locally, tell the user: *"Logged locally but push failed. Run `git -C $OPERATOR_REPO push` to retry."*
+11. Print: `"Logged N session(s) to claude-sessions/YYYY/MM/DD-claude-sessions.md and pushed to remote."`
+12. New line: `"Happy Claud'ing"`
 
 ---
 
@@ -97,10 +104,8 @@ Format: `<name> @ <directory>` per line, one session per line.
 ### Behavior
 1. Read `references/help-card.md` from this skill's directory
 2. Print the full contents to chat
-3. No git changes — read-only intent
-
-### HELP_README.md sync rule
-When the help intent is invoked and `$OPERATOR_REPO/HELP_README.md` does not exist, write it from `references/help-card.md` and commit + push silently.
+3. If `$OPERATOR_REPO/HELP_README.md` does not exist: write it from `references/help-card.md`, commit + push silently
+4. No other git changes — read-only intent
 
 ---
 
@@ -149,9 +154,10 @@ When a new intent is added to the operator skill:
 
 1. Update `references/help-card.md` with the new intent row (both Intents table and Categories table)
 2. Update `SKILL.md` with the new intent behavior
-3. Write the updated `references/help-card.md` content to `$OPERATOR_REPO/HELP_README.md`
-4. Commit + push the operator repo: `"help: add <intent-name> intent"`
-5. Announce to the user:
+3. Update the intent dispatch list in SKILL.md to include the new intent name
+4. Write the updated `references/help-card.md` content to `$OPERATOR_REPO/HELP_README.md`
+5. Commit + push the operator repo: `"help: add <intent-name> intent"`
+6. Announce to the user:
    ```
    New capability added: <intent-name>
    <one-line description>
@@ -160,20 +166,51 @@ When a new intent is added to the operator skill:
 
 ---
 
-## README.md update (operator repo)
+## Data layout (updated)
 
-Add a `## Claude Sessions` section documenting:
+```
+$OPERATOR_REPO/
+├── README.md
+├── HELP_README.md
+├── claude-sessions/
+│   └── YYYY/
+│       └── MM/
+│           └── DD-claude-sessions.md
+├── domains/
+│   └── <domain>/
+│       ├── north-star.md
+│       ├── projects/
+│       │   └── <slug>.md
+│       └── archive/
+├── inbox.md
+└── agenda.md
+```
+
+---
+
+## README.md update (operator repo) — implementation step
+
+Update `$OPERATOR_REPO/README.md` now as part of this implementation. Add two sections:
+
+**## Claude Sessions**
 - Location: `claude-sessions/YYYY/MM/DD-claude-sessions.md`
-- What it captures: session name, directory, time logged
-- How to invoke: trigger phrases
+- What it captures: session name, directory, timestamp logged
+- Trigger: `"hey operator, log my sessions"`
+
+**## Help**
+- Location: `HELP_README.md` (full intent reference card)
+- Auto-created on first `help` invocation; kept current when new intents are added
+- Trigger: `"hey operator, help"`
+
+Commit + push: `"docs: add claude-sessions and help sections to README"`
 
 ---
 
 ## Files changed
 
-| File | Action |
-|------|--------|
-| `claude/skills/operator/SKILL.md` | Add sessions intent, help intent, update convention |
-| `claude/skills/operator/references/help-card.md` | Create — source of truth for help card |
-| `$OPERATOR_REPO/README.md` | Update — add claude-sessions section |
-| `$OPERATOR_REPO/HELP_README.md` | Create on first help invocation |
+| File | Action | When |
+|------|--------|------|
+| `claude/skills/operator/SKILL.md` | Add sessions + help intents; update dispatch list + data layout tree + update convention | Implementation |
+| `claude/skills/operator/references/help-card.md` | Create — source of truth for help card | Implementation |
+| `$OPERATOR_REPO/README.md` | Add Claude Sessions and Help sections | Implementation |
+| `$OPERATOR_REPO/HELP_README.md` | Create from help-card.md | Implementation |
