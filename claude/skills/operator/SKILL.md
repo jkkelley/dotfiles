@@ -8,7 +8,7 @@ description: Personal work-steering system. Captures ideas to a private inbox, t
 This skill is a single named entry point. The user invokes it in natural language and it parses two things from the prompt:
 
 - **Domain hint** — `work`, `weekend-business`, `personal`, or any custom domain the user has created. Hint may be absent (some intents work without one).
-- **Intent** — one of the 10 intents documented below.
+- **Intent** — one of the 12 intents documented below.
 
 The skill operates against a private data repo at `$OPERATOR_REPO` (default `~/projects/operator`). It does NOT operate on the current working directory.
 
@@ -17,7 +17,7 @@ The skill operates against a private data repo at `$OPERATOR_REPO` (default `~/p
 - Read `$OPERATOR_REPO` from the environment. If unset, default to `~/projects/operator` (expand `~`).
 - The data repo is git-tracked with a remote on GitHub (private). Sync rules:
   - **Pull-on-read:** before any read intent (plan, status, agenda, triage), run `git -C "$OPERATOR_REPO" pull --rebase`. On conflict or network failure, warn the user but continue with local state.
-  - **Push-on-write:** after any write intent (capture, new-project, close, edit-north-star, new-domain), commit and `git -C "$OPERATOR_REPO" push`. On push failure, commit locally and tell the user to retry.
+  - **Push-on-write:** after any write intent (capture, new-project, close, edit-north-star, new-domain, backlog, sessions), commit and `git -C "$OPERATOR_REPO" push`. On push failure, commit locally and tell the user to retry.
 - If `$OPERATOR_REPO` does not exist on disk, run the **Bootstrap** flow before performing the requested intent (see below).
 
 ## Data layout
@@ -25,6 +25,11 @@ The skill operates against a private data repo at `$OPERATOR_REPO` (default `~/p
 ```
 $OPERATOR_REPO/
 ├── README.md
+├── HELP_README.md
+├── claude-sessions/
+│   └── YYYY/
+│       └── MM/
+│           └── DD-claude-sessions.md
 ├── domains/
 │   └── <domain>/
 │       ├── north-star.md
@@ -42,7 +47,7 @@ When invoked, parse the user's prompt for:
 1. **Domain hint** — look for a domain name followed by `:` (e.g., `weekend-business:`), or a domain mentioned naturally (e.g., "the work north-star"). Match against existing directories under `$OPERATOR_REPO/domains/`. If ambiguous, ask the user to clarify.
 2. **Intent** — match the prompt's verb and structure to one of the intents below.
 
-Intents documented below: (a) capture, (b) plan, (c) status, (d) new-project, (e) close, (f) new-domain, (g) edit north-star, (h) agenda, (i) triage. Bootstrap is implicit and runs before any of these on first use.
+Intents documented below: (a) capture, (b) plan, (c) status, (d) new-project, (e) close, (f) new-domain, (g) edit north-star, (h) agenda, (i) triage, (j) backlog, (k) sessions, help. Bootstrap is implicit and runs before any of these on first use.
 
 ## Bootstrap (implicit, runs when `$OPERATOR_REPO` does not exist)
 
@@ -556,6 +561,100 @@ Example invocations:
    git -C "$OPERATOR_REPO" push
    ```
 10. Output: `Backlog item logged: YYYYMMDD_<slug>.md [<Severity>]`
+
+---
+
+## Intent (k): log Claude sessions
+
+**Trigger phrasing:** "log my sessions", "log a few sessions", "operator capture claude sessions", "I need to log my session", "I need to log a few sessions".
+
+Example invocations:
+- *"hey operator, log my sessions"*
+- *"hey operator, log a few sessions"*
+- *"hey operator, operator capture claude sessions"*
+
+### Behavior
+
+1. Run pull-on-read: `git -C "$OPERATOR_REPO" pull --rebase` (warn but continue on failure).
+2. Determine input mode from the prompt:
+   - **Bulk** — prompt contains lines with ` @ ` (name @ directory format): parse all pairs immediately.
+   - **Interactive** — no ` @ ` in prompt: ask *"How many sessions are we logging?"*, then for each session ask *"Session N — name?"* followed by *"Session N — directory?"*.
+3. **Bulk parsing rule:** split each line on the **last** `@` — everything before it is the session name, everything after is the directory. This handles `@` characters in session names.
+4. Capture timestamp: `date +"%Y%m%d %H:%M:%S"`.
+5. Resolve file path:
+   ```bash
+   FILE="$OPERATOR_REPO/claude-sessions/$(date +%Y)/$(date +%m)/$(date +%d)-claude-sessions.md"
+   ```
+6. Create missing directories: `mkdir -p "$(dirname "$FILE")"`.
+7. If file does not exist, create it with this header:
+   ```markdown
+   # Claude Sessions — YYYY-MM-DD
+
+   | Time Logged | Session Name | Directory |
+   |-------------|-------------|-----------|
+   ```
+   Then append the new rows. If file already exists, append rows only (no new header).
+8. Each row format:
+   ```
+   | YYYYMMDD HH:MM:SS | <session name> | <directory> |
+   ```
+9. Stage, commit, and push:
+   ```bash
+   git -C "$OPERATOR_REPO" add claude-sessions/
+   git -C "$OPERATOR_REPO" commit -m "sessions: $(date +%Y-%m-%d) — N session(s) logged"
+   git -C "$OPERATOR_REPO" push
+   ```
+   On push failure: tell the user *"Logged locally but push failed. Run `git -C $OPERATOR_REPO push` to retry."*
+10. Print: `Logged N session(s) to claude-sessions/YYYY/MM/DD-claude-sessions.md and pushed to remote.`
+11. On a new line: `Happy Claud'ing`
+
+---
+
+## Intent: help
+
+**Trigger phrasing:** "help", "what can you do", "operator commands", "what are your intents".
+
+Example invocations:
+- *"hey operator, help"*
+- *"hey operator, what can you do"*
+- *"hey operator, operator commands"*
+
+### Behavior
+
+1. Read `references/help-card.md` from this skill's directory (use the Read tool to fetch it).
+2. Print the full contents to chat.
+3. Run pull-on-read: `git -C "$OPERATOR_REPO" pull --rebase` (warn but continue on failure).
+4. Check whether `$OPERATOR_REPO/HELP_README.md` exists:
+   ```bash
+   test -f "$OPERATOR_REPO/HELP_README.md"
+   ```
+   If it does not exist: write it from `references/help-card.md`, then commit + push silently:
+   ```bash
+   git -C "$OPERATOR_REPO" add HELP_README.md
+   git -C "$OPERATOR_REPO" commit -m "help: create HELP_README.md"
+   git -C "$OPERATOR_REPO" push
+   ```
+   On push failure: tell the user *"HELP_README.md created locally but push failed. Run `git -C $OPERATOR_REPO push` to retry."*
+5. No other git changes — read-only intent.
+
+---
+
+## Skill Update Convention
+
+When a new intent is added to the operator skill:
+
+1. Update `claude/skills/operator/references/help-card.md` with the new intent row in both the Intents table and the Intent Categories table.
+2. Update `SKILL.md` with the new intent behavior section.
+3. Update the intent dispatch list in the `## Intent dispatch` section of `SKILL.md`.
+4. Overwrite `$OPERATOR_REPO/HELP_README.md` with the full contents of `references/help-card.md` — the operator repo file is a verbatim mirror (create it if it does not exist).
+5. Commit the dotfiles repo changes (SKILL.md + references/help-card.md) on a feature branch and open a PR against main (per the dotfiles CLAUDE.md PR requirement).
+6. Commit + push the operator repo: `"help: add <intent-name> intent"`
+7. Announce to the user:
+   ```
+   New capability added: <intent-name>
+   <one-line description>
+   Try it: "<example trigger phrase>"
+   ```
 
 ---
 
