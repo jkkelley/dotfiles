@@ -564,6 +564,52 @@ Example invocations:
 
 ---
 
+## Intent (k): log Claude sessions
+
+**Trigger phrasing:** "log my sessions", "log a few sessions", "operator capture claude sessions", "I need to log my session", "I need to log a few sessions".
+
+Example invocations:
+- *"hey operator, log my sessions"*
+- *"hey operator, log a few sessions"*
+- *"hey operator, operator capture claude sessions"*
+
+### Behavior
+
+1. Run pull-on-read: `git -C "$OPERATOR_REPO" pull --rebase` (warn but continue on failure).
+2. Determine input mode from the prompt:
+   - **Bulk** — prompt contains lines with ` @ ` (name @ directory format): parse all pairs immediately.
+   - **Interactive** — no ` @ ` in prompt: ask *"How many sessions are we logging?"*, then for each session ask *"Session N — name?"* followed by *"Session N — directory?"*.
+3. **Bulk parsing rule:** split each line on the **last** `@` — everything before it is the session name, everything after is the directory. This handles `@` characters in session names.
+4. Capture timestamp: `date +"%Y%m%d %H:%M:%S"`.
+5. Resolve file path:
+   ```bash
+   FILE="$OPERATOR_REPO/claude-sessions/$(date +%Y)/$(date +%m)/$(date +%d)-claude-sessions.md"
+   ```
+6. Create missing directories: `mkdir -p "$(dirname "$FILE")"`.
+7. If file does not exist, create it with this header:
+   ```markdown
+   # Claude Sessions — YYYY-MM-DD
+
+   | Time Logged | Session Name | Directory |
+   |-------------|-------------|-----------|
+   ```
+   Then append the new rows. If file already exists, append rows only (no new header).
+8. Each row format:
+   ```
+   | YYYYMMDD HH:MM:SS | <session name> | <directory> |
+   ```
+9. Stage, commit, and push:
+   ```bash
+   git -C "$OPERATOR_REPO" add claude-sessions/
+   git -C "$OPERATOR_REPO" commit -m "sessions: $(date +%Y-%m-%d) — N session(s) logged"
+   git -C "$OPERATOR_REPO" push
+   ```
+   On push failure: tell the user *"Logged locally but push failed. Run `git -C $OPERATOR_REPO push` to retry."*
+10. Print: `Logged N session(s) to claude-sessions/YYYY/MM/DD-claude-sessions.md and pushed to remote.`
+11. On a new line: `Happy Claud'ing`
+
+---
+
 ## Skill Update Convention
 
 When a new intent is added to the operator skill:
