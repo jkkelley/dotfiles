@@ -13,7 +13,7 @@
 | north-star | Edit or walk through a domain's north-star | `"hey operator, work north-star: add constraint X"` |
 | agenda | Show the last planned agenda for today | `"hey operator, agenda"` |
 | triage | Work through inbox items one by one | `"hey operator, let's triage"` |
-| backlog | Log a bug or task to a project's backlog | `"hey operator, yieldpoint-ai: backlog — timeout flicker"` |
+| backlog | Log a bug or task to a project's backlog | `"hey operator, my-project: backlog — timeout flicker"` |
 | sessions | Log one or more Claude sessions for the day | `"hey operator, log my sessions"` |
 | help | Show this reference card | `"hey operator, help"` |
 
