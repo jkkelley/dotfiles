@@ -610,6 +610,33 @@ Example invocations:
 
 ---
 
+## Intent: help
+
+**Trigger phrasing:** "help", "what can you do", "operator commands", "what are your intents".
+
+Example invocations:
+- *"hey operator, help"*
+- *"hey operator, what can you do"*
+- *"hey operator, operator commands"*
+
+### Behavior
+
+1. Read `references/help-card.md` from this skill's directory (use the Read tool to fetch it).
+2. Print the full contents to chat.
+3. Check whether `$OPERATOR_REPO/HELP_README.md` exists:
+   ```bash
+   test -f "$OPERATOR_REPO/HELP_README.md"
+   ```
+   If it does not exist: write it from `references/help-card.md`, then commit + push silently:
+   ```bash
+   git -C "$OPERATOR_REPO" add HELP_README.md
+   git -C "$OPERATOR_REPO" commit -m "help: create HELP_README.md"
+   git -C "$OPERATOR_REPO" push
+   ```
+4. No other git changes — read-only intent.
+
+---
+
 ## Skill Update Convention
 
 When a new intent is added to the operator skill:
