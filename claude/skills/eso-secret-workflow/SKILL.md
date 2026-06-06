@@ -182,6 +182,152 @@ spec:
 The OIDC provider is registered and working (proven by prospector and job-hunter).
 Skip Flow A step 1 (bootstrap check) — the cluster is already bootstrapped.
 
+---
+
+## Jenkins Pipeline IRSA — Non-ESO Workloads
+
+> Use this pattern when a **Jenkins pipeline** needs direct AWS access (S3, CloudFront, ECR, etc.).
+> This is NOT the ESO pattern — it's for pipeline execution, not secret delivery.
+> See also: `local-k8s-docs/runbooks/k8s-jenkins/jenkins-pipeline-irsa.md` for the full runbook.
+
+### Rules — read before writing anything
+
+- **Never use static IAM credentials in a Jenkins pipeline.** No `aws-access-key-id` or `aws-secret-access-key` in Vault, SSM, or Jenkins credentials for pipeline AWS auth. IRSA only.
+- **Every pipeline type gets its own dedicated ServiceAccount and scoped IAM role.** Never share `homelab-jenkins-iac-role` or any other broad role with a new pipeline. Blast radius is real.
+- **Role name describes the workload, not the permissions.** Name it `jenkins-{project}-role`, not `jenkins-{project}-s3-role`. Permissions change; the workload identity doesn't.
+- **`jenkins-agent` stays unannotated.** It is the generic SA used by all pipelines that don't need AWS. Never annotate it with an IRSA role.
+
+### Naming convention
+
+```
+ServiceAccount:  jenkins-{project}-sa       (in jenkins namespace)
+IAM role:        jenkins-{project}-role      (scoped to exactly what the pipeline needs)
+Trust policy:    system:serviceaccount:jenkins:jenkins-{project}-sa
+```
+
+### OIDC issuer SSM path
+
+Read from the app-scoped path (smaller blast radius than the cluster-wide path):
+```bash
+aws ssm get-parameter \
+  --name /yieldpoint-ai/oidc-issuer-url \
+  --region us-east-2 \
+  --query 'Parameter.Value' --output text \
+  --profile {AWS_PROFILE}
+```
+Both `/yieldpoint-ai/oidc-issuer-url` and `/infra/cluster/oidc-issuer-url` resolve to the same value.
+Use the app-scoped path for new IAM roles — a mistake there only breaks that project's Terraform.
+
+### Jenkinsfile pod spec (match jenkins-terraform-sa pattern exactly)
+
+```groovy
+agent {
+    kubernetes {
+        yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: jenkins-{project}-sa
+  containers:
+  - name: aws
+    image: amazon/aws-cli:latest
+    command: [sleep]
+    args: ["99d"]
+    tty: true
+    env:
+    - name: AWS_DEFAULT_REGION
+      value: us-east-2
+    volumeMounts:
+    - name: aws-iam-token
+      mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+      readOnly: true
+  volumes:
+  - name: aws-iam-token
+    projected:
+      sources:
+      - serviceAccountToken:
+          audience: sts.amazonaws.com
+          expirationSeconds: 86400
+          path: token
+'''
+    }
+}
+```
+
+The manual volume mount is belt-and-suspenders alongside the Pod Identity Webhook injection.
+Always include it — the webhook alone is not sufficient for all cluster states.
+
+### ServiceAccount manifest (homelab-gitops)
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins-{project}-sa
+  namespace: jenkins
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::{AWS_ACCOUNT_ID}:role/jenkins-{project}-role
+```
+
+This manifest lives in homelab-gitops and is synced by ArgoCD (same as `jenkins-terraform-sa`).
+
+### Terraform for the IAM role (in project `_infra/` directory)
+
+```hcl
+data "aws_ssm_parameter" "oidc_issuer_url" {
+  name = "/{project}/oidc-issuer-url"   # app-scoped, not /infra/cluster/oidc-issuer-url
+}
+
+locals {
+  oidc_issuer = replace(data.aws_ssm_parameter.oidc_issuer_url.value, "https://", "")
+}
+
+data "aws_iam_policy_document" "pipeline_trust" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    principals {
+      type        = "Federated"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${local.oidc_issuer}"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "${local.oidc_issuer}:sub"
+      values   = ["system:serviceaccount:jenkins:jenkins-{project}-sa"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "${local.oidc_issuer}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "pipeline" {
+  name               = "jenkins-{project}-role"
+  assume_role_policy = data.aws_iam_policy_document.pipeline_trust.json
+}
+# Attach a scoped policy — only the permissions the pipeline actually needs
+```
+
+### Verification
+
+```bash
+# Confirm SA is annotated
+kubectl get sa jenkins-{project}-sa -n jenkins \
+  -o jsonpath='{.metadata.annotations.eks\.amazonaws\.com/role-arn}'
+
+# Confirm IRSA works in a test pod
+kubectl run irsa-test \
+  --image=amazon/aws-cli:latest \
+  --restart=Never \
+  --serviceaccount=jenkins-{project}-sa \
+  --namespace=jenkins \
+  -- sleep 300
+kubectl exec -n jenkins irsa-test -- aws sts get-caller-identity
+kubectl delete pod irsa-test -n jenkins
+```
+
 ### Trust policy `sub` condition for new IAM roles
 
 ```

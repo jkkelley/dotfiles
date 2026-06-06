@@ -65,6 +65,24 @@ Do not begin work until the scope is confirmed.
 
 **If the session involves Terraform files** (any `.tf` file added or modified):
 
+> **⛔ HOMELAB RULE — No local `terraform apply` against real AWS. Ever.**
+>
+> Terraform sessions on the homelab have one job: **write correct code and validate it locally**.
+> The actual apply always happens via the Jenkins Terraform pipeline (same pattern as `yieldpoint-ai-static-website`).
+> If you find yourself about to run `terraform apply` against a real AWS profile — stop. Commit the code, open the PR, let Jenkins run it.
+>
+> **Terraform state is always S3-backed — never local.** Before writing any Terraform module:
+> - Confirm an SSM parameter exists for the state bucket: `/<project>/terraform-state-bucket`
+> - If it doesn't exist yet, flag it to the user before proceeding — it must be created first
+> - The Jenkins pipeline fetches the bucket name from SSM at init time and writes `backend.hcl` dynamically
+> - Never hardcode the bucket name or use `terraform { backend "local" {} }`
+>
+> **What "testing Terraform" means locally:**
+> - `terraform fmt -check` — formatting
+> - `terraform validate` — syntax + provider schema
+> - Ministack apply (S3-compatible resources only) — confirms resource blocks are well-formed
+> - CloudFront, IAM, and other non-S3 resources cannot be tested locally — this is expected and acceptable
+
 1. Check `.gitignore` for required entries before running anything — add any that are missing:
    ```
    test/
@@ -235,6 +253,8 @@ This is the authoritative reference for the full SSM → Vault → AVP → ArgoC
 9. **vault-seed.sh update is part of every vault-seed session:** Any session that creates or modifies Vault paths must update `vault-seed.sh` with `ssm_get()` calls for every new key, and update the SSM Parameter Inventory in `vault_seed.md`. The local-k8s-docs PR must be opened before or alongside the app PR — never left as a follow-up.
    - Local:  `~/Documents/local-k8s-docs/runbooks/vault-seed/vault-seed.sh`
    - Remote (DR fallback): `https://github.com/jkkelley/local-k8s-docs/blob/main/runbooks/vault-seed/vault-seed.sh`
+10. **Terraform state is always S3-backed, never local.** Every Terraform module needs a `/<project>/terraform-state-bucket` SSM param. The Jenkins pipeline fetches it at init time. No `terraform apply` runs locally — Ministack for validation, Jenkins for real apply. See `local-k8s-docs/runbooks/k8s-jenkins/jenkins-pipeline-irsa.md` for the full Jenkins Terraform pipeline pattern.
+11. **Jenkins pipelines use IRSA — never static AWS credentials.** No `aws-access-key-id` or `aws-secret-access-key` in Vault for pipeline use. Every pipeline type gets a dedicated ServiceAccount (`jenkins-{project}-sa`) and a scoped IAM role (`jenkins-{project}-role`). See `local-k8s-docs/runbooks/k8s-jenkins/jenkins-pipeline-irsa.md`.
 
 ---
 
@@ -250,3 +270,6 @@ This is the authoritative reference for the full SSM → Vault → AVP → ArgoC
 - **Never clean up the branch automatically.** Always ask the user before running `git checkout main && git branch -d && git pull`. This is a gate, not an assumption.
 - **Always name the next session.** Tell the user the next session name and the exact phrase to start it.
 - **Stop after hand-off.** Do not continue into the next session unprompted.
+- **Never `terraform apply` against real AWS locally.** Ministack validates code. Jenkins applies it. No exceptions.
+- **Never use static AWS credentials in Jenkins pipelines.** IRSA only. No `aws-access-key-id` or `aws-secret-access-key` in Vault for pipeline use. See `local-k8s-docs/runbooks/k8s-jenkins/jenkins-pipeline-irsa.md`.
+- **Terraform state is always S3-backed.** Confirm `/<project>/terraform-state-bucket` SSM param exists before writing any Terraform module. Never use local state.
