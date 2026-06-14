@@ -5,7 +5,7 @@ description: Enforces work → test → verify → checkpoint → stop for multi
 
 # Session Workflow
 
-One task. One session. Always ends with test → verify → commit → PR → checkpoint → stop.
+One task. One session. Always ends with test → verify → checkpoint → PR → stop.
 
 ## When This Applies
 
@@ -132,7 +132,17 @@ Do not begin work until the scope is confirmed.
 
 ---
 
-## Step 4 — Commit & Push & PR
+## Step 4 — Checkpoint (ask gate)
+
+Before opening the PR, ask the user:
+> "Ready for context compaction before I open the PR? (yes / no)"
+
+- If **yes**: invoke the `context-compaction` skill now. Captures what was built, what was verified, and what the next session starts with. Then proceed to Step 5.
+- If **no**: skip compaction and proceed to Step 5. User can run `context-compaction` manually at any time.
+
+---
+
+## Step 5 — Commit & Push & PR
 
 Every session ends with a PR — not just the last one.
 
@@ -154,20 +164,9 @@ Every session ends with a PR — not just the last one.
 
 ---
 
-## Step 5 — Checkpoint
-
-Invoke the `context-compaction` skill to distill the session into `CONTEXT_STATE.md`.
-
-The checkpoint must capture:
-- What was built
-- What was verified
-- What the next session starts with
-
----
-
 ## Step 6 — Close-Out Gate
 
-This step runs after the checkpoint. Do not skip any part of it.
+This step runs after the PR is open. Do not skip any part of it.
 
 ### 6a — Hand PR to user for review
 Tell the user:
@@ -262,7 +261,7 @@ This is the authoritative reference for the full SSM → Vault → AVP → ArgoC
 
 - **One session = one task.** If the task feels small, that's fine. Don't expand scope.
 - **No verification, no done.** Running the code/tests is mandatory.
-- **Checkpoint is not optional.** `context-compaction` runs at the end of every session.
+- **Checkpoint before PR — always ask first.** Before opening the PR, ask: "Ready for context compaction? (yes / no)". If yes, run `context-compaction` then open the PR. If no, open the PR and skip. Never open the PR before asking.
 - **Never commit to `main`.** Every session runs on `feat/session-<name>`. No exceptions.
 - **Every session gets a PR.** Open it at the end of every session, not just the last one.
 - **Always give the PR URL.** The user must receive the link before the session stops.
