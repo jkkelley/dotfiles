@@ -1,103 +1,83 @@
 ---
 name: backup-home
-description: Syncs $HOME to S3 (win11-wsl-backups bucket) using the minecraft-admin profile. Runs a dry-run first, shows a confirmation prompt, then performs the real sync with a status summary.
+description: Archives $HOME to a timestamped tar.gz and uploads it to S3 (win11-wsl-backups bucket, DevEnv_Internal prefix) using the minecraft-admin profile. Shows a pre-flight size estimate, requires confirmation, then runs the backup script with a status summary.
 ---
 
-# backup-home - Sync $HOME to S3
+# backup-home - Archive and Upload $HOME to S3
 
-Backs up the user's home directory to S3 using `aws s3 sync`.
+Backs up the user's home directory by creating a compressed archive and uploading it to S3.
+The script lives at `scripts/backup-home.sh` relative to this skill's base directory.
 
 ```
 BUCKET="win11-wsl-backups-690712292635-us-east-2-an"
 PROFILE="minecraft-admin"
-DEST="s3://${BUCKET}/DevEnv_Sync/"
+PREFIX="DevEnv_Internal"
 ```
 
-## Step 1: Dry-run
+Excludes: `.cache`, `.local/share/containers`, `.npm`, `.cargo/registry`
 
-Run the sync in dry-run mode and capture the output:
+## Step 1: Pre-flight size estimate
+
+Give the user a sense of what's about to be archived before touching anything:
 
 ```bash
-BUCKET="win11-wsl-backups-690712292635-us-east-2-an"
-PROFILE="minecraft-admin"
-
-aws s3 sync "$HOME" "s3://${BUCKET}/DevEnv_Sync/" \
-  --profile "$PROFILE" \
-  --exclude ".cache/*" \
-  --exclude ".local/share/containers/*" \
-  --dryrun 2>&1 | tee /tmp/backup-home-dryrun.txt
+echo "Estimating archive size (excluding caches)..."
+du -sh \
+  --exclude=".cache" \
+  --exclude=".local/share/containers" \
+  --exclude=".npm" \
+  --exclude=".cargo/registry" \
+  "$HOME" 2>/dev/null | cut -f1
 ```
 
-After the dry-run completes, summarize what would happen:
-
-- Count `(dryrun) upload:` lines - these are files that would be uploaded
-- Count `(dryrun) delete:` lines - these are remote files that would be removed
-
-Show the user:
+Also show the S3 destination it will land in:
 
 ```
-Dry-run complete.
-  Would upload: N files
-  Would delete: N files
-
-Top files to upload (first 10):
-  <list>
+s3://win11-wsl-backups-690712292635-us-east-2-an/DevEnv_Internal/home_devenv_<timestamp>.tar.gz
 ```
 
-If the dry-run itself fails (non-zero exit, AWS auth error, bucket not found), stop and show the raw error. Do not proceed to Step 2.
+If the `du` fails for any reason, skip it and proceed to Step 2 - the estimate is informational only.
 
 ## Step 2: Confirmation prompt
 
 Ask the user explicitly:
 
-> Proceed with the real sync? This will upload/delete the files listed above. (yes/no)
+> Ready to archive and upload ~/ to S3? This will create a tar.gz of approximately <size> and upload it. (yes/no)
 
 Wait for the user's response. If they say anything other than "yes" or "y", abort and say: "Backup cancelled."
 
-## Step 3: Real sync
+## Step 3: Run the backup script
 
-Run the sync for real, capturing output:
+Locate the script relative to this skill's base directory and run it:
 
 ```bash
-BUCKET="win11-wsl-backups-690712292635-us-east-2-an"
-PROFILE="minecraft-admin"
-
-aws s3 sync "$HOME" "s3://${BUCKET}/DevEnv_Sync/" \
-  --profile "$PROFILE" \
-  --exclude ".cache/*" \
-  --exclude ".local/share/containers/*" \
-  2>&1 | tee /tmp/backup-home-sync.txt
-SYNC_EXIT=${PIPESTATUS[0]}
+SKILL_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+bash "$SKILL_DIR/scripts/backup-home.sh"
+BACKUP_EXIT=$?
 ```
+
+If the skill base directory is not available via `BASH_SOURCE`, use the known path:
+
+```bash
+bash ~/.claude/skills/backup-home/scripts/backup-home.sh
+BACKUP_EXIT=$?
+```
+
+Stream the script's output directly to the user as it runs - do not suppress it. The script already prints step-by-step progress.
 
 ## Step 4: Status summary
 
-Parse `/tmp/backup-home-sync.txt` and report:
-
-```bash
-UPLOADED=$(grep -c '^upload:' /tmp/backup-home-sync.txt 2>/dev/null || echo 0)
-DELETED=$(grep -c '^delete:' /tmp/backup-home-sync.txt 2>/dev/null || echo 0)
-```
-
-Show the user:
+After the script exits, report:
 
 ```
 Backup complete.
-  Uploaded: N files
-  Deleted:  N files
   Exit code: 0 (success)
-  Destination: s3://win11-wsl-backups-690712292635-us-east-2-an/DevEnv_Sync/
+  Destination: s3://win11-wsl-backups-690712292635-us-east-2-an/DevEnv_Internal/
 ```
 
-If `SYNC_EXIT` is non-zero, flag it clearly:
+If `BACKUP_EXIT` is non-zero, flag it clearly:
 
 ```
 Backup finished with errors (exit code: N).
-Check /tmp/backup-home-sync.txt for details.
-```
-
-Clean up temp files when done:
-
-```bash
-rm -f /tmp/backup-home-dryrun.txt /tmp/backup-home-sync.txt
+The archive may not have been uploaded or cleaned up. Check /tmp/home_devenv_*.tar.gz for any leftover archive.
 ```
