@@ -15,12 +15,13 @@ echo "Target: s3://$BUCKET/$TARGET_PREFIX/$ARCHIVE_NAME"
 
 # 1. Zip the home directory with critical exclusions
 echo "[1/3] Archiving ~/ (excluding caches and container layers)..."
+USERNAME="$(basename "$HOME")"
 tar -czf "$ARCHIVE_PATH" \
-    --exclude="$HOME/.cache" \
-    --exclude="$HOME/.local/share/containers" \
-    --exclude="$HOME/.npm" \
-    --exclude="$HOME/.cargo/registry" \
-    -C "$HOME/.." "$(basename "$HOME")"
+    --exclude="${USERNAME}/.cache" \
+    --exclude="${USERNAME}/.local/share/containers" \
+    --exclude="${USERNAME}/.npm" \
+    --exclude="${USERNAME}/.cargo/registry" \
+    -C "$HOME/.." "${USERNAME}"
 
 ARCHIVE_SIZE=$(du -h "$ARCHIVE_PATH" | cut -f1)
 echo "    Archive created: $ARCHIVE_SIZE"
