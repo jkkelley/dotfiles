@@ -35,11 +35,12 @@ sys.path.insert(0, '/work')
 from content.profile import WHOS_RESUME_IS_THIS, CONTACT_LINE
 import selection as sel
 
-meta    = sel.LETTER_META       # {date, company, role, tone}
-opening = sel.OPENING           # one string (formatted with .format(**meta))
-proofs  = sel.PROOFS            # list of strings
-why     = sel.WHY_THIS_COMPANY  # free-text paragraph drafted per JD
-closing = sel.CLOSING           # one string
+meta            = sel.LETTER_META       # {date, company, role, tone}
+opening         = sel.OPENING           # one string (formatted with .format(**meta))
+proofs          = sel.PROOFS            # list of strings
+why             = sel.WHY_THIS_COMPANY  # free-text paragraph drafted per JD
+closing         = sel.CLOSING           # one string
+output_filename = getattr(sel, 'OUTPUT_FILENAME', 'james_kelley_cover_letter.docx')
 
 
 def fmt(text):
@@ -127,7 +128,7 @@ def build(work_dir='/work'):
     run(p, WHOS_RESUME_IS_THIS.title(), bold=True, size=SIZE_BODY, color=DARK)
 
     # ── Output ────────────────────────────────────────────────────────────────
-    out = os.path.join(work_dir, 'james_kelley_cover_letter.docx')
+    out = os.path.join(work_dir, output_filename)
     doc.save(out)
     print('Saved: %s' % out)
 
