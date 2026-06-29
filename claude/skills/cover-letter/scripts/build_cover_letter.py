@@ -127,6 +127,11 @@ def build(work_dir='/work'):
     p.paragraph_format.space_after = Pt(0)
     run(p, WHOS_RESUME_IS_THIS.title(), bold=True, size=SIZE_BODY, color=DARK)
 
+    # ── Document metadata ─────────────────────────────────────────────────────
+    props = doc.core_properties
+    props.author   = 'James Kelley'
+    props.comments = 'Generated w/ ☕'
+
     # ── Output ────────────────────────────────────────────────────────────────
     out = os.path.join(work_dir, output_filename)
     doc.save(out)
