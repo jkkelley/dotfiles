@@ -1,13 +1,14 @@
 ---
 name: cover-letter
-description: Build a one-page .docx cover letter for a specific job application. Ingests a job description, picks prose fragments from tone-keyed pools, drafts a "why this company" paragraph, runs a pre-build checklist for user approval, then builds and PRs the output. Output lands in applications/<date>_<company>_<role>/ inside this repo.
+description: Build a one-page .docx cover letter for a specific job application. Ingests a job description, picks prose fragments from tone-keyed pools, drafts a "why this company" paragraph, runs a pre-build checklist for user approval, then builds the output. Output lands in work_title/applications/<date>_<company>_<role>/ (gitignored, local-only).
 ---
 
 # /cover-letter - Cover Letter Generator
 
 Builds a tailored, one-page `.docx` cover letter from a job description.
-All personal content lives in this repo (`content/`, `applications/`).
-The engine lives in `scripts/` alongside this file.
+The prose/content package (`content/`) lives in this repo and is
+version-controlled; per-application output (`work_title/applications/`) is
+gitignored and local-only. The engine lives in `scripts/` alongside this file.
 
 ## Maintenance - mirroring to dotfiles
 
@@ -16,6 +17,7 @@ The dotfiles repo at https://github.com/jkkelley/dotfiles mirrors it at
 `claude/skills/cover-letter/` for portability to other machines.
 
 **When this skill's scripts are updated:**
+
 1. Make and test all changes here first.
 2. Copy the updated files to dotfiles:
    ```bash
@@ -40,15 +42,10 @@ Never edit the dotfiles copy directly - changes made there will be overwritten.
 
 ## Phase B - Full per-application workflow
 
-### Step 1 - Branch
+### Step 1 - Intake the job description
 
-Create a branch named `letter/<company>-<role>-<date>` (lowercase, hyphens, no spaces):
-
-```bash
-git checkout -b letter/<company>-<role>-<date>
-```
-
-### Step 2 - Intake the job description
+No branch needed - output lives under `work_title/`, which is gitignored, so
+nothing from this workflow is ever committed.
 
 Accept the JD in either form:
 
@@ -57,20 +54,21 @@ Accept the JD in either form:
 **File path:** if the user provides a path (or drops a file), read it directly.
 
 Save the JD text to:
+
 ```
-applications/<date>_<company>_<role>/job_description.txt
+work_title/applications/<date>_<company>_<role>/job_description.txt
 ```
 
 Use `YYYY-MM-DD` for the date, lowercase snake_case for company and role.
 Create the directory if it does not exist.
 
-### Step 3 - Read the pools
+### Step 2 - Read the pools
 
 Read `content/cover_letter.py` to see available fragments.
 Read `content/achievements.py` to understand the `FACT_*` constants (what the numbers mean).
 Read `tests/sample-co_devops-engineer/selection.py` as a reference template.
 
-### Step 4 - Hand-pick fragments
+### Step 3 - Hand-pick fragments
 
 Based on the JD, select:
 
@@ -81,14 +79,14 @@ Based on the JD, select:
   Cap at three to preserve the one-page limit.
 - **One closing** from the tone-matched pool (`CLOSING_FORMAL`, `CLOSING_DIRECT`, or `CLOSING_WARM`).
 
-### Step 5 - Draft WHY_THIS_COMPANY
+### Step 4 - Draft WHY_THIS_COMPANY
 
 Write a short paragraph (3-5 sentences) explaining why this specific company and role, drawn from the JD.
 Be specific: reference the company's product, domain, or environment.
 This is the only non-deterministic slot.
 No client names or unverifiable metrics.
 
-### Step 6 - Choose tone
+### Step 5 - Choose tone
 
 If the user has not already specified a tone, ask:
 "Which tone? formal / direct / warm"
@@ -97,9 +95,9 @@ If the user has not already specified a tone, ask:
 - **direct** - confident and concise; good for fintech/startups/regulated environments.
 - **warm** - conversational and enthusiastic; good for mission-driven or smaller teams.
 
-### Step 7 - Write selection.py
+### Step 6 - Write selection.py
 
-Create `applications/<date>_<company>_<role>/selection.py`:
+Create `work_title/applications/<date>_<company>_<role>/selection.py`:
 
 ```python
 from content.cover_letter import (
@@ -132,7 +130,7 @@ CLOSING = CLOSING_<TONE>[<n>]  # <inline comment>
 `OUTPUT_FILENAME` defaults to `james_kelley_cover_letter.docx` - omit it for real applications.
 For test builds only, set `OUTPUT_FILENAME = 'TEST_james_kelley_cover_letter.docx'`.
 
-### Step 8 - Pre-build checklist
+### Step 7 - Pre-build checklist
 
 Show the user:
 
@@ -159,12 +157,12 @@ Wait for the user's answer before continuing.
 Ask: **"Is this good?"**
 Do not build until the user confirms.
 
-### Step 9 - Build
+### Step 8 - Build
 
 ```bash
 SKILL_DIR="$(pwd)/.claude/skills/cover-letter"
 podman run --rm \
-  -v "$(pwd)/applications/<date>_<company>_<role>:/work" \
+  -v "$(pwd)/work_title/applications/<date>_<company>_<role>:/work" \
   -v "$SKILL_DIR/scripts:/scripts" \
   -v "$(pwd)/content:/content" \
   python:3.12-slim bash -c \
@@ -172,16 +170,18 @@ podman run --rm \
 ```
 
 Confirm the build exits 0 and the output exists:
+
 ```
-applications/<date>_<company>_<role>/james_kelley_cover_letter.docx
+work_title/applications/<date>_<company>_<role>/james_kelley_cover_letter.docx
 ```
 
-### Step 10 - Verify
+### Step 9 - Verify
 
 Run the structure check in-container:
+
 ```bash
 podman run --rm \
-  -v "$(pwd)/applications/<date>_<company>_<role>:/work" \
+  -v "$(pwd)/work_title/applications/<date>_<company>_<role>:/work" \
   -v "$(pwd)/content:/content" \
   python:3.12-slim bash -c "pip install python-docx -q && python3 - <<'EOF'
 import sys
@@ -197,25 +197,19 @@ print('structure ok')
 EOF"
 ```
 
-### Step 11 - Commit and PR
+### Step 10 - Done (no git action)
 
-```bash
-git add applications/<date>_<company>_<role>/
-git commit -m "feat: cover letter for <company> <role> (<date>)"
-git push -u origin letter/<company>-<role>-<date>
-gh pr create --base main \
-  --title "Cover letter: <role> at <company> (<date>)" \
-  --body "Application folder for <role> at <company>."
-```
+Nothing to commit or push here - `work_title/` is gitignored, so this
+application folder is local-only by design. Do not `git add`, commit, or
+open a PR for it.
 
-### Step 12 - Final report
+### Step 11 - Final report
 
 Deliver to the user:
 
 ```
-Built:     applications/<date>_<company>_<role>/james_kelley_cover_letter.docx
-Selection: applications/<date>_<company>_<role>/selection.py
-PR:        <PR URL>
+Built:     work_title/applications/<date>_<company>_<role>/james_kelley_cover_letter.docx
+Selection: work_title/applications/<date>_<company>_<role>/selection.py
 ```
 
 ## Adding new fragments to the pools
