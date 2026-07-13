@@ -61,7 +61,7 @@ First, verify `gh` is authenticated:
 gh auth status >/dev/null 2>&1
 ```
 
-If this exits non-zero, tell the user: *"`gh` is not authenticated. Run `gh auth login`, then retry."* and stop. Do NOT proceed to scaffold.
+If this exits non-zero, tell the user: _"`gh` is not authenticated. Run `gh auth login`, then retry."_ and stop. Do NOT proceed to scaffold.
 
 Get the GitHub username:
 
@@ -69,7 +69,7 @@ Get the GitHub username:
 gh api user --jq .login
 ```
 
-If this exits non-zero, tell the user: *"`gh` API call failed (network or token issue). Try again later."* and stop.
+If this exits non-zero, tell the user: _"`gh` API call failed (network or token issue). Try again later."_ and stop.
 
 With auth confirmed and `<user>` known, check whether the operator repo already exists on GitHub:
 
@@ -81,7 +81,7 @@ If this exits 0, the repo exists on GitHub → **Flavor 2**. Otherwise → **Fla
 
 ### Flavor 1: Brand-new setup (remote does not exist)
 
-Tell the user concisely: *"No operator repo yet. I'll scaffold one and create a private GitHub repo. Proceed?"* Wait for confirmation.
+Tell the user concisely: _"No operator repo yet. I'll scaffold one and create a private GitHub repo. Proceed?"_ Wait for confirmation.
 
 On confirmation:
 
@@ -124,13 +124,13 @@ On confirmation:
    gh repo create operator --private --source=. --push
    ```
 
-8. After scaffold completes, tell the user: *"Operator repo created at `$OPERATOR_REPO` and pushed to GitHub. Want to create your first domain now? (e.g., 'work', 'weekend-business', 'personal')"* — if yes, dispatch to intent (f).
+8. After scaffold completes, tell the user: _"Operator repo created at `$OPERATOR_REPO` and pushed to GitHub. Want to create your first domain now? (e.g., 'work', 'weekend-business', 'personal')"_ — if yes, dispatch to intent (f).
 
 9. Then resume the original intent the user invoked.
 
 ### Flavor 2: New machine (remote exists)
 
-Tell the user: *"No operator repo on this machine, but found `<user>/operator` on GitHub. Clone it to `$OPERATOR_REPO`?"* Wait for confirmation.
+Tell the user: _"No operator repo on this machine, but found `<user>/operator` on GitHub. Clone it to `$OPERATOR_REPO`?"_ Wait for confirmation.
 
 On confirmation:
 
@@ -151,9 +151,10 @@ Then resume the original intent.
 **Trigger phrasing:** any prompt where the user is dropping a thought without asking for action — phrases like "idea —", "capture —", "btw —", "by the way —", "thought —", or simply a domain prefix followed by free text.
 
 Example invocations:
-- *"hey operator, weekend-business: idea — scrape Yelp reviews for restaurant niches"*
-- *"hey operator, capture: try LangGraph for the planner"*
-- *"hey operator, work: thought — pair with Marcus on the migration"*
+
+- _"hey operator, weekend-business: idea — scrape Yelp reviews for restaurant niches"_
+- _"hey operator, capture: try LangGraph for the planner"_
+- _"hey operator, work: thought — pair with Marcus on the migration"_
 
 ### Behavior
 
@@ -192,8 +193,9 @@ Do NOT ask any follow-up questions on capture. Capture friction is the enemy. If
 **Trigger phrasing:** "create a new domain", "new domain", "add a domain", "make a domain".
 
 Example invocations:
-- *"hey operator, create a new domain called consulting"*
-- *"hey operator, new domain: weekend-business — selling SaaS templates to local businesses"*
+
+- _"hey operator, create a new domain called consulting"_
+- _"hey operator, new domain: weekend-business — selling SaaS templates to local businesses"_
 
 ### Behavior
 
@@ -205,7 +207,7 @@ Example invocations:
    - `<YYYY-MM-DD>` → today's date (`date -I`)
 5. If the user provided a one-line mission in the prompt, populate the Mission section. If the user mentioned a `time-profile` value (matching one of the enum values), substitute it; otherwise leave the default `anytime` and ask in step 7 if they want to change it.
 6. **Show the draft to the user, ask "ship it?"**
-7. If the time-profile is still `anytime`, also ask: *"Time profile? (anytime / weekday-business-hours / evenings / weekends / weekends-and-evenings)"* — accept the answer.
+7. If the time-profile is still `anytime`, also ask: _"Time profile? (anytime / weekday-business-hours / evenings / weekends / weekends-and-evenings)"_ — accept the answer.
 8. On confirm:
 
    ```bash
@@ -235,14 +237,15 @@ Example invocations:
 **Trigger phrasing:** "new project", "started a new project", "create a project", "add a project".
 
 Example invocations:
-- *"hey operator, weekend-business: started a new project called gohighlevel-niche-templates, building per-vertical SaaS templates I can sell to leads."*
-- *"hey operator, work: new project — migration-X"*
+
+- _"hey operator, weekend-business: started a new project called gohighlevel-niche-templates, building per-vertical SaaS templates I can sell to leads."_
+- _"hey operator, work: new project — migration-X"_
 
 ### Behavior
 
 1. Run pull-on-read.
 2. Parse from the prompt:
-   - **domain** (required) — must match an existing directory under `$OPERATOR_REPO/domains/`. If missing or unrecognized, ask: *"Which domain? (existing: <list>)"*.
+   - **domain** (required) — must match an existing directory under `$OPERATOR_REPO/domains/`. If missing or unrecognized, ask: _"Which domain? (existing: <list>)"_.
    - **project name / slug** (required) — slugs must be lowercase, hyphenated.
    - **gist** — any free-form text after the project name.
 3. If `$OPERATOR_REPO/domains/<domain>/projects/<slug>.md` already exists, stop and tell the user.
@@ -267,16 +270,17 @@ Example invocations:
 
 ### On reject
 
-If the user rejects the draft, ask: *"Edit the draft inline, or discard?"*. On "edit," accept their corrections, re-show, and re-confirm. On "discard," do nothing — no file written.
+If the user rejects the draft, ask: _"Edit the draft inline, or discard?"_. On "edit," accept their corrections, re-show, and re-confirm. On "discard," do nothing — no file written.
 
 ## Intent (c): show domain status
 
 **Trigger phrasing:** "status", "show me <domain> status", "how's <project>", "where am I on <project>".
 
 Example invocations:
-- *"hey operator, status"* — all domains, terse
-- *"hey operator, show me weekend-business status"* — one domain, terse
-- *"hey operator, status on mn-sos-scraper"* — one project, full card
+
+- _"hey operator, status"_ — all domains, terse
+- _"hey operator, show me weekend-business status"_ — one domain, terse
+- _"hey operator, status on mn-sos-scraper"_ — one project, full card
 
 ### Behavior
 
@@ -308,16 +312,17 @@ If a domain has more than 12 active projects, show the 12 most recently touched 
 **Trigger phrasing:** "is done", "is paused", "is blocked", "is abandoned", "mark as <status>", "pause <project>", "archive <project>".
 
 Example invocations:
-- *"hey operator, mn-sos-scraper is paused"*
-- *"hey operator, gohighlevel-niche-templates is done"*
-- *"hey operator, mark yelp-scraper as blocked"*
+
+- _"hey operator, mn-sos-scraper is paused"_
+- _"hey operator, gohighlevel-niche-templates is done"_
+- _"hey operator, mark yelp-scraper as blocked"_
 
 ### Behavior
 
 1. Run pull-on-read.
 2. Parse: project slug (required), target status (required, one of `starting`, `in-progress`, `blocked`, `paused`, `done`, `abandoned`).
 3. Locate the project file via `find` (same approach as intent c). If not found, fuzzy-match and suggest.
-4. **For target status `paused` or `blocked`:** ask the user *"What would unblock this?"* — accept a one-line answer. Append it to the `## Notes` section as:
+4. **For target status `paused` or `blocked`:** ask the user _"What would unblock this?"_ — accept a one-line answer. Append it to the `## Notes` section as:
 
    ```
    - <YYYY-MM-DD> Paused/Blocked: <answer>
@@ -352,8 +357,8 @@ Example invocations:
 
 For small targeted edits, e.g.:
 
-- *"hey operator, weekend-business north-star: add a constraint that we're MN-only for the first 90 days"*
-- *"hey operator, work north-star, change the time-profile to evenings"*
+- _"hey operator, weekend-business north-star: add a constraint that we're MN-only for the first 90 days"_
+- _"hey operator, work north-star, change the time-profile to evenings"_
 
 Behavior:
 
@@ -378,10 +383,10 @@ Triggered by phrases: "walk me through", "refine", "let's review".
 Walk each section in order: Mission → Why this matters → Success criteria → Out of scope → Constraints. For each:
 
 1. Read the current section content aloud (echo it).
-2. Ask: *"Keep, change, or replace? (Or 'skip' to leave as-is.)"*
+2. Ask: _"Keep, change, or replace? (Or 'skip' to leave as-is.)"_
 3. On `change` or `replace`, accept the new content and apply via Edit tool.
 
-After the last section, also ask: *"Update time-profile? (current: <value>)"*.
+After the last section, also ask: _"Update time-profile? (current: <value>)"_.
 
 At the end of the walkthrough, run `git diff` to show all changes, ask "ship it?", and commit with a message like `north-star: <domain> — full refresh`.
 
@@ -390,9 +395,10 @@ At the end of the walkthrough, run `git diff` to show all changes, ask "ship it?
 **Trigger phrasing:** "what should I work on", "what's next", "plan", "/standup", "what's on my plate".
 
 Example invocations:
-- *"hey operator, what should I work on?"* → stratified (default)
-- *"hey operator, what's the one thing right now, max focus"* → focus
-- *"hey operator, what's live across everything"* → list
+
+- _"hey operator, what should I work on?"_ → stratified (default)
+- _"hey operator, what's the one thing right now, max focus"_ → focus
+- _"hey operator, what's live across everything"_ → list
 
 ### Behavior
 
@@ -459,13 +465,13 @@ Example invocations:
    <agenda body>
    ```
 
-7. If `age_seconds > 43200` (12h), append the line: *"Agenda is from <age string> — run `/standup` again?"*.
+7. If `age_seconds > 43200` (12h), append the line: _"Agenda is from <age string> — run `/standup` again?"_.
 
 8. No git changes — read-only intent.
 
 ### Edge cases
 
-- **`agenda.md` missing or empty:** print *"No agenda yet — run `/standup` to generate one."* and stop.
+- **`agenda.md` missing or empty:** print _"No agenda yet — run `/standup` to generate one."_ and stop.
 - **Frontmatter unparseable:** print the file content unchanged with a warning header.
 
 ## Intent (i): triage inbox
@@ -474,8 +480,8 @@ Example invocations:
 
 ### Two modes — picked from the prompt
 
-- **Full** — *"hey operator, let's triage the inbox"* → walk all unactioned items.
-- **Targeted** — *"hey operator, triage the yelp idea"* → pull just items whose text matches the substring "yelp".
+- **Full** — _"hey operator, let's triage the inbox"_ → walk all unactioned items.
+- **Targeted** — _"hey operator, triage the yelp idea"_ → pull just items whose text matches the substring "yelp".
 
 ### Behavior
 
@@ -521,8 +527,8 @@ Example invocations:
 
 ### Edge cases
 
-- **Inbox empty:** print *"Inbox is empty — nothing to triage."* and stop.
-- **Targeted match: no items:** print *"No inbox items match '<substring>'."* and stop.
+- **Inbox empty:** print _"Inbox is empty — nothing to triage."_ and stop.
+- **Targeted match: no items:** print _"No inbox items match '<substring>'."_ and stop.
 - **Targeted match: multiple items:** list all matches with ids, ask the user to pick one or say "all of them".
 
 ---
@@ -532,19 +538,20 @@ Example invocations:
 **Trigger phrasing:** "backlog", "add to backlog", "log a backlog item", "backlog item", "add this to the backlog".
 
 Example invocations:
-- *"hey operator, yieldpoint-ai: backlog — timeout UI flicker"*
-- *"hey operator, add this to the yieldpoint-ai backlog"*
+
+- _"hey operator, yieldpoint-ai: backlog — timeout UI flicker"_
+- _"hey operator, add this to the yieldpoint-ai backlog"_
 
 ### Behavior
 
 1. Run pull-on-read.
 2. Parse domain hint. Check that `$OPERATOR_REPO/domains/<domain>/backlog/` exists. If not, tell the user and stop.
 3. Ask the following questions **one at a time** — wait for the answer before asking the next:
-   - *"What's the problem?"*
-   - *"What area? (frontend / infra / backend / content)"*
-   - *"Proposed fix? ('Unknown' is fine)"*
-   - *"Any extra notes? (or 'skip' to leave blank)"*
-   - *"Severity? (Low / Medium / High / Critical)"*
+   - _"What's the problem?"_
+   - _"What area? (frontend / infra / backend / content)"_
+   - _"Proposed fix? ('Unknown' is fine)"_
+   - _"Any extra notes? (or 'skip' to leave blank)"_
+   - _"Severity? (Low / Medium / High / Critical)"_
 4. Generate a slug from the problem text: lowercase, hyphenated, max 5 words.
 5. Get today's date: `date +%Y%m%d` for filename, `date -I` for frontmatter.
 6. Read the template from `references/backlog-item-template.md` and substitute all placeholders.
@@ -569,44 +576,58 @@ Example invocations:
 **Trigger phrasing:** "log my sessions", "log a few sessions", "operator capture claude sessions", "I need to log my session", "I need to log a few sessions".
 
 Example invocations:
-- *"hey operator, log my sessions"*
-- *"hey operator, log a few sessions"*
-- *"hey operator, operator capture claude sessions"*
+
+- _"hey operator, log my sessions"_
+- _"hey operator, log a few sessions"_
+- _"hey operator, operator capture claude sessions"_
 
 ### Behavior
 
 1. Run pull-on-read: `git -C "$OPERATOR_REPO" pull --rebase` (warn but continue on failure).
 2. Determine input mode from the prompt:
-   - **Bulk** — prompt contains lines with ` @ ` (name @ directory format): parse all pairs immediately.
-   - **Interactive** — no ` @ ` in prompt: ask *"How many sessions are we logging?"*, then for each session ask *"Session N — name?"* followed by *"Session N — directory?"*.
+   - **Bulk** — prompt contains lines with `@` (name @ directory format): parse all pairs immediately.
+   - **Interactive** — no `@` in prompt: ask _"How many sessions are we logging?"_, then for each session ask _"Session N — name?"_, _"Session N — directory?"_, then _"Session N — OS? (blank to auto-detect)"_.
 3. **Bulk parsing rule:** split each line on the **last** `@` — everything before it is the session name, everything after is the directory. This handles `@` characters in session names.
-4. Capture timestamp: `date +"%Y%m%d %H:%M:%S"`.
-5. Resolve file path:
+4. **OS resolution:** every logged session records the OS it ran on.
+   - In bulk input, a markdown header line of the form `### <OS>` (e.g. `### WSL`, `### Win11`) sets the OS for every session line that follows it, until the next `### <OS>` header. These header lines are grouping labels, not sessions, and must not be logged as rows.
+   - For any session with no OS (no preceding `### <OS>` header in bulk, or a blank answer in interactive), auto-detect the host OS:
+     ```bash
+     detect_os() {
+       case "$(uname -s)" in
+         Linux*)  grep -qiE 'microsoft|wsl' /proc/version 2>/dev/null && echo "WSL" || echo "Linux" ;;
+         Darwin*) echo "macOS" ;;
+         MINGW*|MSYS*|CYGWIN*) echo "Windows" ;;
+         *) uname -s ;;
+       esac
+     }
+     ```
+5. Capture timestamp: `date +"%Y%m%d %H:%M:%S"`.
+6. Resolve file path:
    ```bash
    FILE="$OPERATOR_REPO/claude-sessions/$(date +%Y)/$(date +%m)/$(date +%d)-claude-sessions.md"
    ```
-6. Create missing directories: `mkdir -p "$(dirname "$FILE")"`.
-7. If file does not exist, create it with this header:
+7. Create missing directories: `mkdir -p "$(dirname "$FILE")"`.
+8. If file does not exist, create it with this header:
    ```markdown
    # Claude Sessions — YYYY-MM-DD
 
-   | Time Logged | Session Name | Directory |
-   |-------------|-------------|-----------|
+   | Time Logged | Session Name | Directory | OS  |
+   | ----------- | ------------ | --------- | --- |
    ```
    Then append the new rows. If file already exists, append rows only (no new header).
-8. Each row format:
+9. Each row format:
    ```
-   | YYYYMMDD HH:MM:SS | <session name> | <directory> |
+   | YYYYMMDD HH:MM:SS | <session name> | <directory> | <OS> |
    ```
-9. Stage, commit, and push:
-   ```bash
-   git -C "$OPERATOR_REPO" add claude-sessions/
-   git -C "$OPERATOR_REPO" commit -m "sessions: $(date +%Y-%m-%d) — N session(s) logged"
-   git -C "$OPERATOR_REPO" push
-   ```
-   On push failure: tell the user *"Logged locally but push failed. Run `git -C $OPERATOR_REPO push` to retry."*
-10. Print: `Logged N session(s) to claude-sessions/YYYY/MM/DD-claude-sessions.md and pushed to remote.`
-11. On a new line: `Happy Claud'ing`
+10. Stage, commit, and push:
+    ```bash
+    git -C "$OPERATOR_REPO" add claude-sessions/
+    git -C "$OPERATOR_REPO" commit -m "sessions: $(date +%Y-%m-%d) — N session(s) logged"
+    git -C "$OPERATOR_REPO" push
+    ```
+    On push failure: tell the user _"Logged locally but push failed. Run `git -C $OPERATOR_REPO push` to retry."_
+11. Print: `Logged N session(s) to claude-sessions/YYYY/MM/DD-claude-sessions.md and pushed to remote.`
+12. On a new line: `Happy Claud'ing`
 
 ---
 
@@ -615,9 +636,10 @@ Example invocations:
 **Trigger phrasing:** "help", "what can you do", "operator commands", "what are your intents".
 
 Example invocations:
-- *"hey operator, help"*
-- *"hey operator, what can you do"*
-- *"hey operator, operator commands"*
+
+- _"hey operator, help"_
+- _"hey operator, what can you do"_
+- _"hey operator, operator commands"_
 
 ### Behavior
 
@@ -634,7 +656,7 @@ Example invocations:
    git -C "$OPERATOR_REPO" commit -m "help: create HELP_README.md"
    git -C "$OPERATOR_REPO" push
    ```
-   On push failure: tell the user *"HELP_README.md created locally but push failed. Run `git -C $OPERATOR_REPO push` to retry."*
+   On push failure: tell the user _"HELP_README.md created locally but push failed. Run `git -C $OPERATOR_REPO push` to retry."_
 5. No other git changes — read-only intent.
 
 ---
