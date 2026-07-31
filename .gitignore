@@ -1,2 +1,10 @@
-*.un~.worktrees/
-claude/skills/cover-letter/scripts/__pycache__/
+*.un~
+.worktrees/
+__pycache__/
+*.pyc
+
+# Windows/WSL "mark of the web" artifacts, created when files are copied in from Windows
+*:Zone.Identifier
+
+# Machine-specific Claude settings. settings.json is committed; the .local overlay is not.
+.claude/settings.local.json
