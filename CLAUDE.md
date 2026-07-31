@@ -72,7 +72,48 @@ PR bodies must NEVER contain the "Generated with Claude Code" footer (or any
 equivalent Claude/agent attribution line). This is absolute, always, no
 exceptions - even when default harness guidance suggests adding it.
 
+## Rule 14 — All testing runs in Podman
+
+Every command whose purpose is to verify that something works runs inside a
+container. No exceptions, no size threshold - a single `python3 script.py --help`
+counts as testing and goes in a container. Running it on the host and reporting
+the result is a Rule 12 violation, not a shortcut.
+
+How to test is defined by the `container-sandbox` skill:
+
+- `claude/skills/container-sandbox/SKILL.md` - npm, Terraform/Ministack, Kind,
+  and full-stack compose.
+- `claude/skills/container-sandbox/references/skill-testing.md` - **this is the
+  file that defines how a skill or agent in this repo is tested.** It covers the
+  bundled-script case (Python/Bash shipped inside a skill), the four checks that
+  make a script "tested", and worked examples of good and bad testing.
+
+If neither file has a section covering what you are testing, write one. Add it to
+`SKILL.md`, or to `references/skill-testing.md` if it is about verifying a skill's
+own scripts. Falling back to the host because the pattern is not documented yet is
+the one thing that is never allowed.
+
 This repository is **public and intended to be shared**. The agents, skills, and configurations here are designed to be consumed by anyone. That means every file must be safe to read by the general public at all times.
+
+Refer to the user as _they_ for pronouns - never assume who they may be.
+
+## Feature branches only - never commit to `main`
+
+`main` is written once, at repository creation, and never again directly.
+
+## Post-merge cleanup
+
+When the user says a PR is merged, perform this cleanup automatically without being asked.
+Do not wait for the user to spell out the steps each time.
+
+1. `git fetch origin --prune`
+2. `git checkout main`
+3. `git merge --ff-only origin/main` to fast-forward local `main` to the merged state.
+4. Delete the feature branch locally: `git branch -D <feature-branch>`.
+   Use `-D`, not `-d`: squash and rebase merges rewrite the SHA, so `-d` refuses the delete even though the work landed.
+5. Delete the feature branch on the remote: `git push origin --delete <feature-branch>`.
+6. Verify the result: on `main`, in sync with `origin/main`, and the feature branch gone from both local and remote.
+7. Remove any temporary or scratch directories and scaffolding created during the work.
 
 ## PII & PHI Policy — Strictly Enforced
 

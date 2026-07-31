@@ -7,14 +7,21 @@ description: Run all dependency-heavy tasks (npm, go, pip) in isolated Podman co
 
 **RULE:** Never run `npm install`, `go mod download`, or `pip install` on the host.
 
+**RULE:** All testing runs in Podman. Every command whose purpose is to verify that something works goes in a container, including a single `python3 script.py --help`. There is no threshold below which host execution is acceptable.
+
+If this file has no section covering the thing being tested, use `references/skill-testing.md` and add a section here rather than falling back to the host.
+
 ## 1. Choosing the Sandbox
+
 - **Small Tasks:** Use the **Single-Use Container** (Podman).
 - **Cluster Tasks:** Use the **Kind Sandbox** (Kind + Podman).
 - **Terraform Tasks:** Use the **Ministack Sandbox** (see section below).
+- **Testing a skill's or agent's bundled scripts:** see `references/skill-testing.md`.
 
 ## 2. Dependency Management (The "No-Clutter" Way)
 
 ### Node.js (npm)
+
 Instead of `npm install`, tell the agent to run:
 
 **Step 1 — check for a project golden image first.**
@@ -33,6 +40,7 @@ podman run --rm --userns=keep-id -v .:/app:Z -w /app \
 ```
 
 **Fallback** — if no golden image exists or GHCR auth is unavailable:
+
 ```bash
 podman run --rm -v .:/app:Z -w /app node:24-alpine sh -c "npm install && npm test"
 ```
@@ -157,6 +165,7 @@ podman stop ministack_${MINISTACK_PORT} && podman rm ministack_${MINISTACK_PORT}
 ---
 
 ## Lifecycle Management
+
 - **Pre-flight:** Always run `./scripts/verify-readiness.sh` before starting a cluster.
 - **Teardown:** When the task is complete, run `./scripts/cleanup-kind-podman.sh`.
 - **Maintenance:** If disk space is low or images are outdated, run `./scripts/prune-images.sh`.
@@ -168,6 +177,7 @@ podman stop ministack_${MINISTACK_PORT} && podman rm ministack_${MINISTACK_PORT}
 **RULE: Never ask the user to look at a page with no data.**
 
 When a frontend feature makes API calls, spin up a `podman compose` stack with:
+
 - The real backend (or a mock) seeded with realistic data
 - The frontend dev server
 - All services on the same compose network
@@ -198,11 +208,11 @@ echo "Using port $FREE_PORT"
 
 Run the probe once per service that needs a host port. Each service gets its own `FREE_PORT` call.
 
-| Service | Host port |
-|---------|-----------|
-| Frontend | `$FREE_PORT` — probed, confirmed open, 30000+ |
-| Backend API | `$FREE_PORT_2` — separately probed, confirmed open, 30000+ |
-| Mock backend | internal only — no host port needed |
+| Service      | Host port                                                  |
+| ------------ | ---------------------------------------------------------- |
+| Frontend     | `$FREE_PORT` — probed, confirmed open, 30000+              |
+| Backend API  | `$FREE_PORT_2` — separately probed, confirmed open, 30000+ |
+| Mock backend | internal only — no host port needed                        |
 
 ---
 
@@ -241,6 +251,7 @@ echo "Auto-stops in 30 minutes (container: $CONTAINER_NAME)"
 ```
 
 Then verify with curl before handing the URL to the user:
+
 ```bash
 sleep 2 && curl -s -o /dev/null -w "%{http_code}" "http://localhost:${FREE_PORT}/"
 # Must return 200 before reporting the URL
@@ -283,7 +294,7 @@ When the project already has a working backend image (`<service>:dev`):
          retries: 15
 
      be:
-       image: myapp-be:dev           # pre-built dev image
+       image: myapp-be:dev # pre-built dev image
        volumes:
          - ./myapp-be:/app:Z
          - ./test/init.py:/init.py:ro,Z
@@ -300,14 +311,14 @@ When the project already has a working backend image (`<service>:dev`):
      frontend:
        # Prefer the project golden image (:latest-amd64) if available; fall back to node:24-alpine
        image: ghcr.io/${GHCR_USER}/<project>-base:latest-amd64
-       user: "0"   # run as root in dev compose — avoids UID mismatch with volume mounts
+       user: "0" # run as root in dev compose — avoids UID mismatch with volume mounts
        volumes:
          - ./myapp-fe:/app:Z
        working_dir: /app
        ports:
-         - "13000:3000"             # or whatever port Vite uses
+         - "13000:3000" # or whatever port Vite uses
        environment:
-         API_PROXY_TARGET: http://be:8000   # see proxy env var rule below
+         API_PROXY_TARGET: http://be:8000 # see proxy env var rule below
        command: npm run dev -- --host
        depends_on:
          - be
@@ -316,6 +327,7 @@ When the project already has a working backend image (`<service>:dev`):
 4. **Spin up:** `podman compose -f compose.test.yml up --build -d`
 
 5. **Verify the API responds** before directing the user to the browser:
+
    ```bash
    curl -s http://localhost:18000/api/v1/<resource>/ | python3 -m json.tool | head -20
    curl -s http://localhost:13000/api/v1/<resource>/          # through the Vite proxy
@@ -334,6 +346,7 @@ Vite exposes **all** `VITE_*` env vars to the browser bundle at dev-server start
 **The fix:** use a non-`VITE_` prefixed variable for the server-side proxy target only.
 
 In `vite.config.ts`:
+
 ```ts
 proxy: {
   '/api': {
@@ -344,9 +357,10 @@ proxy: {
 ```
 
 In `compose.test.yml`:
+
 ```yaml
 environment:
-  API_PROXY_TARGET: http://be:8000   # server-side only — NOT exposed to browser
+  API_PROXY_TARGET: http://be:8000 # server-side only — NOT exposed to browser
   # do NOT set VITE_API_URL here
 ```
 
@@ -364,6 +378,7 @@ When there is no pre-built backend image, create a zero-dependency Node.js mock:
    - Logs all requests so you can verify API contracts
 
 2. **Create `test/mock-api/Dockerfile`**:
+
    ```dockerfile
    # Prefer the project golden image (:latest-amd64) if available; fall back to node:24-alpine
    FROM ghcr.io/${GHCR_USER}/<project>-base:latest-amd64
@@ -380,7 +395,7 @@ When there is no pre-built backend image, create a zero-dependency Node.js mock:
 
 ### podman-compose 1.0.6 known limitations
 
-- **One-shot containers in dependency chains don't work.** `depends_on: condition: service_completed_successfully` is ignored — podman uses `--requires` which requires the dependency to be *running*, not *completed*. A one-shot init container that exits will break the chain for all downstream services.
+- **One-shot containers in dependency chains don't work.** `depends_on: condition: service_completed_successfully` is ignored — podman uses `--requires` which requires the dependency to be _running_, not _completed_. A one-shot init container that exits will break the chain for all downstream services.
   - **Workaround:** merge migrations and seed into the main service startup script (see `start-be.sh` pattern above).
 
 - **`condition: service_healthy`** works correctly for postgres with a `pg_isready` healthcheck.
@@ -390,12 +405,14 @@ When there is no pre-built backend image, create a zero-dependency Node.js mock:
 ---
 
 ### Seed data guidelines
+
 - Include enough records to exercise every UI state: empty results, filtered results, edge-case values.
 - Use realistic names, addresses, phone numbers — not `"foo"` / `"bar"` / `999`.
 - Insert seed data in **non-alphabetical order** when testing sort fixes — this is the only way to prove the sort is actually working.
 - Use `ON CONFLICT DO NOTHING` so the script is safe to re-run.
 
 ### Teardown
+
 ```bash
 podman compose -f compose.test.yml down
 ```
