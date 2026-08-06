@@ -1,0 +1,147 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this repository is
+
+TODO: FILL THIS IN
+
+## Hard rules
+
+This holds even when something is plainly wrong.
+If you spot something, say nothing.
+
+"Explicitly asks" means a direct request about the code, in the current message - for example "review this", "why is this wrong", "make this faster".
+A vague or adjacent instruction is not permission.
+Prior permission does not carry forward: asking for help on one problem does not open the rest of the repo, and it expires at the end of that exchange.
+
+When help is requested, answer only the question asked and stop.
+
+## Hard rule: sliding-window files are read 10 entries deep, no further
+
+Two files in this repository are sliding windows. Newest entry is always on top.
+
+| File               | Window             | Holds                                          |
+| ------------------ | ------------------ | ---------------------------------------------- |
+| `ISSUES.md`        | top 10 entries     | What broke, why, and how it was fixed          |
+| `CONTEXT_STATE.md` | top 10 checkpoints | Session state at each checkpoint, newest first |
+
+On first read of either file, take the **top 10 entries and stop**. That is the default and it is
+not negotiable by preference - reading the whole file burns tokens on history that has already
+been superseded.
+
+This applies from the first checkpoint onward. `CONTEXT_STATE.md` is written newest-first for
+exactly this reason: the top entry is current state, and everything below it is how you got here.
+
+Go deeper only when one of these is true:
+
+- The user asks you to.
+- An entry inside the window references an older ID or checkpoint you need in order to act.
+- You are chasing a symptom that recurs across the window and the cause is plainly older.
+
+State it when you go deeper, and say why. Silently scanning the whole file is a defect.
+
+Nothing in either file is ever rewritten in place. A fixed issue arrives as a **new entry at the
+top** carrying `resolves: <ID>`, so reading top-down you meet the resolution before the problem it
+closed. A new checkpoint is likewise appended at the top, never an edit of the one below it.
+
+## What agents are for here
+
+Menial, mechanical, non-coding work:
+
+- Git: branches, commits, pushes, PRs, post-merge cleanup
+- Documentation: README, this file
+- Configuration: `.gitignore`, `.claude/`, tooling config
+- Filesystem chores: creating problem directories, moving or renaming files as instructed
+
+## Hard rule: use Lavish for anything worth looking at
+
+Plans, comparisons, option sets, reviews, reports, and any question with more than one
+axis go through Lavish - not a wall of terminal text.
+It is smoother to read and lets me annotate the exact line I care about.
+
+- Build the artifact under `.lavish/` in this project, then run `lavish-axi <html-file>`.
+- Run `lavish-axi poll <html-file>` afterwards and leave it running until feedback arrives.
+- Run `lavish-axi playbook <id>` first - read every playbook that applies to the artifact,
+  not just one. Use the `input` playbook whenever the artifact asks me to decide something.
+- Prefer Lavish over `AskUserQuestion` when the decision has options, tradeoffs, or
+  formats I need to see side by side.
+
+This is a hard rule, not a preference. Falling back to plain text for a multi-part
+decision is a defect.
+
+## Hard rule: no PII
+
+Never write personally identifiable information anywhere in this repository - source, comments, sample data, filenames, or commit messages.
+No real names, emails, phone numbers, addresses, account numbers, employer or client names, credentials, tokens, or internal hostnames.
+All sample data must be synthetic and obviously fake.
+
+If a request would introduce PII, substitute a placeholder and say so.
+
+## Layout and running
+
+## Working style here
+
+Do the menial task you were given, confirm it is done, and stop.
+
+## Zenith agent instructions
+
+These are common instructions for Zenith's agents across all scenarios.
+
+General Guidelines
+
+- Never use the em dash "—". Use plain dash "-" instead
+- When writing commit messages, NEVER auto-add your agent name as co-author
+- Never manually modify CHANGELOG.md files or any files that are marked as auto-generated
+- When writing or substantially editing long Markdown files, put each full sentence on its own line.
+  Preserve normal Markdown structure, but avoid wrapping multiple sentences onto one physical line.
+- When making technical decisions, do not give much weight to development cost.
+  Instead, prefer quality, simplicity, robustness, scalability, and long term maintainability.
+- When doing bug fixes, always start with reproducing the bug in an E2E setting as closely aligned with how an end use
+  This makes sure you find the real problem so your fix will actually solve it.
+- When end-to-end testing a product, be picky about the UI you see and be obsessed with pixel perfection.
+  If something clearly looks off, even if it is not directly related to what you are doing, try to get it fixed along
+- Apply that same high standard to engineering excellence: lint, test failures, and test flakiness.
+  If you see one, even if it is not caused by what you are working on right now, still get it fixed.
+
+Zenith Opinions
+
+When you are working on something that would benefit from being informed by Zenith's viewpoints, read ./OPINIONS.md to understand.
+If I have a new opinion and the file doesn't exist, we need to create and ask the user if they want this added to OPINIONS.md
+
+## Post-merge cleanup
+
+When the user says a PR is merged, perform this cleanup automatically without being asked.
+Do not wait for the user to spell out the steps each time.
+
+1. `git fetch origin --prune`
+2. `git checkout main`
+3. `git merge --ff-only origin/main` to fast-forward local `main` to the merged state.
+4. Delete the feature branch locally: `git branch -D <feature-branch>`.
+   Use `-D`, not `-d`: squash and rebase merges rewrite the SHA, so `-d` refuses the delete even though the work landed.
+5. Delete the feature branch on the remote: `git push origin --delete <feature-branch>`.
+6. Verify the result: on `main`, in sync with `origin/main`, and the feature branch gone from both local and remote.
+7. Remove any temporary or scratch directories and scaffolding created during the work.
+
+## Session State
+
+See `CONTEXT_STATE.md` for current state, active tasks, decisions, and lessons learned.
+Read it before starting any task - top 10 checkpoints only, per the sliding-window rule above.
+
+It is written by the `context-compaction` skill at the end of a piece of work, immediately before
+the PR is handed over, so the state that reaches `main` describes the change that reached `main`.
+
+## Logging an issue
+
+Never hand-edit `ISSUES.md` or `BACKLOG.md`. Both have scripts that own their format:
+
+```sh
+.claude/scripts/log-issue.sh --project . --help
+.claude/scripts/backlog.sh   --help
+```
+
+`log-issue.sh` allocates the ID, stamps the time, and inserts at the top.
+A fix for an earlier issue is a new entry with `--resolves ISS-NNNN`, never an edit of the old one.
+
+Both scripts take `--json` and use documented exit codes: 0 ok, 2 usage, 3 validation, 4 io,
+5 lock timeout, 6 id not found. Branch on the code, not on the message text.

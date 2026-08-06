@@ -148,6 +148,125 @@ podman run --rm --userns=keep-id -v "$PWD:/skill:ro,Z" -v "$SCRATCH:/work:Z" -w 
 
 ---
 
+## Bash scripts
+
+The examples above are Python.
+A skill whose scripts are shell has a different set of ways to fail, and they are worth naming because most of them pass silently on the host.
+
+### Ask for bash explicitly
+
+`python:3.12-slim` and `debian:stable-slim` both have `/bin/sh` as **dash**.
+Arrays, `[[ ]]`, `mapfile`, `PIPESTATUS` and `${var,,}` all fail there.
+
+```bash
+podman run --rm ... docker.io/library/debian:stable-slim bash -c '<checks>'
+```
+
+Running the suite under `sh` produces failures that have nothing to do with the code under test, which is worse than no suite because it trains people to ignore it.
+
+### `set -e` kills scripts in ways the host hides
+
+The most common shell bug in a skill is not logic - it is a command that returns non-zero as its *value* while `set -e` is on.
+
+**`((count++))` returns exit 1 when `count` is 0**, because post-increment evaluates to the old value.
+So does `((n > max)) && max=$n` when the test is false, and `[[ -n $x ]] && return 0` when `x` is empty.
+
+```bash
+# Bad - exits the script the first time count is 0
+((count++))
+
+# Good
+count=$((count + 1))
+
+# Bad - exits the script whenever the test is false
+[[ -n $PS_SCRATCH ]] && return 0
+
+# Good
+if [[ -n $PS_SCRATCH ]]; then return 0; fi
+```
+
+A case that walks a loop containing one of these dies mid-iteration and still reports exit 0 to a careless check, so **assert on the observable outcome**, not just the exit code:
+
+```bash
+bash script.sh --project "$p" >/dev/null 2>&1
+echo "exit=$?  (want 0)"
+grep -c '^id: ' "$p/FILE.md"   # did it actually write anything?
+```
+
+### Quote substitution patterns and replacements
+
+Two bash behaviours corrupt data silently, and neither is visible by reading the code:
+
+```bash
+# bash 5.2: a bare & in the REPLACEMENT expands to whatever the pattern matched
+s=${s//-->/--&gt;}      # produces ---->gt;
+s=${s//-->/"$ESCAPE"}  # correct - quoted replacement is literal
+
+# an unquoted [ ] in the PATTERN is a glob class matching one space
+line=${line/- [ ]/- [x]}       # never matches "- [ ]"
+line=${line/"- [ ]"/"- [x]"}   # correct
+```
+
+Pin both with a regression test.
+Nothing about either is guessable from the source six months later.
+
+### Test the concurrency claim if the script takes a lock
+
+A script that allocates IDs or appends to a shared file must be run in parallel, not just twice in a row:
+
+```bash
+for i in $(seq 1 8); do bash script.sh --project "$p" ... >/dev/null 2>&1 & done
+wait
+total=$(grep -cE '^id: ' "$p/FILE.md")
+unique=$(grep -oE '^id: [A-Z]+-[0-9]{4}' "$p/FILE.md" | sort -u | wc -l)
+echo "total=$total unique=$unique  (want both 8)"
+```
+
+Assert on both counts.
+Distinctness alone passes when a write is lost; the total alone passes when two writers reuse an ID.
+
+### `--help` on every entry point, including subcommand dispatchers
+
+A script shaped `tool.sh <subcommand> [flags]` will consume `--help` as the subcommand unless it is handled before dispatch:
+
+```bash
+(($#)) || { usage; exit 2; }
+case ${1-} in --help | -h) usage; exit 0 ;; esac   # before the dispatch
+command="$1"; shift
+```
+
+This is a real bug found by exactly this check, in a script whose happy path was fully green.
+
+### Injected time, for determinism
+
+A script that stamps timestamps cannot be `cmp`-compared across runs unless the clock is injectable:
+
+```bash
+ps_now() {
+  if [[ -n ${SCAFFOLD_NOW-} ]]; then printf '%s' "$SCAFFOLD_NOW"; else date -Iseconds; fi
+}
+```
+
+Then two runs into two files can be compared byte for byte.
+Without it, "deterministic" is an untested claim.
+
+### Prove the read-only mount
+
+`-v "$PWD:/skill:ro,Z"` stops a script writing beside itself, but the guarantee is only demonstrated by comparing the directory before and after:
+
+```bash
+before=$(find "$SKILL_DIR" -type f | sort)
+podman run ... # the suite
+after=$(find "$SKILL_DIR" -type f | sort)
+[[ $before == "$after" ]] || { echo "FAIL: skill directory changed"; exit 1; }
+```
+
+### A worked example
+
+`claude/skills/project-scaffold/testing/` is a full suite built to this pattern: `run-tests.sh` as the only entry point, `assert.sh` for the vocabulary, one file per case, and `SOP.md` explaining what each case asserts and why its failure would matter.
+
+---
+
 ## Skills with no executable code
 
 A skill that is only Markdown still gets a check, and it still runs in the container.
