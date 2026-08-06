@@ -6,6 +6,7 @@ description: Reference for the homelab jenkins-shared-lib — DevSecOps pipeline
 # Homelab Jenkins Shared Library
 
 **Library declaration:**
+
 ```groovy
 @Library('jenkins-shared-lib') _
 ```
@@ -25,18 +26,18 @@ def cfg = pipelineConfig('staging')   // or 'prod'
 
 **Returned keys:**
 
-| Key | Staging | Prod |
-|-----|---------|------|
-| `sonarHost` | `http://sonarqube.sonarqube.svc.cluster.local:9000` | same |
-| `sonarDashUrl` | `https://sonarqube.<your-homelab-domain>` | same |
-| `sonarProject` | `vulnerable-flask` | same |
-| `githubUser` | `<your-github-username>` | same |
-| `imageBase` | `ghcr.io/<your-github-username>/vulnerable-flask` | same |
-| `trivyExitCode` | `0` | `0` |
-| `zapFailOnHigh` | `false` | `true` |
-| `snykSeverityThreshold` | `high` | `high` |
-| `zapUrl` | `http://owasp-zap.staging.svc.cluster.local:8090` | `http://owasp-zap.prod.svc.cluster.local:8090` |
-| `targetUrl` | `http://vulnerable-flask.staging.svc.cluster.local:5000` | `http://vulnerable-flask.prod.svc.cluster.local:5000` |
+| Key                     | Staging                                                  | Prod                                                  |
+| ----------------------- | -------------------------------------------------------- | ----------------------------------------------------- |
+| `sonarHost`             | `http://sonarqube.sonarqube.svc.cluster.local:9000`      | same                                                  |
+| `sonarDashUrl`          | `https://sonarqube.<your-homelab-domain>`                | same                                                  |
+| `sonarProject`          | `vulnerable-flask`                                       | same                                                  |
+| `githubUser`            | `<your-github-username>`                                 | same                                                  |
+| `imageBase`             | `ghcr.io/<your-github-username>/vulnerable-flask`        | same                                                  |
+| `trivyExitCode`         | `0`                                                      | `0`                                                   |
+| `zapFailOnHigh`         | `false`                                                  | `true`                                                |
+| `snykSeverityThreshold` | `high`                                                   | `high`                                                |
+| `zapUrl`                | `http://owasp-zap.staging.svc.cluster.local:8090`        | `http://owasp-zap.prod.svc.cluster.local:8090`        |
+| `targetUrl`             | `http://vulnerable-flask.staging.svc.cluster.local:5000` | `http://vulnerable-flask.prod.svc.cluster.local:5000` |
 
 ---
 
@@ -113,6 +114,7 @@ buildKaniko(
 
 **Credential required:** `github-pat` (Username/password — GitHub PAT with `write:packages`)
 **How it works:**
+
 1. Copies `sourceDir` and `k8sDir` into `/kaniko-workspace/` on the shared PVC
 2. Creates a short-lived k8s Secret `kaniko-ghcr-<BUILD_NUMBER>` with ghcr.io auth
 3. Spawns pod `kaniko-<BUILD_NUMBER>` in `jenkins` namespace
@@ -177,6 +179,7 @@ dastZap(
 ```
 
 **Post step:** always archive `zap-report.html`:
+
 ```groovy
 post {
     always {
@@ -279,38 +282,39 @@ stage('Version & Release') {
 **Returns:** semver string (e.g. `1.4.2`) if a release was created, or `BUILD_NUMBER` if no release (chore/docs commits only).
 
 **Conventional commit → release mapping:**
-| Commit type | Release |
-|-------------|---------|
-| `feat:` | MINOR (1.x.0) |
-| `fix:` | PATCH (1.0.x) |
-| `feat!:` or `BREAKING CHANGE:` | MAJOR (x.0.0) |
-| `chore:` / `docs:` / `ci:` / `refactor:` / `test:` | No release |
+
+| Commit type                                        | Release       |
+| -------------------------------------------------- | ------------- |
+| `feat:`                                            | MINOR (1.x.0) |
+| `fix:`                                             | PATCH (1.0.x) |
+| `feat!:` or `BREAKING CHANGE:`                     | MAJOR (x.0.0) |
+| `chore:` / `docs:` / `ci:` / `refactor:` / `test:` | No release    |
 
 ---
 
 ## Required Jenkins Credentials
 
-| Credential ID | Type | Used by |
-|--------------|------|---------|
-| `sonar-token` | Secret text | `sastSonarQube` |
-| `snyk-token` | Secret text | `scaSnyk` |
-| `github-pat` | Username/password | `buildKaniko`, `imageScanTrivy`, `deployStaging`, `versionRelease` |
-| `github-pat-credentials` | Username/password | `updateGitOpsManifest` |
+| Credential ID            | Type              | Used by                                                            |
+| ------------------------ | ----------------- | ------------------------------------------------------------------ |
+| `sonar-token`            | Secret text       | `sastSonarQube`                                                    |
+| `snyk-token`             | Secret text       | `scaSnyk`                                                          |
+| `github-pat`             | Username/password | `buildKaniko`, `imageScanTrivy`, `deployStaging`, `versionRelease` |
+| `github-pat-credentials` | Username/password | `updateGitOpsManifest`                                             |
 
 ---
 
 ## Infrastructure Defaults
 
-| Resource | Value |
-|---------|-------|
-| Shared PVC | `kaniko-workspace` (Longhorn RWX) |
-| Jenkins namespace | `jenkins` |
-| Staging namespace | `staging` |
-| ZAP deployment | `owasp-zap` (in `staging`) |
-| SonarQube | `http://sonarqube.sonarqube.svc.cluster.local:9000` |
-| GHCR registry | `ghcr.io/<your-github-username>/` |
-| Node.js cache | `/kaniko-workspace/nodejs/` |
-| semrel cache | `/kaniko-workspace/semrel/` |
+| Resource          | Value                                               |
+| ----------------- | --------------------------------------------------- |
+| Shared PVC        | `kaniko-workspace` (Longhorn RWX)                   |
+| Jenkins namespace | `jenkins`                                           |
+| Staging namespace | `staging`                                           |
+| ZAP deployment    | `owasp-zap` (in `staging`)                          |
+| SonarQube         | `http://sonarqube.sonarqube.svc.cluster.local:9000` |
+| GHCR registry     | `ghcr.io/<your-github-username>/`                   |
+| Node.js cache     | `/kaniko-workspace/nodejs/`                         |
+| semrel cache      | `/kaniko-workspace/semrel/`                         |
 
 ---
 
@@ -334,8 +338,9 @@ spec:
   - name: ghcr-pull-secret
   containers:
   - name: gitops
-    image: ghcr.io/jkkelley/gitops-builder:latest
-    imagePullPolicy: Always
+    # Rule 15: pinned by digest, never :latest. Repin deliberately.
+    image: ghcr.io/<your-github-username>/gitops-builder@sha256:<digest>
+    imagePullPolicy: IfNotPresent
     command: [cat]
     tty: true
     volumeMounts:
@@ -430,13 +435,13 @@ updateGitOpsManifest(
 
 ```yaml
 # These are resolved by ArgoCD Vault Plugin — CI never touches them
-imageName:       <path:secret/data/homelab/apps/myapp#image-name>
-iamRoleArn:      <path:secret/data/homelab/roles#myapp-eso>
-awsRegion:       <path:secret/data/homelab/apps/myapp#aws-region>
-ssmSaName:       <path:secret/data/homelab/apps/myapp#ssm-sa-name>
+imageName: <path:secret/data/homelab/apps/myapp#image-name>
+iamRoleArn: <path:secret/data/homelab/roles#myapp-eso>
+awsRegion: <path:secret/data/homelab/apps/myapp#aws-region>
+ssmSaName: <path:secret/data/homelab/apps/myapp#ssm-sa-name>
 secretStoreName: <path:secret/data/homelab/apps/myapp#secret-store-name>
-memoryLimit:     <path:secret/data/homelab/apps/myapp#memory-limit>
-host:            <path:secret/data/homelab/apps/myapp#host>
+memoryLimit: <path:secret/data/homelab/apps/myapp#memory-limit>
+host: <path:secret/data/homelab/apps/myapp#host>
 # ... all non-imageTag values
 ```
 

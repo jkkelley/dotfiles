@@ -8,3 +8,7 @@ __pycache__/
 
 # Machine-specific Claude settings. settings.json is committed; the .local overlay is not.
 .claude/settings.local.json
+
+# Lavish Editor review sessions. Design surfaces for a single conversation -
+# the decisions they capture belong in the skill's own docs, not in git.
+.lavish/

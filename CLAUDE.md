@@ -93,6 +93,34 @@ If neither file has a section covering what you are testing, write one. Add it t
 own scripts. Falling back to the host because the pattern is not documented yet is
 the one thing that is never allowed.
 
+## Rule 15 — Pin every version. No floating tags.
+
+Anything this repo pulls from a registry, a package index, or an action
+marketplace is pinned to an immutable identifier. No exceptions.
+
+| Kind           | Wrong                | Right                   |
+| -------------- | -------------------- | ----------------------- |
+| Container base | `debian:stable-slim` | `debian@sha256:328d16…` |
+| Container run  | `python:3.12-slim`   | `python@sha256:…`       |
+| Never          | `:latest`            | anything else           |
+
+`:latest` is banned outright. A moving tag means the thing you tested is not the
+thing that ships, and a suite that silently rebases its own base image starts
+failing for reasons unrelated to the change under test. That is not a hypothetical
+
+- it is the most common way a green pipeline goes red overnight.
+
+Repinning is a deliberate commit, never a side effect:
+
+```bash
+podman pull docker.io/library/debian:stable-slim
+podman image inspect docker.io/library/debian:stable-slim \
+  --format '{{index .RepoDigests 0}}'
+```
+
+Record the human-readable tag in a comment next to the digest so the next person
+knows what they are looking at. A digest with no comment is unmaintainable.
+
 This repository is **public and intended to be shared**. The agents, skills, and configurations here are designed to be consumed by anyone. That means every file must be safe to read by the general public at all times.
 
 Refer to the user as _they_ for pronouns - never assume who they may be.
