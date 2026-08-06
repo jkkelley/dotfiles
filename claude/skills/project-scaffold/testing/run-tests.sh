@@ -55,18 +55,23 @@ podman run --rm --userns=keep-id --network=none \
   -e SCAFFOLD_NOW=2026-08-05T14:32:11-05:00 \
   "$IMAGE" \
   bash -c '
-    set -u
+    set -uo pipefail
     failed=0
+    : >/work/.results
     for case_file in /skill/testing/cases/*.sh; do
       printf "\n  %s\n" "$(basename "$case_file")"
-      if ! bash "$case_file"; then failed=$((failed + 1)); fi
+      if bash "$case_file" | tee -a /work/.results; then :; else failed=$((failed + 1)); fi
     done
+    # Totals are computed from the run, never hand-maintained. A count in a
+    # commit message or a PR body goes stale the moment a case is added.
+    files=$(ls /skill/testing/cases/*.sh | wc -l)
+    checks=$(awk -F"[ ,]+" "/checks, [0-9]+ failed\$/ { for (i=1;i<=NF;i++) if (\$(i+1)==\"checks\") t+=\$i } END { print t+0 }" /work/.results)
     printf "\n"
     if ((failed)); then
-      printf "%d case file(s) FAILED\n" "$failed"
+      printf "%d of %d case file(s) FAILED\n" "$failed" "$files"
       exit 1
     fi
-    printf "all cases passed\n"
+    printf "all cases passed: %s checks across %s case files\n" "$checks" "$files"
   '
 
 rc=$?
