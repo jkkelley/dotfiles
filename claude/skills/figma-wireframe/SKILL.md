@@ -118,6 +118,23 @@ Leave `wireframe-brief.json` and `build-plan.json` in the repo. They are the
 reproducibility artifact — committing them means the next run is a diff, not a
 redraw.
 
+#### Downstream consumers
+
+Those two files are also the input to the `work-order` skill, which turns them
+into a ticket whose acceptance criteria are bound to this build plan. Nothing
+here changes for that — work-order reads `build_order`, `done_when` and
+`non_goals` as they already exist, and snapshots both files into the ticket so a
+later wireframe run in the same repo cannot overwrite them.
+
+Two things worth knowing when a work-order will follow:
+
+- **`build-plan.json` carries no Figma node IDs.** They do not exist until step 6.
+  Downstream evidence therefore refers to frames by their deterministic `id` and
+  `name`, so keep `naming_prefix` stable across reruns of the same feature.
+- **A multi-screen brief can be split.** work-order's `--frames` filter cuts one
+  ticket per screen, so there is no need to shrink a brief just to keep tickets
+  small.
+
 ## Rerunning and iterating
 
 When the user wants changes, **edit the brief and rerun the pipeline**. Do not
