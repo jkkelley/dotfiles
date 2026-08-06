@@ -51,7 +51,7 @@ Options:
 
 What it installs:
   CLAUDE.md COMPASS.md BACKLOG.md ISSUES.md NAMING.md
-  .claude/settings.json
+  .claude/settings.json and .claude/settings.local.json
   .claude/scripts/   (log-issue.sh, backlog.sh, cache.sh, lib/common.sh)
   .claude/scaffold.json  (records the version these copies came from)
 
@@ -190,11 +190,14 @@ build_plan() {
   local f
   for f in "${CONTEXT_FILES[@]}"; do plan_context_file "$f"; done
 
-  if [[ ! -e $project/.claude/settings.json ]]; then
-    plan_add ".claude/settings.json" create "absent"
-  else
-    plan_add ".claude/settings.json" skip "exists"
-  fi
+  local sf
+  for sf in settings.json settings.local.json; do
+    if [[ ! -e $project/.claude/$sf ]]; then
+      plan_add ".claude/$sf" create "absent"
+    else
+      plan_add ".claude/$sf" skip "exists"
+    fi
+  done
 
   local v
   for v in "${VENDORED[@]}"; do
@@ -324,11 +327,17 @@ apply_plan() {
     case $f in
       CLAUDE.md | COMPASS.md | BACKLOG.md | ISSUES.md | NAMING.md)
         apply_context_file "$f" "$a" ;;
-      .claude/settings.json)
+      .claude/settings.json | .claude/settings.local.json)
         if [[ $a == create ]]; then
+          local base="${f#.claude/}"
+          local tmpl="$TEMPLATE_DIR/${base}.tmpl"
+          [[ -r $tmpl ]] || ps_die "$PS_IO" "template_missing" "template not found: $tmpl"
           local s; s=$(ps_tempfile)
-          printf '{\n  "attribution": {\n    "commit": "",\n    "pr": ""\n  }\n}\n' >"$s"
-          ps_atomic_install "$s" "$project/.claude/settings.json"
+          # Copied verbatim. The permission list is deliberately project-scoped -
+          # no home paths, no machine-specific entries - so the same file is
+          # correct on every machine and safe in a public repository.
+          cat -- "$tmpl" >"$s"
+          ps_atomic_install "$s" "$project/.claude/$base"
         fi ;;
       .claude/scripts/*)
         if [[ $a == create || $a == refresh ]]; then
@@ -348,7 +357,7 @@ apply_plan() {
       .gitignore)
         if [[ $a == create ]]; then
           local s; s=$(ps_tempfile)
-          printf '# agent cache - derived, rebuildable, never authoritative\n.claude/cache/\n\n# lock files used by the scaffold tools\n.issues.lock\n.backlog.lock\n\n# editor and OS noise\n.DS_Store\n*.swp\n' >"$s"
+          printf '# agent cache - derived, rebuildable, never authoritative\n.claude/cache/\n\n# local settings - machine-specific paths, recreated by scaffold.sh\n.claude/settings.local.json\n\n# lock files used by the scaffold tools\n.issues.lock\n.backlog.lock\n\n# editor and OS noise\n.DS_Store\n*.swp\n' >"$s"
           ps_atomic_install "$s" "$project/.gitignore"
         fi ;;
       "git repository")

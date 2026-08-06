@@ -228,6 +228,17 @@ Keeping them separate is what stops the cache becoming a place people quietly au
 
 ---
 
+## .claude/ settings
+
+`settings.json` carries the attribution block.
+`settings.local.json` carries a **project-scoped** permission allowlist: git, `gh-axi`, `podman`, `lavish-axi`, the test entry point.
+
+Nothing user-level or machine-level belongs in it.
+A home-directory glob would be wrong on any other machine and would put a username into a repository that may be public.
+Both files are create-if-absent: a hand-edited settings file is never overwritten.
+
+---
+
 ## ID format
 
 `<PREFIX>-<4 digits>`, zero-padded, never reused.

@@ -17,7 +17,7 @@
 set -euo pipefail
 
 SKILL_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-IMAGE="${PS_TEST_IMAGE:-docker.io/library/debian:stable-slim}"
+IMAGE="${PS_TEST_IMAGE:-docker.io/library/python:3.12-slim}"
 
 SCRATCH=$(mktemp -d "${TMPDIR:-/tmp}/project-scaffold-test.XXXXXX")
 cleanup() { rm -rf -- "$SCRATCH"; }
@@ -39,6 +39,11 @@ printf '  scratch: %s (removed on exit)\n\n' "$SCRATCH"
 # flag. Snapshot first.
 before=$(find "$SKILL_DIR" -type f | sort)
 
+# python:3.12-slim, not debian:stable-slim: identical bash 5.2 and coreutils,
+# plus a python3 the suite uses to assert the generated JSON actually parses.
+# A settings file that does not parse is silently ignored by the harness, which
+# is the worst kind of broken, so that check is worth an image with python in it.
+#
 # bash, not sh: the scripts use arrays, [[ ]], mapfile and PIPESTATUS. The
 # image's /bin/sh is dash and would fail on all of them.
 podman run --rm --userns=keep-id --network=none \

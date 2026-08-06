@@ -3,7 +3,7 @@
 What each case runs, what it asserts, and **why that failure would matter**.
 
 A case whose "why" cannot be written is a case not worth keeping.
-Three of the ten case files are mostly negative tests, because a validator that never rejects anything is not a validator.
+Three of the eleven case files are mostly negative tests, because a validator that never rejects anything is not a validator.
 
 Run everything with:
 
@@ -29,7 +29,8 @@ There is no threshold below which host execution is acceptable.
 The scratch directory is removed by a trap on every exit path, including failure and Ctrl-C.
 Nothing the suite creates outlives it.
 
-The image is `debian:stable-slim` and the cases run under **bash**, not `sh`.
+The image is `python:3.12-slim` and the cases run under **bash**, not `sh`.
+It is Debian-based with the same bash 5.2 and coreutils as `debian:stable-slim`, plus a `python3` used only to assert that generated JSON actually parses - a settings file that does not parse is silently ignored by the harness, which is the worst kind of broken.
 The image's `/bin/sh` is dash, which has no arrays, no `[[ ]]`, no `mapfile` and no `PIPESTATUS`.
 A suite that ran under dash would fail for reasons that have nothing to do with the code being tested.
 
@@ -178,6 +179,21 @@ The delete-and-rebuild case enforces "derived, never authoritative" - if anythin
 A silently stale copy would keep writing yesterday's format into today's file, and the whole "change the script, change the format everywhere" property would quietly stop being true.
 
 The run-in-place check is the point of vendoring at all: the project must work for someone who does not have these dotfiles installed.
+
+---
+
+## 110-settings-files
+
+**Runs:** a scaffold, then inspects both `.claude` settings files, then re-applies over a hand-edited one.
+
+**Asserts:** both files are created; `settings.local.json` matches its template byte for byte; neither contains a `/home/` or `/Users/` path; both parse as JSON; a hand-edited settings file survives a re-run untouched.
+
+**Why it matters:** the permission list is deliberately **project-scoped**.
+User-level entries such as a home-directory read glob would be wrong in two ways at once: incorrect on any other machine, and a username committed to a public repository.
+The two path assertions are the PII rule expressed as a test rather than a promise.
+
+The parse checks exist because a settings file that does not parse is **silently ignored** by the harness.
+It fails by doing nothing, which is the worst kind of broken - there is no error to notice.
 
 ---
 
