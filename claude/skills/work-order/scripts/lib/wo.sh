@@ -96,6 +96,90 @@ wo_find() {
 
 wo_is_archived() { [[ $1 == */archive/* ]]; }
 
+# wo_exists <project> <id> - quiet lookup, for validating an edge target.
+wo_exists() {
+  local root
+  root=$(wo_root "$1")
+  [[ -d $root ]] || return 1
+  [[ -n $(find "$root" -type f -name "${2}-*.md" -print -quit) ]]
+}
+
+# ---------------------------------------------------------------------------
+# Hierarchy.
+#
+# A ticket with no parent sits at the root of work-orders/. A ticket with
+# parent P sits in the directory named for P, which is the sibling of P's own
+# file. So an epic reads one level down to its children and no further, and the
+# tree mirrors the work rather than the order tickets happened to be minted in.
+#
+#   work-orders/WO-…-e21f-dev001-pipeline-test.md     the epic
+#   work-orders/WO-…-e21f/WO-…-a1d4-track-a1.md       one of its children
+#
+# Parent is immutable in practice, so a path recorded anywhere stays valid -
+# which is why grouping is by parent and not by status.
+# ---------------------------------------------------------------------------
+
+# wo_child_dir <parent-file> -> the directory this ticket's children live in
+wo_child_dir() {
+  local pf="$1" pid
+  pid=$(wo_field "$pf" '.id')
+  printf '%s/%s' "$(dirname -- "$pf")" "$pid"
+}
+
+# wo_home_dir <project> <parent-id-or-empty> -> where a ticket with that parent belongs
+wo_home_dir() {
+  local project="$1" parent="${2:-}"
+  if [[ -z $parent ]]; then
+    wo_root "$project"
+    return 0
+  fi
+  wo_child_dir "$(wo_find "$project" "$parent")"
+}
+
+# wo_ancestors <project> <id> - the parent chain, nearest first, on stdout.
+# Depth-capped: a cycle already on disk must be reported, never looped on.
+wo_ancestors() {
+  local project="$1" cur="$2" depth=0 f p
+  while ((depth < 32)); do
+    wo_exists "$project" "$cur" || return 0
+    f=$(wo_find "$project" "$cur")
+    p=$(wo_field "$f" '.parent')
+    [[ -n $p ]] || return 0
+    printf '%s\n' "$p"
+    cur="$p"
+    depth=$((depth + 1))
+  done
+  ps_die "$PS_VALIDATION" "parent_cycle" \
+    "the parent chain above $2 is more than 32 deep - it contains a cycle"
+}
+
+# ---------------------------------------------------------------------------
+# Records. One jq per ticket, emitting every field the index and the graph
+# need. Reading each field with its own jq call is what made reindex slow
+# enough that an agent would be tempted to skip it.
+# ---------------------------------------------------------------------------
+
+# wo_records <root> -> TSV: id status type priority parent deps relpath title
+#
+# An absent parent and an empty dependency list are emitted as WO_NONE rather
+# than as an empty field. Tab is an IFS whitespace character, so `read` collapses
+# two adjacent tabs into one delimiter and every later column shifts left - a
+# ticket with no parent would silently read its own path as its parent. The
+# sentinel keeps all eight fields non-empty; the caller maps it back.
+readonly WO_NONE="-"
+
+wo_records() {
+  local root="$1" f
+  while IFS= read -r f; do
+    wo_fm "$f" | jq -r --arg p "${f#"$root"/}" --arg none "$WO_NONE" '
+      def blank_as_none: if . == "" then $none else . end;
+      [ .id, .status, .type, (.priority // "p2"),
+        ((.parent // "") | blank_as_none),
+        (((.depends_on // []) | join(",")) | blank_as_none),
+        $p, .title ] | @tsv'
+  done < <(find "$root" -type f -name 'WO-*.md' | sort)
+}
+
 # ---------------------------------------------------------------------------
 # Frontmatter. The ticket is one file: a JSON object between the first pair of
 # --- fences, then markdown. Keeping both in one file is what stops the machine

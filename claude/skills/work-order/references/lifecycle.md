@@ -34,6 +34,9 @@ Assumptions are recorded and proceed.
 Open questions block.
 That distinction is the whole reason they are separate sections.
 
+`resolve --index N --answer "..."` is the only way to tick one off, and there is deliberately no flag that waives an unanswered question.
+A question nobody answered is not a question that stopped mattering, and `--no-lavish` waives the Lavish gate alone.
+
 `--no-lavish` writes `approval.via = "override"` along with the reason into the ticket.
 The exception is auditable, never silent.
 
@@ -91,6 +94,34 @@ That is a deliberate decision and it has a known cost: a PR that is rejected lea
 
 `REPLACED` exists because figma-wireframe writes fixed filenames into the working directory.
 Wireframing a second feature in the same repo overwrites the first one's files, and that must not be mistaken for a rebuild of the same feature.
+
+## Outside the status set
+
+Seven commands change the graph, the record, or the view, and none of them touches status.
+That separation is deliberate: nothing an agent does while working on a ticket should be able to advance it, and nothing about a ticket's state should block writing down what happened.
+
+| Command   | Writes                                                   | Refuses if                                                                                                                                         |
+| --------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `link`    | `parent`, `depends_on`, `blocks`, and moves the file     | the target does not exist; the edge would close a cycle; the ticket would become its own ancestor                                                  |
+| `note`    | one entry at the top of `## Notes`                       | `--text` is empty                                                                                                                                  |
+| `resolve` | one answer under one Open question, and ticks its box    | `--answer` is empty; no selector was given; the index is out of range; a `--match` is ambiguous or hits nothing; that question is already resolved |
+| `next`    | nothing                                                  | never - an empty result is an answer, and it means nothing may be started                                                                          |
+| `tree`    | nothing                                                  | never                                                                                                                                              |
+| `reindex` | `INDEX.md`                                               | `--check` exits 3 when the index and the tickets on disk disagree                                                                                  |
+| `repair`  | the H1 of any ticket still holding a `%%…%%` placeholder | the frontmatter has no `id` or `title` to rebuild the heading from                                                                                 |
+
+`resolve` is outside the status set for the same reason `note` is, and for one more: it is what makes the `approve` gate survivable.
+The gate is strict on purpose, and the answer to a strict gate is a verb that satisfies it honestly, never a flag that waives it.
+
+`repair` is idempotent and `--dry-run` writes nothing.
+It rewrites exactly one line per ticket and never the frontmatter, so it cannot be confused with an edit of the work.
+It is separate from `reindex` because `reindex` runs implicitly at the end of nearly every other subcommand, and a ticket body that changed as a side effect of `note` would be an invisible mutation.
+
+`link --parent` is the only command besides `close` that moves a file.
+It moves the ticket's children directory with it, so re-homing an epic cannot orphan the tickets underneath it, and it uses `git mv` when the project is a repository so the move lands in history as a rename.
+
+A dependency is satisfied only by status `done`.
+A dependency that no longer exists is reported as missing and treated as unsatisfied - never assumed cleared, because an ID that resolves to nothing is a broken ticket, not a finished one.
 
 ## The frozen block
 
