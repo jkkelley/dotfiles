@@ -35,6 +35,8 @@ Usage:
   work-order.sh note    [--project DIR] --id WO-... --text T [--json]
   work-order.sh resolve [--project DIR] --id WO-... (--index N | --match TEXT)
                         --answer T [--json]
+  work-order.sh evidence [--project DIR] --id WO-... (--index N | --match TEXT)
+                        --observed T [--json]
   work-order.sh next    [--project DIR] [--json]
   work-order.sh tree    [--project DIR] [--json]
   work-order.sh reindex [--project DIR] [--check] [--json]
@@ -98,6 +100,21 @@ resolve:
   --answer     what was decided. Written under the question with today's date;
                the question text itself is preserved, never overwritten.
 
+evidence:
+  Records what was observed for one acceptance criterion and checks its box.
+  `done` refuses while any criterion is unchecked, so this is the only way a
+  ticket reaches `done`. It is not a way to wave a criterion through: --observed
+  is required, and there is no flag that ticks one without it. A criterion that
+  was not observed stays unchecked, and the ticket stays in review - that
+  refusal is the gate working, not a fault to route around.
+  --index      1-based, counting every criterion in the block whether it is
+               checked or not, so an index never shifts as criteria are met.
+  --match      substring of the criterion, case-insensitive. An ambiguous match
+               is refused rather than guessed.
+  --observed   what was actually seen: the input, the result, and how a reader
+               confirms it. Written under the criterion with today's date; the
+               criterion text itself is preserved, never overwritten.
+
 next:
   Prints the tickets that are `ready` with every dependency `done`. This is the
   handoff list: an empty result means nothing may be started, not "pick anything".
@@ -137,7 +154,7 @@ command="$1"; shift
 
 title=""; type=""; problem=""; test_plan=""; priority="p2"
 id=""; pr=""; reason=""; status_filter=""; from_figma=""; frames_glob="*"
-parent=""; text=""; answer=""; index=""; match=""
+parent=""; text=""; answer=""; observed=""; index=""; match=""
 no_lavish=0; dry_run=0; detach=0; check=0
 declare -a in_items=() out_items=() ac_items=() surfaces=() assumptions=() questions=()
 declare -a dep_items=() block_items=()
@@ -165,6 +182,7 @@ while (($#)); do
     --blocks) block_items+=("${2-}"); shift 2 ;;
     --text) text="${2-}"; shift 2 ;;
     --answer) answer="${2-}"; shift 2 ;;
+    --observed) observed="${2-}"; shift 2 ;;
     --index) index="${2-}"; shift 2 ;;
     --match) match="${2-}"; shift 2 ;;
     --detach) detach=1; shift ;;
@@ -516,7 +534,9 @@ cmd_done() {
   local body; body=$(wo_body "$file")
   printf '%s' "$body" | awk '/^## Acceptance criteria/{f=1;next} /^## /{f=0} f' \
     | grep -q '^- \[ \] ' && ps_die "$PS_VALIDATION" "unchecked_criteria" \
-    "acceptance criteria still unchecked - tick them or say why in Outcome"
+    "acceptance criteria still unchecked - record each one with:
+  work-order.sh evidence --id $id --index N --observed 'what was seen'
+A criterion that was not observed is not met, and this refusal is the point."
 
   wo_fm_set "$file" '.status="done" | .updated=$d' --arg d "$(ps_today)"
   reindex
@@ -903,6 +923,99 @@ cmd_resolve() {
       "$(ps_json_string "$answer")" "$stamp" "$(ps_json_string "$file")"
   else
     ps_info "$id question $pick resolved: ${texts[pick - 1]}"
+  fi
+}
+
+criteria_of() {
+  wo_body "$1" | awk '
+    /^## Acceptance criteria[[:space:]]*$/ { inc = 1; next }
+    /^## / { inc = 0 }
+    inc && /^- \[[ xX]\] / {
+      printf "%s\t%s\n", (substr($0, 4, 1) == " " ? "unmet" : "met"), substr($0, 7)
+    }'
+}
+
+# The selector logic below is a deliberate mirror of cmd_resolve rather than a
+# shared helper: every refusal names the thing it refused, and "criterion" and
+# "question" are different nouns to the human reading the error. Factoring them
+# together would trade a legible message for six saved lines.
+cmd_evidence() {
+  wo_require_jq; require_id
+  ps_require_value observed "$observed"
+  if [[ -z $index && -z $match ]]; then
+    ps_die "$PS_USAGE" "no_selector" \
+      "evidence needs --index N or --match TEXT to say which criterion was observed"
+  fi
+  if [[ -n $index && -n $match ]]; then
+    ps_die "$PS_USAGE" "conflicting_flags" \
+      "--index and --match are two ways to name the same criterion - pass one"
+  fi
+
+  local file; file=$(wo_find "$project" "$id")
+
+  local -a states=() texts=()
+  local st tx
+  while IFS=$'\t' read -r st tx; do
+    states+=("$st"); texts+=("$tx")
+  done < <(criteria_of "$file")
+
+  local n=${#states[@]}
+  ((n)) || ps_die "$PS_VALIDATION" "no_criteria" \
+    "$id has no Acceptance criteria - there is nothing to evidence"
+
+  local pick=0
+  if [[ -n $index ]]; then
+    [[ $index =~ ^[0-9]+$ ]] || ps_die "$PS_USAGE" "bad_index" \
+      "--index must be a whole number (got: $index)"
+    ((index >= 1 && index <= n)) || ps_die "$PS_VALIDATION" "index_out_of_range" \
+      "--index $index is out of range: $id has $n criterion(s)"
+    pick=$index
+  else
+    local i needle hits=0
+    needle="${match,,}"
+    for ((i = 0; i < n; i++)); do
+      if [[ ${texts[i],,} == *"$needle"* ]]; then hits=$((hits + 1)); pick=$((i + 1)); fi
+    done
+    ((hits)) || ps_die "$PS_VALIDATION" "match_no_hit" \
+      "--match '$match' matches none of the $n criterion(s) on $id"
+    ((hits == 1)) || ps_die "$PS_VALIDATION" "match_ambiguous" \
+      "--match '$match' matches $hits criteria on $id - name one with --index"
+  fi
+
+  # Re-evidencing is refused rather than appended. Two observations under one
+  # criterion is a ticket that cannot say which run proved it, and the second
+  # one is nearly always a repeat of the command rather than a second proof.
+  [[ ${states[pick - 1]} == unmet ]] || ps_die "$PS_VALIDATION" "already_evidenced" \
+    "criterion $pick on $id is already evidenced: ${texts[pick - 1]}"
+
+  local stamp entry tmp
+  stamp=$(ps_today)
+  entry="  - observed \`$stamp\` $(ps_sanitize_line "$observed")"
+  tmp=$(ps_tempfile)
+  {
+    printf -- '---\n'
+    wo_fm "$file"
+    printf -- '---\n'
+    wo_body "$file" | awk -v pick="$pick" -v entry="$entry" '
+      BEGIN { inc = 0; seen = 0 }
+      /^## Acceptance criteria[[:space:]]*$/ { inc = 1; print; next }
+      /^## / { inc = 0 }
+      inc && /^- \[[ xX]\] / {
+        seen++
+        if (seen == pick) { print "- [x] " substr($0, 7); print entry; next }
+      }
+      { print }
+    '
+  } >"$tmp"
+  ps_atomic_install "$tmp" "$file"
+  wo_fm_set "$file" '.updated=$d' --arg d "$stamp"
+
+  if ((PS_JSON)); then
+    printf '{"ok":true,"id":"%s","criterion":%s,"index":%d,"observed":%s,"at":"%s","file":%s}\n' \
+      "$id" "$(ps_json_string "${texts[pick - 1]}")" "$pick" \
+      "$(ps_json_string "$observed")" "$stamp" "$(ps_json_string "$file")"
+  else
+    ps_info "$id criterion $pick evidenced: ${texts[pick - 1]}"
   fi
 }
 
@@ -1415,6 +1528,7 @@ case $command in
   link) cmd_link ;;
   note) cmd_note ;;
   resolve) cmd_resolve ;;
+  evidence) cmd_evidence ;;
   next) cmd_next ;;
   tree) cmd_tree ;;
   reindex) cmd_reindex ;;

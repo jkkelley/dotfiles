@@ -88,7 +88,7 @@ it refuse, is in `references/lifecycle.md`.
 means a rejected PR leaves a ticket claiming done, which is what `reopen` exists
 to correct.
 
-`link`, `note`, `resolve`, `next`, `tree`, `reindex` and `repair` sit outside the
+`link`, `note`, `resolve`, `evidence`, `next`, `tree`, `reindex` and `repair` sit outside the
 status set: they change the graph, the record, or the view, never the state. So
 none of them can advance a ticket, and none of them is blocked by one.
 
@@ -181,6 +181,31 @@ closed with no recorded answer is indistinguishable from a deleted one and takes
 the audit trail with it, so anything of that shape would be the gate removed
 rather than satisfied. The question text is preserved and the answer is written
 underneath it with the date.
+
+### Evidencing an acceptance criterion
+
+`--ac` writes an unchecked box, and `done` refuses while any box in that block is
+unchecked. `evidence` is the verb that records what was seen and ticks it:
+
+```bash
+bash $WO evidence --id WO-20260805-3f2a --index 1 --observed "curl returned 200, body matched the fixture"
+bash $WO evidence --id WO-20260805-3f2a --match "retry" --observed "three retries then dead-lettered, seen in the run log"
+```
+
+Selection works exactly as it does for `resolve`: `--index` is 1-based over every
+criterion whether checked or not, `--match` is a case-insensitive substring, and
+an ambiguous match is refused rather than guessed.
+
+`--observed` is mandatory and there is no flag that ticks a criterion without it,
+because a criterion checked with no recorded observation is a claim that somebody
+verified it. Re-evidencing an already-checked criterion is refused too: two
+observations under one criterion leave the ticket unable to say which run proved
+it, and the second call is nearly always a repeated command rather than a second
+proof.
+
+A criterion nobody observed stays unchecked and the ticket stays in review. That
+refusal is the gate working. The way past it is to observe the thing, or to split
+the unobservable criterion into its own ticket - never to tick it.
 
 ### Repairing a heading
 
