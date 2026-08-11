@@ -92,6 +92,25 @@ That is a deliberate decision and it has a known cost: a PR that is rejected lea
 `REPLACED` exists because figma-wireframe writes fixed filenames into the working directory.
 Wireframing a second feature in the same repo overwrites the first one's files, and that must not be mistaken for a rebuild of the same feature.
 
+## Outside the status set
+
+Five commands change the graph, the record, or the view, and none of them touches status.
+That separation is deliberate: nothing an agent does while working on a ticket should be able to advance it, and nothing about a ticket's state should block writing down what happened.
+
+| Command   | Writes                                               | Refuses if                                                                                        |
+| --------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `link`    | `parent`, `depends_on`, `blocks`, and moves the file | the target does not exist; the edge would close a cycle; the ticket would become its own ancestor |
+| `note`    | one entry at the top of `## Notes`                   | `--text` is empty                                                                                 |
+| `next`    | nothing                                              | never - an empty result is an answer, and it means nothing may be started                         |
+| `tree`    | nothing                                              | never                                                                                             |
+| `reindex` | `INDEX.md`                                           | `--check` exits 3 when the index and the tickets on disk disagree                                 |
+
+`link --parent` is the only command besides `close` that moves a file.
+It moves the ticket's children directory with it, so re-homing an epic cannot orphan the tickets underneath it, and it uses `git mv` when the project is a repository so the move lands in history as a rename.
+
+A dependency is satisfied only by status `done`.
+A dependency that no longer exists is reported as missing and treated as unsatisfied - never assumed cleared, because an ID that resolves to nothing is a broken ticket, not a finished one.
+
 ## The frozen block
 
 Wireframe-derived criteria live between `<!-- wo:frozen:start checksum=... -->` and `<!-- wo:frozen:end -->`.
