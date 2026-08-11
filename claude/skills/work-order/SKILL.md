@@ -294,6 +294,12 @@ survives a render, an unwired template token refuses the write, and a repaired
 ticket is byte-identical to a freshly minted one, which is how "it touches only
 the H1" is proved rather than asserted.
 
+Case 160 covers `evidence`, and mirrors 140's shape for the same reason: its
+load-bearing assertion is that `done` is still refused with exit 3 while one
+criterion of two is unobserved. It also asserts that the refusal names the verb
+that fixes it, because an error that says what is wrong but not what to run is
+how a hand edit gets invented.
+
 ## Bundled resources
 
 - `references/lifecycle.md` — the full status table: setter, gate, legal successors, what it writes, what makes it refuse.
