@@ -88,9 +88,9 @@ it refuse, is in `references/lifecycle.md`.
 means a rejected PR leaves a ticket claiming done, which is what `reopen` exists
 to correct.
 
-`link`, `note`, `next`, `tree` and `reindex` sit outside the status set: they
-change the graph, the record, or the view, never the state. So none of them can
-advance a ticket, and none of them is blocked by one.
+`link`, `note`, `resolve`, `next`, `tree`, `reindex` and `repair` sit outside the
+status set: they change the graph, the record, or the view, never the state. So
+none of them can advance a ticket, and none of them is blocked by one.
 
 ## Usage
 
@@ -108,6 +108,7 @@ bash $WO new --title "Retry failed webhook deliveries" --type bug \
 bash $WO new --title "Empty cart state" --type feature --problem "..." \
   --out "payment errors" --from-figma . --frames 'wf/checkout-cart/*'
 
+bash $WO resolve --id WO-20260805-3f2a --index 1 --answer "v2 only"
 bash $WO approve --id WO-20260805-3f2a     # after Lavish review
 bash $WO start   --id WO-20260805-3f2a     # creates feat/<slug>
 bash $WO submit  --id WO-20260805-3f2a --pr 42
@@ -158,6 +159,48 @@ frontmatter outright.
 
 Notes are for what happened. A decision that changes the work belongs in the
 ticket's own fields, and a new idea belongs in `BACKLOG.md`.
+
+### Answering an open question
+
+`--question` writes an unchecked box, and `approve` refuses while any box in that
+block is unchecked. `resolve` is the verb that records the answer and ticks it:
+
+```bash
+bash $WO resolve --id WO-20260805-3f2a --index 1 --answer "v2 only, v1 is retired"
+bash $WO resolve --id WO-20260805-3f2a --match "DNS" --answer "platform team owns it"
+```
+
+`--index` is 1-based and counts every question whether resolved or not, so an
+index never shifts as questions get answered. `--match` is a case-insensitive
+substring and an ambiguous match is refused, never resolved by picking the first
+hit - guessing which question was answered is the nondeterminism this skill
+exists to remove.
+
+`--answer` is mandatory and there is no flag that resolves without one. A question
+closed with no recorded answer is indistinguishable from a deleted one and takes
+the audit trail with it, so anything of that shape would be the gate removed
+rather than satisfied. The question text is preserved and the answer is written
+underneath it with the date.
+
+### Repairing a heading
+
+```bash
+bash $WO repair --dry-run    # list what would change, write nothing
+bash $WO repair              # rebuild each placeholder H1 from its own frontmatter
+```
+
+Tickets written before the heading placeholder was substituted carry
+`# %%ID%% - %%TITLE%%` as their H1. `repair` rewrites that one line from the
+ticket's own `id` and `title`, touches nothing else, and is idempotent. It is a
+subcommand rather than a flag on `reindex` because `reindex` writes only generated
+index files and runs implicitly after almost every other subcommand - a repair
+that fired as a side effect of `note` would be exactly the invisible mutation this
+skill forbids.
+
+`new` now refuses with exit 3 and error `unsubstituted_placeholder` if any
+`%%TOKEN%%` survives rendering, and writes nothing. That guard is the more
+important half of the fix: the original defect was invisible for 27 tickets
+precisely because a wrong heading breaks nothing downstream.
 
 ### The index as a gate
 
@@ -219,11 +262,18 @@ gate. The assertions that earn their keep are the refusals: an edge to a missing
 ticket, a cycle in either direction, a re-home that would leave a grandchild
 behind, and an index that drifted.
 
+Case 140 covers `resolve`, and its load-bearing assertion is that `approve` is
+still refused with exit 3 while one question of two remains unresolved - the point
+of `resolve` was never to loosen the gate. Case 150 covers the heading: no `%%`
+survives a render, an unwired template token refuses the write, and a repaired
+ticket is byte-identical to a freshly minted one, which is how "it touches only
+the H1" is proved rather than asserted.
+
 ## Bundled resources
 
 - `references/lifecycle.md` — the full status table: setter, gate, legal successors, what it writes, what makes it refuse.
-- `references/ticket.tmpl` — the body skeleton. `new` fills it; nobody edits a ticket by hand.
+- `references/ticket.tmpl` — the body skeleton. `new` fills it; nobody edits a ticket by hand. A `%%TOKEN%%` added here without a matching case in `render_body` makes `new` refuse rather than ship the placeholder.
 - `scripts/work-order.sh` — every subcommand.
 - `scripts/lib/wo.sh` — identity, frontmatter, hierarchy, the graph, wireframe binding.
 - `scripts/lib/common.sh` — vendored from project-scaffold so this skill is independently consumable.
-- `settings.json.tmpl`, `settings.local.json.tmpl` — allowlist the script, and deliberately do **not** allowlist raw `git branch -D` / `git push --delete`, so hand-rolled cleanup is not an available path.
+- `settings.local.json.tmpl` — allowlists `work-order.sh` as a whole, so a new subcommand needs no permission change, and deliberately does **not** allowlist raw `git branch -D` / `git push --delete`, so hand-rolled cleanup is not an available path.

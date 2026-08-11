@@ -33,9 +33,12 @@ Usage:
   work-order.sh link    [--project DIR] --id WO-... [--parent WO-... | --detach]
                         [--depends-on WO-...] [--blocks WO-...] [--json]
   work-order.sh note    [--project DIR] --id WO-... --text T [--json]
+  work-order.sh resolve [--project DIR] --id WO-... (--index N | --match TEXT)
+                        --answer T [--json]
   work-order.sh next    [--project DIR] [--json]
   work-order.sh tree    [--project DIR] [--json]
   work-order.sh reindex [--project DIR] [--check] [--json]
+  work-order.sh repair  [--project DIR] [--dry-run] [--json]
   work-order.sh approve [--project DIR] --id WO-... [--no-lavish --reason T] [--json]
   work-order.sh start   [--project DIR] --id WO-... [--json]
   work-order.sh submit  [--project DIR] --id WO-... --pr N [--json]
@@ -83,6 +86,18 @@ note:
   --text       one line, appended newest-first under `## Notes`. This is the only
                way a progress note reaches a ticket - nothing here is hand-edited.
 
+resolve:
+  Records the answer to one Open question and checks its box. `approve` refuses
+  while any question is unchecked, so this is the only way a ticket minted with
+  --question ever reaches `ready`. It is not a way to dismiss a question:
+  --answer is required, and there is no flag that resolves without one.
+  --index      1-based, counting every question in the block whether it is
+               resolved or not, so an index never shifts as questions are answered.
+  --match      substring of the question, case-insensitive. An ambiguous match is
+               refused rather than guessed.
+  --answer     what was decided. Written under the question with today's date;
+               the question text itself is preserved, never overwritten.
+
 next:
   Prints the tickets that are `ready` with every dependency `done`. This is the
   handoff list: an empty result means nothing may be started, not "pick anything".
@@ -90,6 +105,12 @@ next:
 reindex:
   --check      exit 3 when INDEX.md does not match the tickets on disk, and print
                nothing but the reason. For a commit gate.
+
+repair:
+  Rewrites the H1 of any ticket still carrying the `%%ID%% - %%TITLE%%` template
+  placeholder, from that ticket's own frontmatter. Idempotent. It touches that one
+  line and nothing else - never the frontmatter, never the body.
+  --dry-run    list what would change and write nothing.
 
 close:
   --dry-run    print the phase plan and every assertion result, execute nothing.
@@ -102,6 +123,10 @@ Common:
 
 Exit codes: 0 ok, 2 usage, 3 validation/illegal-transition, 4 io/missing-dep,
             5 lock timeout, 6 id not found
+
+`new` exits 3 with error `unsubstituted_placeholder` when a %%TOKEN%% survives
+rendering, and writes nothing. A ticket carrying a raw placeholder is a defect in
+the template pass, and shipping it silently is how it stayed unnoticed once.
 EOF
 }
 
@@ -112,7 +137,7 @@ command="$1"; shift
 
 title=""; type=""; problem=""; test_plan=""; priority="p2"
 id=""; pr=""; reason=""; status_filter=""; from_figma=""; frames_glob="*"
-parent=""; text=""
+parent=""; text=""; answer=""; index=""; match=""
 no_lavish=0; dry_run=0; detach=0; check=0
 declare -a in_items=() out_items=() ac_items=() surfaces=() assumptions=() questions=()
 declare -a dep_items=() block_items=()
@@ -139,6 +164,9 @@ while (($#)); do
     --depends-on) dep_items+=("${2-}"); shift 2 ;;
     --blocks) block_items+=("${2-}"); shift 2 ;;
     --text) text="${2-}"; shift 2 ;;
+    --answer) answer="${2-}"; shift 2 ;;
+    --index) index="${2-}"; shift 2 ;;
+    --match) match="${2-}"; shift 2 ;;
     --detach) detach=1; shift ;;
     --check) check=1; shift ;;
     --id) id="${2-}"; shift 2 ;;
@@ -178,14 +206,15 @@ bullets() {
 
 render_body() {
   local criteria="$1" outcome="$2"
-  local line token
+  local line token safe_title
+  safe_title=$(ps_sanitize_line "$title")
   while IFS= read -r line; do
     case $line in
       '%%'*'%%')
         token="${line//%/}"
         case $token in
           ID) printf '%s\n' "$id" ;;
-          TITLE) printf '%s\n' "$(ps_sanitize_line "$title")" ;;
+          TITLE) printf '%s\n' "$safe_title" ;;
           PROBLEM) printf '%s\n' "$(ps_sanitize_line "$problem")" ;;
           IN) bullets "- " "${in_items[@]+"${in_items[@]}"}" ;;
           OUT) bullets "- " "${out_items[@]+"${out_items[@]}"}" ;;
@@ -201,9 +230,32 @@ render_body() {
           OUTCOME) printf '%s\n' "$outcome" ;;
           *) printf '%s\n' "$line" ;;
         esac ;;
-      *) printf '%s\n' "$line" ;;
+      # Inline placeholders. The H1 is `# %%ID%% - %%TITLE%%`, which is not a
+      # whole-line token, so the cases above never saw it and every ticket this
+      # skill ever wrote carried the raw placeholder as its heading. The
+      # frontmatter held the right values, so nothing downstream broke and the
+      # defect stayed invisible - which is exactly why render_guard now exists.
+      *) line=${line//'%%ID%%'/"$id"}
+         line=${line//'%%TITLE%%'/"$safe_title"}
+         printf '%s\n' "$line" ;;
     esac
   done <"$TEMPLATE"
+}
+
+# render_guard <rendered-file> - refuse to write a ticket that still carries a
+# template placeholder. A token the substitution pass does not know about is a
+# defect in this script, and a ticket is read by agents for weeks: failing here
+# costs one run, shipping it costs every ticket minted until somebody notices.
+#
+# The pattern is the placeholder shape, not a bare `%%`, so a legitimate title
+# like "cap CPU at 100%% in the worker" is not mistaken for an unfilled token.
+render_guard() {
+  local hits
+  hits=$(grep -oE '%%[A-Z][A-Z0-9_]*%%' "$1" | sort -u | tr '\n' ' ') || true
+  if [[ -n $hits ]]; then
+    ps_die "$PS_VALIDATION" "unsubstituted_placeholder" \
+      "template placeholders survived rendering: ${hits% } - refusing to write the ticket"
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -356,6 +408,7 @@ cmd_new() {
     printf -- '---\n%s\n---\n\n' "$fm"
     render_body "$criteria" "_Written by \`work-order close\`. Empty until then._"
   } >"$tmp"
+  render_guard "$tmp"
   ps_atomic_install "$tmp" "$file"
 
   # Inverse edges last: the ticket exists by now, so a failure here leaves a
@@ -735,6 +788,121 @@ cmd_note() {
       "$id" "$(ps_json_string "$text")" "$(ps_json_string "$file")"
   else
     ps_info "$id note recorded"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# resolve - the verb that records a question's answer.
+#
+# `new --question` writes an unchecked box and `approve` refuses while any box in
+# the Open questions block is unchecked. That gate is right: an unanswered
+# question genuinely must not reach `ready`. What was missing was a verb that
+# could record the answer, so a ticket minted with a question could only ever be
+# freed by hand-editing the file - the one thing this skill exists to prevent.
+#
+# resolve is not a way to dismiss a question. `--answer` is mandatory and there is
+# deliberately no --force, --skip or --all: a question closed with no recorded
+# answer is indistinguishable from a deleted one, and it takes the audit trail
+# with it. Anything that resolved without an answer would be the gate removed.
+#
+# It sits outside the status set, like `link` and `note`: it changes the record,
+# never the state. So it cannot advance a ticket and no status blocks it.
+# ---------------------------------------------------------------------------
+
+# questions_of <file> -> "<open|resolved>\t<text>" per question, in file order.
+#
+# Resolved questions are numbered too. Numbering only the unresolved ones would
+# renumber every later question each time one was answered, so a script that
+# resolved 1 and then 2 would answer something nobody asked about.
+questions_of() {
+  wo_body "$1" | awk '
+    /^## Open questions[[:space:]]*$/ { inq = 1; next }
+    /^## / { inq = 0 }
+    inq && /^- \[[ xX]\] / {
+      printf "%s\t%s\n", (substr($0, 4, 1) == " " ? "open" : "resolved"), substr($0, 7)
+    }'
+}
+
+cmd_resolve() {
+  wo_require_jq; require_id
+  ps_require_value answer "$answer"
+  if [[ -z $index && -z $match ]]; then
+    ps_die "$PS_USAGE" "no_selector" \
+      "resolve needs --index N or --match TEXT to say which question was answered"
+  fi
+  if [[ -n $index && -n $match ]]; then
+    ps_die "$PS_USAGE" "conflicting_flags" \
+      "--index and --match are two ways to name the same question - pass one"
+  fi
+
+  local file; file=$(wo_find "$project" "$id")
+
+  local -a states=() texts=()
+  local st tx
+  while IFS=$'\t' read -r st tx; do
+    states+=("$st"); texts+=("$tx")
+  done < <(questions_of "$file")
+
+  local n=${#states[@]}
+  ((n)) || ps_die "$PS_VALIDATION" "no_questions" \
+    "$id has no Open questions - there is nothing to resolve"
+
+  local pick=0
+  if [[ -n $index ]]; then
+    [[ $index =~ ^[0-9]+$ ]] || ps_die "$PS_USAGE" "bad_index" \
+      "--index must be a whole number (got: $index)"
+    ((index >= 1 && index <= n)) || ps_die "$PS_VALIDATION" "index_out_of_range" \
+      "--index $index is out of range: $id has $n question(s)"
+    pick=$index
+  else
+    # Ambiguity is refused, never resolved by picking the first hit. Guessing
+    # which question was answered is precisely the nondeterminism this tool exists
+    # to remove, and the wrong answer recorded under the wrong question is worse
+    # than a refusal because it reads as though somebody decided it.
+    local i needle hits=0
+    needle="${match,,}"
+    for ((i = 0; i < n; i++)); do
+      if [[ ${texts[i],,} == *"$needle"* ]]; then hits=$((hits + 1)); pick=$((i + 1)); fi
+    done
+    ((hits)) || ps_die "$PS_VALIDATION" "match_no_hit" \
+      "--match '$match' matches none of the $n question(s) on $id"
+    ((hits == 1)) || ps_die "$PS_VALIDATION" "match_ambiguous" \
+      "--match '$match' matches $hits questions on $id - name one with --index"
+  fi
+
+  [[ ${states[pick - 1]} == open ]] || ps_die "$PS_VALIDATION" "already_resolved" \
+    "question $pick on $id is already resolved: ${texts[pick - 1]}"
+
+  # The question text is copied through untouched and the answer is added beneath
+  # it, so the ticket still says what was asked as well as what was decided.
+  local stamp entry tmp
+  stamp=$(ps_today)
+  entry="  - answer \`$stamp\` $(ps_sanitize_line "$answer")"
+  tmp=$(ps_tempfile)
+  {
+    printf -- '---\n'
+    wo_fm "$file"
+    printf -- '---\n'
+    wo_body "$file" | awk -v pick="$pick" -v entry="$entry" '
+      BEGIN { inq = 0; seen = 0 }
+      /^## Open questions[[:space:]]*$/ { inq = 1; print; next }
+      /^## / { inq = 0 }
+      inq && /^- \[[ xX]\] / {
+        seen++
+        if (seen == pick) { print "- [x] " substr($0, 7); print entry; next }
+      }
+      { print }
+    '
+  } >"$tmp"
+  ps_atomic_install "$tmp" "$file"
+  wo_fm_set "$file" '.updated=$d' --arg d "$stamp"
+
+  if ((PS_JSON)); then
+    printf '{"ok":true,"id":"%s","question":%s,"index":%d,"answer":%s,"at":"%s","file":%s}\n' \
+      "$id" "$(ps_json_string "${texts[pick - 1]}")" "$pick" \
+      "$(ps_json_string "$answer")" "$stamp" "$(ps_json_string "$file")"
+  else
+    ps_info "$id question $pick resolved: ${texts[pick - 1]}"
   fi
 }
 
@@ -1158,6 +1326,82 @@ cmd_reindex() {
   fi
 }
 
+# ---------------------------------------------------------------------------
+# repair - heal tickets minted before the H1 placeholder was substituted.
+#
+# Every ticket written before that fix carries `# %%ID%% - %%TITLE%%` as its
+# heading. The facts were always correct in the frontmatter, so nothing
+# downstream broke; the repair is therefore a pure re-derivation from the
+# ticket's own id and title, inventing nothing.
+#
+# It is a subcommand rather than a flag on reindex on purpose. reindex writes only
+# generated index files and never a ticket body, and it runs implicitly at the end
+# of almost every other subcommand - a repair that fired as a side effect of
+# `note` would be the invisible mutation this skill forbids. It is a script rather
+# than a manual pass because hand-editing a ticket corrupts the JSON frontmatter
+# on any repository with a markdown formatter hook.
+# ---------------------------------------------------------------------------
+
+# repair_h1 <file> -> the ticket's H1 line, which is the first `# ` line of the
+# body. Nothing below it is ever considered.
+repair_h1() {
+  wo_body "$1" | awk '/^#[[:space:]]/ { print; exit }'
+}
+
+cmd_repair() {
+  wo_require_jq
+  [[ -d $root ]] || ps_die "$PS_NOTFOUND" "no_work_orders" "no $WO_DIR_NAME/ in $project"
+
+  local f h1 tid ttitle want tmp scanned=0
+  local -a changed=()
+  while IFS= read -r f; do
+    scanned=$((scanned + 1))
+    h1=$(repair_h1 "$f")
+    case $h1 in *'%%'*) ;; *) continue ;; esac
+
+    tid=$(wo_field "$f" '.id')
+    ttitle=$(ps_sanitize_line "$(wo_field "$f" '.title')")
+    [[ -n $tid && -n $ttitle ]] || ps_die "$PS_VALIDATION" "incomplete_frontmatter" \
+      "${f#"$project"/} has a placeholder heading and no id/title to rebuild it from"
+    want="# $tid - $ttitle"
+    changed+=("${f#"$project"/}")
+    ((dry_run)) && continue
+
+    # Exactly one line changes: the first heading that still holds a placeholder.
+    # The frontmatter is copied through byte for byte and no other body line is
+    # even examined, so a repair can never be mistaken for an edit of the work.
+    tmp=$(ps_tempfile)
+    {
+      printf -- '---\n'
+      wo_fm "$f"
+      printf -- '---\n'
+      wo_body "$f" | awk -v want="$want" '
+        BEGIN { fixed = 0 }
+        !fixed && /^#[[:space:]].*%%/ { print want; fixed = 1; next }
+        { print }
+      '
+    } >"$tmp"
+    ps_atomic_install "$tmp" "$f"
+  done < <(find "$root" -type f -name 'WO-*.md' | sort)
+
+  local n=${#changed[@]} dr="false" p
+  ((dry_run)) && dr="true"
+  if ((PS_JSON)); then
+    printf '{"ok":true,"dry_run":%s,"scanned":%d,"repaired":%d,"files":%s}\n' \
+      "$dr" "$scanned" "$n" \
+      "$(printf '%s\n' "${changed[@]+"${changed[@]}"}" | grep -v '^$' | jq -R . | jq -sc .)"
+  else
+    for p in "${changed[@]+"${changed[@]}"}"; do
+      if ((dry_run)); then printf 'would repair %s\n' "$p"; else printf 'repaired %s\n' "$p"; fi
+    done
+    if ((dry_run)); then
+      ps_info "$n of $scanned ticket(s) carry a placeholder heading - nothing was written"
+    else
+      ps_info "repaired $n of $scanned ticket(s)"
+    fi
+  fi
+}
+
 emit_ok() {
   if ((PS_JSON)); then
     printf '{"ok":true,"id":"%s","status":"%s","file":%s}\n' "$1" "$2" "$(ps_json_string "$3")"
@@ -1170,9 +1414,11 @@ case $command in
   new) cmd_new ;;
   link) cmd_link ;;
   note) cmd_note ;;
+  resolve) cmd_resolve ;;
   next) cmd_next ;;
   tree) cmd_tree ;;
   reindex) cmd_reindex ;;
+  repair) cmd_repair ;;
   approve) cmd_approve ;;
   start) cmd_start ;;
   submit) cmd_submit ;;
@@ -1184,5 +1430,5 @@ case $command in
   show) cmd_show ;;
   list) cmd_list ;;
   *) ps_die "$PS_USAGE" "unknown_command" \
-       "unknown command: $command (new|link|note|approve|start|submit|done|close|reopen|verify|resync|show|list|next|tree|reindex)" ;;
+       "unknown command: $command (new|link|note|resolve|approve|start|submit|done|close|reopen|verify|resync|show|list|next|tree|reindex|repair)" ;;
 esac

@@ -7,7 +7,8 @@ run 0 "--help exits 0" wo --help
 run 2 "no arguments is a usage error" wo
 run 2 "an unknown command is a usage error" wo nonsense
 
-for c in new approve start submit done close reopen verify resync show list; do
+for c in new link note resolve approve start submit done close reopen verify resync \
+         show list next tree reindex repair; do
   run 0 "$c --help loads" wo "$c" --help
 done
 
