@@ -24,22 +24,37 @@ thing that stops being deterministic. jq reads; `ps_json_string` writes.
 
 ## How the directory is organised
 
-One rule: **a child ticket lives in the directory named for its parent.**
+Two rules, and the top level of `work-orders/` holds directories and nothing else:
+
+1. **A ticket with no parent owns the directory named for it, and its own file lives inside.**
+2. **A ticket with a parent is written into the parent's directory**, promoting that parent into one if it was still a loose leaf.
 
 ```
 work-orders/
-├── INDEX.md                              generated router - read this first
-├── WO-20260810-e21f-dev001-pipeline.md   an epic
-├── WO-20260810-e21f/                      ...and its children, one level down
-│   ├── WO-20260810-a1d4-track-a1.md
-│   └── WO-20260810-33d1-track-c3.md
-├── evidence/<ID>/                        wireframe snapshots
-└── archive/YYYY/                          closed tickets
+├── INDEX.md                                  generated router - read this first
+├── WO-20260810-e21f/                          a top-level epic - the folder is the unit
+│   ├── README.md                              generated, lists the children
+│   ├── WO-20260810-e21f-dev001-pipeline.md    the epic's own ticket, inside its folder
+│   ├── WO-20260810-a1d4-track-a1.md           a leaf: a plain file, no folder of its own
+│   └── WO-20260810-33d1/                      a child that is itself an epic
+│       ├── README.md
+│       └── WO-20260810-33d1-track-c3.md
+├── evidence/<ID>/                            wireframe snapshots
+└── archive/YYYY/                              closed tickets
 ```
 
-Grouping is by parent and never by status, because parent does not change over a
-ticket's life and status changes five times. A layout that moved a file on every
-transition would rot every path anyone had written down.
+Everything has a home, and a ticket belonging to nothing cannot be expressed. The
+older layout let a parentless ticket sit loose at the root, and unrelated tickets
+piled up there with nothing tying them together - the pile is now structurally
+impossible rather than something to be tidied periodically. `new` refuses a ticket
+that names neither `--parent` nor `--top-level`, and `reindex --check` fails on any
+`WO-*.md` found at the top level.
+
+Owning a directory is monotone: a ticket keeps its folder even after its last
+child leaves, so a path recorded anywhere stays valid. Grouping is by parent and
+never by status, for the same reason - parent does not change over a ticket's life
+and status changes five times, and a layout that moved a file on every transition
+would rot every path anyone had written down.
 
 The tree is the same shape one level at a time: an epic reads down to its
 children and no further, so a grandchild appearing never rewrites anything above
@@ -88,8 +103,8 @@ it refuse, is in `references/lifecycle.md`.
 means a rejected PR leaves a ticket claiming done, which is what `reopen` exists
 to correct.
 
-`link`, `note`, `resolve`, `evidence`, `next`, `tree`, `reindex` and `repair` sit outside the
-status set: they change the graph, the record, or the view, never the state. So
+`link`, `note`, `resolve`, `evidence`, `next`, `tree`, `reindex`, `reflow` and `repair` sit
+outside the status set: they change the graph, the record, the layout or the view, never the state. So
 none of them can advance a ticket, and none of them is blocked by one.
 
 ## Usage
@@ -98,14 +113,14 @@ none of them can advance a ticket, and none of them is blocked by one.
 WO=.claude/skills/work-order/scripts/work-order.sh
 
 # generic path - no design involved
-bash $WO new --title "Retry failed webhook deliveries" --type bug \
+bash $WO new --title "Retry failed webhook deliveries" --type bug --parent "$EPIC" \
   --problem "Deliveries that 500 are dropped silently" \
   --in "exponential backoff" --out "changing the payload schema" \
   --ac "a 500 is retried three times then dead-lettered" \
   --test-plan "podman run --rm -v \$PWD:/w -w /w node:22 npm test -- webhooks"
 
 # figma path - "a work-order with a side of figma"
-bash $WO new --title "Empty cart state" --type feature --problem "..." \
+bash $WO new --title "Empty cart state" --type feature --problem "..." --parent "$EPIC" \
   --out "payment errors" --from-figma . --frames 'wf/checkout-cart/*'
 
 bash $WO resolve --id WO-20260805-3f2a --index 1 --answer "v2 only"
@@ -127,7 +142,9 @@ An epic is a ticket whose closure depends on its children. Mint the parent first
 then each child with `--parent`, then wire the ordering with `--depends-on`:
 
 ```bash
-EPIC=$(bash $WO new --json --type feature --priority p1 \
+# --top-level is required for a ticket with no parent: it opens a new directory
+# at the root of work-orders/, which is a deliberate act rather than a default.
+EPIC=$(bash $WO new --json --top-level --type feature --priority p1 \
   --title "Dev pipeline test end to end" --problem "..." --out "real money" \
   --ac "the run script exits 0 from a clean environment" | jq -r .id)
 
@@ -143,7 +160,9 @@ bash $WO tree             # <- the shape, for a human
 
 `link` is the only way to add an edge after the fact, which is the normal case:
 siblings cannot reference each other at mint time. It moves the file when the
-parent changes, with `git mv`, and carries any descendants along.
+parent changes, with `git mv`, and carries any descendants along - a ticket that
+owns a directory travels as that whole directory. `--detach` gives a ticket back
+its own directory at the root rather than leaving it loose there.
 
 ### Notes: the progress record
 
@@ -233,11 +252,25 @@ precisely because a wrong heading breaks nothing downstream.
 agent arrives with is "what may I pick up". Wire the gate into the commit hook:
 
 ```bash
-bash $WO reindex --check   # exit 3 when INDEX.md and the tickets disagree
+bash $WO reindex --check   # exit 3 when INDEX.md and the tickets disagree,
+                           # or when any ticket sits loose at the top level
 ```
 
 A stale index is not cosmetic. It is the router the next agent reads, and one that
 disagrees with the tickets on disk sends work to the wrong place.
+
+The same gate enforces the layout. When it reports a loose ticket, `reflow` is the
+fix:
+
+```bash
+bash $WO reflow --dry-run   # what would move, and where
+bash $WO reflow             # move every ticket to the home its own parent implies
+```
+
+`reflow` invents nothing: it touches no frontmatter and assigns no parent. It only
+moves each file to where the ticket's own recorded `parent` already says it
+belongs, so it is safe to run at any time and does nothing on a tree that is
+already correct.
 
 ### Working with figma-wireframe
 

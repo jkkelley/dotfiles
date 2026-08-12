@@ -28,7 +28,8 @@ Usage:
   work-order.sh new     [--project DIR] --title T --type T --problem T --out T...
                         [--in T...] [--ac T...] [--test-plan T] [--surface T...]
                         [--priority p0|p1|p2|p3] [--assume T...] [--question T...]
-                        [--parent WO-...] [--depends-on WO-...] [--blocks WO-...]
+                        (--parent WO-... | --top-level)
+                        [--depends-on WO-...] [--blocks WO-...]
                         [--from-figma DIR] [--frames GLOB] [--json]
   work-order.sh link    [--project DIR] --id WO-... [--parent WO-... | --detach]
                         [--depends-on WO-...] [--blocks WO-...] [--json]
@@ -40,6 +41,7 @@ Usage:
   work-order.sh next    [--project DIR] [--json]
   work-order.sh tree    [--project DIR] [--json]
   work-order.sh reindex [--project DIR] [--check] [--json]
+  work-order.sh reflow  [--project DIR] [--dry-run] [--json]
   work-order.sh repair  [--project DIR] [--dry-run] [--json]
   work-order.sh approve [--project DIR] --id WO-... [--no-lavish --reason T] [--json]
   work-order.sh start   [--project DIR] --id WO-... [--json]
@@ -155,7 +157,7 @@ command="$1"; shift
 title=""; type=""; problem=""; test_plan=""; priority="p2"
 id=""; pr=""; reason=""; status_filter=""; from_figma=""; frames_glob="*"
 parent=""; text=""; answer=""; observed=""; index=""; match=""
-no_lavish=0; dry_run=0; detach=0; check=0
+no_lavish=0; dry_run=0; detach=0; check=0; top_level=0
 declare -a in_items=() out_items=() ac_items=() surfaces=() assumptions=() questions=()
 declare -a dep_items=() block_items=()
 
@@ -186,6 +188,7 @@ while (($#)); do
     --index) index="${2-}"; shift 2 ;;
     --match) match="${2-}"; shift 2 ;;
     --detach) detach=1; shift ;;
+    --top-level) top_level=1; shift ;;
     --check) check=1; shift ;;
     --id) id="${2-}"; shift 2 ;;
     --pr) pr="${2-}"; shift 2 ;;
@@ -329,6 +332,14 @@ cmd_new() {
   # Everything that can refuse must refuse before the first mkdir. A rejected run
   # leaves no trace - not even an empty work-orders/ directory.
   local e
+  # Every ticket has a home. A ticket with no parent becomes a directory at the
+  # top of work-orders/, and that is a deliberate act rather than the default -
+  # otherwise unrelated tickets accumulate at the root with nothing tying them
+  # together, which is exactly the pile this rule exists to prevent.
+  if [[ -z $parent ]] && ((top_level == 0)); then
+    ps_die "$PS_VALIDATION" "no_home" \
+      "a ticket needs a home: pass --parent WO-... to file it under existing work, or --top-level to open a new epic at the root of $WO_DIR_NAME/"
+  fi
   if [[ -n $parent ]]; then require_edge_target parent "$parent"; fi
   for e in "${dep_items[@]+"${dep_items[@]}"}"; do require_edge_target depends-on "$e"; done
   for e in "${block_items[@]+"${block_items[@]}"}"; do require_edge_target blocks "$e"; done
@@ -347,7 +358,12 @@ cmd_new() {
   fi
 
   mkdir -p "$root" || ps_die "$PS_IO" "mkdir_failed" "cannot create $root"
-  local home; home=$(wo_home_dir "$project" "$parent")
+  local home
+  if [[ -n $parent ]]; then
+    home=$(child_home "$parent")
+  else
+    home=$(wo_home_dir "$project" "" "$id")
+  fi
   mkdir -p "$home" || ps_die "$PS_IO" "mkdir_failed" "cannot create $home"
   local file="$home/${id}-${slug}.md"
   [[ -e $file ]] && ps_die "$PS_VALIDATION" "id_collision" "$file already exists"
@@ -642,6 +658,9 @@ EOF
   wo_fm_set "$file" '.merge_sha=$s | .closed=$d | .updated=$d' \
     --arg s "$sha" --arg d "$(ps_today)"
   git -C "$project" mv "$file" "$dest" >/dev/null 2>&1 || mv -- "$file" "$dest"
+  # An epic archived after its last child leaves would otherwise hold an empty
+  # directory open with nothing but its own generated README inside it.
+  prune_dir "$(dirname -- "$file")"
   reindex
   git -C "$project" add -A "$root" >/dev/null 2>&1
   git -C "$project" commit -m "chore($id): close out and archive" >/dev/null 2>&1 \
@@ -678,34 +697,114 @@ dep_reaches() {
   return 1
 }
 
-# relocate <file> <new-parent-or-empty> -> the new path on stdout.
-# A ticket's own children directory travels with it, so re-homing an epic does
-# not orphan the tickets underneath it.
-relocate() {
-  local f="$1" np="$2" home dest olddir kids
-  home=$(wo_home_dir "$project" "$np")
-  dest="$home/$(basename -- "$f")"
-  if [[ $dest == "$f" ]]; then printf '%s' "$f"; return 0; fi
-  [[ -e $dest ]] && ps_die "$PS_VALIDATION" "path_collision" "$dest already exists"
-  mkdir -p "$home" || ps_die "$PS_IO" "mkdir_failed" "cannot create $home"
+# ---------------------------------------------------------------------------
+# Layout. A parentless ticket lives inside the directory named for it, and a
+# child lives in its parent's directory. Promotion is what keeps the second rule
+# true for a ticket minted as a leaf that later grows children.
+# ---------------------------------------------------------------------------
 
-  olddir=$(dirname -- "$f")
-  kids="$olddir/$(wo_field "$f" '.id')"
-  git -C "$project" mv "$f" "$dest" >/dev/null 2>&1 || mv -- "$f" "$dest" \
-    || ps_die "$PS_IO" "move_failed" "cannot move $f to $dest"
-  if [[ -d $kids ]]; then
-    git -C "$project" mv "$kids" "$home/" >/dev/null 2>&1 || mv -- "$kids" "$home/" \
-      || ps_die "$PS_IO" "move_failed" "moved the ticket but not its children directory"
+# wo_git_mv <src> <dest> - git mv when the path is tracked, plain mv otherwise,
+# so the layout can be repaired in a working tree that is not yet a repository.
+wo_git_mv() {
+  git -C "$project" mv "$1" "$2" >/dev/null 2>&1 || mv -- "$1" "$2" \
+    || ps_die "$PS_IO" "move_failed" "cannot move $1 to $2"
+}
+
+# prune_dir <dir> - drop a directory that holds nothing but its own generated
+# README, which would otherwise hold an empty folder open forever.
+prune_dir() {
+  local d="$1"
+  [[ -d $d && $d != "$root" ]] || return 0
+  if [[ -f $d/README.md ]] \
+    && [[ -z $(find "$d" -mindepth 1 -maxdepth 1 ! -name README.md -print -quit) ]]; then
+    git -C "$project" rm -q -f "$d/README.md" >/dev/null 2>&1 || rm -f -- "$d/README.md"
   fi
-  # An epic that has just lost its last child keeps only its generated README,
-  # which would hold the empty directory open forever.
-  if [[ -d $olddir && $olddir != "$root" && -f $olddir/README.md ]]; then
-    if [[ -z $(find "$olddir" -mindepth 1 -maxdepth 1 ! -name README.md -print -quit) ]]; then
-      git -C "$project" rm -q -f "$olddir/README.md" >/dev/null 2>&1 || rm -f -- "$olddir/README.md"
-    fi
+  rmdir -p --ignore-fail-on-non-empty "$d" 2>/dev/null || true
+}
+
+# promote <file> -> the directory this ticket owns, after moving its own file
+# inside it. Idempotent: a ticket already sitting in its own directory is
+# returned untouched, so every caller may promote without checking first.
+promote() {
+  local f="$1" own fname
+  own=$(wo_own_dir "$f")
+  mkdir -p "$own" || ps_die "$PS_IO" "mkdir_failed" "cannot create $own"
+  if wo_owns_dir "$f"; then printf '%s' "$own"; return 0; fi
+  fname=$(basename -- "$f")
+  [[ -e $own/$fname ]] && ps_die "$PS_VALIDATION" "path_collision" "$own/$fname already exists"
+  wo_git_mv "$f" "$own/$fname"
+  printf '%s' "$own"
+}
+
+# child_home <parent-id> -> the directory a child of that ticket belongs in.
+# Promotes the parent first, so a leaf gaining its first child becomes an epic
+# with a folder rather than leaving the child stranded beside it.
+child_home() { promote "$(wo_find "$project" "$1")"; }
+
+# desired_dir <id> -> the directory this ticket's own file belongs in.
+#
+# A ticket owns the directory named for it in exactly two cases: it has children,
+# or it has no parent and so must be a directory at the top level. Everything
+# else is a leaf - a plain file in its parent's directory, with no folder and no
+# generated README of its own.
+#
+# Derived rather than remembered: a ticket that gains its first child is promoted
+# into a folder, and one that loses its last is demoted back out. Ownership that
+# persisted after the last child left would leave a folder holding one file and a
+# README listing nothing, which is the clutter this layout exists to avoid.
+#
+# Requires a loaded graph.
+desired_dir() {
+  local gid="$1" base
+  if [[ -z ${G_PARENT[$gid]} ]]; then
+    base="$root"
+  else
+    base=$(desired_dir "${G_PARENT[$gid]}")
   fi
-  rmdir -p --ignore-fail-on-non-empty "$olddir" 2>/dev/null || true
-  printf '%s' "$dest"
+  if [[ -z ${G_PARENT[$gid]} || -n $(g_kids "$gid") ]]; then
+    printf '%s/%s' "$base" "$gid"
+  else
+    printf '%s' "$base"
+  fi
+}
+
+# owns_dir_by_graph <id> - 0 when the ticket is entitled to its own directory.
+owns_dir_by_graph() {
+  [[ -z ${G_PARENT[$1]} || -n $(g_kids "$1") ]]
+}
+
+# place_all -> "<before>\t<after>" for every ticket the layout rule moved.
+#
+# Shallowest first, so a parent's directory exists before its children move into
+# it and an emptied directory is pruned only once the last child has left. Every
+# ticket is moved as a single file rather than as a folder: the folder is not the
+# unit of the move, it is a consequence of having children, and moving files one
+# at a time means a demotion and a promotion in the same pass cannot fight.
+#
+# Requires a loaded graph.
+place_all() {
+  local gid depth f cur want dest
+  local -a plan=()
+  for gid in "${G_IDS[@]+"${G_IDS[@]}"}"; do
+    g_archived "$gid" && continue
+    depth=$(wo_ancestors "$project" "$gid" | wc -l)
+    plan+=("$(printf '%04d\t%s' "$depth" "$gid")")
+  done
+  ((${#plan[@]})) || return 0
+
+  while IFS=$'\t' read -r depth gid; do
+    [[ -n $gid ]] || continue
+    f=$(wo_find "$project" "$gid")
+    cur=$(dirname -- "$f")
+    want=$(desired_dir "$gid")
+    [[ $cur == "$want" ]] && continue
+    dest="$want/$(basename -- "$f")"
+    [[ -e $dest ]] && ps_die "$PS_VALIDATION" "path_collision" "$dest already exists"
+    mkdir -p "$want" || ps_die "$PS_IO" "mkdir_failed" "cannot create $want"
+    wo_git_mv "$f" "$dest"
+    prune_dir "$cur"
+    printf '%s\t%s\n' "${f#"$project"/}" "${dest#"$project"/}"
+  done < <(printf '%s\n' "${plan[@]}" | sort -n)
 }
 
 cmd_link() {
@@ -751,7 +850,12 @@ cmd_link() {
     fi
     wo_fm_set "$file" '.parent=(if $p == "" then null else $p end) | .updated=$d' \
       --arg p "$newp" --arg d "$(ps_today)"
-    file=$(relocate "$file" "$newp")
+    # Re-parenting can promote the new parent and demote the old one, so the
+    # whole tree is re-placed rather than just this ticket. Every move is
+    # derived from the parents on disk, so it converges in one pass.
+    load_graph
+    place_all >/dev/null
+    file=$(wo_find "$project" "$id")
   fi
 
   reindex
@@ -1324,8 +1428,9 @@ build_index() {
   fi
 
   printf '## Tree\n\n'
-  printf 'Children sit in the directory named for their parent, so this shape is the\n'
-  printf 'directory layout. Archived tickets drop out of it and into the table below.\n\n'
+  printf 'A ticket with children owns the directory named for it and sits inside it, so\n'
+  printf 'this shape is the directory layout. Nothing sits loose at the top level.\n'
+  printf 'Archived tickets drop out of it and into the table below.\n\n'
   printf '```text\n'
   if ((n_active == 0)); then printf '(no active work orders)\n'; else render_branch "" "" 0; fi
   printf '```\n\n'
@@ -1364,33 +1469,51 @@ build_index() {
 # that requires a .md at every level of the tree gets one without anybody hand
 # writing it into a directory the script owns.
 child_dir_of() {
-  local gid="$1" d
-  d=$(dirname -- "${G_PATH[$gid]}")
-  if [[ $d == "." ]]; then printf '%s/%s' "$root" "$gid"; else printf '%s/%s/%s' "$root" "$d" "$gid"; fi
+  local gid="$1"
+  desired_dir "$gid"
 }
 
 build_child_readme() {
-  local gid="$1" kid w
-  printf '# Children of %s\n\n' "$gid"
+  local gid="$1" kid w n=0
+  printf '# %s and its children\n\n' "$gid"
   printf 'Generated by `work-order.sh`. Never edit by hand - run `work-order.sh reindex`.\n\n'
-  printf 'Parent: [%s](../%s)\n\n' "${G_TITLE[$gid]}" "${G_PATH[$gid]##*/}"
+  printf 'This ticket: [%s](%s)\n\n' "${G_TITLE[$gid]}" "${G_PATH[$gid]##*/}"
   printf 'One level down only. A child of a child is listed in its own directory, not here.\n\n'
+  n=$(g_kids "$gid" | grep -c . || true)
+  if ((n == 0)); then
+    printf '_No children yet. This ticket sits at the top level, so it holds the directory\n'
+    printf 'on its own until work is filed underneath it._\n'
+    return 0
+  fi
   printf '| ID | status | pri | waiting on | title |\n|---|---|---|---|---|\n'
   while IFS= read -r kid; do
     w=$(g_waiting "$kid")
     printf '| `%s` | %s | %s | %s | [%s](%s) |\n' \
       "$kid" "${G_STATUS[$kid]}" "${G_PRI[$kid]}" "${w:--}" \
-      "${G_TITLE[$kid]}" "${G_PATH[$kid]##*/}"
+      "${G_TITLE[$kid]}" "$(readme_link "$gid" "$kid")"
   done < <(g_kids "$gid")
 }
 
-# each_child_dir -> "<parent-id>\t<abs-dir>" for every ticket that has children.
+# readme_link <epic-id> <child-id> -> the child's path relative to the epic's
+# directory. A child that owns a directory of its own sits one level below the
+# README that lists it, so a bare filename would be a broken pointer.
+readme_link() {
+  local kid="$2" f
+  f="${G_PATH[$kid]##*/}"
+  if owns_dir_by_graph "$kid"; then printf '%s/%s' "$kid" "$f"; else printf '%s' "$f"; fi
+}
+
+# each_child_dir -> "<id>\t<abs-dir>" for every ticket that owns a directory.
+# That is every epic and every top-level ticket - and it is exactly the set of
+# directories that exist, so each one gets the explainer the repository requires
+# without anybody hand-writing a README into a directory the script owns.
 # Tab separated because IFS here excludes the space, and a project directory is
 # perfectly entitled to contain one.
 each_child_dir() {
   local gid
   for gid in "${G_IDS[@]+"${G_IDS[@]}"}"; do
-    [[ -n $(g_kids "$gid") ]] || continue
+    g_archived "$gid" && continue
+    owns_dir_by_graph "$gid" || continue
     printf '%s\t%s\n' "$gid" "$(child_dir_of "$gid")"
   done
 }
@@ -1416,6 +1539,17 @@ cmd_reindex() {
   wo_require_jq
   [[ -d $root ]] || ps_die "$PS_NOTFOUND" "no_work_orders" "no $WO_DIR_NAME/ in $project"
   if ((check)); then
+    # The layout gate. A ticket loose at the top of work-orders/ belongs to
+    # nothing, and one of them is all it takes for the pile to start again -
+    # so this fails the commit rather than waiting for anyone to notice.
+    local loose names
+    loose=$(wo_loose_at_root "$root")
+    if [[ -n $loose ]]; then
+      names=$(printf '%s\n' "$loose" | while IFS= read -r p; do basename -- "$p"; done | paste -sd' ' -)
+      ps_die "$PS_VALIDATION" "loose_ticket" \
+        "these tickets sit loose at the top of $WO_DIR_NAME/ instead of inside a directory: $names - run 'work-order.sh reflow'"
+    fi
+
     load_graph
     local tmp gid dir
     tmp=$(ps_tempfile)
@@ -1437,6 +1571,61 @@ cmd_reindex() {
   else
     ps_info "rebuilt $root/INDEX.md and every child README"
   fi
+}
+
+# ---------------------------------------------------------------------------
+# reflow - move every ticket to the home the layout rule gives it.
+#
+# It is the repair for a tree written under the older rule, where a parentless
+# ticket sat loose at the root and an epic's own file sat outside its children's
+# directory. It is also the fix the gate names when anything drifts back.
+#
+# Nothing about the ticket changes: no frontmatter is touched and no parent is
+# invented. The only thing that moves is the file, to where its own recorded
+# parent already says it belongs.
+# ---------------------------------------------------------------------------
+
+cmd_reflow() {
+  wo_require_jq
+  [[ -d $root ]] || ps_die "$PS_NOTFOUND" "no_work_orders" "no $WO_DIR_NAME/ in $project"
+  load_graph
+
+  local gid f cur want
+  local -a moved=()
+
+  if ((dry_run)); then
+    # A dry run may not move a byte, so it compares each ticket's current
+    # directory against the one the rule gives it and reports the difference.
+    for gid in "${G_IDS[@]+"${G_IDS[@]}"}"; do
+      g_archived "$gid" && continue
+      f=$(wo_find "$project" "$gid")
+      cur=$(dirname -- "$f")
+      want=$(desired_dir "$gid")
+      [[ $cur == "$want" ]] \
+        || moved+=("${f#"$project"/} -> ${want#"$project"/}/$(basename -- "$f")")
+    done
+    if ((PS_JSON)); then
+      printf '{"ok":true,"dry_run":true,"out_of_place":%d}\n' "${#moved[@]}"
+    else
+      ps_info "DRY RUN - ${#moved[@]} ticket(s) are not in the home the layout rule gives them"
+      ((${#moved[@]})) && printf '  %s\n' "${moved[@]}" >&2
+    fi
+    return 0
+  fi
+
+  local before after
+  while IFS=$'\t' read -r before after; do
+    [[ -n $before ]] && moved+=("$before -> $after")
+  done < <(place_all)
+
+  reindex
+  if ((PS_JSON)); then
+    printf '{"ok":true,"moved":%d}\n' "${#moved[@]}"
+  else
+    ps_info "reflowed ${#moved[@]} ticket(s)"
+    ((${#moved[@]})) && printf '  %s\n' "${moved[@]}" >&2
+  fi
+  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -1532,6 +1721,7 @@ case $command in
   next) cmd_next ;;
   tree) cmd_tree ;;
   reindex) cmd_reindex ;;
+  reflow) cmd_reflow ;;
   repair) cmd_repair ;;
   approve) cmd_approve ;;
   start) cmd_start ;;

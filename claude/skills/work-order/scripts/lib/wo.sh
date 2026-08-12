@@ -105,35 +105,73 @@ wo_exists() {
 }
 
 # ---------------------------------------------------------------------------
-# Hierarchy.
+# Hierarchy and layout.
 #
-# A ticket with no parent sits at the root of work-orders/. A ticket with
-# parent P sits in the directory named for P, which is the sibling of P's own
-# file. So an epic reads one level down to its children and no further, and the
-# tree mirrors the work rather than the order tickets happened to be minted in.
+# The top level of work-orders/ holds directories and nothing else. Two rules
+# produce that, and both are enforced rather than remembered:
 #
-#   work-orders/WO-…-e21f-dev001-pipeline-test.md     the epic
-#   work-orders/WO-…-e21f/WO-…-a1d4-track-a1.md       one of its children
+#   1. A ticket with no parent owns the directory named for it, and its own file
+#      lives inside that directory.
+#   2. A ticket with a parent is written into the parent's directory, promoting
+#      the parent into one first if it was still a loose leaf.
 #
-# Parent is immutable in practice, so a path recorded anywhere stays valid -
-# which is why grouping is by parent and not by status.
+#   work-orders/WO-…-e21f/WO-…-e21f-dev001-pipeline-test.md   the epic itself
+#   work-orders/WO-…-e21f/WO-…-a1d4-track-a1.md               a leaf beneath it
+#   work-orders/WO-…-e21f/WO-…-234b/WO-…-234b-skeleton.md     a child that is
+#                                                             itself an epic
+#
+# A loose ticket file at the root was the old shape, and it is what let ten
+# unrelated tickets pile up with nothing tying them together. Placing every
+# parentless ticket in its own directory makes that pile impossible rather than
+# merely tidied.
+#
+# Owning a directory is monotone: a ticket that has one keeps it even after its
+# last child leaves. A path recorded anywhere therefore stays valid, which is
+# the same reason grouping is by parent and never by status.
 # ---------------------------------------------------------------------------
 
-# wo_child_dir <parent-file> -> the directory this ticket's children live in
-wo_child_dir() {
-  local pf="$1" pid
-  pid=$(wo_field "$pf" '.id')
-  printf '%s/%s' "$(dirname -- "$pf")" "$pid"
+# wo_owns_dir <file> - 0 when the ticket's file already sits inside the
+# directory named for its own id.
+wo_owns_dir() {
+  local f="$1" id
+  id=$(wo_field "$f" '.id')
+  [[ $(basename -- "$(dirname -- "$f")") == "$id" ]]
 }
 
-# wo_home_dir <project> <parent-id-or-empty> -> where a ticket with that parent belongs
+# wo_own_dir <file> -> the directory this ticket owns, whether or not it exists
+# on disk yet. For a ticket that already owns one, that is the directory its own
+# file sits in.
+wo_own_dir() {
+  local f="$1" id
+  if wo_owns_dir "$f"; then printf '%s' "$(dirname -- "$f")"; return 0; fi
+  id=$(wo_field "$f" '.id')
+  printf '%s/%s' "$(dirname -- "$f")" "$id"
+}
+
+# wo_child_dir <parent-file> -> the directory this ticket's children live in.
+# The same directory the ticket owns: an epic sits beside its children rather
+# than one level above them, so the folder is the whole unit of work.
+wo_child_dir() { wo_own_dir "$1"; }
+
+# wo_home_dir <project> <parent-id-or-empty> <id> -> where this ticket's own
+# file belongs. The id is required for a parentless ticket because that ticket
+# is placed in the directory named for itself, never at the root.
 wo_home_dir() {
-  local project="$1" parent="${2:-}"
+  local project="$1" parent="${2:-}" id="${3:-}"
   if [[ -z $parent ]]; then
-    wo_root "$project"
+    [[ -n $id ]] || ps_die "$PS_USAGE" "missing_id" \
+      "wo_home_dir needs the ticket id to place a ticket that has no parent"
+    printf '%s/%s' "$(wo_root "$project")" "$id"
     return 0
   fi
   wo_child_dir "$(wo_find "$project" "$parent")"
+}
+
+# wo_loose_at_root <root> -> every ticket file sitting directly in work-orders/,
+# one per line. This is what the layout gate reads: a single hit means the rule
+# above has been broken and the pile is starting again.
+wo_loose_at_root() {
+  find "$1" -maxdepth 1 -type f -name 'WO-*.md' | sort
 }
 
 # wo_ancestors <project> <id> - the parent chain, nearest first, on stdout.
