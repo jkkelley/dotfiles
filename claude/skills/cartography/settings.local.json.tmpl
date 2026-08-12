@@ -1,0 +1,33 @@
+{
+  "_comment": [
+    "cartography permissions. Merge these into the consuming project's",
+    ".claude/settings.local.json - do not overwrite the file.",
+    "",
+    "cartograph.sh is allowlisted as a whole, so adding a subcommand needs no",
+    "permission change. work-order's own entry is required too: cartography mints",
+    "every ticket by shelling out to work-order.sh, and without that entry the",
+    "mint prompts once per ticket in the middle of a run.",
+    "",
+    "The deny list is inherited from work-order for the same reason it exists",
+    "there - close is the sanctioned path for deleting a branch, and it refuses",
+    "unless gh reports the PR MERGED."
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(bash .claude/skills/cartography/scripts/cartograph.sh *)",
+      "Bash(bash *//cartography/scripts/cartograph.sh *)",
+      "Bash(bash .claude/skills/cartography/testing/run-tests.sh)",
+      "Bash(bash .claude/skills/work-order/scripts/work-order.sh *)",
+      "Bash(bash *//work-order/scripts/work-order.sh *)",
+      "Bash(jq *)",
+      "Bash(podman build *)",
+      "Bash(podman run *)"
+    ],
+    "deny": [
+      "Bash(git branch -D *)",
+      "Bash(git branch -d *)",
+      "Bash(git push origin --delete *)",
+      "Bash(git push --delete *)"
+    ]
+  }
+}
