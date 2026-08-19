@@ -119,6 +119,18 @@ Managed by `backlog.sh`.
 Buckets _are_ the priority.
 No numeric ranks, because nobody ever agrees on what 3 versus 4 means.
 
+### Read protocol
+
+`Now`, `Next` and `Later` are read in full - that is live work, and it is capped by the disciplines above rather than by a window.
+`Done` is a sliding window: top 10 entries, then stop.
+
+The window is smaller than the file on purpose.
+`backlog.sh done` trims `Done` to 20 so a recently closed item is still findable without reaching for git, but 20 is a retention limit, not a reading limit.
+Reading all 20 by default spends tokens on work that is finished and, by definition, no longer a decision.
+
+Go deeper only when the user asks, or when an item inside the window references an older ID you need in order to act.
+Same rule as `ISSUES.md` and `CONTEXT_STATE.md`, and for the same reason - state it when you go deeper, and say why.
+
 ### Item shape
 
 ```markdown

@@ -28,6 +28,8 @@ Not this skill: cloning an existing repo and renaming it. That is `repo-scaffold
 ├── BACKLOG.md           Now / Next / Later / Done         (backlog.sh)
 ├── ISSUES.md            append-only, newest first          (log-issue.sh)
 ├── NAMING.md            inherited vs project-specific conventions
+├── .gitignore           the shared ignore set, plus what the tools above create
+├── .dockerignore        the same set, trimmed for a build context
 └── .claude/
     ├── settings.json
     ├── scaffold.json    which skill version the copies below came from
@@ -50,8 +52,15 @@ scripts/scaffold.sh --project <dir> --apply      # interviews, then commits the 
 scripts/scaffold.sh --project <dir> --apply --yes --full   # non-interactive, everything
 ```
 
-On a terminal `--apply` interviews the user about the optional extras (`README.md`, `.gitignore`,
-`git init`) and shows what each produces before writing. `--yes` skips the interview.
+On a terminal `--apply` interviews the user about the optional extras (`README.md`, `git init`) and
+shows what each produces before writing. `--yes` skips the interview.
+
+`.gitignore` and `.dockerignore` are **not** extras - they install by default, because an agent that
+commits `.claude/cache/` or bakes a `.env` into an image has already done the damage by the time
+anyone reviews it. Both come from
+[references/templates/](references/templates/), which vendors the shared ignore set from
+`claudes-markdown-12-rules`; re-pull that upstream rather than hand-editing a project's copy.
+`--no-gitignore` / `--no-dockerignore` opt out.
 
 **Existing files are appended to, never deleted or overwritten.** A file already present gains only
 the sections it is missing. A non-empty file with none of the expected structure is reported and
@@ -113,7 +122,10 @@ Stated in the installed `CLAUDE.md`, and worth repeating here:
 2. `ISSUES.md` - **top 10 entries, then stop.** Deeper only on request, or when an entry in the
    window references an older ID you need.
 3. `CONTEXT_STATE.md` - top 10 checkpoints, same rule.
-4. `BACKLOG.md` when choosing work; `NAMING.md` before naming anything.
+4. `BACKLOG.md` when choosing work - `Now` / `Next` / `Later` in full, `Done` **top 10 only**.
+   `Done` is retained 20 deep so a recent item stays findable, but 20 is a retention limit, not a
+   reading limit.
+5. `NAMING.md` before naming anything.
 
 If `.claude/cache/` is present and `cache.sh verify` passes, read the slices instead - same
 information, roughly a fifth of the tokens. If verify fails, read the markdown; never trust a

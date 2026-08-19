@@ -9,7 +9,7 @@
 source "${SKILL:-/skill}/testing/assert.sh"
 
 d=$(new_project)
-wo new --project "$d" --title "Empty cart state" --type feature \
+wo new --project "$d" --title "Empty cart state" --type feature --top-level \
    --problem "The cart shows nothing when empty" \
    --out "payment errors" --ac "npm test passes" >/dev/null
 f=$(find "$d/work-orders" -name 'WO-*.md')
@@ -59,7 +59,7 @@ run 0 "frontmatter still parses after a repair" bash -c \
 # inputs under the same fixed clock is the reference: byte-identical, or the
 # repair changed something it had no business changing.
 d2=$(new_project)
-wo new --project "$d2" --title "Empty cart state" --type feature \
+wo new --project "$d2" --title "Empty cart state" --type feature --top-level \
    --problem "The cart shows nothing when empty" \
    --out "payment errors" --ac "npm test passes" >/dev/null
 f2=$(find "$d2/work-orders" -name 'WO-*.md')

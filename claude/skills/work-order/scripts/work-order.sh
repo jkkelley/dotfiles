@@ -31,8 +31,11 @@ Usage:
                         (--parent WO-... | --top-level)
                         [--depends-on WO-...] [--blocks WO-...]
                         [--from-figma DIR] [--frames GLOB] [--json]
+  work-order.sh amend   [--project DIR] --id WO-... [--title T] [--problem T]
+                        [--in T...] [--out T...] [--ac T...] [--test-plan T] [--json]
   work-order.sh link    [--project DIR] --id WO-... [--parent WO-... | --detach]
-                        [--depends-on WO-...] [--blocks WO-...] [--json]
+                        [--depends-on WO-...] [--blocks WO-...]
+                        [--no-depends-on WO-...] [--no-blocks WO-...] [--json]
   work-order.sh note    [--project DIR] --id WO-... --text T [--json]
   work-order.sh resolve [--project DIR] --id WO-... (--index N | --match TEXT)
                         --answer T [--json]
@@ -48,6 +51,8 @@ Usage:
   work-order.sh submit  [--project DIR] --id WO-... --pr N [--json]
   work-order.sh done    [--project DIR] --id WO-... [--json]
   work-order.sh close   [--project DIR] --id WO-... [--dry-run] [--json]
+  work-order.sh cancel  [--project DIR] --id WO-... --reason T
+                        [--superseded-by WO-...] [--json]
   work-order.sh reopen  [--project DIR] --id WO-... --reason T [--json]
   work-order.sh verify  [--project DIR] [--id WO-...] [--json]
   work-order.sh resync  [--project DIR] --id WO-... [--json]
@@ -57,6 +62,8 @@ Usage:
 Lifecycle:
   draft --approve--> ready --start--> in-progress --submit--> in-review
         --done--> done --close--> done (archived, merge SHA recorded)
+  Any of draft/ready/in-progress/in-review may become `cancelled` via cancel,
+  which archives the ticket with nothing shipped. It is the other terminal state.
   Any of ready/in-progress/in-review may become `stale` via verify; resync returns it.
 
 Authority:
@@ -80,10 +87,29 @@ new:
   --depends-on an existing WO that must reach `done` first. Repeatable. The
                inverse `blocks` edge is written on the other ticket too.
 
+amend:
+  Corrects a `draft` before it is approved, and only a draft: an approved ticket
+  is amended by `reopen` or by cutting a new one. That refusal is the point - a
+  ticket whose scope can move after approval is not a contract.
+  Every repeatable flag REPLACES its whole section rather than adding to it, so
+  what you pass is what the section says afterwards. Predictable beats clever.
+  --title      rewrites the H1 and the frontmatter title. The slug and the file
+               name are minted once by `new` and are left alone.
+  --out        replaces the non-goals. As in `new`, an empty Out list is refused.
+  --ac         replaces the human criteria. A wireframe-derived frozen block is
+               preserved untouched - it is derived from build-plan.json, not
+               from the caller.
+
 link:
   Edges after the fact, for children cut before every ID existed.
   --parent     re-home the ticket under a parent; the file is moved with git mv.
-  --detach     back to the root of work-orders/.
+  --detach     back to the root of work-orders/. It removes the parent and only
+               the parent, so it is refused alongside --depends-on/--blocks.
+  --no-depends-on  removes a dependency edge, and the inverse `blocks` edge on
+               the other ticket with it. Repeatable. A target that no longer
+               exists is still removed from this ticket - a dangling edge is the
+               reason to run this, not a reason to refuse.
+  --no-blocks  the same, in the other direction.
   Both --parent and --depends-on refuse a cycle and refuse an unknown ID.
 
 note:
@@ -104,6 +130,9 @@ resolve:
 
 evidence:
   Records what was observed for one acceptance criterion and checks its box.
+  Requires status `in-progress` or `in-review`: a criterion can only be observed
+  while the work is being done, and ticking one on a draft would let a ticket
+  reach `done` with nothing ever run.
   `done` refuses while any criterion is unchecked, so this is the only way a
   ticket reaches `done`. It is not a way to wave a criterion through: --observed
   is required, and there is no flag that ticks one without it. A criterion that
@@ -132,7 +161,27 @@ repair:
   --dry-run    list what would change and write nothing.
 
 close:
+  Three phases: clean up the feature branch, land a close-out PR that archives the
+  ticket, clean up the close-out branch. The close-out PR is opened and merged
+  without asking, because close has already proved with `gh` that the ticket's own
+  PR is MERGED - what is left is bookkeeping behind a merge a human approved.
+  The caller ends on `main` when it succeeds, and back on the branch they started
+  on when anything fails. A failed run is always safe to re-run: close reuses and
+  resets the close-out branch, reuses a PR already open on it, and skips work a
+  previous attempt already landed. Nothing here has to be finished by hand.
   --dry-run    print the phase plan and every assertion result, execute nothing.
+
+cancel:
+  Terminates a `draft`, `ready`, `in-progress` or `in-review` ticket that is not
+  going to be built. It archives the file exactly where `close` would, and does no
+  git and no gh work at all: no branch, no PR, no merge. The move is left staged in
+  your working tree - commit it yourself, in whatever change explains it.
+  A `done` ticket is refused: that one is finished, and `close` is its verb.
+  --reason     REQUIRED. A cancellation with no stated reason is how the same idea
+               gets cut again a month later. It is written into `## Outcome`.
+  --superseded-by  the WO that replaced this one. Validated like any other edge
+               target, written to the `superseded_by` field so the graph can be
+               asked, and repeated in `## Outcome` beside the reason.
 
 Common:
   --project DIR   project directory (default: .)
@@ -156,10 +205,10 @@ command="$1"; shift
 
 title=""; type=""; problem=""; test_plan=""; priority="p2"
 id=""; pr=""; reason=""; status_filter=""; from_figma=""; frames_glob="*"
-parent=""; text=""; answer=""; observed=""; index=""; match=""
+parent=""; text=""; answer=""; observed=""; index=""; match=""; superseded_by=""
 no_lavish=0; dry_run=0; detach=0; check=0; top_level=0
 declare -a in_items=() out_items=() ac_items=() surfaces=() assumptions=() questions=()
-declare -a dep_items=() block_items=()
+declare -a dep_items=() block_items=() no_dep_items=() no_block_items=()
 
 while (($#)); do
   case $1 in
@@ -182,6 +231,9 @@ while (($#)); do
     --parent) parent="${2-}"; shift 2 ;;
     --depends-on) dep_items+=("${2-}"); shift 2 ;;
     --blocks) block_items+=("${2-}"); shift 2 ;;
+    --no-depends-on) no_dep_items+=("${2-}"); shift 2 ;;
+    --no-blocks) no_block_items+=("${2-}"); shift 2 ;;
+    --superseded-by) superseded_by="${2-}"; shift 2 ;;
     --text) text="${2-}"; shift 2 ;;
     --answer) answer="${2-}"; shift 2 ;;
     --observed) observed="${2-}"; shift 2 ;;
@@ -304,6 +356,17 @@ add_edge() {
   wo_fm_set "$tf" \
     "if ((.${field} // []) | index(\$v)) then . else .${field} = ((.${field} // []) + [\$v]) end
      | .updated = \$d" \
+    --arg v "$3" --arg d "$(ps_today)"
+}
+
+# del_edge <target-id> <field> <value-id> - the inverse of add_edge. Subtraction
+# rather than a search, so removing an edge that was never there is a no-op and a
+# half-applied removal can be finished by re-running the same command.
+del_edge() {
+  local tf field="$2"
+  tf=$(wo_find "$project" "$1")
+  wo_fm_set "$tf" \
+    ".${field} = ((.${field} // []) - [\$v]) | .updated = \$d" \
     --arg v "$3" --arg d "$(ps_today)"
 }
 
@@ -461,6 +524,154 @@ cmd_new() {
 }
 
 # ---------------------------------------------------------------------------
+# amend - the review fix for a draft, and only for a draft.
+#
+# `new` is the only thing that ever wrote In, Out, Acceptance criteria or the
+# test plan, so a review that found the scope wrong had nowhere to land: the
+# choice was a binding note contradicting the section above it, or a hand edit of
+# a file this skill owns. Both leave the ticket saying two things at once.
+#
+# The status gate is the whole point rather than a convenience. A ticket that can
+# be rewritten after `approve` is not a contract, and the ability to move the
+# goalposts on work already approved is worth more to a confused agent than every
+# other refusal in this script is worth to us. An approved ticket changes through
+# `reopen`, or by cutting a new one that says why.
+#
+# Each repeatable flag replaces its section wholesale. Merge semantics would need
+# a rule for ordering and de-duplication, and "what you passed is what it says"
+# needs no rule at all.
+# ---------------------------------------------------------------------------
+
+# section_file <text> -> a temp file holding it verbatim, for awk to read back.
+# Passing a section body through `awk -v` runs it through awk's escape
+# processing, so a criterion containing a backslash would be silently altered on
+# the way in. A file is read byte for byte.
+section_file() {
+  local f; f=$(ps_tempfile)
+  printf '%s\n' "$1" >"$f"
+  printf '%s' "$f"
+}
+
+cmd_amend() {
+  wo_require_jq; require_id
+  local file; file=$(wo_find "$project" "$id")
+  wo_require_status "$file" draft
+
+  ((${#in_items[@]})) || ((${#out_items[@]})) || ((${#ac_items[@]})) \
+    || [[ -n $title || -n $problem || -n $test_plan ]] \
+    || ps_die "$PS_USAGE" "nothing_to_do" \
+      "amend needs one of --title, --problem, --in, --out, --ac, --test-plan"
+
+  # The Out list may be replaced but never emptied, for the same reason `new`
+  # requires one: a ticket with no non-goals is a ticket an agent may wander out
+  # of, and an amend is exactly when somebody is tempted to drop them.
+  local o kept=0
+  for o in "${out_items[@]+"${out_items[@]}"}"; do
+    [[ -n $(ps_sanitize_line "$o") ]] && kept=$((kept + 1))
+  done
+  if ((${#out_items[@]})) && ((kept == 0)); then
+    ps_die "$PS_VALIDATION" "no_non_goals" \
+      "--out was passed with nothing in it: an amend may replace the non-goals, never empty them"
+  fi
+
+  local body; body=$(wo_body "$file")
+  # A section that is not there cannot be replaced, and a silent no-op reported as
+  # ok is the failure mode this whole script is written against.
+  if ((${#in_items[@]})) && ! printf '%s\n' "$body" | grep -q '^\*\*In\*\*[[:space:]]*$'; then
+    ps_die "$PS_VALIDATION" "section_missing" "$id has no **In** block to replace"
+  fi
+  if ((${#out_items[@]})) && ! printf '%s\n' "$body" | grep -q '^\*\*Out - non-goals\*\*[[:space:]]*$'; then
+    ps_die "$PS_VALIDATION" "section_missing" "$id has no **Out - non-goals** block to replace"
+  fi
+  if ((${#ac_items[@]})) && ! printf '%s\n' "$body" | grep -q '^## Acceptance criteria[[:space:]]*$'; then
+    ps_die "$PS_VALIDATION" "section_missing" "$id has no ## Acceptance criteria section to replace"
+  fi
+  if [[ -n $problem ]] && ! printf '%s\n' "$body" | grep -q '^## Problem[[:space:]]*$'; then
+    ps_die "$PS_VALIDATION" "section_missing" "$id has no ## Problem section to replace"
+  fi
+  if [[ -n $test_plan ]] && ! printf '%s\n' "$body" | grep -q '^## Test plan[[:space:]]*$'; then
+    ps_die "$PS_VALIDATION" "section_missing" "$id has no ## Test plan section to replace"
+  fi
+
+  # Every section is built by the same helpers `new` uses, so an amended ticket
+  # and a freshly minted one are the same bytes for the same inputs.
+  local f_title="" f_problem="" f_in="" f_out="" f_ac="" f_test=""
+  local safe_title=""
+  if [[ -n $title ]]; then
+    safe_title=$(ps_sanitize_line "$title")
+    [[ -n $safe_title ]] || ps_die "$PS_USAGE" "required_empty" "--title is required and must not be empty"
+    f_title="# $id - $safe_title"
+  fi
+  [[ -n $problem ]] && f_problem=$(section_file "$(ps_sanitize_line "$problem")")
+  ((${#in_items[@]})) && f_in=$(section_file "$(bullets "- " "${in_items[@]}")")
+  ((${#out_items[@]})) && f_out=$(section_file "$(bullets "- " "${out_items[@]}")")
+  [[ -n $test_plan ]] && f_test=$(section_file "$(printf '```sh\n%s\n```' "$(ps_sanitize_line "$test_plan")")")
+
+  if ((${#ac_items[@]})); then
+    # A wireframe-derived frozen block is carried through untouched: it is
+    # derived from build-plan.json and checksummed against it, so it is not the
+    # caller's to replace. --ac replaces the human criteria beneath it.
+    local criteria hn=0 a
+    criteria=$(printf '%s\n' "$body" | awk -v s="$WO_FROZEN_START" -v e="$WO_FROZEN_END" '
+      index($0, s) == 1 { f = 1 }
+      f { print }
+      index($0, e) == 1 { f = 0 }')
+    for a in "${ac_items[@]}"; do
+      hn=$((hn + 1))
+      [[ -n $criteria ]] && criteria+=$'\n'
+      criteria+="- [ ] \`AC-H${hn}\` *(human)* $(ps_sanitize_line "$a")"
+    done
+    f_ac=$(section_file "$criteria")
+  fi
+
+  local tmp; tmp=$(ps_tempfile)
+  {
+    printf -- '---\n'
+    wo_fm "$file"
+    printf -- '---\n'
+    printf '%s\n' "$body" | awk \
+      -v h1="$f_title" -v problem="$f_problem" -v inb="$f_in" -v outb="$f_out" \
+      -v ac="$f_ac" -v testp="$f_test" '
+      function emit(f,   line) { while ((getline line < f) > 0) print line; close(f) }
+      {
+        # A replaced section runs to the next heading. **In** and **Out** are
+        # sub-blocks of one heading, so they end at the next bold line too.
+        if (skip) {
+          if ($0 ~ /^## / || (stopsub && $0 ~ /^\*\*/)) { skip = 0; stopsub = 0 }
+          else next
+        }
+        if (h1 != "" && !titled && /^#[[:space:]]/) { print h1; titled = 1; next }
+        if (problem != "" && /^## Problem[[:space:]]*$/) {
+          print; print ""; emit(problem); print ""; skip = 1; next }
+        if (ac != "" && /^## Acceptance criteria[[:space:]]*$/) {
+          print; print ""; emit(ac); print ""; skip = 1; next }
+        if (testp != "" && /^## Test plan[[:space:]]*$/) {
+          print; print ""; emit(testp); print ""; skip = 1; next }
+        if (inb != "" && /^\*\*In\*\*[[:space:]]*$/) {
+          print; print ""; emit(inb); print ""; skip = 1; stopsub = 1; next }
+        if (outb != "" && /^\*\*Out - non-goals\*\*[[:space:]]*$/) {
+          print; print ""; emit(outb); print ""; skip = 1; stopsub = 1; next }
+        print
+      }'
+  } >"$tmp"
+  render_guard "$tmp"
+  ps_atomic_install "$tmp" "$file"
+
+  # The title lives in three places - the H1, the frontmatter and INDEX.md - and
+  # the slug in a fourth. The first three are rewritten here; the slug and the
+  # file name are minted once by `new` and left alone, because renaming a file an
+  # agent may already have been handed is a worse trade than a slug that reads a
+  # little old.
+  if [[ -n $safe_title ]]; then
+    wo_fm_set "$file" '.title=$t | .updated=$d' --arg t "$safe_title" --arg d "$(ps_today)"
+  else
+    wo_fm_set "$file" '.updated=$d' --arg d "$(ps_today)"
+  fi
+  reindex
+  emit_ok "$id" draft "$file"
+}
+
+# ---------------------------------------------------------------------------
 # transitions
 # ---------------------------------------------------------------------------
 
@@ -581,6 +792,44 @@ cmd_reopen() {
 # never accepted from the caller.
 # ---------------------------------------------------------------------------
 
+# The branch the caller stood on when close started, and the trap that puts them
+# back. close checks out main and then cuts close-out/<id>, so every refusal
+# after that point used to end with the caller somewhere they never asked to be -
+# which is how a failed close turns into a lost afternoon rather than a retry.
+WO_CLOSE_RETURN=""
+
+# close_restore_branch - EXIT/INT/TERM hook. Only acts on a failure: finishing on
+# main is the correct end state once the archive has landed, so a clean run is
+# left exactly where it stopped.
+close_restore_branch() {
+  local rc=$? cur back
+  ((rc == 0)) && return 0
+  [[ -n $WO_CLOSE_RETURN ]] || return 0
+  cur=$(git -C "$project" symbolic-ref --quiet --short HEAD 2>/dev/null) || cur=""
+  back="$WO_CLOSE_RETURN"
+  # Phase 1 deletes the feature branch deliberately, and close is normally run
+  # from it. Recreating it here would undo the one thing phase 1 got right, so
+  # when the branch the caller started on is the branch that just went, main is
+  # the honest answer: it is where their work lives now.
+  if ! git -C "$project" rev-parse --verify --quiet "$back" >/dev/null 2>&1; then
+    back=main
+    ps_warn "$WO_CLOSE_RETURN was deleted by phase 1 - leaving you on main instead"
+  fi
+  [[ $cur == "$back" ]] && return 0
+  # --force is safe here and nowhere else: close refuses a dirty tree before it
+  # touches anything, so the only uncommitted work at this point is close's own
+  # half-finished archive move, and carrying that back onto the caller's branch
+  # would be worse than dropping it.
+  git -C "$project" checkout --force "$back" >/dev/null 2>&1 \
+    || ps_warn "could not return you to $back - you are on ${cur:-a detached HEAD}"
+  return 0
+}
+
+# gh_in_project - gh infers the repository from the working directory, and every
+# other fact in this command is read from $project. A write aimed at whatever
+# repository the caller happened to be standing in is not a risk worth taking.
+gh_in_project() { (cd -- "$project" && gh "$@"); }
+
 cmd_close() {
   wo_require_jq; wo_require_git "$project"; wo_require_gh; require_id
   local file; file=$(wo_find "$project" "$id")
@@ -592,9 +841,9 @@ cmd_close() {
   pr_num=$(wo_field "$file" '.pr')
   [[ -n $pr_num ]] || ps_die "$PS_VALIDATION" "no_pr" "$id has no PR recorded - run submit first"
 
-  state=$(gh pr view "$pr_num" --json state -q .state 2>/dev/null) \
+  state=$(gh_in_project pr view "$pr_num" --json state -q .state 2>/dev/null) \
     || ps_die "$PS_IO" "gh_failed" "gh could not read PR #$pr_num"
-  sha=$(gh pr view "$pr_num" --json mergeCommit -q '.mergeCommit.oid // ""' 2>/dev/null)
+  sha=$(gh_in_project pr view "$pr_num" --json mergeCommit -q '.mergeCommit.oid // ""' 2>/dev/null)
 
   # The whole point of this command.
   [[ $state == MERGED ]] || ps_die "$PS_VALIDATION" "pr_not_merged" \
@@ -619,9 +868,11 @@ DRY RUN - nothing will be executed
 
   phase 1   git fetch --prune; checkout main; merge --ff-only origin/main
             git branch -D ${branch:-<none>}; git push origin --delete ${branch:-<none>}
-  phase 2   branch close-out/$id from main
+  phase 2   branch close-out/$id from main, reusing one an earlier attempt left
             backfill merge_sha + closed; archive to ${archive_dir#"$project"/}/
-            commit; push; open PR; merge
+            commit; push --force-with-lease
+  phase 2b  gh pr create --base main, or reuse the open one; gh pr merge --squash
+            no prompt: PR #$pr_num is already MERGED, so this is bookkeeping
   phase 3   repeat phase 1 for close-out/$id
 
   assertions passed: status=done, not archived, PR MERGED, merge commit present
@@ -631,6 +882,17 @@ EOF
 
   git -C "$project" diff --quiet && git -C "$project" diff --cached --quiet \
     || ps_die "$PS_VALIDATION" "dirty_tree" "working tree is dirty - refusing"
+
+  # Remember where the caller stood, and arm the trap before the first checkout.
+  # ps_scratch_init is called first on purpose: it installs the cleanup traps
+  # lazily on the first temp file, and doing that after this point would silently
+  # replace the handler below with one that no longer restores the branch.
+  ps_scratch_init
+  WO_CLOSE_RETURN=$(git -C "$project" symbolic-ref --quiet --short HEAD 2>/dev/null) \
+    || WO_CLOSE_RETURN=""
+  trap 'close_restore_branch; ps_cleanup' EXIT
+  trap 'close_restore_branch; ps_cleanup; trap - INT; kill -INT $$' INT
+  trap 'close_restore_branch; ps_cleanup; trap - TERM; kill -TERM $$' TERM
 
   # phase 1
   git -C "$project" fetch origin --prune >/dev/null 2>&1
@@ -643,32 +905,210 @@ EOF
   # verified before the checkout says nothing about the file we now hold, and a
   # PR that gh calls MERGED whose ticket never reached done on main means the
   # two disagree. Refuse rather than stamp a merge SHA onto the wrong state.
+  # The refusal names the actual cause rather than the raw status. A caller who
+  # just watched the ticket say `done` on the feature branch reads
+  # "status is 'in-review'" as the script being wrong, and goes looking in the
+  # wrong place; what it means is that the commit carrying the transition has
+  # not reached main.
   file=$(wo_find "$project" "$id")
-  wo_require_status "$file" done
+  local main_status; main_status=$(wo_field "$file" '.status')
+  [[ $main_status == done ]] || ps_die "$PS_VALIDATION" "done_not_merged" \
+    "$id reached done on the feature branch, but main's copy still says '$main_status': the PR carrying that transition has not merged to main yet. Merge it first, then run close again."
   if [[ -n $branch ]]; then
     git -C "$project" branch -D "$branch" >/dev/null 2>&1 || true
     git -C "$project" push origin --delete "$branch" >/dev/null 2>&1 || true
   fi
 
   # phase 2
+  #
+  # Every step from here is written to be repeatable, because the first version
+  # of this phase was not: an attempt that died after the branch was cut left it
+  # behind, the next run refused to create a branch that already existed, and the
+  # ticket became permanently unclosable by the tool. A close-out that can only
+  # be finished by hand is the failure this command exists to remove, so a second
+  # run has to reach the same end state as a clean first one.
   local cob="close-out/$id"
-  git -C "$project" checkout -b "$cob" >/dev/null 2>&1 \
-    || ps_die "$PS_IO" "checkout_failed" "cannot create $cob"
+  # -B, not -b: reuse and reset the branch an earlier attempt abandoned. Reset
+  # rather than continue, so the retry rebuilds from main instead of stacking on
+  # top of a half-finished attempt.
+  git -C "$project" checkout -B "$cob" >/dev/null 2>&1 \
+    || ps_die "$PS_IO" "checkout_failed" \
+      "cannot create or reset $cob from main - it is most likely checked out in another worktree. Run 'git -C $project worktree list', free the branch there, and run close again."
+
   mkdir -p "$archive_dir"
+  # Assigning the same SHA and date twice is a no-op, so this needs no guard.
+  # Moving a file onto itself is not, so the move does: a previous attempt may
+  # already have landed the archive on main.
   wo_fm_set "$file" '.merge_sha=$s | .closed=$d | .updated=$d' \
     --arg s "$sha" --arg d "$(ps_today)"
-  git -C "$project" mv "$file" "$dest" >/dev/null 2>&1 || mv -- "$file" "$dest"
+  if [[ $file != "$dest" ]]; then
+    [[ -e $dest ]] && ps_die "$PS_VALIDATION" "path_collision" \
+      "$dest already exists and is not this ticket's file - resolve it by hand"
+    git -C "$project" mv "$file" "$dest" >/dev/null 2>&1 || mv -- "$file" "$dest"
+  fi
   # An epic archived after its last child leaves would otherwise hold an empty
   # directory open with nothing but its own generated README inside it.
   prune_dir "$(dirname -- "$file")"
   reindex
+  archive_readmes
   git -C "$project" add -A "$root" >/dev/null 2>&1
-  git -C "$project" commit -m "chore($id): close out and archive" >/dev/null 2>&1 \
-    || ps_die "$PS_IO" "commit_failed" "nothing to commit for $id"
-  git -C "$project" push -u origin "$cob" >/dev/null 2>&1 \
-    || ps_die "$PS_IO" "push_failed" "cannot push $cob"
+
+  # phase 2b - the close-out PR, opened and merged without asking anybody.
+  #
+  # That is a decision, not an oversight. close has already established with
+  # `gh pr view` that this ticket's own PR is MERGED, so everything on this
+  # branch is bookkeeping that follows a merge a human already approved: a file
+  # moved into archive/, a merge SHA backfilled, a regenerated index. It never
+  # merges the work, only the record of it, and it cannot run at all until the
+  # work is in main.
+  if git -C "$project" diff --cached --quiet; then
+    # Nothing staged means main already carries this exact archive - an earlier
+    # attempt got the close-out merged and died afterwards. There is no commit to
+    # make and no PR to open, so the run drops through to the cleanup that is all
+    # that was ever left.
+    ps_warn "$id is already archived on main - nothing left to commit, finishing the cleanup"
+  else
+    git -C "$project" commit -m "chore($id): close out and archive" >/dev/null 2>&1 \
+      || ps_die "$PS_IO" "commit_failed" "nothing to commit for $id"
+    # --force-with-lease, because a previous attempt may have pushed a branch the
+    # -B above has just reset. The lease is against the ref fetched in phase 1, so
+    # it still refuses to overwrite anything that arrived after that fetch.
+    git -C "$project" push -u --force-with-lease origin "$cob" >/dev/null 2>&1 \
+      || ps_die "$PS_IO" "push_failed" \
+        "cannot push $cob - origin moved since the fetch in phase 1. Run close again."
+
+    # An earlier attempt may have opened the PR and then failed to merge it, and
+    # gh refuses a second PR for the same branch. Asking first turns that into a
+    # reuse rather than a dead end.
+    local co_pr
+    co_pr=$(gh_in_project pr list --head "$cob" --state open --json number \
+      -q '.[0].number // ""' 2>/dev/null) || co_pr=""
+    if [[ -n $co_pr ]]; then
+      ps_info "reusing close-out PR #$co_pr, left open by an earlier attempt"
+    else
+      gh_in_project pr create --base main --head "$cob" \
+        --title "chore($id): close out and archive" \
+        --body "Archives $id after PR #$pr_num merged as $sha. Generated by work-order.sh close." \
+        >/dev/null 2>&1 \
+        || ps_die "$PS_IO" "pr_create_failed" \
+          "could not open the close-out PR for $cob. Nothing is lost: the branch is pushed and close is safe to re-run once gh works - it reuses the branch and any PR already open on it."
+    fi
+    gh_in_project pr merge "$cob" --squash --delete-branch >/dev/null 2>&1 \
+      || ps_die "$PS_IO" "pr_merge_failed" \
+        "the close-out PR for $cob is open but would not merge. Clear whatever is blocking it - a failing check, a required review - and run close again; it will pick this PR back up rather than starting over."
+  fi
+
+  # phase 3 - the same cleanup phase 1 did, for the close-out branch this time.
+  git -C "$project" fetch origin --prune >/dev/null 2>&1 || true
+  git -C "$project" checkout main >/dev/null 2>&1 \
+    || ps_die "$PS_IO" "checkout_failed" "cannot check out main after merging $cob"
+  git -C "$project" merge --ff-only origin/main >/dev/null 2>&1 \
+    || ps_die "$PS_VALIDATION" "main_diverged" \
+      "$cob merged, but main cannot fast-forward to origin/main - reconcile main by hand"
+  # gh --delete-branch usually takes the local copy with it; this is for when it
+  # could not, because the branch was checked out at the time.
+  git -C "$project" branch -D "$cob" >/dev/null 2>&1 || true
 
   emit_ok "$id" done "$dest"
+}
+
+# ---------------------------------------------------------------------------
+# cancel - the other terminal state.
+#
+# Before this verb, a ticket that was never going to be built could only leave
+# the active tree through `close`, which demands a branch, a merged PR and an
+# observation against every acceptance criterion. Nobody produces that for work
+# that was abandoned, so the ticket sat in the index forever or was deleted by
+# hand - and a deleted ticket takes the reason with it.
+#
+# It touches no git history at all: no branch, no PR, no merge. It moves the file
+# and reindexes, and leaves the result staged for the caller to commit inside
+# whatever change explains the cancellation. That asymmetry with `close` is
+# deliberate: close has to prove something about main, cancel has nothing to
+# prove, and a verb that opens a PR to record "we are not doing this" would be
+# ceremony charged for nothing.
+# ---------------------------------------------------------------------------
+
+cmd_cancel() {
+  wo_require_jq; require_id
+  ps_require_value reason "$reason"
+  local file; file=$(wo_find "$project" "$id")
+
+  if wo_is_archived "$file"; then
+    ps_die "$PS_VALIDATION" "already_archived" \
+      "$id is archived - a ticket that already left the active tree is not cancelled again"
+  fi
+  local cur; cur=$(wo_field "$file" '.status')
+  if [[ $cur == cancelled ]]; then
+    ps_die "$PS_VALIDATION" "already_cancelled" "$id was already cancelled"
+  fi
+  if [[ $cur == done ]]; then
+    ps_die "$PS_VALIDATION" "done_not_cancellable" \
+      "$id is done - work that finished is closed out with 'close', never cancelled. Use 'reopen' first if it turns out it was not finished."
+  fi
+  wo_require_status "$file" draft ready in-progress in-review
+
+  if [[ -n $superseded_by ]]; then
+    require_edge_target superseded-by "$superseded_by"
+    [[ $superseded_by == "$id" ]] && ps_die "$PS_VALIDATION" "self_edge" \
+      "$id cannot supersede itself"
+  fi
+
+  # The Outcome block is where a reader lands when they follow a stale pointer to
+  # this ticket, so it has to answer "why is there nothing here" on its own.
+  local stamp block tmp
+  stamp=$(ps_today)
+  block=$(
+    printf 'Cancelled `%s` - nothing shipped.\n\n' "$stamp"
+    printf -- '- reason: %s\n' "$(ps_sanitize_line "$reason")"
+    if [[ -n $superseded_by ]]; then
+      printf -- '- superseded by: `%s`\n' "$superseded_by"
+    fi
+    printf '\nNo branch, no PR and no merge commit exist for this work order.\n'
+  )
+
+  tmp=$(ps_tempfile)
+  {
+    printf -- '---\n'
+    wo_fm "$file"
+    printf -- '---\n'
+    wo_body "$file" | awk -v block="$block" '
+      BEGIN { placed = 0; skip = 0 }
+      skip && /^## / { skip = 0 }
+      skip { next }
+      /^## Outcome[[:space:]]*$/ {
+        print; print ""; print block; print ""
+        placed = 1; skip = 1; next
+      }
+      { print }
+      END { if (!placed) { print ""; print "## Outcome"; print ""; print block } }
+    '
+  } >"$tmp"
+  ps_atomic_install "$tmp" "$file"
+
+  # The reason is prose in `## Outcome`, but "what replaced this" is a fact the
+  # graph should be able to answer without reading English, so it is a field too.
+  wo_fm_set "$file" \
+    '.status="cancelled" | .closed=$d | .updated=$d
+     | .superseded_by=(if $s == "" then null else $s end)' \
+    --arg d "$stamp" --arg s "$superseded_by"
+
+  # Archived exactly where close files a ticket, because the question a reader
+  # asks later is "where did this ticket go", and one answer is easier to hold
+  # than two.
+  local year archive_dir dest
+  year="${stamp%%-*}"
+  archive_dir="$root/archive/$year"
+  mkdir -p "$archive_dir" || ps_die "$PS_IO" "mkdir_failed" "cannot create $archive_dir"
+  dest="$archive_dir/$(basename -- "$file")"
+  [[ -e $dest ]] && ps_die "$PS_VALIDATION" "path_collision" "$dest already exists"
+  wo_git_mv "$file" "$dest"
+  prune_dir "$(dirname -- "$file")"
+  reindex
+  archive_readmes
+
+  ps_info "nothing was committed - 'git add' the move and commit it with the change that explains it"
+  emit_ok "$id" cancelled "$dest"
 }
 
 # ---------------------------------------------------------------------------
@@ -813,8 +1253,35 @@ cmd_link() {
   ((detach)) && [[ -n $parent ]] && ps_die "$PS_USAGE" "conflicting_flags" \
     "--parent and --detach are opposites - pass one"
   ((detach)) || [[ -n $parent ]] || ((${#dep_items[@]})) || ((${#block_items[@]})) \
+    || ((${#no_dep_items[@]})) || ((${#no_block_items[@]})) \
     || ps_die "$PS_USAGE" "nothing_to_do" \
-      "link needs one of --parent, --detach, --depends-on, --blocks"
+      "link needs one of --parent, --detach, --depends-on, --blocks, --no-depends-on, --no-blocks"
+
+  # --detach removes the parent edge and nothing else, but it reads like a
+  # modifier - and `link --detach --depends-on B` used to detach the parent while
+  # quietly ADDING the dependency the caller was trying to drop. Removal now has
+  # its own flags, so the ambiguous pairing is refused rather than guessed at.
+  if ((detach)) && { ((${#dep_items[@]})) || ((${#block_items[@]})); }; then
+    ps_die "$PS_USAGE" "conflicting_flags" \
+      "--detach removes the parent only; alongside --depends-on/--blocks it would add the very edge you meant to drop. Use --no-depends-on/--no-blocks to remove one, or run the two links separately."
+  fi
+
+  # Adding and removing the same edge in one run is refused rather than resolved
+  # by ordering: whichever way the loops happened to run would be the answer, and
+  # that is a coin toss with a permanent result.
+  local a b
+  for a in "${dep_items[@]+"${dep_items[@]}"}"; do
+    for b in "${no_dep_items[@]+"${no_dep_items[@]}"}"; do
+      [[ $a == "$b" ]] && ps_die "$PS_USAGE" "conflicting_flags" \
+        "--depends-on $a and --no-depends-on $a in the same run - pass one"
+    done
+  done
+  for a in "${block_items[@]+"${block_items[@]}"}"; do
+    for b in "${no_block_items[@]+"${no_block_items[@]}"}"; do
+      [[ $a == "$b" ]] && ps_die "$PS_USAGE" "conflicting_flags" \
+        "--blocks $a and --no-blocks $a in the same run - pass one"
+    done
+  done
 
   local e
   for e in "${dep_items[@]+"${dep_items[@]}"}"; do
@@ -832,6 +1299,28 @@ cmd_link() {
       "$id already depends on $e, so blocking it would close a loop"
     add_edge "$id" blocks "$e"
     add_edge "$e" depends_on "$id"
+  done
+
+  # Removals. An edge is written on both tickets, so it is removed from both -
+  # a half-removed edge still blocks `next` from one side and is invisible from
+  # the other, which is worse than never having removed it.
+  #
+  # Unlike an addition, a missing target is not refused. g_waiting already
+  # reports a dependency whose ticket has gone as `missing`, and that dangling
+  # edge is precisely what somebody would run this flag to clear; refusing it
+  # would leave hand-editing the frontmatter as the only route, which is the one
+  # thing this skill exists to prevent.
+  for e in "${no_dep_items[@]+"${no_dep_items[@]}"}"; do
+    wo_id_valid "$e" || ps_die "$PS_USAGE" "bad_id_format" \
+      "--no-depends-on must look like WO-20260805-3f2a (got: $e)"
+    del_edge "$id" depends_on "$e"
+    if wo_exists "$project" "$e"; then del_edge "$e" blocks "$id"; fi
+  done
+  for e in "${no_block_items[@]+"${no_block_items[@]}"}"; do
+    wo_id_valid "$e" || ps_die "$PS_USAGE" "bad_id_format" \
+      "--no-blocks must look like WO-20260805-3f2a (got: $e)"
+    del_edge "$id" blocks "$e"
+    if wo_exists "$project" "$e"; then del_edge "$e" depends_on "$id"; fi
   done
 
   # Parent last: it is the one that moves the file, so every frontmatter write
@@ -1056,6 +1545,11 @@ cmd_evidence() {
   fi
 
   local file; file=$(wo_find "$project" "$id")
+  # Evidence is an observation of work in flight, so it is the one record verb
+  # that a status does block. Without this, every criterion on a draft could be
+  # ticked before a line was written and `done` would then pass with nothing ever
+  # observed - the gate `done` relies on is only as good as when it may be met.
+  wo_require_status "$file" in-progress in-review
 
   local -a states=() texts=()
   local st tx
@@ -1503,6 +1997,78 @@ readme_link() {
   if owns_dir_by_graph "$kid"; then printf '%s/%s' "$kid" "$f"; else printf '%s' "$f"; fi
 }
 
+# ---------------------------------------------------------------------------
+# The archive's own explainers.
+#
+# reindex walks active tickets only - each_child_dir skips anything archived by
+# construction - so no generated README has ever reached archive/ or archive/
+# <year>/. The two that exist there were written by hand after `rolodex.sh check`
+# failed on them, which means rolling into a new year reproduces that failure
+# exactly. close and cancel are the only things that create those directories, so
+# they are the only things that can write the explainer at the same moment.
+#
+# Written only when missing. The hand-written pair say more about the archive
+# than a generator can, and regenerating over them every close would trade a good
+# document for a consistent one.
+# ---------------------------------------------------------------------------
+
+build_archive_readme() {
+  printf '# Work-order archive\n\n'
+  printf 'Written by `work-order.sh` the first time a ticket is archived into a year that had no\n'
+  printf 'explainer yet. One level down only: what is inside each year is that year'"'"'s own README.\n\n'
+  printf 'A ticket arrives here two ways, and only these two:\n\n'
+  printf -- '- `work-order.sh close` - the work shipped. It refuses unless `gh` reports the pull\n'
+  printf '  request `MERGED` and it can read a merge commit, so every file it files here carries a\n'
+  printf '  `merge_sha` that exists in `main`.\n'
+  printf -- '- `work-order.sh cancel` - the work was abandoned. No branch, no PR, no merge commit;\n'
+  printf '  the `Outcome` block says why and what superseded it, if anything did.\n\n'
+  printf 'Nothing here is edited, ever. A closed ticket that turns out to be wrong is reopened with\n'
+  printf '`work-order.sh reopen`, or it becomes a new ticket.\n\n'
+  printf '| Year | Archived in |\n|---|---|\n'
+  local d y
+  while IFS= read -r d; do
+    y=$(basename -- "$d")
+    [[ $y =~ ^[0-9]{4}$ ]] || continue
+    printf '| [%s](%s/README.md) | Tickets archived during %s |\n' "$y" "$y" "$y"
+  done < <(find "$root/archive" -mindepth 1 -maxdepth 1 -type d | sort)
+  printf '\nActive tickets, and the lifecycle a ticket passes through to get here, are one level up in\n'
+  printf '[../README.md](../README.md).\n'
+}
+
+build_archive_year_readme() {
+  local year="$1"
+  printf '# Archived in %s\n\n' "$year"
+  printf 'Written by `work-order.sh`. Tickets that left the active tree during %s, one file each,\n' "$year"
+  printf 'named exactly as they were while active.\n\n'
+  printf 'Read one to see what was asked for, which acceptance criteria were observed and what was\n'
+  printf 'observed for each, and either the merge SHA that landed it or the reason it was cancelled.\n'
+  printf 'The `Outcome` block at the bottom is the only part added after the work stopped.\n\n'
+  printf 'Filed here by `close` and `cancel`, never by hand. What the archive is and why it is\n'
+  printf 'immutable is one level up in [../README.md](../README.md).\n'
+}
+
+# archive_readmes - create any absent explainer under archive/, never touch one
+# that exists. Every year directory is checked rather than only the one being
+# written to, because the table above links to all of them and a pointer to a
+# directory with no README is the defect this whole function exists to stop.
+archive_readmes() {
+  local adir="$root/archive" tmp d y
+  [[ -d $adir ]] || return 0
+  if [[ ! -e $adir/README.md ]]; then
+    tmp=$(ps_tempfile)
+    build_archive_readme >"$tmp"
+    ps_atomic_install "$tmp" "$adir/README.md"
+  fi
+  while IFS= read -r d; do
+    y=$(basename -- "$d")
+    [[ $y =~ ^[0-9]{4}$ ]] || continue
+    [[ -e $d/README.md ]] && continue
+    tmp=$(ps_tempfile)
+    build_archive_year_readme "$y" >"$tmp"
+    ps_atomic_install "$tmp" "$d/README.md"
+  done < <(find "$adir" -mindepth 1 -maxdepth 1 -type d | sort)
+}
+
 # each_child_dir -> "<id>\t<abs-dir>" for every ticket that owns a directory.
 # That is every epic and every top-level ticket - and it is exactly the set of
 # directories that exist, so each one gets the explainer the repository requires
@@ -1714,6 +2280,7 @@ emit_ok() {
 
 case $command in
   new) cmd_new ;;
+  amend) cmd_amend ;;
   link) cmd_link ;;
   note) cmd_note ;;
   resolve) cmd_resolve ;;
@@ -1728,11 +2295,15 @@ case $command in
   submit) cmd_submit ;;
   done) cmd_done ;;
   close) cmd_close ;;
+  cancel) cmd_cancel ;;
   reopen) cmd_reopen ;;
   verify) cmd_verify ;;
   resync) cmd_resync ;;
   show) cmd_show ;;
   list) cmd_list ;;
+  # Every verb the case above dispatches appears here, because this string is the
+  # only listing an agent that guessed wrong ever sees. `evidence` and `reflow`
+  # were missing from it for as long as they have existed.
   *) ps_die "$PS_USAGE" "unknown_command" \
-       "unknown command: $command (new|link|note|resolve|approve|start|submit|done|close|reopen|verify|resync|show|list|next|tree|reindex|repair)" ;;
+       "unknown command: $command (new|amend|link|note|resolve|evidence|approve|start|submit|done|close|cancel|reopen|verify|resync|show|list|next|tree|reindex|reflow|repair)" ;;
 esac

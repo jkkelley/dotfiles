@@ -9,7 +9,7 @@ source "${SKILL:-/skill}/testing/assert.sh"
 d=$(git_project); fig=$(figma_dir "$WORK/fig070")
 export PATH="$(gh_stub "$WORK/stub-open" OPEN ""):$PATH"
 
-wo new --project "$d" --title "Cart empty" --type feature --problem P --out X \
+wo new --project "$d" --title "Cart empty" --type feature --problem P --out X --top-level \
    --ac "it works" --from-figma "$fig" >/dev/null
 id=$(wo list --project "$d" --json | jq -r '.[0].id')
 git -C "$d" add -A && git -C "$d" commit -qm "add $id"

@@ -24,7 +24,11 @@ readonly VENDORED=(lib/common.sh log-issue.sh backlog.sh cache.sh)
 
 APPLY=0
 WITH_README=0
-WITH_GITIGNORE=0
+# The two ignore files are part of the context layer, not an extra: an agent
+# that commits .claude/cache/ or bakes .env into an image has already done the
+# damage by the time anyone notices. On by default, off only if asked.
+WITH_GITIGNORE=1
+WITH_DOCKERIGNORE=1
 GIT_INIT=0
 ASSUME_YES=0
 
@@ -41,9 +45,10 @@ Add --apply to commit the plan.
 Options:
   --apply            actually write the plan
   --with-readme      also create README.md if absent
-  --with-gitignore   also create .gitignore if absent
+  --no-gitignore     do not create .gitignore (created by default if absent)
+  --no-dockerignore  do not create .dockerignore (created by default if absent)
   --git-init         run git init if the project is not already a repository
-  --full             shorthand for --with-readme --with-gitignore --git-init
+  --full             shorthand for --with-readme --git-init
   --yes              skip the interview and take the flags as given
   --project DIR      project directory (default: .)
   --json             machine-readable plan / result on stdout
@@ -51,6 +56,7 @@ Options:
 
 What it installs:
   CLAUDE.md COMPASS.md BACKLOG.md ISSUES.md NAMING.md
+  .gitignore and .dockerignore
   .claude/settings.json and .claude/settings.local.json
   .claude/scripts/   (log-issue.sh, backlog.sh, cache.sh, lib/common.sh)
   .claude/scaffold.json  (records the version these copies came from)
@@ -67,9 +73,10 @@ while (($#)); do
     --json) PS_JSON=1; shift ;;
     --apply) APPLY=1; shift ;;
     --with-readme) WITH_README=1; shift ;;
-    --with-gitignore) WITH_GITIGNORE=1; shift ;;
+    --no-gitignore) WITH_GITIGNORE=0; shift ;;
+    --no-dockerignore) WITH_DOCKERIGNORE=0; shift ;;
     --git-init) GIT_INIT=1; shift ;;
-    --full) WITH_README=1; WITH_GITIGNORE=1; GIT_INIT=1; shift ;;
+    --full) WITH_README=1; GIT_INIT=1; shift ;;
     --yes | -y) ASSUME_YES=1; shift ;;
     --help | -h) usage; exit "$PS_OK" ;;
     *) PS_JSON=0; ps_die "$PS_USAGE" "unknown_flag" "unknown flag: $1 (try --help)" ;;
@@ -217,6 +224,9 @@ build_plan() {
   if ((WITH_GITIGNORE)); then
     if [[ -e $project/.gitignore ]]; then plan_add ".gitignore" skip "exists"; else plan_add ".gitignore" create "absent"; fi
   fi
+  if ((WITH_DOCKERIGNORE)); then
+    if [[ -e $project/.dockerignore ]]; then plan_add ".dockerignore" skip "exists"; else plan_add ".dockerignore" create "absent"; fi
+  fi
   if ((GIT_INIT)); then
     if [[ -d $project/.git ]]; then plan_add "git repository" skip "already initialised"; else plan_add "git repository" create "git init"; fi
   fi
@@ -262,11 +272,12 @@ Always installed (the context layer):
   BACKLOG.md    Now / Next / Later / Done, managed by backlog.sh
   ISSUES.md     append-only issue log, newest first, managed by log-issue.sh
   NAMING.md     naming conventions, inherited and project-specific
+  .gitignore    the shared ignore set, plus the files the scaffold tools create
+  .dockerignore the same set, trimmed for a build context
   .claude/      settings plus a versioned copy of the tools
 
 Optional extras:
   README.md     e.g. a title, one-paragraph description, and setup steps
-  .gitignore    e.g. .claude/cache/, *.lock, editor and OS noise
   git init      initialise a repository if this directory is not one yet
 
 Existing files are APPENDED to - only the sections they are missing get added.
@@ -276,8 +287,6 @@ EOF
   local reply
   ps_prompt "Include README.md? [y/N]" reply
   [[ ${reply,,} == y* ]] && WITH_README=1
-  ps_prompt "Include .gitignore? [y/N]" reply
-  [[ ${reply,,} == y* ]] && WITH_GITIGNORE=1
   ps_prompt "Run git init if needed? [y/N]" reply
   [[ ${reply,,} == y* ]] && GIT_INIT=1
   return 0
@@ -354,11 +363,16 @@ apply_plan() {
             "$(basename -- "$project")" >"$s"
           ps_atomic_install "$s" "$project/README.md"
         fi ;;
-      .gitignore)
+      .gitignore | .dockerignore)
+        # Copied verbatim from a template rather than printf'd inline, so the
+        # shared ignore set lives in one readable file and can be re-pulled from
+        # upstream without touching this script.
         if [[ $a == create ]]; then
+          local tmpl="$TEMPLATE_DIR/${f#.}.tmpl"
+          [[ -r $tmpl ]] || ps_die "$PS_IO" "template_missing" "template not found: $tmpl"
           local s; s=$(ps_tempfile)
-          printf '# agent cache - derived, rebuildable, never authoritative\n.claude/cache/\n\n# local settings - machine-specific paths, recreated by scaffold.sh\n.claude/settings.local.json\n\n# lock files used by the scaffold tools\n.issues.lock\n.backlog.lock\n\n# editor and OS noise\n.DS_Store\n*.swp\n' >"$s"
-          ps_atomic_install "$s" "$project/.gitignore"
+          cat -- "$tmpl" >"$s"
+          ps_atomic_install "$s" "$project/$f"
         fi ;;
       "git repository")
         if [[ $a == create ]]; then

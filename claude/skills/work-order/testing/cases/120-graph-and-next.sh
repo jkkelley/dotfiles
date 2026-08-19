@@ -12,12 +12,12 @@ mk() {
 ready() { wo approve --project "$1" --id "$2" --no-lavish --reason "test" >/dev/null 2>&1; }
 
 d=$(new_project)
-a=$(mk "$d" "Runner first" --priority p1)
-b=$(mk "$d" "Depends on the runner" --priority p1 --depends-on "$a")
+a=$(mk "$d" "Runner first" --top-level --priority p1)
+b=$(mk "$d" "Depends on the runner" --top-level --priority p1 --depends-on "$a")
 
 # Both directions of the edge are written, so a ticket read on its own is enough.
-assert_contains "$d/work-orders/${b}-depends-on-the-runner.md" "\"$a\"" "the dependent records depends_on"
-assert_contains "$d/work-orders/${a}-runner-first.md" "\"$b\"" "the dependency records the inverse blocks edge"
+assert_contains "$d/work-orders/$b/${b}-depends-on-the-runner.md" "\"$a\"" "the dependent records depends_on"
+assert_contains "$d/work-orders/$a/${a}-runner-first.md" "\"$b\"" "the dependency records the inverse blocks edge"
 
 capture out wo next --project "$d" --json
 assert_eq "[]" "$out" "a draft is never startable, however free of dependencies"

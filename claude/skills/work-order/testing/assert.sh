@@ -102,7 +102,7 @@ wo() { bash "$SKILL/scripts/work-order.sh" "$@"; }
 # A project with one draft ticket, returned as "<dir> <id>".
 drafted_project() {
   local d id; d=$(new_project)
-  id=$(wo new --project "$d" --title "Empty cart state" --type feature \
+  id=$(wo new --project "$d" --title "Empty cart state" --type feature --top-level \
         --problem "The cart shows nothing when empty" \
         --out "payment errors" --ac "npm test passes" 2>/dev/null | tail -1)
   printf '%s %s' "$d" "$id"
@@ -149,19 +149,47 @@ git_project() {
   printf '%s' "$d"
 }
 
-# gh_stub <dir> <state> [sha] - put a fake gh on PATH reporting a fixed state.
-# The close tests are about what work-order does with gh's answer, so gh's
-# answer has to be the thing under our control.
+# gh_stub <dir> <state> [sha] [project] [pr-create-fails] - put a fake gh on PATH
+# reporting a fixed state. The close tests are about what work-order does with
+# gh's answer, so gh's answer has to be the thing under our control.
+#
+# `pr list` answers "no open PR" by default, which is the state a first close run
+# actually finds; a stub that claimed one would send every run down the reuse
+# branch and leave the create path untested.
+#
+# `pr merge` really merges when <project> is given. close's phase 3 fetches and
+# fast-forwards main immediately afterwards, so a stub that reported a merge
+# without moving origin/main would test a world that cannot exist - and would
+# quietly discard the close-out commit rather than failing.
+#
+# <pr-create-fails> makes `pr create` exit 1, which is the dead end the retry
+# path exists for.
 gh_stub() {
   local dir="$1" state="$2" sha="${3-abc123def456}"  # ${3-} not ${3:-}: "" must stay ""
+  local proj="${4-}" create_fails="${5-}"
   mkdir -p "$dir"
   cat >"$dir/gh" <<STUB
 #!/usr/bin/env bash
-# canned gh: state=$state sha=$sha
+# canned gh: state=$state sha=$sha project=$proj create_fails=$create_fails
+proj='$proj'
 case "\$*" in
-  *"--json number"*)      printf '{"number":7}\n' ;;
+  *"pr list"*)            : ;;   # no open PR: real gh prints nothing through -q
+  *"pr create"*)
+    if [[ -n '$create_fails' ]]; then
+      printf 'gh: could not create pull request\n' >&2
+      exit 1
+    fi
+    printf '{}\n' ;;
+  *"pr merge"*)
+    if [[ -n \$proj ]]; then
+      head=\$(git -C "\$proj" rev-parse --abbrev-ref HEAD)
+      git -C "\$proj" push -q origin "HEAD:main" || exit 1
+      git -C "\$proj" push -q origin --delete "\$head" >/dev/null 2>&1 || true
+    fi
+    printf '{}\n' ;;
   *"--json state"*)       printf '$state\n' ;;
   *"--json mergeCommit"*) printf '$sha\n' ;;
+  *"--json number"*)      printf '{"number":7}\n' ;;
   *) printf '{}\n' ;;
 esac
 STUB

@@ -4,7 +4,7 @@ source "${SKILL:-/skill}/testing/assert.sh"
 
 d=$(new_project)
 run 0 "new exits 0 on the documented example" \
-  wo new --project "$d" --title "Empty cart state" --type feature \
+  wo new --project "$d" --title "Empty cart state" --type feature --top-level \
      --problem "The cart shows nothing when empty" \
      --in "cart empty state" --out "payment errors" \
      --ac "npm test passes" --priority p2
@@ -25,7 +25,7 @@ run 0 "frontmatter parses as JSON" bash -c \
 
 # Determinism: same inputs + fixed clock => byte-identical ticket.
 d2=$(new_project)
-wo new --project "$d2" --title "Empty cart state" --type feature \
+wo new --project "$d2" --title "Empty cart state" --type feature --top-level \
    --problem "The cart shows nothing when empty" \
    --in "cart empty state" --out "payment errors" \
    --ac "npm test passes" --priority p2 >/dev/null

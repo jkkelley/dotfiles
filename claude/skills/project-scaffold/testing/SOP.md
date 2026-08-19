@@ -197,6 +197,35 @@ It fails by doing nothing, which is the worst kind of broken - there is no error
 
 ---
 
+## 120-ignore-files
+
+**Runs:** a plain scaffold, a scaffold with `--no-gitignore`, then a re-apply over hand-edited ignore files.
+
+**Asserts:** `.gitignore` and `.dockerignore` are created with no flag at all; each matches its template byte for byte; the upstream rules arrived (`**/node_modules/`, `!**/.env.example`, `**/.git/`); the scaffold's own entries survived the vendoring (`.claude/cache/`, `.claude/settings.local.json`, both lock files); provenance is recorded with a `<your-github-username>` placeholder; `--no-gitignore` suppresses one without suppressing the other; hand-edited copies survive a re-run.
+
+**Why it matters:** these two files come from an upstream repo, so their exact text is _expected_ to change.
+Asserting the text would only produce a test that has to be edited on every re-pull, which trains people to edit tests rather than read them.
+What must not change is the pair of properties around the copy: the project's copy is byte-identical to the template, and the scaffold's own entries are still in it.
+A re-pull that quietly dropped `.claude/cache/` would start committing derived state to every project this skill has ever touched, and nothing would fail - the repository would just get slowly wrong.
+
+The byte-for-byte assertion is also what makes drift visible: if someone hand-edits a project's `.gitignore` instead of the template, the next comparison says so.
+
+---
+
+## 130-backlog-read-window
+
+**Runs:** a scaffold, then inspects `CLAUDE.md`, `COMPASS.md` and `BACKLOG.md` for the read-depth rule.
+
+**Asserts:** all three state the 10-entry window for `BACKLOG.md`; two of them scope it explicitly to the `Done` bucket; `Now` / `Next` / `Later` are stated as read-in-full; the 20-item retention limit is still documented alongside the 10-item read window.
+
+**Why it matters:** a read-depth rule is only load-bearing where the agent actually looks.
+An agent that opens `BACKLOG.md` directly, without reading `CLAUDE.md` first, has to meet the rule in the file itself - which is why it is stated in three places and why all three are asserted.
+Drop it from any one of them and the default silently reverts to reading all 20 `Done` entries. Nothing fails; the cost just shows up as tokens.
+
+The retention assertion guards the other direction. `Done` keeps 20 but is read 10 deep, and two nearby numbers that differ look like a bug to the next reader - the file has to say why, or someone will "fix" one to match the other and destroy either the window or the lookup.
+
+---
+
 ## Adding a case
 
 1. Add `testing/cases/NNN-name.sh`, sourcing `testing/assert.sh`.

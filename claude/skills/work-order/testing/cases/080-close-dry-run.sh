@@ -5,7 +5,7 @@ source "${SKILL:-/skill}/testing/assert.sh"
 d=$(git_project)
 export PATH="$(gh_stub "$WORK/stub-dry" MERGED deadbeefcafe):$PATH"
 
-wo new --project "$d" --title "Dry run me" --type chore --problem P --out X --ac "works" >/dev/null
+wo new --project "$d" --title "Dry run me" --type chore --problem P --out X --ac "works" --top-level >/dev/null
 id=$(wo list --project "$d" --json | jq -r '.[0].id')
 git -C "$d" add -A && git -C "$d" commit -qm "add"
 wo approve --project "$d" --id "$id" --no-lavish --reason t >/dev/null

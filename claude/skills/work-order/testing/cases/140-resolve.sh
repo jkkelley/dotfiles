@@ -10,7 +10,7 @@
 source "${SKILL:-/skill}/testing/assert.sh"
 
 d=$(new_project)
-wo new --project "$d" --title "Two questions" --type feature --problem P \
+wo new --project "$d" --title "Two questions" --type feature --problem P --top-level \
    --out X --ac "it works" \
    --question "which API version?" --question "who owns the DNS record?" >/dev/null
 id=$(wo list --project "$d" --json | jq -r '.[0].id')

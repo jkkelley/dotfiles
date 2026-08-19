@@ -11,15 +11,20 @@ mk() { # mk <dir> <title> [extra flags...]
 }
 
 d=$(new_project)
-epic=$(mk "$d" "Epic router")
+epic=$(mk "$d" "Epic router" --top-level)
 kid=$(mk "$d" "Child one" --parent "$epic")
 gkid=$(mk "$d" "Grandchild" --parent "$kid")
 
-assert_file "$d/work-orders/${epic}-epic-router.md" "a parentless ticket sits at the root"
-assert_file "$d/work-orders/$epic/${kid}-child-one.md" "a child sits in its parent's directory"
+# A ticket owns the directory named for it when it is parentless or has children,
+# and is a plain file in its parent's directory otherwise. So the epic and the
+# child each get a folder, and the leaf grandchild does not.
+assert_file "$d/work-orders/$epic/${epic}-epic-router.md" \
+  "a parentless ticket owns a directory at the root rather than sitting loose in it"
+assert_file "$d/work-orders/$epic/$kid/${kid}-child-one.md" \
+  "a child with children of its own sits in a folder inside its parent's"
 assert_file "$d/work-orders/$epic/$kid/${gkid}-grandchild.md" "nesting recurses"
 
-f="$d/work-orders/$epic/${kid}-child-one.md"
+f="$d/work-orders/$epic/$kid/${kid}-child-one.md"
 assert_contains "$f" "\"parent\": \"$epic\"" "the child records its parent in frontmatter"
 
 # An ID must resolve wherever it sits - that is what keeps every recorded path
@@ -34,12 +39,15 @@ run 3 "a parent cannot be its own descendant" wo link --project "$d" --id "$epic
 
 # Re-homing. The grandchild must travel with the child.
 run 0 "detach moves a child back to the root" wo link --project "$d" --id "$kid" --detach
-assert_file "$d/work-orders/${kid}-child-one.md" "the detached ticket is at the root"
+assert_file "$d/work-orders/$kid/${kid}-child-one.md" "the detached ticket owns a root directory"
 assert_file "$d/work-orders/$kid/${gkid}-grandchild.md" "its child came with it"
-assert_no_file "$d/work-orders/$epic/${kid}-child-one.md" "and left nothing behind"
+assert_no_file "$d/work-orders/$epic/$kid" "and left nothing behind"
 
-assert_no_file "$d/work-orders/$epic/README.md" \
-  "an epic that lost its last child does not keep an empty directory open"
+# The epic keeps its directory - it is parentless, so the directory holds its own
+# ticket rather than nothing. What must not survive is the README still naming a
+# child that left, which is how an agent gets routed to a ticket that moved.
+assert_not_contains "$d/work-orders/$epic/README.md" "$kid" \
+  "the epic's README drops the child that left"
 
 run 0 "link --parent re-homes it" wo link --project "$d" --id "$kid" --parent "$epic"
 assert_file "$d/work-orders/$epic/$kid/${gkid}-grandchild.md" "the grandchild is back under the epic"

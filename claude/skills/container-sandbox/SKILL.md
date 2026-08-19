@@ -45,6 +45,98 @@ podman run --rm --userns=keep-id -v .:/app:Z -w /app \
 podman run --rm -v .:/app:Z -w /app node:24-alpine sh -c "npm install && npm test"
 ```
 
+### Go
+
+**What this covers:** `go build`, `go test`, `go vet`, `gofmt`, `go mod tidy` - every Go toolchain
+invocation, including the ones that look harmless. `go` is not installed on the host and must not be.
+
+**Four things to get right.** None of them are obvious and two of them cost real time:
+
+1. **No `--userns=keep-id` needed.** Unlike the npm recipe above, Go needs no userns flag. Under
+   rootless podman the container's root already maps to the invoking host user, so `bin/` comes
+   back owned by the caller. `keep-id` also works here, it is simply machinery with nothing to do.
+2. **Put `GOCACHE` and `GOMODCACHE` on named volumes.** Left at their defaults they live inside
+   the container, so `--rm` throws them away and every run re-downloads the whole module graph.
+   Redirecting them into the bind mount instead is worse: the caches then litter the work tree.
+   Named volumes keep them warm and outside the repository.
+3. **`GOTOOLCHAIN=local` always; `CGO_ENABLED=0` on builds only.** Without the first, a bumped `go`
+   directive in `go.mod` makes the toolchain download a different compiler at build time and the
+   pinned image tag stops describing what actually built the binary. The second is what produces
+   the static binary a distroless final image needs, but setting it globally breaks the tests:
+
+   ```text
+   go: -race requires cgo; enable cgo by setting CGO_ENABLED=1
+   ```
+
+4. **Set `HOME` somewhere writable and disposable, such as `/tmp`.** The toolchain writes telemetry
+   counters under `$HOME/.config/go/telemetry`, and with the bind-mounted work tree as the working
+   directory those land in the repository:
+
+   ```text
+   ?? .config/go/telemetry/local/compile@go1.26.6-...v1.count
+   ```
+
+   Gitignoring them hides the symptom. `-e HOME=/tmp` means they are never written there at all.
+
+```bash
+# One command, all four fixes. Swap the trailing `go ...` for any toolchain call.
+podman run --rm \
+  -v "$PWD:/src:Z" -w /src \
+  -v myproject-go-build-cache:/go-build-cache \
+  -v myproject-go-mod-cache:/go-mod-cache \
+  -e GOCACHE=/go-build-cache \
+  -e GOMODCACHE=/go-mod-cache \
+  -e GOTOOLCHAIN=local \
+  -e HOME=/tmp \
+  docker.io/library/golang:1.26-bookworm \
+  go test -race -count=1 ./...
+```
+
+**Wire it into the Makefile, not into your fingers.** The project's Makefile is the single testing
+interface, so the container belongs inside the target. Detect whether a host toolchain exists and
+fall back to the container when it does not, so the same `make test` then works on a clean host and
+on a developer machine that happens to have Go installed:
+
+```make
+ifeq ($(shell command -v go 2>/dev/null),)
+GO_RUNNER := podman run $(PODMAN_GO_ARGS) $(GO_IMAGE)
+else
+GO_RUNNER :=
+endif
+GO    := $(GO_RUNNER) go
+GOFMT := $(GO_RUNNER) gofmt
+```
+
+`gatehouse-click/Makefile` is a complete worked example, including the `-p` and `-e` handling
+needed for a `make run` target that publishes the service port out of the container.
+
+**Verifying a service, not just a package.** A Go binary that compiles proves nothing about whether
+it serves. Build the real image and drive it over a real socket, on a probed high port:
+
+```bash
+make image
+PORT=$(python3 -c "
+import socket, random
+for p in random.sample(range(30000, 65001), 200):
+    try:
+        with socket.socket() as s:
+            s.bind(('127.0.0.1', p)); print(p); break
+    except OSError: continue
+")
+podman run -d --name verify-$PORT -p "$PORT:8080" myimage:dev
+curl -s -i "http://127.0.0.1:$PORT/healthz"
+
+# Graceful shutdown is a real behaviour and deserves a real test: readiness must
+# fail first, while the socket keeps serving, and the exit code must be 0.
+podman kill --signal TERM verify-$PORT
+podman wait verify-$PORT          # expect 0
+podman logs verify-$PORT          # expect the drain sequence
+podman rm verify-$PORT
+```
+
+Use `-d --name` rather than `-d --rm` when you want the logs and the exit code: `--rm` reaps the
+container the instant it stops and takes the evidence with it.
+
 ## Terraform / Ministack Sandbox
 
 **RULE:** Use Ministack any time Terraform files are written or modified, unless the user explicitly says not to. This includes `terraform validate` — syntax-only checks are not enough. No exceptions.

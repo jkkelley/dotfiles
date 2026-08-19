@@ -5,7 +5,7 @@
 source "${SKILL:-/skill}/testing/assert.sh"
 
 d=$(new_project); fig=$(figma_dir "$WORK/fig040")
-wo new --project "$d" --title "Cart empty" --type feature --problem P --out X \
+wo new --project "$d" --title "Cart empty" --type feature --problem P --out X --top-level \
    --from-figma "$fig" >/dev/null
 id=$(wo list --project "$d" --json | jq -r '.[0].id')
 

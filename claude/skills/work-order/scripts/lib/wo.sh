@@ -9,7 +9,11 @@
 #
 # work-order-version: 1
 
-readonly WO_STATUSES=(draft ready in-progress in-review done stale)
+# `cancelled` is terminal like `done`, but it is the other terminal: nothing
+# shipped. It is a separate status rather than a deleted file because a ticket
+# that was abandoned is a decision, and a decision with no record is how the same
+# idea gets cut again three weeks later.
+readonly WO_STATUSES=(draft ready in-progress in-review done cancelled stale)
 readonly WO_TYPES=(feature bug chore spike)
 readonly WO_PRIORITIES=(p0 p1 p2 p3)
 
@@ -279,8 +283,13 @@ wo_require_status() {
   for s in "$@"; do
     if [[ $cur == "$s" ]]; then return 0; fi
   done
+  # IFS is $'\n\t' script-wide, so an unqualified "$*" would list the allowed
+  # statuses one per line inside a single-line error. The list is read by a human
+  # deciding what to run next, so it is joined by hand.
+  local allowed=""
+  for s in "$@"; do allowed+="${allowed:+, }$s"; done
   ps_die "$PS_VALIDATION" "illegal_transition" \
-    "status is '$cur'; this command requires one of: $*"
+    "status is '$cur'; this command requires one of: $allowed"
 }
 
 # ---------------------------------------------------------------------------

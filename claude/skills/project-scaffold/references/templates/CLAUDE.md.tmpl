@@ -19,16 +19,21 @@ When help is requested, answer only the question asked and stop.
 
 ## Hard rule: sliding-window files are read 10 entries deep, no further
 
-Two files in this repository are sliding windows. Newest entry is always on top.
+Three files in this repository are sliding windows. Newest entry is always on top.
 
-| File               | Window             | Holds                                          |
-| ------------------ | ------------------ | ---------------------------------------------- |
-| `ISSUES.md`        | top 10 entries     | What broke, why, and how it was fixed          |
-| `CONTEXT_STATE.md` | top 10 checkpoints | Session state at each checkpoint, newest first |
+| File               | Window                | Holds                                          |
+| ------------------ | --------------------- | ---------------------------------------------- |
+| `ISSUES.md`        | top 10 entries        | What broke, why, and how it was fixed          |
+| `CONTEXT_STATE.md` | top 10 checkpoints    | Session state at each checkpoint, newest first |
+| `BACKLOG.md`       | top 10 of `Done` only | Work already shipped, newest first             |
 
-On first read of either file, take the **top 10 entries and stop**. That is the default and it is
+On first read of any of them, take the **top 10 entries and stop**. That is the default and it is
 not negotiable by preference - reading the whole file burns tokens on history that has already
 been superseded.
+
+`BACKLOG.md` is the partial case: `Now`, `Next` and `Later` are live work, so read them in full -
+they are capped by the rules below, not by a window. The window applies to `Done` only, which is
+the part that grows without bound.
 
 This applies from the first checkpoint onward. `CONTEXT_STATE.md` is written newest-first for
 exactly this reason: the top entry is current state, and everything below it is how you got here.

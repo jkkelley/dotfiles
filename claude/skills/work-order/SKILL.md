@@ -89,23 +89,39 @@ The status set is closed. Every transition is validated and an illegal one is
 refused by name. Full table, including what each transition writes and what makes
 it refuse, is in `references/lifecycle.md`.
 
-| #   | Status        | Set by    | Gate                                 | Legal next              |
-| --- | ------------- | --------- | ------------------------------------ | ----------------------- |
-| 1   | `draft`       | `new`     | Rendered in Lavish for review        | `ready`                 |
-| 2   | `ready`       | `approve` | Lavish approval. Lavish is done here | `in-progress`, `stale`  |
-| 3   | `in-progress` | `start`   | Creates and stamps the branch        | `in-review`             |
-| 4   | `in-review`   | `submit`  | Human review gate on the PR          | `done`                  |
-| 5   | `done`        | `done`    | Last feature commit, at compaction   | _(archived by `close`)_ |
-| —   | `stale`       | `verify`  | Frozen block drifted                 | `ready` via `resync`    |
+| #   | Status        | Set by    | Gate                                 | Legal next               |
+| --- | ------------- | --------- | ------------------------------------ | ------------------------ |
+| 1   | `draft`       | `new`     | Rendered in Lavish for review        | `ready`                  |
+| 2   | `ready`       | `approve` | Lavish approval. Lavish is done here | `in-progress`, `stale`   |
+| 3   | `in-progress` | `start`   | Creates and stamps the branch        | `in-review`              |
+| 4   | `in-review`   | `submit`  | Human review gate on the PR          | `done`                   |
+| 5   | `done`        | `done`    | Last feature commit, at compaction   | _(archived by `close`)_  |
+| -   | `cancelled`   | `cancel`  | A stated reason. Nothing shipped     | _(archived immediately)_ |
+| —   | `stale`       | `verify`  | Frozen block drifted                 | `ready` via `resync`     |
 
 `done` is written on the feature branch **before** the PR lands, alongside the
 `context-compaction` update to `CONTEXT_STATE.md`. That is a deliberate choice: it
 means a rejected PR leaves a ticket claiming done, which is what `reopen` exists
 to correct.
 
-`link`, `note`, `resolve`, `evidence`, `next`, `tree`, `reindex`, `reflow` and `repair` sit
+`cancel` is the other terminal state, and the only one a ticket can reach without
+shipping anything. It takes a required `--reason`, writes it into `## Outcome`,
+archives the file exactly where `close` files one, and does no git and no `gh`
+work at all - the move is left staged for you to commit. `--superseded-by` is
+written to a `superseded_by` field as well as into the prose, so the graph can be
+asked what replaced it. A `done` ticket is refused: that one is finished, and
+`close` is its verb.
+
+`link`, `note`, `resolve`, `next`, `tree`, `reindex`, `reflow` and `repair` sit
 outside the status set: they change the graph, the record, the layout or the view, never the state. So
 none of them can advance a ticket, and none of them is blocked by one.
+
+Two verbs are deliberately not in that list. `evidence` requires `in-progress` or
+`in-review`, because a criterion is an observation of work in flight and ticking
+one on a draft would let `done` pass with nothing ever run. `amend` requires
+`draft`, because a ticket whose scope can move after `approve` is not a contract;
+it replaces the In, Out, Acceptance criteria or Test plan sections wholesale, and
+leaves a wireframe-derived frozen block untouched.
 
 ## Usage
 
@@ -124,12 +140,18 @@ bash $WO new --title "Empty cart state" --type feature --problem "..." --parent 
   --out "payment errors" --from-figma . --frames 'wf/checkout-cart/*'
 
 bash $WO resolve --id WO-20260805-3f2a --index 1 --answer "v2 only"
+bash $WO amend   --id WO-20260805-3f2a --ac "a 500 is retried three times" \
+  --out "changing the payload schema"      # drafts only; replaces the section
 bash $WO approve --id WO-20260805-3f2a     # after Lavish review
 bash $WO start   --id WO-20260805-3f2a     # creates feat/<slug>
 bash $WO submit  --id WO-20260805-3f2a --pr 42
 bash $WO done    --id WO-20260805-3f2a     # last feature commit
 bash $WO close   --id WO-20260805-3f2a --dry-run
 bash $WO close   --id WO-20260805-3f2a     # post-merge only
+
+# the other ending: work that is not going to happen
+bash $WO cancel  --id WO-20260805-3f2a --reason "superseded by the queue rewrite" \
+  --superseded-by WO-20260812-9a1c         # archives it; commit the move yourself
 ```
 
 Every subcommand takes `--project DIR`, `--json`, `--help`. Exit codes match
@@ -303,7 +325,12 @@ accepts is `--id`. Everything else it discovers:
 it re-reads the ticket, because the checkout swaps the file for main's copy.
 
 Three phases, each completing before the next: cleanup → close-out PR → cleanup.
-`--dry-run` prints the whole plan and every assertion result and executes nothing.
+The close-out PR is opened and merged with no prompt, because the ticket's own PR
+is already `MERGED` and what is left is bookkeeping behind a merge a human
+approved. You end on `main` when it succeeds, and back on the branch you started
+on when anything fails - and a failed run is always safe to re-run, which is the
+only repair that should ever be needed. `--dry-run` prints the whole plan and
+every assertion result and executes nothing.
 
 ## Testing
 
