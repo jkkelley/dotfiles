@@ -19,13 +19,19 @@ When help is requested, answer only the question asked and stop.
 
 ## Hard rule: sliding-window files are read 10 entries deep, no further
 
-Three files in this repository are sliding windows. Newest entry is always on top.
+Four files in this repository are sliding windows. Newest entry is always on top.
 
-| File               | Window                | Holds                                          |
-| ------------------ | --------------------- | ---------------------------------------------- |
-| `ISSUES.md`        | top 10 entries        | What broke, why, and how it was fixed          |
-| `CONTEXT_STATE.md` | top 10 checkpoints    | Session state at each checkpoint, newest first |
-| `BACKLOG.md`       | top 10 of `Done` only | Work already shipped, newest first             |
+| File               | Retains               | Read                  | Holds                                          |
+| ------------------ | --------------------- | --------------------- | ---------------------------------------------- |
+| `ISSUES.md`        | 10 entries            | top 10                | What broke, why, and how it was fixed          |
+| `CONTEXT_STATE.md` | 10 checkpoints        | top 10                | Session state at each checkpoint, newest first |
+| `BACKLOG.md`       | 20 in `Done`          | top 10 of `Done`      | Work already shipped, newest first             |
+| `HYDRATION.md`     | 10 entries            | **the top entry only**| The prompt that starts the next session        |
+
+`HYDRATION.md` is the exception worth reading twice: it retains ten and is read **one** deep. Each
+entry is a complete session-starting prompt, so ten of them is roughly fifteen thousand words of
+superseded instructions. The nine below the top are kept so a question about how we got here can be
+answered, not so they can be read at the start of a session.
 
 On first read of any of them, take the **top 10 entries and stop**. That is the default and it is
 not negotiable by preference - reading the whole file burns tokens on history that has already
@@ -150,3 +156,59 @@ A fix for an earlier issue is a new entry with `--resolves ISS-NNNN`, never an e
 
 Both scripts take `--json` and use documented exit codes: 0 ok, 2 usage, 3 validation, 4 io,
 5 lock timeout, 6 id not found. Branch on the code, not on the message text.
+
+## The close-out flow
+
+**`CONTEXT_STATE.md` -> hydration prompt -> one PR -> merge -> cleanup -> the command.**
+In that order, every time.
+
+**There is exactly one pull request per ticket.**
+A second PR carrying only state files doubles the review surface for one piece of work and leaves `main` briefly describing a world that no longer exists.
+
+1. Update `CONTEXT_STATE.md` **on the work branch, as part of the work**.
+   New checkpoint at the **top**, newest first, per the sliding-window rule above.
+   Never append to the bottom and never edit the checkpoint below it.
+2. Generate the successor's hydration prompt **on the same branch**:
+
+   ```sh
+   HP=.claude/skills/hydration-prompt/scripts/hydration.sh
+   bash $HP check --project . --body-file /tmp/entry.md    # refuses a malformed entry
+   bash $HP add   --project . --id WO-... --title "..." --body-file /tmp/entry.md
+   ```
+
+   Never hand-edit `HYDRATION.md`. The script owns the ordering and the 10-entry window.
+3. Leave the **interview-ready retro** as a note on the ticket with `work-order.sh note`:
+   what went well, what went wrong, what was harder than expected, and STAR-shaped talking points with real specifics.
+   Then `work-order.sh done`, still on the same branch.
+4. Push once and open **one** pull request.
+   It carries the code, the state file and the hydration prompt together, so one review sees the change and the record of the change.
+5. After the merge, run `bash .claude/skills/work-order/scripts/work-order.sh close --id WO-...`.
+   It backfills the merge SHA, archives the ticket and regenerates `INDEX.md` **straight to `main`** - no second PR.
+   It falls back to a PR only if that push is rejected.
+6. Hand back **both** the hydration prompt and the command that starts the next session, then hold.
+   Do not start it.
+
+   ```sh
+   bash $HP command --project . --id WO-... --title "..."
+   ```
+
+**Never open a PR whose only content is `CONTEXT_STATE.md` or `HYDRATION.md`.**
+
+**Check whether your PR has already merged before every commit once it is open.**
+A squash merge rewrites the SHA and closes the branch, so a commit pushed seconds later is stranded
+on a branch nothing points at. This has happened twice. Recovery is cheap - fast-forward `main`,
+branch fresh, cherry-pick, delete the merged branch on both sides - but noticing late is avoidable,
+and it is the usual reason step 1 gets skipped and the one-PR rule gets broken.
+
+## Starting a session
+
+`HYDRATION.md` is the prompt that starts the next session, and the nine before it.
+
+**Read the top entry only.** It is current and complete on its own; everything below it has been
+superseded and is kept for history, not for reading. This differs from `CONTEXT_STATE.md` and
+`ISSUES.md`, which are read ten deep - ten full hydration prompts is roughly fifteen thousand words
+of superseded instructions.
+
+Newest on top. Adding an entry removes the tenth in the same commit. Entries are never numbered,
+never renumbered and never edited in place; a correction is a new entry. The `hydration-prompt`
+skill owns the file.

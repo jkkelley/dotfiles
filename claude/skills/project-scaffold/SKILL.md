@@ -28,6 +28,7 @@ Not this skill: cloning an existing repo and renaming it. That is `repo-scaffold
 ├── BACKLOG.md           Now / Next / Later / Done         (backlog.sh)
 ├── ISSUES.md            append-only, newest first          (log-issue.sh)
 ├── NAMING.md            inherited vs project-specific conventions
+├── HYDRATION.md         the prompt that starts the next session  (hydration.sh)
 ├── .gitignore           the shared ignore set, plus what the tools above create
 ├── .dockerignore        the same set, trimmed for a build context
 └── .claude/
@@ -39,6 +40,9 @@ Not this skill: cloning an existing repo and renaming it. That is `repo-scaffold
 
 `CONTEXT_STATE.md` is **not** written here. This skill writes the pointer to it in `CLAUDE.md`; the
 `context-compaction` skill owns the file itself.
+
+`HYDRATION.md` is seeded empty and pointed at, the same way. The `hydration-prompt` skill owns its
+contents, its ordering and its 10-entry window; nothing here ever writes an entry.
 
 ## Workflow
 
@@ -122,10 +126,13 @@ Stated in the installed `CLAUDE.md`, and worth repeating here:
 2. `ISSUES.md` - **top 10 entries, then stop.** Deeper only on request, or when an entry in the
    window references an older ID you need.
 3. `CONTEXT_STATE.md` - top 10 checkpoints, same rule.
-4. `BACKLOG.md` when choosing work - `Now` / `Next` / `Later` in full, `Done` **top 10 only**.
+4. `HYDRATION.md` - **the top entry only**, not ten. It is current and complete on its own, and the
+   nine below it are retained for history rather than for reading. This is the one file where the
+   retention depth and the reading depth deliberately differ.
+5. `BACKLOG.md` when choosing work - `Now` / `Next` / `Later` in full, `Done` **top 10 only**.
    `Done` is retained 20 deep so a recent item stays findable, but 20 is a retention limit, not a
    reading limit.
-5. `NAMING.md` before naming anything.
+6. `NAMING.md` before naming anything.
 
 If `.claude/cache/` is present and `cache.sh verify` passes, read the slices instead - same
 information, roughly a fifth of the tokens. If verify fails, read the markdown; never trust a
@@ -158,3 +165,4 @@ See [testing/SOP.md](testing/SOP.md) for what each case covers and why its failu
 - [references/templates/](references/templates/) - the templates themselves
 - `claude/skills/container-sandbox/references/skill-testing.md` - how shell scripts in this repo are tested
 - `context-compaction` skill - owns `CONTEXT_STATE.md`, which this skill only points at
+- `hydration-prompt` skill - owns `HYDRATION.md` and the session-launch command, same arrangement

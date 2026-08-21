@@ -11,6 +11,27 @@ comes from one rule: **the script writes the ticket, never the model.**
 An agent hand-writing ticket markdown is the failure this skill removes. Every
 field, every transition, every archive move goes through `scripts/work-order.sh`.
 
+## Hard rule: never name a ticket without its title
+
+Every reference to a work-order in a chat reply carries the ticket ID _and_ its full title, joined by a dash.
+
+```text
+WO-20260818-b1a7 - Login, 403 and error screens wireframed then built
+```
+
+A bare ID is a defect.
+So is a pointer with no name attached: "the next ticket", "the blocked one", "the one this depends on".
+The user cannot see what you are referring to, and will not go and look it up.
+
+This holds on the first mention in a reply and on every mention after it.
+When several tickets appear together - a list, a table, a dependency chain, a close-out message - each one carries its own ID and title.
+
+Take the title from the ticket file itself.
+The tree in `work-orders/INDEX.md` truncates long titles with an ellipsis, and a truncated title is not a title.
+
+Scope is chat replies.
+Commit messages, PR titles and bodies, and the ticket files themselves keep whatever format their own conventions call for.
+
 ## Requirements
 
 - `bash` 4+, `jq`, `git`. `gh` for `submit` and `close`.
@@ -324,13 +345,35 @@ accepts is `--id`. Everything else it discovers:
 `MERGED`, and refuses a `MERGED` with no merge commit. After checking out `main`
 it re-reads the ticket, because the checkout swaps the file for main's copy.
 
-Three phases, each completing before the next: cleanup → close-out PR → cleanup.
-The close-out PR is opened and merged with no prompt, because the ticket's own PR
-is already `MERGED` and what is left is bookkeeping behind a merge a human
-approved. You end on `main` when it succeeds, and back on the branch you started
-on when anything fails - and a failed run is always safe to re-run, which is the
-only repair that should ever be needed. `--dry-run` prints the whole plan and
-every assertion result and executes nothing.
+**One pull request per ticket.** Cleanup, then the archive committed straight to
+`main` and pushed. `close` used to open a second PR whose entire content was a
+file move and a regenerated index; that doubled the review surface for one piece
+of work and bought nothing, because `close` cannot run at all until the ticket's
+own PR is `MERGED` and main's copy says `done`. The record follows the work.
+
+The branch-and-PR route survives as a **fallback**, for a repository that
+protects `main`. Nothing selects it - a rejected push does. It peels the commit
+onto `close-out/<id>`, puts `main` back, opens a PR and merges it. Every step of
+that path is repeatable, because the dead end it was written for is still
+reachable there: an attempt that dies after the branch is cut must never leave a
+ticket only a human can close.
+
+You end on `main` when it succeeds, and back on the branch you started on when
+anything fails - and a failed run is always safe to re-run, which is the only
+repair that should ever be needed. `--dry-run` prints the whole plan and every
+assertion result and executes nothing.
+
+### Where the hydration prompt fits
+
+`close` is step 6 of the one flow, not the end of it:
+
+```text
+CONTEXT_STATE.md -> hydration prompt -> ONE pull request -> merge -> close -> hand back the command
+```
+
+`context-compaction` and `hydration-prompt` both write on the feature branch,
+alongside `done`, so all three ride the ticket's single PR. See the
+`hydration-prompt` skill for the entry format and the launch command.
 
 ## Testing
 
