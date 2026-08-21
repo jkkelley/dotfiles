@@ -28,7 +28,6 @@ Not this skill: cloning an existing repo and renaming it. That is `repo-scaffold
 ├── BACKLOG.md           Now / Next / Later / Done         (backlog.sh)
 ├── ISSUES.md            append-only, newest first          (log-issue.sh)
 ├── NAMING.md            inherited vs project-specific conventions
-├── HYDRATION.md         the prompt that starts the next session  (hydration.sh)
 ├── .gitignore           the shared ignore set, plus what the tools above create
 ├── .dockerignore        the same set, trimmed for a build context
 └── .claude/
@@ -41,8 +40,10 @@ Not this skill: cloning an existing repo and renaming it. That is `repo-scaffold
 `CONTEXT_STATE.md` is **not** written here. This skill writes the pointer to it in `CLAUDE.md`; the
 `context-compaction` skill owns the file itself.
 
-`HYDRATION.md` is seeded empty and pointed at, the same way. The `hydration-prompt` skill owns its
-contents, its ordering and its 10-entry window; nothing here ever writes an entry.
+`HYDRATION.md` is **not** written here either, for the same reason and by the same arrangement.
+This skill writes the pointer to it in `CLAUDE.md`; `hydration-prompt`'s own `hydration.sh init`
+creates the file, and that script owns its contents, its ordering and its 10-entry window.
+Nothing in this skill ever writes an entry or reconciles a section of it.
 
 ## Workflow
 

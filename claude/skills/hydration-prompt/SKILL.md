@@ -146,8 +146,12 @@ session is and why, instead of an ID.
 ## Pointer
 
 Every project using this skill carries a line in `CLAUDE.md` pointing at
-`HYDRATION.md` and stating the read-the-top-entry-only rule. `project-scaffold`
-seeds both.
+`HYDRATION.md` and stating the read-the-top-entry-only rule.
+
+`project-scaffold` writes that pointer; it does **not** create the file. Running
+`hydration.sh init --project .` does, and this script owns the file from then on.
+The split is the same one `context-compaction` has with `CONTEXT_STATE.md`: the
+scaffold points at it, the owning skill writes it.
 
 ## Testing
 
