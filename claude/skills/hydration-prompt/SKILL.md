@@ -137,43 +137,47 @@ hits the same heading a second time cannot tell which copy is current.
 
 ## The launch command
 
-`command` emits this and only this, with every variable derived rather than
-typed, **on one line**:
+`command` emits this, with every variable derived rather than typed, and
+**folded by us** at 68 columns:
 
 ```sh
-claude -p "Read Hydration Prompt located at $FULL_PATH_TO_FILE, Process work order $WO_ID per its acceptance criteria after you've read it." --permission-mode bypassPermissions -n "Session: $WO_ID - $WO_TITLE"
+claude -p "Read Hydration Prompt located at \
+/home/luna/projects/example/HYDRATION.md, Process work order WO-... per \
+its acceptance criteria after you've read it." --permission-mode \
+bypassPermissions -n "Session: WO-... - The full title"
 ```
 
-### One line, and it is not a style choice
+### The fold is the point, and it is not cosmetic
 
-A backslash only continues a line when the newline after it is **real**.
+**A single line is not safe.** Every surface this command travels through - a
+chat transcript, a terminal, a markdown pane - soft-wraps it at *its own* width,
+and a copy taken out of that surface can carry the break with it. The break lands
+wherever that renderer decided, which is usually the middle of a quoted string.
 
-Every surface this command travels through can break that: a chat transcript
-that soft-wraps, a terminal at a narrower width, a markdown renderer, a
-screenshot somebody retypes. Any of them can introduce a line break that is not
-real, or drop one that was.
+The failure mode is the bad kind: the first fragment is normally a syntactically
+**valid** command that does something other than intended, so the shell runs it
+rather than complaining, and the user finds out afterwards.
 
-The failure mode is the bad kind. The first fragment is usually a syntactically
-valid command that does something other than intended, so the shell **runs it**
-rather than complaining. The user finds out afterwards.
+So the breaks are ours. Folded narrow enough that nothing else wants to re-wrap
+it, with a real backslash at every one, and **continuations flush left** - an
+indent wastes width, and a copy that loses the indent is indistinguishable from
+one that did not.
 
-A single line has nothing to lose. A terminal soft-wrapping it is cosmetic,
-because no continuation character's survival is being depended on. Paste it at
-any width, into anything, and it is the same command.
+A backslash-newline is removed by the shell **inside double quotes as well as
+outside**, so a break may fall mid-token and rejoin with no space invented.
+Breaking at a space is preferred only because it reads better; that space is kept
+*before* the backslash so it survives.
 
-`--multiline` emits the backslash-continued form for documentation, where a
-human is reading rather than pasting. A test asserts the two forms are the same
-command. **Never hand the multiline shape to a user.**
+Never single-quote anything that goes through the folder. Inside single quotes a
+backslash is literal, and the continuation would become part of the string.
 
-`$FULL_PATH_TO_FILE` is always the absolute path to the project's `HYDRATION.md`,
-and the script refuses to print a command pointing at a file that is not there.
+`--width N` changes the column, `--oneline` disables folding for scripting.
 
-Prefer `command --project .` with no other flags. Both values are then read out
-of the newest entry, so the command cannot disagree with the entry it points at.
-Typing them again is a chance to type them differently.
-
-Hand back the prompt **and** the command together. The command alone is not
-enough - the user should be able to read what they are about to start.
+**This is verified against the shell, not against itself.** `testing/wrap-roundtrip.sh`
+puts a stub `claude` on `PATH` that prints its argv, runs both the folded and the
+unfolded form through a real bash at six widths and both command shapes, and
+compares what each actually delivered. Fifty checks. If bash disagrees with the
+folder, it fails.
 
 ### When there is no work order
 

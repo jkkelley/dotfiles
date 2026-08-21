@@ -55,13 +55,13 @@ hydration.sh <command> [options]
   latest   --project DIR [--id-only | --title-only | --path]
            Print the newest entry. This is what an incoming agent reads.
 
-  command  --project DIR [--id WO-ID] [--title TITLE] [--multiline]
-           Print the claude -p command that starts the next session, on ONE
-           line so a copy cannot break it. With neither id nor title, both are
-           read out of the newest entry - the form to prefer, since it cannot
-           disagree with the file it points at.
-           --multiline prints the backslash-continued form, for documentation
-           only. Never hand that shape to a user.
+  command  --project DIR [--id WO-ID] [--title TITLE] [--width N] [--oneline]
+           Print the claude -p command that starts the next session, folded at
+           N columns (default 68) with a real backslash at every break and
+           continuations flush left, so no renderer gets to choose where it
+           wraps. With neither id nor title, both are read out of the newest
+           entry - the form to prefer, since it cannot disagree with the file
+           it points at. --oneline emits it unfolded, for scripting.
 
   check    --project DIR [--body-file FILE]
            Validate structure. With --body-file, validate that file instead of
@@ -153,6 +153,55 @@ hp_check_body() {
 }
 
 # ---------------------------------------------------------------------------
+# hp_wrap - fold a command onto lines short enough that nothing else folds it.
+#
+# THE PROBLEM THIS SOLVES.
+# A one-line command is not safe either. Every surface it travels through - a
+# chat transcript, a terminal, a markdown pane - soft-wraps it at ITS width, and
+# a copy out of that surface can carry the break with it. The break lands
+# wherever that renderer decided, which is usually the middle of a quoted string,
+# and the result is a command that is still syntactically valid and does the
+# wrong thing.
+#
+# THE FIX.
+# Put the breaks in ourselves, at a width narrower than anything likely to
+# re-wrap it, with a real backslash at each one. Then the line the user sees is
+# the line we wrote, and pasting it reassembles exactly.
+#
+# WHY THIS IS SAFE INSIDE THE QUOTES.
+# A backslash-newline is removed by the shell inside double quotes as well as
+# outside. `"...at \` + newline + `/home/..."` reassembles to `"...at /home/..."`
+# with no space inserted, so a break may fall mid-token. Breaking at a space is
+# preferred only because it reads better; the space is kept BEFORE the backslash
+# so it survives.
+#
+# CONTINUATION LINES START AT COLUMN 0.
+# Indented continuations waste width and, worse, a copy that loses the indent is
+# indistinguishable from one that did not. Flush left has nothing to lose.
+#
+# Never single-quote anything passed through here: inside single quotes a
+# backslash is literal and the continuation would become part of the string.
+hp_wrap() {
+  local line=$1 width=$2 chunk head
+  (( width > 20 )) || width=20
+  local limit=$(( width - 2 ))   # room for the trailing " \"
+
+  while (( ${#line} > width )); do
+    chunk=${line:0:limit}
+    if [[ $chunk == *" "* && ${chunk% *} != "" ]]; then
+      head=${chunk% *}                       # up to, not including, the last space
+      printf '%s \\\n' "$head"            # keep that one space before the backslash
+      line=${line:$(( ${#head} + 1 ))}       # and drop it from the remainder
+    else
+      head=$chunk                            # a token longer than the width
+      printf '%s\\\n' "$head"             # no space: the join must not invent one
+      line=${line:${#chunk}}
+    fi
+  done
+  printf '%s\n' "$line"
+}
+
+# ---------------------------------------------------------------------------
 # commands
 
 cmd_init() {
@@ -225,7 +274,7 @@ cmd_latest() {
 # derived here rather than typed, so the command that comes back is always
 # runnable and always points at a file that exists.
 cmd_command() {
-  local project=$1 id=$2 title=$3 multiline=$4 full
+  local project=$1 id=$2 title=$3 oneline=$4 width=$5 full
   full="$(cd "$project" 2>/dev/null && pwd)/HYDRATION.md" \
     || die "$EX_IO" "no such directory: $project"
   [[ -f $full ]] || die "$EX_IO" "no HYDRATION.md at $full"
@@ -238,38 +287,11 @@ cmd_command() {
     title=${title:-$(cmd_latest "$project" title-only)}
   }
 
-  # ------------------------------------------------------------------ WHY ONE LINE
-  #
-  # The default output is a SINGLE line, with no backslash continuations.
-  #
-  # The multi-line form looks better and does not survive being copied. A
-  # backslash only continues a line when the newline after it is real. Every
-  # surface this command travels through - a chat transcript, a terminal at a
-  # narrower width, a markdown renderer, a screenshot someone retypes - can
-  # introduce a line break that is NOT real, or drop one that was. Either way
-  # the paste breaks, and it breaks in the worst possible manner: the first
-  # fragment is a syntactically valid command that does the wrong thing, so the
-  # shell runs it rather than complaining.
-  #
-  # A single line has nothing to lose. A terminal soft-wrapping it is cosmetic;
-  # there is no continuation character whose survival the paste depends on.
-  # This is the whole reason the default changed. Do not "tidy" it back.
-  #
-  # --multiline exists for documentation, where a human is reading rather than
-  # pasting. It is never what gets handed back to a user.
-
-  local prompt name
+  local cmd
   if [[ -n $id ]]; then
-    prompt="Read Hydration Prompt located at $full, Process work order $id per its acceptance criteria after you've read it."
-    name="Session: $id - $title"
-    if (( multiline )); then
-      printf 'claude -p "%s" \\\n  --permission-mode bypassPermissions \\\n  -n "%s"\n' "$prompt" "$name"
-    else
-      printf 'claude -p "%s" --permission-mode bypassPermissions -n "%s"\n' "$prompt" "$name"
-    fi
+    cmd="claude -p \"Read Hydration Prompt located at $full, Process work order $id per its acceptance criteria after you've read it.\" --permission-mode bypassPermissions -n \"Session: $id - $title\""
   else
-    # No work order. Three deliberate differences from the shape above, none of
-    # them an oversight.
+    # No work order. Three deliberate differences, none of them an oversight.
     #
     # The acceptance-criteria clause is dropped, because there are none to
     # process and pointing it at nothing is worse than leaving it out.
@@ -281,13 +303,10 @@ cmd_command() {
     # name until the person starting it decides what this session is - a design
     # pass, a spike, an investigation - so the slot is left open to be typed at
     # the moment of pasting. Do not "helpfully" fill it from the entry title.
-    prompt="Read Hydration Prompt located at $full"
-    if (( multiline )); then
-      printf 'claude -p "%s" \\\n  -n "Session: "\n' "$prompt"
-    else
-      printf 'claude -p "%s" -n "Session: "\n' "$prompt"
-    fi
+    cmd="claude -p \"Read Hydration Prompt located at $full\" -n \"Session: \""
   fi
+
+  if (( oneline )); then printf '%s\n' "$cmd"; else hp_wrap "$cmd" "$width"; fi
 }
 
 cmd_check() {
@@ -315,14 +334,15 @@ main() {
   case $cmd in -h|--help|help) usage; exit "$EX_OK" ;; esac
   shift
 
-  local project="" id="" title="" body="" mode="full" multiline=0
+  local project="" id="" title="" body="" mode="full" oneline=0 width=68
   while (( $# )); do
     case $1 in
       --project)    project=${2:-}; shift 2 ;;
       --id)         id=${2:-}; shift 2 ;;
       --title)      title=${2:-}; shift 2 ;;
       --body-file)  body=${2:-}; shift 2 ;;
-      --multiline)  multiline=1; shift ;;
+      --oneline)    oneline=1; shift ;;
+      --width)      width=${2:-}; shift 2 ;;
       --id-only)    mode="id-only"; shift ;;
       --title-only) mode="title-only"; shift ;;
       --path)       mode="path"; shift ;;
@@ -338,7 +358,8 @@ main() {
                || die "$EX_USAGE" "add needs --title and --body-file (--id is optional: omit it for work outside a ticket)"
              cmd_add "$project" "$id" "$title" "$body" ;;
     latest)  cmd_latest "$project" "$mode" ;;
-    command) cmd_command "$project" "$id" "$title" "$multiline" ;;
+    command) [[ $width =~ ^[0-9]+$ ]] || die "$EX_USAGE" "--width takes a number"
+             cmd_command "$project" "$id" "$title" "$oneline" "$width" ;;
     check)   cmd_check "$project" "$body" ;;
     count)   cmd_count "$project" ;;
     *)       die "$EX_USAGE" "unknown command: $cmd" ;;
