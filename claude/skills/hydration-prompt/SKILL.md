@@ -50,6 +50,29 @@ bash $HP latest  --project .                                # what the next agen
 `add` refuses a body that fails `check`, so a malformed entry never reaches the
 file.
 
+## Which file governs
+
+`CONTEXT_STATE.md` and `HYDRATION.md` are written in the same commit, by the same
+close-out, describing the same moment. They are meant to be read together and an
+agent should read both.
+
+**When they disagree, the hydration prompt wins.** It is not a tie to be
+reconciled and it is not a judgement call.
+
+The reason is what each file is for. `CONTEXT_STATE.md` is a **state snapshot**:
+where things stood, what was decided, what was learned. `HYDRATION.md` is an
+**instruction written for this session**: what to do, what not to assume, what
+must be settled first. State describes; the prompt directs. A snapshot that has
+drifted is stale information, which is survivable. An instruction that is
+overridden by stale information is how a session goes and does the wrong thing
+confidently.
+
+So the reading order is: `HYDRATION.md` top entry for what to do, then
+`CONTEXT_STATE.md` top 10 for the background it assumes. If the background
+contradicts the instruction, follow the instruction and **say so** - a
+contradiction between two files written in the same commit is a defect worth
+reporting, not worth silently resolving.
+
 ## The window
 
 **Read the top entry only.** It is current and complete on its own. The nine
