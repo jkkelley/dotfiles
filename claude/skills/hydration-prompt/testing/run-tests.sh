@@ -142,13 +142,33 @@ COUNT_AFTER=$(bash "$HP" count --project "$P")
 # ---------------------------------------------------------------- the command
 hd "the launch command"
 CMD=$(bash "$HP" command --project "$P" --id WO-20260818-7a0b --title "CI/CD + GitOps")
-EXPECT="claude -p \"Read Hydration Prompt located at $(cd "$P" && pwd)/HYDRATION.md, Process work order WO-20260818-7a0b per its acceptance criteria after you've read it.\" \\
-  --permission-mode bypassPermissions \\
-  -n \"Session: WO-20260818-7a0b - CI/CD + GitOps\""
+EXPECT="claude -p \"Read Hydration Prompt located at $(cd "$P" && pwd)/HYDRATION.md, Process work order WO-20260818-7a0b per its acceptance criteria after you've read it.\" --permission-mode bypassPermissions -n \"Session: WO-20260818-7a0b - CI/CD + GitOps\""
 [ "$CMD" = "$EXPECT" ] && ok "matches the template byte for byte" || {
   bad "command did not match the template"
   printf '    got:      %s\n    expected: %s\n' "$CMD" "$EXPECT"
 }
+
+# THE POINT OF THE SINGLE LINE. A backslash only continues a line when the
+# newline after it is real. Anything this command travels through - a chat
+# transcript, a narrower terminal, a markdown renderer - can add a break that is
+# not real or drop one that was, and the first fragment is usually a VALID
+# command that does the wrong thing, so the shell runs it instead of complaining.
+[ "$(printf '%s' "$CMD" | wc -l)" = "0" ] && ok "the command is a single line" \
+  || bad "the command spans $(printf '%s\n' "$CMD" | wc -l) lines"
+printf '%s' "$CMD" | grep -q '\\$' \
+  && bad "the command ends in a backslash continuation" \
+  || ok "no trailing backslash to lose in a copy"
+case "$CMD" in *' \\ '*|*'\\'*) bad "a backslash survives in the default output" ;;
+                *) ok "no backslash anywhere in the default output" ;; esac
+
+# --multiline still exists, for documentation only
+MCMD=$(bash "$HP" command --project "$P" --id WO-20260818-7a0b --title "CI/CD + GitOps" --multiline)
+[ "$(printf '%s\n' "$MCMD" | wc -l)" = "3" ] \
+  && ok "--multiline still emits the three-line form" || bad "--multiline shape wrong"
+# and the two forms must mean the same thing
+NORM=$(printf '%s' "$MCMD" | sed 's/\\$//' | tr '\n' ' ' | tr -s ' ' | sed 's/ $//')
+[ "$NORM" = "$CMD" ] && ok "single-line and --multiline are the same command" \
+  || { bad "the two forms differ"; printf '    one: %s\n    many: %s\n' "$CMD" "$NORM"; }
 printf '%s' "$CMD" | grep -q "^claude -p \"Read Hydration Prompt located at /" \
   && ok "path is absolute" || bad "path is not absolute"
 
@@ -170,8 +190,7 @@ T=$(bash "$HP" latest --project "$Q" --title-only)
   && ok "the title survives intact" || bad "title was '$T'"
 
 ACMD=$(bash "$HP" command --project "$Q")
-AEXPECT="claude -p \"Read Hydration Prompt located at $(cd "$Q" && pwd)/HYDRATION.md\" \\
-  -n \"Session: \""
+AEXPECT="claude -p \"Read Hydration Prompt located at $(cd "$Q" && pwd)/HYDRATION.md\" -n \"Session: \""
 [ "$ACMD" = "$AEXPECT" ] && ok "emits the no-work-order command shape" || {
   bad "no-work-order command did not match"
   printf '    got:      %s\n    expected: %s\n' "$ACMD" "$AEXPECT"
@@ -179,12 +198,14 @@ AEXPECT="claude -p \"Read Hydration Prompt located at $(cd "$Q" && pwd)/HYDRATIO
 printf '%s' "$ACMD" | grep -q "Process work order" \
   && bad "the acceptance-criteria clause leaked into a ticketless command" \
   || ok "no acceptance-criteria clause when there is no ticket"
+[ "$(printf '%s' "$ACMD" | wc -l)" = "0" ] && ok "the ticketless command is a single line too" \
+  || bad "the ticketless command spans multiple lines"
 printf '%s' "$ACMD" | grep -q "permission-mode" \
   && bad "bypassPermissions leaked into a ticketless command" \
   || ok "no bypassPermissions when there is no ticket"
 # The empty slot is the feature, not an oversight: the person pasting decides
 # what this session is called, because ad-hoc work has no name until then.
-[ "$(printf '%s' "$ACMD" | tail -n1)" = '  -n "Session: "' ] \
+[ "$(printf '%s' "$ACMD" | grep -c '\-n "Session: "$')" = "1" ] \
   && ok "the session name is left empty to be typed at paste time" \
   || bad "the session name slot was filled in"
 printf '%s' "$ACMD" | grep -q "Spike: can Lightsail" \

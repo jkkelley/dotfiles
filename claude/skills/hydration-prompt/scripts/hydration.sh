@@ -55,10 +55,13 @@ hydration.sh <command> [options]
   latest   --project DIR [--id-only | --title-only | --path]
            Print the newest entry. This is what an incoming agent reads.
 
-  command  --project DIR [--id WO-ID] [--title TITLE]
-           Print the claude -p block that starts the next session. With neither
-           flag, both are read out of the newest entry, which is the form to
-           prefer - it cannot disagree with the file it points at.
+  command  --project DIR [--id WO-ID] [--title TITLE] [--multiline]
+           Print the claude -p command that starts the next session, on ONE
+           line so a copy cannot break it. With neither id nor title, both are
+           read out of the newest entry - the form to prefer, since it cannot
+           disagree with the file it points at.
+           --multiline prints the backslash-continued form, for documentation
+           only. Never hand that shape to a user.
 
   check    --project DIR [--body-file FILE]
            Validate structure. With --body-file, validate that file instead of
@@ -222,7 +225,7 @@ cmd_latest() {
 # derived here rather than typed, so the command that comes back is always
 # runnable and always points at a file that exists.
 cmd_command() {
-  local project=$1 id=$2 title=$3 full
+  local project=$1 id=$2 title=$3 multiline=$4 full
   full="$(cd "$project" 2>/dev/null && pwd)/HYDRATION.md" \
     || die "$EX_IO" "no such directory: $project"
   [[ -f $full ]] || die "$EX_IO" "no HYDRATION.md at $full"
@@ -234,27 +237,56 @@ cmd_command() {
     id=${id:-$(cmd_latest "$project" id-only)}
     title=${title:-$(cmd_latest "$project" title-only)}
   }
+
+  # ------------------------------------------------------------------ WHY ONE LINE
+  #
+  # The default output is a SINGLE line, with no backslash continuations.
+  #
+  # The multi-line form looks better and does not survive being copied. A
+  # backslash only continues a line when the newline after it is real. Every
+  # surface this command travels through - a chat transcript, a terminal at a
+  # narrower width, a markdown renderer, a screenshot someone retypes - can
+  # introduce a line break that is NOT real, or drop one that was. Either way
+  # the paste breaks, and it breaks in the worst possible manner: the first
+  # fragment is a syntactically valid command that does the wrong thing, so the
+  # shell runs it rather than complaining.
+  #
+  # A single line has nothing to lose. A terminal soft-wrapping it is cosmetic;
+  # there is no continuation character whose survival the paste depends on.
+  # This is the whole reason the default changed. Do not "tidy" it back.
+  #
+  # --multiline exists for documentation, where a human is reading rather than
+  # pasting. It is never what gets handed back to a user.
+
+  local prompt name
   if [[ -n $id ]]; then
-    cat <<EOF
-claude -p "Read Hydration Prompt located at $full, Process work order $id per its acceptance criteria after you've read it." \\
-  --permission-mode bypassPermissions \\
-  -n "Session: $id - $title"
-EOF
+    prompt="Read Hydration Prompt located at $full, Process work order $id per its acceptance criteria after you've read it."
+    name="Session: $id - $title"
+    if (( multiline )); then
+      printf 'claude -p "%s" \\\n  --permission-mode bypassPermissions \\\n  -n "%s"\n' "$prompt" "$name"
+    else
+      printf 'claude -p "%s" --permission-mode bypassPermissions -n "%s"\n' "$prompt" "$name"
+    fi
   else
-    # No work order. Two deliberate differences from the shape above, and
-    # neither is an oversight.
+    # No work order. Three deliberate differences from the shape above, none of
+    # them an oversight.
     #
     # The acceptance-criteria clause is dropped, because there are none to
     # process and pointing it at nothing is worse than leaving it out.
+    #
+    # bypassPermissions is not carried over: a ticket has a reviewed scope
+    # behind it, an ad-hoc session has none, so it answers for itself.
     #
     # The session name is left EMPTY on purpose. Work outside a ticket has no
     # name until the person starting it decides what this session is - a design
     # pass, a spike, an investigation - so the slot is left open to be typed at
     # the moment of pasting. Do not "helpfully" fill it from the entry title.
-    cat <<EOF
-claude -p "Read Hydration Prompt located at $full" \\
-  -n "Session: "
-EOF
+    prompt="Read Hydration Prompt located at $full"
+    if (( multiline )); then
+      printf 'claude -p "%s" \\\n  -n "Session: "\n' "$prompt"
+    else
+      printf 'claude -p "%s" -n "Session: "\n' "$prompt"
+    fi
   fi
 }
 
@@ -283,13 +315,14 @@ main() {
   case $cmd in -h|--help|help) usage; exit "$EX_OK" ;; esac
   shift
 
-  local project="" id="" title="" body="" mode="full"
+  local project="" id="" title="" body="" mode="full" multiline=0
   while (( $# )); do
     case $1 in
       --project)    project=${2:-}; shift 2 ;;
       --id)         id=${2:-}; shift 2 ;;
       --title)      title=${2:-}; shift 2 ;;
       --body-file)  body=${2:-}; shift 2 ;;
+      --multiline)  multiline=1; shift ;;
       --id-only)    mode="id-only"; shift ;;
       --title-only) mode="title-only"; shift ;;
       --path)       mode="path"; shift ;;
@@ -305,7 +338,7 @@ main() {
                || die "$EX_USAGE" "add needs --title and --body-file (--id is optional: omit it for work outside a ticket)"
              cmd_add "$project" "$id" "$title" "$body" ;;
     latest)  cmd_latest "$project" "$mode" ;;
-    command) cmd_command "$project" "$id" "$title" ;;
+    command) cmd_command "$project" "$id" "$title" "$multiline" ;;
     check)   cmd_check "$project" "$body" ;;
     count)   cmd_count "$project" ;;
     *)       die "$EX_USAGE" "unknown command: $cmd" ;;

@@ -138,13 +138,32 @@ hits the same heading a second time cannot tell which copy is current.
 ## The launch command
 
 `command` emits this and only this, with every variable derived rather than
-typed:
+typed, **on one line**:
 
 ```sh
-claude -p "Read Hydration Prompt located at $FULL_PATH_TO_FILE, Process work order $WO_ID per its acceptance criteria after you've read it." \
-  --permission-mode bypassPermissions \
-  -n "Session: $WO_ID - $WO_TITLE"
+claude -p "Read Hydration Prompt located at $FULL_PATH_TO_FILE, Process work order $WO_ID per its acceptance criteria after you've read it." --permission-mode bypassPermissions -n "Session: $WO_ID - $WO_TITLE"
 ```
+
+### One line, and it is not a style choice
+
+A backslash only continues a line when the newline after it is **real**.
+
+Every surface this command travels through can break that: a chat transcript
+that soft-wraps, a terminal at a narrower width, a markdown renderer, a
+screenshot somebody retypes. Any of them can introduce a line break that is not
+real, or drop one that was.
+
+The failure mode is the bad kind. The first fragment is usually a syntactically
+valid command that does something other than intended, so the shell **runs it**
+rather than complaining. The user finds out afterwards.
+
+A single line has nothing to lose. A terminal soft-wrapping it is cosmetic,
+because no continuation character's survival is being depended on. Paste it at
+any width, into anything, and it is the same command.
+
+`--multiline` emits the backslash-continued form for documentation, where a
+human is reading rather than pasting. A test asserts the two forms are the same
+command. **Never hand the multiline shape to a user.**
 
 `$FULL_PATH_TO_FILE` is always the absolute path to the project's `HYDRATION.md`,
 and the script refuses to print a command pointing at a file that is not there.
@@ -162,8 +181,7 @@ Not every session is a ticket. A spike, an investigation, a piece of maintenance
 `--id` is optional, and both the entry and the command adapt:
 
 ```sh
-claude -p "Read Hydration Prompt located at $FULL_PATH_TO_FILE" \
-  -n "Session: "
+claude -p "Read Hydration Prompt located at $FULL_PATH_TO_FILE" -n "Session: "
 ```
 
 Three deliberate differences from the shape above, none of them an oversight.
