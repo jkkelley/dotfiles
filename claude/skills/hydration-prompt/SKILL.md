@@ -137,47 +137,76 @@ hits the same heading a second time cannot tell which copy is current.
 
 ## The launch command
 
-`command` emits this, with every variable derived rather than typed, and
-**folded by us** at 68 columns:
+`command` emits this, with every variable derived rather than typed, laid out
+**one argument per line** and folded at 68 columns:
 
 ```sh
 claude -p "Read Hydration Prompt located at \
-/home/luna/projects/example/HYDRATION.md, Process work order WO-... per \
-its acceptance criteria after you've read it." --permission-mode \
-bypassPermissions -n "Session: WO-... - The full title"
+/home/luna/projects/example/HYDRATION.md, Process work order \
+WO-20260819-ca7c per its acceptance criteria after you've read it." \
+--permission-mode bypassPermissions \
+-n "Session: WO-20260819-ca7c - Phase 5: the mothership GUI, its \
+container image, and the first visual"
 ```
 
-### The fold is the point, and it is not cosmetic
+### Why it is folded at all
 
 **A single line is not safe.** Every surface this command travels through - a
 chat transcript, a terminal, a markdown pane - soft-wraps it at *its own* width,
 and a copy taken out of that surface can carry the break with it. The break lands
-wherever that renderer decided, which is usually the middle of a quoted string.
+wherever that renderer decided, usually the middle of a quoted string.
 
 The failure mode is the bad kind: the first fragment is normally a syntactically
 **valid** command that does something other than intended, so the shell runs it
 rather than complaining, and the user finds out afterwards.
 
-So the breaks are ours. Folded narrow enough that nothing else wants to re-wrap
-it, with a real backslash at every one, and **continuations flush left** - an
-indent wastes width, and a copy that loses the indent is indistinguishable from
-one that did not.
+So the breaks are ours, folded narrow enough that nothing else wants to re-wrap.
+
+### Why one argument per line, rather than a greedy fill
+
+A greedy fill is correct and unreadable, and it is fragile in a way that only
+shows up later. It produced this:
+
+```text
+you've read it." --permission-mode bypassPermissions -n "Session: ```
+
+An argument ends mid-line and two more begin behind it. Add a flag and it lands
+wherever the fill happens to put it.
+
+One argument per line means **a new flag is a new line and nothing else moves**.
+The layout is also the same at every width, because the fold is structural rather
+than width-driven - a two-argument command is two lines even at a width that
+would fit it on one. Newlines are free; a command nobody can read is not.
+
+### Why the join is exact
 
 A backslash-newline is removed by the shell **inside double quotes as well as
-outside**, so a break may fall mid-token and rejoin with no space invented.
-Breaking at a space is preferred only because it reads better; that space is kept
-*before* the backslash so it survives.
+outside**.
+
+Between arguments the line ends `text \` so the space survives and the arguments
+stay separate. Inside an argument, a break at a space keeps that space *before*
+the backslash; a token longer than the width breaks mid-token and rejoins with no
+space invented, which is why a long path may split anywhere.
+
+**Continuations start at column 0.** An indent wastes width, and a copy that
+loses the indent is indistinguishable from one that did not.
 
 Never single-quote anything that goes through the folder. Inside single quotes a
-backslash is literal, and the continuation would become part of the string.
+backslash is literal and the continuation would become part of the string.
 
 `--width N` changes the column, `--oneline` disables folding for scripting.
 
-**This is verified against the shell, not against itself.** `testing/wrap-roundtrip.sh`
-puts a stub `claude` on `PATH` that prints its argv, runs both the folded and the
-unfolded form through a real bash at six widths and both command shapes, and
-compares what each actually delivered. Fifty checks. If bash disagrees with the
-folder, it fails.
+### Verified against the shell, not against itself
+
+Checking the folder with its own inverse would only prove the two agree with each
+other. `testing/wrap-roundtrip.sh` puts a stub `claude` on `PATH` that prints its
+argv, runs **both** the folded and the unfolded form through a real bash at six
+widths across three command shapes, and compares what each actually delivered.
+
+**128 checks.** They cover argv equality, that no line exceeds the width, that
+every line but the last carries a real continuation and the last does not, that
+continuations are flush left, that no argument ends and another begins on one
+line, and the apostrophe in `you've`, which is where a mis-placed fold surfaces.
 
 ### When there is no work order
 

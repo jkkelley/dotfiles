@@ -56,8 +56,8 @@ run_form() {           # run_form <file-with-command>  -> argv dump
   ( cd "$W" && bash "$1" )
 }
 
-compare_at() {         # compare_at <label> <width> [--id ID --title T]
-  local label=$1 width=$2; shift 2
+compare_at() {         # compare_at <label> <width> <n-arguments> [--id ID ...]
+  local label=$1 width=$2 nargs=$3; shift 3
   bash "$HP" command --project "$W/proj" --width "$width" "$@" > "$W/folded.sh"
   bash "$HP" command --project "$W/proj" --oneline        "$@" > "$W/flat.sh"
 
@@ -72,18 +72,17 @@ compare_at() {         # compare_at <label> <width> [--id ID --title T]
     printf '    folded:\n%s\n    flat:\n%s\n' "$a" "$b"
   fi
 
-  # Folded if and only if it needed to be. The first version of this assertion
-  # said "must fold below width 200", which is not the rule and failed on a
-  # command that was simply shorter than the width.
-  local lines flatlen; lines=$(wc -l < "$W/folded.sh"); flatlen=$(wc -c < "$W/flat.sh")
-  flatlen=$(( flatlen - 1 ))                    # drop the trailing newline
-  if (( flatlen > width )); then
-    (( lines > 1 )) && ok "$label: folded because $flatlen > $width ($lines lines)" \
-                    || bad "$label: $flatlen chars exceeds $width but nothing folded"
-  else
-    (( lines == 1 )) && ok "$label: $flatlen fits in $width, correctly left unfolded" \
-                     || bad "$label: folded a command that already fitted"
-  fi
+  # THE FOLD IS STRUCTURAL, NOT WIDTH-DRIVEN. One line per argument, always,
+  # plus more when an argument is too long for the width. So the minimum line
+  # count is the argument count even at a width that would fit everything.
+  #
+  # That is deliberate: the layout is then the same at every width, so adding a
+  # flag adds a line and nothing else moves. Two earlier versions of this
+  # assertion encoded the old width-driven model and failed on correct output.
+  local lines; lines=$(wc -l < "$W/folded.sh")
+  (( lines >= nargs )) \
+    && ok "$label: $lines lines for $nargs arguments at width $width" \
+    || bad "$label: only $lines lines for $nargs arguments - an argument shares a line"
 
   # no line may exceed the width
   local over; over=$(awk -v w="$width" 'length($0) > w {c++} END{print c+0}' "$W/folded.sh")
@@ -94,18 +93,46 @@ compare_at() {         # compare_at <label> <width> [--id ID --title T]
   local indented; indented=$(awk 'NR>1 && /^[[:space:]]/ {c++} END{print c+0}' "$W/folded.sh")
   [[ $indented == 0 ]] && ok "$label: continuations are flush left" \
                        || bad "$label: $indented continuation line(s) are indented"
+
+  # every line but the last carries a real continuation, and the last does not
+  local missing; missing=$(sed '$d' "$W/folded.sh" | grep -vc '\\$')
+  [[ $missing == 0 ]] && ok "$label: every line but the last ends in a backslash" \
+                      || bad "$label: $missing line(s) missing a continuation"
+  tail -n1 "$W/folded.sh" | grep -q '\\$' \
+    && bad "$label: the last line ends in a stray backslash" \
+    || ok "$label: the last line has no backslash"
+
+  # ARGUMENT PER LINE. A greedy fill is correct but unreadable and fragile: it
+  # once put an argument end, a whole flag and the start of the next argument on
+  # one line, so adding a flag landed it wherever the fill happened to put it.
+  # Every flag must therefore begin a line rather than trail one.
+  # The defect is a CLOSING quote followed by another argument on the same line,
+  # e.g.   read it." --permission-mode bypassPermissions -n "Session: \
+  # An opening `claude -p "` is not that and must not be flagged - the first
+  # version of this check matched it and failed 20 times on correct output.
+  local trailing
+  trailing=$(grep -c '" -' "$W/folded.sh")
+  [[ $trailing == 0 ]] && ok "$label: no argument ends and another begins on one line" \
+                       || bad "$label: $trailing line(s) pack two arguments together"
 }
 
 echo "=== ticketless entry"
 bash "$HP" add --project "$W/proj" --title "Design pass" --body-file "$W/body.md" >/dev/null 2>&1
-for w in 40 55 68 80 120 250; do compare_at "ticketless" "$w"; done
+for w in 40 55 68 80 120 250; do compare_at "ticketless" "$w" 2; done
 
 echo
 echo "=== ticketed entry, long title"
 bash "$HP" add --project "$W/proj" --id WO-20260818-7a0b \
   --title "CI/CD + GitOps: Jenkins pipeline, ghcr, chart, Vault, ArgoCD" \
   --body-file "$W/body.md" >/dev/null 2>&1
-for w in 40 55 68 80 120 250; do compare_at "ticketed" "$w"; done
+for w in 40 55 68 80 120 250; do compare_at "ticketed" "$w" 3; done
+
+echo
+echo "=== the long-title case, which is what broke the greedy fill"
+bash "$HP" add --project "$W/proj" --id WO-20260819-ca7c \
+  --title "Phase 5: the mothership GUI, its container image, and the first visual" \
+  --body-file "$W/body.md" >/dev/null 2>&1
+for w in 40 55 68 80 100 140; do compare_at "long-title" "$w" 3; done
 
 echo
 echo "=== the apostrophe, which is the one that would bite"

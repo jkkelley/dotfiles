@@ -156,9 +156,12 @@ EXPECT="claude -p \"Read Hydration Prompt located at $(cd "$P" && pwd)/HYDRATION
 # Folding it ourselves at a narrow width, with a real backslash at each break,
 # means the line the user sees is the line we wrote.
 FOLDED=$(bash "$HP" command --project "$P" --id WO-20260818-7a0b --title "CI/CD + GitOps")
-[ "$(printf '%s\n' "$FOLDED" | wc -l)" -gt 1 ] \
-  && ok "the command is folded, not left for a renderer to break" \
-  || bad "the command came back on one line"
+[ "$(printf '%s\n' "$FOLDED" | wc -l)" -ge 3 ] \
+  && ok "one line per argument: 3 arguments, at least 3 lines" \
+  || bad "arguments are sharing lines"
+printf '%s\n' "$FOLDED" | grep -q '" -' \
+  && bad "an argument ends and another begins on the same line" \
+  || ok "no argument ends and another begins on the same line"
 [ "$(printf '%s\n' "$FOLDED" | awk 'length($0) > 68 {c++} END{print c+0}')" = "0" ] \
   && ok "no line exceeds the 68-column default" || bad "a line is wider than 68"
 [ "$(printf '%s\n' "$FOLDED" | awk 'NR>1 && /^[[:space:]]/ {c++} END{print c+0}')" = "0" ] \

@@ -153,52 +153,81 @@ hp_check_body() {
 }
 
 # ---------------------------------------------------------------------------
-# hp_wrap - fold a command onto lines short enough that nothing else folds it.
+# hp_fold - lay a command out one argument per line, folding anything still too
+# long, so that no renderer ever gets to choose where it breaks.
 #
-# THE PROBLEM THIS SOLVES.
-# A one-line command is not safe either. Every surface it travels through - a
-# chat transcript, a terminal, a markdown pane - soft-wraps it at ITS width, and
-# a copy out of that surface can carry the break with it. The break lands
-# wherever that renderer decided, which is usually the middle of a quoted string,
-# and the result is a command that is still syntactically valid and does the
-# wrong thing.
+# WHY IT IS FOLDED AT ALL.
+# A one-line command is not safe. Every surface it travels through - a chat
+# transcript, a terminal, a markdown pane - soft-wraps it at ITS width, and a
+# copy taken out of that surface can carry the break with it. The break lands
+# wherever that renderer decided, usually the middle of a quoted string, and the
+# first fragment is normally a syntactically VALID command that does the wrong
+# thing, so the shell runs it rather than complaining.
 #
-# THE FIX.
-# Put the breaks in ourselves, at a width narrower than anything likely to
-# re-wrap it, with a real backslash at each one. Then the line the user sees is
-# the line we wrote, and pasting it reassembles exactly.
+# WHY ONE ARGUMENT PER LINE, RATHER THAN A GREEDY FILL.
+# A greedy fill is correct but unreadable, and it is fragile in a way that only
+# shows up later: it once produced
 #
-# WHY THIS IS SAFE INSIDE THE QUOTES.
+#     you've read it." --permission-mode bypassPermissions -n "Session: \
+#
+# where an argument ends mid-line and two more begin behind it. Add a flag and it
+# lands wherever the fill happens to put it. Argument-per-line means a new flag
+# is a new line and nothing else moves. Newlines are free; a command nobody can
+# read is not.
+#
+# WHY THE JOIN IS EXACT.
 # A backslash-newline is removed by the shell inside double quotes as well as
-# outside. `"...at \` + newline + `/home/..."` reassembles to `"...at /home/..."`
-# with no space inserted, so a break may fall mid-token. Breaking at a space is
-# preferred only because it reads better; the space is kept BEFORE the backslash
-# so it survives.
+# outside. Between arguments the line ends "text \" so the space survives and the
+# arguments stay separate. Inside an argument a break at a space keeps that space
+# before the backslash; a token longer than the width breaks mid-token and
+# rejoins with no space invented, which is why a long path may split anywhere.
 #
-# CONTINUATION LINES START AT COLUMN 0.
-# Indented continuations waste width and, worse, a copy that loses the indent is
-# indistinguishable from one that did not. Flush left has nothing to lose.
+# CONTINUATIONS START AT COLUMN 0.
+# An indent wastes width, and a copy that loses the indent is indistinguishable
+# from one that did not. Flush left has nothing to lose.
 #
 # Never single-quote anything passed through here: inside single quotes a
 # backslash is literal and the continuation would become part of the string.
-hp_wrap() {
-  local line=$1 width=$2 chunk head
-  (( width > 20 )) || width=20
-  local limit=$(( width - 2 ))   # room for the trailing " \"
+hp_fold() {
+  local width=$1; shift
+  (( width > 24 )) || width=24
+  # Every emitted body is kept to width-2 so the trailing " \\" still fits.
+  local limit=$(( width - 2 ))
 
-  while (( ${#line} > width )); do
-    chunk=${line:0:limit}
-    if [[ $chunk == *" "* && ${chunk% *} != "" ]]; then
-      head=${chunk% *}                       # up to, not including, the last space
-      printf '%s \\\n' "$head"            # keep that one space before the backslash
-      line=${line:$(( ${#head} + 1 ))}       # and drop it from the remainder
+  local -a text=() kind=()      # kind: 0 mid-token, 1 space then backslash, 2 final
+  local seg rest chunk head
+  local nsegs=$# i=0
+
+  for seg in "$@"; do
+    i=$(( i + 1 ))
+    rest=$seg
+    while (( ${#rest} > limit )); do
+      chunk=${rest:0:limit}
+      if [[ $chunk == *" "* && ${chunk% *} != "" ]]; then
+        head=${chunk% *}                  # up to, not including, the last space
+        text+=("$head"); kind+=(1)        # keep that space before the backslash
+        rest=${rest:$(( ${#head} + 1 ))}  # and drop it from the remainder
+      else
+        head=$chunk                       # a token longer than the width
+        text+=("$head"); kind+=(0)        # no space: the join must not invent one
+        rest=${rest:${#chunk}}
+      fi
+    done
+    if (( i < nsegs )); then
+      text+=("$rest"); kind+=(1)          # a space, because another argument follows
     else
-      head=$chunk                            # a token longer than the width
-      printf '%s\\\n' "$head"             # no space: the join must not invent one
-      line=${line:${#chunk}}
+      text+=("$rest"); kind+=(2)          # the end: no backslash at all
     fi
   done
-  printf '%s\n' "$line"
+
+  local n=${#text[@]} k
+  for (( k = 0; k < n; k++ )); do
+    case ${kind[k]} in
+      2) printf '%s\n'     "${text[k]}" ;;
+      1) printf '%s \\\n' "${text[k]}" ;;
+      0) printf '%s\\\n'  "${text[k]}" ;;
+    esac
+  done
 }
 
 # ---------------------------------------------------------------------------
@@ -287,9 +316,15 @@ cmd_command() {
     title=${title:-$(cmd_latest "$project" title-only)}
   }
 
-  local cmd
+  # One element per argument. A new flag is a new element and therefore a new
+  # line; nothing else moves.
+  local -a seg
   if [[ -n $id ]]; then
-    cmd="claude -p \"Read Hydration Prompt located at $full, Process work order $id per its acceptance criteria after you've read it.\" --permission-mode bypassPermissions -n \"Session: $id - $title\""
+    seg=(
+      "claude -p \"Read Hydration Prompt located at $full, Process work order $id per its acceptance criteria after you've read it.\""
+      "--permission-mode bypassPermissions"
+      "-n \"Session: $id - $title\""
+    )
   else
     # No work order. Three deliberate differences, none of them an oversight.
     #
@@ -303,10 +338,19 @@ cmd_command() {
     # name until the person starting it decides what this session is - a design
     # pass, a spike, an investigation - so the slot is left open to be typed at
     # the moment of pasting. Do not "helpfully" fill it from the entry title.
-    cmd="claude -p \"Read Hydration Prompt located at $full\" -n \"Session: \""
+    seg=(
+      "claude -p \"Read Hydration Prompt located at $full\""
+      "-n \"Session: \""
+    )
   fi
 
-  if (( oneline )); then printf '%s\n' "$cmd"; else hp_wrap "$cmd" "$width"; fi
+  if (( oneline )); then
+    local flat="" x
+    for x in "${seg[@]}"; do flat="${flat:+$flat }$x"; done
+    printf '%s\n' "$flat"
+  else
+    hp_fold "$width" "${seg[@]}"
+  fi
 }
 
 cmd_check() {
