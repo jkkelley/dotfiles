@@ -17,16 +17,34 @@ should never have to assemble a command by hand.
 `CONTEXT_STATE.md` -> hydration prompt -> **one** pull request -> merge -> cleanup -> the command.
 
 ```text
-1  context-compaction writes CONTEXT_STATE.md          on the work branch
-2  hydration-prompt writes HYDRATION.md                on the same branch
-3  work-order.sh done                                  on the same branch
-4  push, open ONE pull request                         code + both state files
-5  human reviews and merges
-6  work-order.sh close                                 archives, straight to main
-7  hand back the prompt and its launch command
+close-out
+│
+├─ ON THE WORK BRANCH ─── everything the ticket owns, nothing deferred
+│  │
+│  ├─ 1. CONTEXT_STATE.md        new checkpoint at the TOP, newest first
+│  │
+│  ├─ 2. THE TICKET REACHES done ← every part of it, in this order
+│  │     ├─ evidence every AC      work-order.sh evidence --observed
+│  │     ├─ interview-ready retro  work-order.sh note
+│  │     └─ mark it done           work-order.sh done
+│  │
+│  └─ 3. HYDRATION.md            hydration.sh check, then add
+│
+├─ ONE PULL REQUEST
+│  └─ 4. push once               code + ticket + state + prompt, one review
+│
+└─ AFTER THE MERGE
+   ├─ 5. archive                 work-order.sh close, straight to main
+   ├─ 6. cleanup                 ff main, delete the branch both sides
+   └─ 7. hand back               the prompt AND its launch command, then hold
 ```
 
-Steps 1 through 3 are all part of the deliverable and all ride the same branch.
+**Everything the ticket owns happens on the work branch, and the ticket reaches
+`done` there.** We always roll forward: nothing is left as paperwork that follows
+the PR, because paperwork that follows a merge is paperwork that gets skipped. A
+branch carrying finished code and an unfinished ticket merges into a `main` where
+the work exists and the record of it does not.
+
 **There is exactly one pull request per ticket.** A second PR that carries only
 state files doubles the review surface for one piece of work and leaves `main`
 briefly describing a world that no longer exists.
