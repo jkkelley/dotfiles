@@ -114,10 +114,18 @@ ps_scratch_init() {
     printf 'error: could not create a temporary directory\n' >&2
     exit "$PS_IO"
   }
+  # Only the top-level shell installs the cleanup traps. Every caller reaches
+  # this through `tmp=$(ps_tempfile)`, and bash runs an EXIT trap set inside a
+  # command substitution when that substitution closes. That deleted the scratch
+  # directory, and the file just created inside it, before the caller could use
+  # the path it had printed. Leaking a temp directory is survivable; handing back
+  # a path to a file that no longer exists is not.
   # INT and TERM re-raise after cleanup so the caller sees a real signal death.
-  trap 'ps_cleanup' EXIT
-  trap 'ps_cleanup; trap - INT; kill -INT $$' INT
-  trap 'ps_cleanup; trap - TERM; kill -TERM $$' TERM
+  if [[ ${BASHPID:-$$} == "$$" ]]; then
+    trap 'ps_cleanup' EXIT
+    trap 'ps_cleanup; trap - INT; kill -INT $$' INT
+    trap 'ps_cleanup; trap - TERM; kill -TERM $$' TERM
+  fi
 }
 
 ps_cleanup() {
@@ -131,6 +139,14 @@ ps_tempfile() {
   ps_scratch_init
   mktemp "$PS_SCRATCH/tmp.XXXXXX"
 }
+
+# Create the scratch directory here, at source time, in the shell that will still
+# be alive to clean it up. Left lazy, the first code to reach it was always a
+# command substitution, so a subshell became the owner and tore the directory
+# down on its way out - every ps_tempfile caller then got a path to a file that
+# had already been removed. cmd_close in work-order.sh called this eagerly for
+# its own reasons and was the only command that worked; this makes it the rule.
+ps_scratch_init
 
 # ---------------------------------------------------------------------------
 # Input sanitising.

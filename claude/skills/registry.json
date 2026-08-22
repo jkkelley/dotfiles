@@ -33,7 +33,7 @@
     "plan-scaffold": { "version": "1.0.2", "sha256": "9b5c840114a9ac8013e6ebc5625b156a65d5783179bfeb4b056159f01f0d1903" },
     "project-kickoff": { "version": "1.0.2", "sha256": "4501741ef793ab38e9fe1b2fadf0fb8b0a6eafb61ba1c5d1cbcee88e74ec6abe" },
     "project-manager": { "version": "1.0.2", "sha256": "8c3ac90912e05a086c49477ef1355f05011a97ebb73947f7352e4f341d70d9a9" },
-    "project-scaffold": { "version": "1.2.0", "sha256": "c8236b6a99b35e1432ba38d5493519dfc779c8d0391e3126c507a12e320d6a38" },
+    "project-scaffold": { "version": "1.2.1", "sha256": "221dfdc7d699bb6e183235b9cec52b8374c854365361e39ebf9987d15ccc4d7e" },
     "repo-scaffold": { "version": "1.0.2", "sha256": "9ec2d87e3232ef0fdab645782e67431bc3a3123bdcd90ce624f02530d8e0807d" },
     "repo-sync": { "version": "1.0.2", "sha256": "861c9dd81401b6b96fdeb48a46768aa785bf9879d909df421936db6038579b02" },
     "screenshot-syncer": { "version": "1.0.2", "sha256": "d8f5bde0fa7aabf24a329969f33696d422a60037cee9967c916f74b6adf27f22" },
@@ -43,6 +43,6 @@
     "terraform-patterns": { "version": "1.0.2", "sha256": "06722f2febf7655ab42d3689603473bdbccdbf21208f3e3ee54ba0dbadf2995d" },
     "test-writer": { "version": "1.0.2", "sha256": "7d163ff3ace4891e9eac9dc72beeb65ac389e88c546c7d406efc94a9a8e1591e" },
     "web-scraping-guru": { "version": "1.0.2", "sha256": "d6755f6962398b47a5df3d0bee3b0f9e56b059ea9da76d58207a2117f5444849" },
-    "work-order": { "version": "1.0.2", "sha256": "7e1d2a246e483fb2d99be3266a7ba207f363213ac20543478cd66cc26a321f59" }
+    "work-order": { "version": "1.0.3", "sha256": "a2b21c857ef1b3ae6281981727393947267e256b99e834c2e2977048a7afb941" }
   }
 }
