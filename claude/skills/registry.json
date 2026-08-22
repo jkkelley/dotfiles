@@ -13,7 +13,7 @@
     "container-design": { "version": "1.0.1", "sha256": "e07c9a3c8bf0cb2f0c17a8570ead2782fd9bbe47c65ecd4c2d8816744b286561" },
     "container-sandbox": { "version": "1.0.1", "sha256": "3bc7b234b5df05e478007619418a06da0435b1c3024ec65aa62b584f7870fe4d" },
     "context-compaction": { "version": "1.0.1", "sha256": "b26304f6f0768000c27669ef563941288601e3fc0c238cb73c9e6c9b7ea47742" },
-    "cover-letter": { "version": "1.0.1", "sha256": "25de01aae0a97ecc6e20533eeb7bb745db8997146c1e4029db6d27eb9ffca164" },
+    "cover-letter": { "version": "2.0.0", "sha256": "6982a07751f0022198a1fe8018ff0beb010460bcaf3ab4356bb5122a5e68d572" },
     "cypress-patterns": { "version": "1.0.1", "sha256": "672e1d588a946ad0d7bf787ce6e6b4ae5ff235762ff052cfa3b40d6d1b9635de" },
     "daily-pr-log": { "version": "1.0.1", "sha256": "477d32b632adf23c70d0abae27ac8c8020b7b89e054cceff8355dcadb8177fac" },
     "dba": { "version": "1.0.1", "sha256": "61b5f708d28bf5ae5bcfe854893be25a276c9f73623408d4e3971a859d054de7" },

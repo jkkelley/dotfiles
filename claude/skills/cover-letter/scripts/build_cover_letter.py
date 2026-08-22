@@ -2,7 +2,8 @@
 
 Reads LETTER_META and picked fragments from the application's selection.py,
 merges with profile.py identity from the content package, and writes
-james_kelley_cover_letter.docx into /work.
+<slug>_cover_letter.docx into /work, where <slug> is OWNER_SLUG derived from
+WHOS_RESUME_IS_THIS. This file holds no names or personal details of its own.
 
 Podman invocation (engine from skill, content from resume repo):
   podman run --rm \\
@@ -25,14 +26,20 @@ from docx import Document
 from docx_helpers import (
     DARK, BLUE, GRAY,
     SIZE_NAME, SIZE_TITLE, SIZE_CONTACT, SIZE_BODY, SIZE_COMPANY,
-    run, page_setup, section_header, add_bottom_border,
+    run, page_setup, section_header, add_bottom_border, set_editing_time,
 )
 
 # ── Load content ──────────────────────────────────────────────────────────────
 # /work contains the application's selection.py (LETTER_META + fragment picks)
 sys.path.insert(0, '/work')
 
-from content.profile import WHOS_RESUME_IS_THIS, CONTACT_LINE
+from content.profile import WHOS_RESUME_IS_THIS, CONTACT_LINE, OWNER_SLUG
+from content.validate import check_ready
+
+# A fresh clone has empty prose pools and no identity. Fail with a readable
+# report rather than rendering a letter signed by nobody.
+check_ready('cover_letter')
+
 import selection as sel
 
 meta            = sel.LETTER_META       # {date, company, role, tone}
@@ -40,7 +47,7 @@ opening         = sel.OPENING           # one string (formatted with .format(**m
 proofs          = sel.PROOFS            # list of strings
 why             = sel.WHY_THIS_COMPANY  # free-text paragraph drafted per JD
 closing         = sel.CLOSING           # one string
-output_filename = getattr(sel, 'OUTPUT_FILENAME', 'james_kelley_cover_letter.docx')
+output_filename = getattr(sel, 'OUTPUT_FILENAME', '%s_cover_letter.docx' % OWNER_SLUG)
 
 
 def fmt(text):
@@ -128,13 +135,15 @@ def build(work_dir='/work'):
     run(p, WHOS_RESUME_IS_THIS.title(), bold=True, size=SIZE_BODY, color=DARK)
 
     # ── Document metadata ─────────────────────────────────────────────────────
+    # Tracks the content, never a literal. See the same note in build_resume.py.
     props = doc.core_properties
-    props.author   = 'James Kelley'
+    props.author   = WHOS_RESUME_IS_THIS.title()
     props.comments = 'Generated w/ ☕'
 
     # ── Output ────────────────────────────────────────────────────────────────
     out = os.path.join(work_dir, output_filename)
     doc.save(out)
+    set_editing_time(out, 17)
     print('Saved: %s' % out)
 
 

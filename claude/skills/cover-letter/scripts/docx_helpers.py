@@ -17,6 +17,10 @@ Design system (source of truth: CLAUDE.md in the resume repo):
   Page: 8.5x11, margins top 0.50 bottom 0.45 left 0.50 right 0.50 (all inches)
 """
 
+import re
+import shutil
+import zipfile
+
 from docx.shared import Pt, Inches, RGBColor
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
@@ -89,3 +93,18 @@ def section_header(doc, title):
     run(p, title, bold=True, size=SIZE_SECTION, color=BLUE)
     add_bottom_border(p, color_hex='2E78C2')
     return p
+
+
+def set_editing_time(docx_path, minutes):
+    """Patch docProps/app.xml TotalTime - python-docx has no API for extended properties."""
+    tmp_path = docx_path + '.tmp'
+    with zipfile.ZipFile(docx_path, 'r') as zin, \
+         zipfile.ZipFile(tmp_path, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename == 'docProps/app.xml':
+                data = re.sub(rb'<TotalTime>\d+</TotalTime>',
+                               ('<TotalTime>%d</TotalTime>' % minutes).encode(),
+                               data)
+            zout.writestr(item, data)
+    shutil.move(tmp_path, docx_path)
