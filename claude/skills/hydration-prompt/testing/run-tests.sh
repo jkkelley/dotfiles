@@ -142,11 +142,27 @@ COUNT_AFTER=$(bash "$HP" count --project "$P")
 # ---------------------------------------------------------------- the command
 hd "the launch command"
 CMD=$(bash "$HP" command --project "$P" --id WO-20260818-7a0b --title "CI/CD + GitOps" --oneline)
-EXPECT="claude -p \"Read Hydration Prompt located at $(cd "$P" && pwd)/HYDRATION.md, Process work order WO-20260818-7a0b per its acceptance criteria after you've read it.\" --permission-mode bypassPermissions -n \"Session: WO-20260818-7a0b - CI/CD + GitOps\""
+EXPECT="claude --permission-mode bypassPermissions -n \"Session: WO-20260818-7a0b - CI/CD + GitOps\" \"Read Hydration Prompt located at $(cd "$P" && pwd)/HYDRATION.md, Process work order WO-20260818-7a0b per its acceptance criteria after you've read it.\""
 [ "$CMD" = "$EXPECT" ] && ok "matches the template byte for byte" || {
   bad "command did not match the template"
   printf '    got:      %s\n    expected: %s\n' "$CMD" "$EXPECT"
 }
+
+# THE REGRESSION THIS FILE EXISTS TO PREVENT.
+# The prompt used to be passed as -p, which is --print: "print response and
+# exit". The command ran the hydration prompt headless and quit, so the user
+# never landed in a session - the one thing this skill exists to arrange. It
+# looked right in every transcript, because the output was a plausible reply.
+# The prompt is a positional argument now. -p must never come back.
+printf '%s' "$CMD" | grep -qE '(^| )-p( |$)|--print' \
+  && bad "-p/--print is back: the session would run headless and exit" \
+  || ok "no -p/--print: the session is interactive"
+printf '%s' "$CMD" | grep -q 'Read Hydration Prompt located at' \
+  && ok "the prompt still ships with the command" \
+  || bad "the prompt was lost when -p was dropped"
+printf '%s' "$CMD" | grep -q 'you.ve read it\."$' \
+  && ok "the positional prompt is the last argument" \
+  || bad "the prompt is not last - a flag would have to step over it"
 
 # WHY IT IS FOLDED BY US RATHER THAN BY WHATEVER RENDERS IT.
 # A one-line command is not safe: every surface it travels through soft-wraps at
@@ -182,8 +198,11 @@ NARROW=$(bash "$HP" command --project "$P" --width 40 --id W --title T)
   && ok "--width 40 is respected" || bad "--width 40 was exceeded"
 bash "$HP" command --project "$P" --width abc >/dev/null 2>&1
 [ $? -eq 2 ] && ok "a non-numeric --width exits 2 (usage)" || bad "bad --width was accepted"
-printf '%s' "$CMD" | grep -q "^claude -p \"Read Hydration Prompt located at /" \
+printf '%s' "$CMD" | grep -q '"Read Hydration Prompt located at /' \
   && ok "path is absolute" || bad "path is not absolute"
+printf '%s' "$CMD" | grep -q "^claude --permission-mode bypassPermissions " \
+  && ok "claude and the first flag share the opening line" \
+  || bad "the command does not open as expected"
 
 bash "$HP" command --project "$WORK/nope" --id X --title Y >/dev/null 2>&1
 [ $? -eq 4 ] && ok "refuses to emit a command for a missing file" || bad "emitted a command for a missing file"
@@ -203,11 +222,18 @@ T=$(bash "$HP" latest --project "$Q" --title-only)
   && ok "the title survives intact" || bad "title was '$T'"
 
 ACMD=$(bash "$HP" command --project "$Q" --oneline)
-AEXPECT="claude -p \"Read Hydration Prompt located at $(cd "$Q" && pwd)/HYDRATION.md\" -n \"Session: \""
+AEXPECT="claude -n \"Session: \""
 [ "$ACMD" = "$AEXPECT" ] && ok "emits the no-work-order command shape" || {
   bad "no-work-order command did not match"
   printf '    got:      %s\n    expected: %s\n' "$ACMD" "$AEXPECT"
 }
+# A ticketless session carries NO prompt - not a shortened one, not the bare
+# located-at clause. Work outside a ticket has no instruction until the person
+# starting it writes one, and a guessed prompt aims a session at the wrong
+# thing with full confidence.
+printf '%s' "$ACMD" | grep -q "Read Hydration Prompt" \
+  && bad "a prompt leaked into a ticketless command" \
+  || ok "no prompt at all when there is no ticket"
 printf '%s' "$ACMD" | grep -q "Process work order" \
   && bad "the acceptance-criteria clause leaked into a ticketless command" \
   || ok "no acceptance-criteria clause when there is no ticket"

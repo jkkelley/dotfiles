@@ -1,7 +1,7 @@
 ---
 name: skill-versioning
 description: Semver for the skills in this dotfiles repo, and the machinery that keeps a project's installed copies honest. Use when bumping a skill's version, regenerating claude/skills/registry.json, checking whether a project's .claude/skills are behind the published registry, or applying an update to a project. Triggered by "bump this skill", "is my skill out of date", "update the skill in this project", "regenerate the registry", or by the session-start skill version check in CLAUDE.md.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Skill versioning
@@ -45,6 +45,17 @@ scripts/skill-version.sh list                       # every skill and its versio
 
 `bump` is the only supported way to change a version.
 Hand-editing the field leaves the registry stale, and `verify` exists to catch exactly that.
+
+### Bump once, last
+
+`bump` raises the version every time it is called, and it has no way to lower one again.
+Run it **once, at the end**, after the last edit to the skill and immediately before committing.
+
+Bumping in the middle and then editing again leaves the registry stale, and the obvious reaction - bump a second time - inflates the version by a release that never existed.
+`hydration-prompt` reached 2.0.1 that way: 2.0.0 was published to nothing and skipped by nobody.
+Harmless, and still a number that describes history inaccurately, which is the one thing this file is supposed to prevent.
+
+The habit is: finish the change, run `verify` to see the drift, then bump once to clear it.
 
 ## The registry is generated, never edited
 

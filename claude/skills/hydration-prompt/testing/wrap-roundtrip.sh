@@ -108,17 +108,20 @@ compare_at() {         # compare_at <label> <width> <n-arguments> [--id ID ...]
   # Every flag must therefore begin a line rather than trail one.
   # The defect is a CLOSING quote followed by another argument on the same line,
   # e.g.   read it." --permission-mode bypassPermissions -n "Session: \
-  # An opening `claude -p "` is not that and must not be flagged - the first
-  # version of this check matched it and failed 20 times on correct output.
+  # A line that OPENS with a quote is not that and must not be flagged - the
+  # positional prompt is exactly such a line, and the first version of this
+  # check matched the opening quote and failed 20 times on correct output.
   local trailing
   trailing=$(grep -c '" -' "$W/folded.sh")
   [[ $trailing == 0 ]] && ok "$label: no argument ends and another begins on one line" \
                        || bad "$label: $trailing line(s) pack two arguments together"
 }
 
+# One argument, because a ticketless session carries no prompt at all - see the
+# reasoning in cmd_command. It still has to survive the round trip.
 echo "=== ticketless entry"
 bash "$HP" add --project "$W/proj" --title "Design pass" --body-file "$W/body.md" >/dev/null 2>&1
-for w in 40 55 68 80 120 250; do compare_at "ticketless" "$w" 2; done
+for w in 40 55 68 80 120 250; do compare_at "ticketless" "$w" 1; done
 
 echo
 echo "=== ticketed entry, long title"

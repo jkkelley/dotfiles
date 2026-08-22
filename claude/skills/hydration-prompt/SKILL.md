@@ -1,7 +1,7 @@
 ---
 name: hydration-prompt
 description: Writes the prompt that starts the next session, and hands back the exact command to launch it. Maintains HYDRATION.md as a 10-entry sliding window, newest on top. Use at close-out, after CONTEXT_STATE.md is written and before the pull request is opened, or whenever the user asks for a hydration prompt, a handoff, or how to start the next ticket.
-version: 1.0.0
+version: 2.0.1
 ---
 
 # Hydration prompt
@@ -142,18 +142,36 @@ hits the same heading a second time cannot tell which copy is current.
 **one argument per line** and folded at 68 columns:
 
 ```sh
-claude -p "Read Hydration Prompt located at \
-/home/luna/projects/example/HYDRATION.md, Process work order \
-WO-20260819-ca7c per its acceptance criteria after you've read it." \
---permission-mode bypassPermissions \
+claude --permission-mode bypassPermissions \
 -n "Session: WO-20260819-ca7c - Phase 5: the mothership GUI, its \
-container image, and the first visual"
+container image, and the first visual" \
+"Read Hydration Prompt located at \
+/home/luna/projects/example/HYDRATION.md, Process work order \
+WO-20260819-ca7c per its acceptance criteria after you've read it."
 ```
+
+### The prompt is positional. It must never go back to `-p`
+
+This used to be `claude -p "<prompt>"`, which was wrong in the way that looks
+right.
+
+`-p` is `--print`: _"print response and exit."_ The command ran the hydration
+prompt headless, printed a reply, and quit. Nobody ever landed in a session,
+which is the one thing this whole skill exists to arrange. It survived as long as
+it did because the failure produces plausible output rather than an error - you
+get a sensible-looking answer in your terminal and no session.
+
+`claude [options] [prompt]` takes the prompt as a **positional argument**, and
+without `-p` that starts an interactive session with the prompt already
+delivered. One command, no paste step, and the session is actually a session.
+
+The prompt goes **last**, after the options, so adding a flag never has to step
+over it. There is a test asserting `-p` and `--print` appear nowhere.
 
 ### Why it is folded at all
 
 **A single line is not safe.** Every surface this command travels through - a
-chat transcript, a terminal, a markdown pane - soft-wraps it at *its own* width,
+chat transcript, a terminal, a markdown pane - soft-wraps it at _its own_ width,
 and a copy taken out of that surface can carry the break with it. The break lands
 wherever that renderer decided, usually the middle of a quoted string.
 
@@ -168,7 +186,7 @@ So the breaks are ours, folded narrow enough that nothing else wants to re-wrap.
 A greedy fill is correct and unreadable, and it is fragile in a way that only
 shows up later. It produced this:
 
-```text
+````text
 you've read it." --permission-mode bypassPermissions -n "Session: ```
 
 An argument ends mid-line and two more begin behind it. Add a flag and it lands
@@ -215,13 +233,16 @@ Not every session is a ticket. A spike, an investigation, a piece of maintenance
 `--id` is optional, and both the entry and the command adapt:
 
 ```sh
-claude -p "Read Hydration Prompt located at $FULL_PATH_TO_FILE" -n "Session: "
-```
+claude -n "Session: "
+````
 
-Three deliberate differences from the shape above, none of them an oversight.
+One argument on one line. Three deliberate differences from the shape above,
+none of them an oversight.
 
-The **acceptance-criteria clause is dropped**, because there are none to process
-and pointing it at nothing is worse than leaving it out.
+**There is no prompt at all.** Not a shortened one, not the bare located-at
+clause - none. Work outside a ticket has no instruction until the person starting
+it writes one, and a guessed prompt aims a session at the wrong thing with full
+confidence. A test asserts no prompt leaks onto this path.
 
 **`--permission-mode bypassPermissions` is not carried over.** A ticket has a
 reviewed scope and acceptance criteria behind it; an ad-hoc session has neither,
