@@ -89,6 +89,27 @@ All sample data must be synthetic and obviously fake.
 
 If a request would introduce PII, substitute a placeholder and say so.
 
+## Hard rule: every runbook and playbook lives in one repository
+
+**https://github.com/jkkelley/local-k8s-docs**
+
+That is where the operational knowledge for this setup lives, all of it, in one place.
+Runbooks and playbooks both. If you need access to it, ask - do not work around not having it.
+
+Three cases, and they cover everything:
+
+| Situation                                  | What you do                                                              |
+| ------------------------------------------ | ------------------------------------------------------------------------ |
+| You need to know how something is done     | It is in there. Go and read it, then follow it as written                |
+| You are following one                      | Follow **its** format and its steps, not your own improved version       |
+| The one you need does not exist yet        | Write it, in that repository, in the same format as the ones beside it   |
+
+The third case is the one that gets skipped, and skipping it is what put the knowledge in somebody's head instead of in the repository.
+If you worked out a process in order to finish a task, that process is now a runbook that does not exist yet. Go and make it.
+
+Do not invent a local procedure when a documented one exists, and do not leave one undocumented once you have worked it out.
+A process that lives only in a chat log, a commit message, or this file is a process the next person re-derives from scratch.
+
 ## Layout and running
 
 ## Working style here

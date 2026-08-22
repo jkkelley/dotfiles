@@ -33,7 +33,7 @@
     "plan-scaffold": { "version": "1.0.2", "sha256": "9b5c840114a9ac8013e6ebc5625b156a65d5783179bfeb4b056159f01f0d1903" },
     "project-kickoff": { "version": "1.0.2", "sha256": "4501741ef793ab38e9fe1b2fadf0fb8b0a6eafb61ba1c5d1cbcee88e74ec6abe" },
     "project-manager": { "version": "1.0.2", "sha256": "8c3ac90912e05a086c49477ef1355f05011a97ebb73947f7352e4f341d70d9a9" },
-    "project-scaffold": { "version": "1.2.1", "sha256": "221dfdc7d699bb6e183235b9cec52b8374c854365361e39ebf9987d15ccc4d7e" },
+    "project-scaffold": { "version": "1.3.0", "sha256": "7bbc4f90468c9f527aad4e3703e64d6b06295f995f008dadc20d817c22fc7177" },
     "repo-scaffold": { "version": "1.0.2", "sha256": "9ec2d87e3232ef0fdab645782e67431bc3a3123bdcd90ce624f02530d8e0807d" },
     "repo-sync": { "version": "1.0.2", "sha256": "861c9dd81401b6b96fdeb48a46768aa785bf9879d909df421936db6038579b02" },
     "screenshot-syncer": { "version": "1.0.2", "sha256": "d8f5bde0fa7aabf24a329969f33696d422a60037cee9967c916f74b6adf27f22" },
