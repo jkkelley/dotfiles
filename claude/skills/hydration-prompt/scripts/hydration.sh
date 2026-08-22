@@ -56,7 +56,7 @@ hydration.sh <command> [options]
            Print the newest entry. This is what an incoming agent reads.
 
   command  --project DIR [--id WO-ID] [--title TITLE] [--width N] [--oneline]
-           Print the claude -p command that starts the next session, folded at
+           Print the claude command that starts the next session, folded at
            N columns (default 68) with a real backslash at every break and
            continuations flush left, so no renderer gets to choose where it
            wraps. With neither id nor title, both are read out of the newest
@@ -318,29 +318,47 @@ cmd_command() {
 
   # One element per argument. A new flag is a new element and therefore a new
   # line; nothing else moves.
+  #
+  # THE PROMPT IS POSITIONAL, NOT -p. This used to be `claude -p "<prompt>"`,
+  # which was wrong in the way that looks right: -p is --print, "print response
+  # and exit", so the command ran the hydration prompt headless and quit. The
+  # user never landed in a session, which is the one thing this skill exists to
+  # arrange. `claude [options] [prompt]` takes the prompt as a positional and
+  # starts an interactive session with it already delivered - no paste step, and
+  # the session is actually a session.
+  #
+  # The prompt goes LAST. Options first, then the positional, so adding a flag
+  # never has to step over it.
   local -a seg
   if [[ -n $id ]]; then
     seg=(
-      "claude -p \"Read Hydration Prompt located at $full, Process work order $id per its acceptance criteria after you've read it.\""
-      "--permission-mode bypassPermissions"
+      "claude --permission-mode bypassPermissions"
       "-n \"Session: $id - $title\""
+      "\"Read Hydration Prompt located at $full, Process work order $id per its acceptance criteria after you've read it.\""
     )
   else
-    # No work order. Three deliberate differences, none of them an oversight.
+    # No work order, and the command collapses to almost nothing. Every
+    # difference here is deliberate.
     #
-    # The acceptance-criteria clause is dropped, because there are none to
-    # process and pointing it at nothing is worse than leaving it out.
+    # There is no prompt at all. Not a shortened one, not the bare
+    # located-at clause - none. Work outside a ticket has no instruction until
+    # the person starting it writes one, and guessing at it produces a session
+    # confidently pointed at the wrong thing.
     #
     # bypassPermissions is not carried over: a ticket has a reviewed scope
     # behind it, an ad-hoc session has none, so it answers for itself.
     #
-    # The session name is left EMPTY on purpose. Work outside a ticket has no
-    # name until the person starting it decides what this session is - a design
-    # pass, a spike, an investigation - so the slot is left open to be typed at
-    # the moment of pasting. Do not "helpfully" fill it from the entry title.
+    # The session name is left EMPTY on purpose, for the same reason. Ad-hoc
+    # work has no name until the person starting it decides what this session
+    # is - a design pass, a spike, an investigation - so the slot stays open to
+    # be typed at the moment of pasting. Do not "helpfully" fill it from the
+    # entry title.
+    #
+    # What is left is one argument on one line: a named, empty session the
+    # human then drives. That is the correct amount of scaffolding for work
+    # nobody has scoped yet.
     seg=(
-      "claude -p \"Read Hydration Prompt located at $full\""
-      "-n \"Session: \""
+      "claude -n \"Session: \""
     )
   fi
 
