@@ -8,7 +8,8 @@ version: 1.0.2
 
 > **This copy is read-only.**
 > Skills are vendored into a project as copies, and this may be one.
-> Edit this skill at `~/dotfiles/claude/skills/skill-versioning/`, bump its version, then re-pull it - never edit the copy where it landed.
+> Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
+> Upstream is `~/dotfiles/claude/skills/skill-versioning/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/skill-versioning if that checkout is not on this machine.
 > `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
 > The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
@@ -75,8 +76,12 @@ The registry's `sha256` cannot catch that either: a project's copy legitimately 
 `verify` fails on any `SKILL.md` without it, and names the skill.
 That is what stops a new skill from being born without it, which is the failure this repository has already had once - with the session-start check, which lived in exactly one project until somebody asked why.
 
-The block sits under the title and names that skill's own upstream path rather than a placeholder.
-Copy it from any other skill.
+The block sits under the title and names that skill's own upstream twice: the local path, and the public URL.
+Both, because the local path is worthless on a machine with no dotfiles checkout - which is precisely the machine a vendored copy is most likely to be sitting on.
+A notice that says "edit it upstream" without a reachable upstream is a notice that gets ignored.
+
+Neither is a placeholder. See the documented exception in root `CLAUDE.md`.
+Copy the block from any other skill.
 
 ## The registry is generated, never edited
 
