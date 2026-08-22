@@ -245,6 +245,74 @@ on a branch nothing points at. This has happened twice. Recovery is cheap - fast
 branch fresh, cherry-pick, delete the merged branch on both sides - but noticing late is avoidable,
 and it is the usual reason a step gets skipped and the one-PR rule gets broken.
 
+## Session start - skill version check
+
+Skills are installed into a project as **copies**.
+A copy has no way of knowing the original moved on, so this check is the only thing standing between a project and a silently stale skill.
+Run it once, before the first task of the session.
+
+Skip the whole thing if `.claude/skills/` does not exist.
+
+**1. Read both sides.**
+
+```bash
+curl -fsS --max-time 5 https://raw.githubusercontent.com/jkkelley/dotfiles/main/claude/skills/registry.json
+grep -H '^version:' .claude/skills/*/SKILL.md
+```
+
+That URL is literal and correct.
+It is **not** a placeholder to be substituted with your own handle.
+Substituting it points the check at a repository that does not exist and breaks it silently.
+
+**2. Compare.**
+
+- A skill with no `version:` line predates versioning. Treat it as behind.
+- A skill installed in the project but absent from the registry is project-local. Ignore it silently.
+- If the fetch fails, say one line - `skill version check skipped, registry unreachable` - and start the work. Never block a session on this.
+
+**3. If everything matches, say nothing.**
+Start the work.
+No output, no confirmation, no "all skills current" line.
+
+**4. If anything is behind, print the gap, then ask.**
+One table, then exactly three options, then wait for an answer.
+
+| skill            | installed | latest | bump  |
+| ---------------- | --------- | ------ | ----- |
+| hydration-prompt | 1.1.0     | 1.4.0  | minor |
+
+1. **Update now.** Standalone, before the work starts.
+
+   ```bash
+   ~/dotfiles/claude/skills/skill-versioning/scripts/skill-update.sh \
+     --skill <name> --mode standalone --project .
+   ```
+
+   Branches off `origin/main` inside a throwaway worktree, copies, commits, pushes, opens a PR, squash-merges it without review, deletes the branch, fast-forwards local `main`, and prints the PR URL.
+   The working tree is never touched, so work in progress is safe.
+   Merged without review on purpose: the content is a byte copy of a file already reviewed in dotfiles, so there is nothing left for a human to decide.
+
+2. **Fold it into this work.** The update rides the commit that is about to happen anyway.
+
+   ```bash
+   ~/dotfiles/claude/skills/skill-versioning/scripts/skill-update.sh \
+     --skill <name> --mode inline --project .
+   ```
+
+   Copies the skill in and leaves it uncommitted.
+   No branch, no PR, no round trip.
+   Then get straight on with the actual task.
+
+3. **Note it and move on.**
+   The table above was the whole deliverable.
+   Write nothing, start the work.
+
+Report the outcome plainly: the new version and the full path on success, or the failing step and the log path on failure.
+The script captures both.
+
+If `~/dotfiles` is not checked out on this machine, only option 3 is available.
+Report the gap and say that updating needs the dotfiles checkout.
+
 ## Starting a session
 
 `HYDRATION.md` is the prompt that starts the next session, and the nine before it.

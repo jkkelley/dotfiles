@@ -3,7 +3,7 @@
 What each case runs, what it asserts, and **why that failure would matter**.
 
 A case whose "why" cannot be written is a case not worth keeping.
-Three of the eleven case files are mostly negative tests, because a validator that never rejects anything is not a validator.
+Three of the fourteen case files are mostly negative tests, because a validator that never rejects anything is not a validator.
 
 Run everything with:
 
@@ -223,6 +223,26 @@ An agent that opens `BACKLOG.md` directly, without reading `CLAUDE.md` first, ha
 Drop it from any one of them and the default silently reverts to reading all 20 `Done` entries. Nothing fails; the cost just shows up as tokens.
 
 The retention assertion guards the other direction. `Done` keeps 20 but is read 10 deep, and two nearby numbers that differ look like a bug to the next reader - the file has to say why, or someone will "fix" one to match the other and destroy either the window or the lookup.
+
+---
+
+## 140-skill-version-check
+
+**Runs:** a scaffold, then inspects `CLAUDE.md` for the session-start skill version check.
+
+**Asserts:** the section is present; the registry URL is carried literally, owner and all; it has not been rewritten into an angle-bracket placeholder; the check reads the installed `version:` lines as well as the registry; both apply modes are offered; the happy path is silent; an unreachable registry does not block the session; and the whole check is skipped where `.claude/skills/` does not exist.
+
+**Why it matters:** skills are installed into a project as copies, and a copy cannot know the original moved on.
+This section is the only thing that ever raises the question.
+Drop it from the template and every project scaffolded from then on runs on whatever skill version it was born with, indefinitely - and nothing fails, because old skills still work.
+That is exactly how two existing projects ended up without the check and stayed that way until somebody asked.
+
+The URL assertion is the sharp one, and it guards against this repository's own house style.
+Root `CLAUDE.md` requires environment-specific values to become `<angle-bracket>` placeholders, and this URL is its single documented exception.
+Substituting the owner points the check at a repository that does not exist, so the fetch fails, the check reports `registry unreachable`, and the session starts anyway.
+It breaks silently and stays broken, which is why a literal-string assertion sits in front of it.
+
+The silence assertion guards the opposite failure. A check that announces itself every session becomes noise, and noise gets skipped.
 
 ---
 
