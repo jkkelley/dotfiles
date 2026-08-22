@@ -1,10 +1,16 @@
 ---
 name: test-writer
 description: Write test suites for any programming language by analyzing code structure, public API surface, side effects, and edge cases. Use when the user asks to write tests, generate test cases, add unit or integration tests, improve test coverage, or says "write me a test" for code in any language (Python, JavaScript, TypeScript, Go, Java, Rust, Ruby, C#, PHP, Bash, and more).
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Test Writer
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill at `~/dotfiles/claude/skills/test-writer/`, bump its version, then re-pull it - never edit the copy where it landed.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 ## Workflow
 

@@ -1,10 +1,16 @@
 ---
 name: cover-letter
 description: Build a one-page .docx cover letter for a specific job application. Ingests a job description, picks prose fragments from tone-keyed pools, drafts a "why this company" paragraph, runs a pre-build checklist for user approval, then builds the output. Output lands in work_title/applications/<date>_<company>_<role>/ (gitignored, local-only).
-version: 1.0.0
+version: 1.0.1
 ---
 
 # /cover-letter - Cover Letter Generator
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill at `~/dotfiles/claude/skills/cover-letter/`, bump its version, then re-pull it - never edit the copy where it landed.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 Builds a tailored, one-page `.docx` cover letter from a job description.
 The prose/content package (`content/`) lives in this repo and is

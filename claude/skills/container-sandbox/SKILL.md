@@ -1,10 +1,16 @@
 ---
 name: container-sandbox
 description: Run all dependency-heavy tasks (npm, go, pip) in isolated Podman containers. Also use when showing the user a localhost frontend that makes API calls — a real or mock backend must be running in the same compose stack.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Dependency Isolation Protocol
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill at `~/dotfiles/claude/skills/container-sandbox/`, bump its version, then re-pull it - never edit the copy where it landed.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 **RULE:** Never run `npm install`, `go mod download`, or `pip install` on the host.
 

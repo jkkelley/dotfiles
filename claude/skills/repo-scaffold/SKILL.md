@@ -1,10 +1,16 @@
 ---
 name: repo-scaffold
 description: Scaffold a new repository from an existing one as a template, applying targeted tweaks. Use when you want to clone a repo's structure and patterns into a new project with a different name, language version, framework, or configuration; when spinning up a new service that mirrors an existing one; when asked to "make one just like X but change Y"; or when bootstrapping a new repo from a working reference.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Repo Scaffold
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill at `~/dotfiles/claude/skills/repo-scaffold/`, bump its version, then re-pull it - never edit the copy where it landed.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 Clone an existing repo's structure, conventions, and tooling into a new repo — changing only what needs to change.
 

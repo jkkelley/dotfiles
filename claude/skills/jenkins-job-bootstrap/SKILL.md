@@ -1,10 +1,16 @@
 ---
 name: jenkins-job-bootstrap
 description: Use when adding a new GitHub repo to homelab Jenkins and you don't want to click through the multibranch-job creation UI. Generates a Job DSL seed that creates/syncs all multibranch pipeline jobs from a YAML manifest committed to jenkins-shared-lib.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Jenkins Job Bootstrap
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill at `~/dotfiles/claude/skills/jenkins-job-bootstrap/`, bump its version, then re-pull it - never edit the copy where it landed.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 ## Overview
 

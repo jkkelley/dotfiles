@@ -1,10 +1,16 @@
 ---
 name: task-router
 description: Multi-task project coordinator. Holds the master plan, dispatches tasks as subagents or handoff documents, manages the PR gate (announce URL → stop → wait → merge → log → cleanup). Use when the user says "task-router", "use the task router", "we need the task router here", or invokes /task-router.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Task Router
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill at `~/dotfiles/claude/skills/task-router/`, bump its version, then re-pull it - never edit the copy where it landed.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 Coordinate multi-task projects. One Claude session holds the plan and routes work — either dispatching subagents directly or generating handoff documents for separate Claude sessions to pick up. Every task ends at a PR gate. The router does not merge; the user does.
 

@@ -1,10 +1,16 @@
 ---
 name: project-kickoff
 description: Run at the start of any new project before brainstorming or writing plans. Interviews the user about project infrastructure needs (AWS, K8s, secrets, CI/CD, DNS) and produces a filled-in, project-specific kickoff checklist with exact commands to run. Use when the user says "new project", "starting a project", "project kickoff", or "set up a new project".
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Project Kickoff
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill at `~/dotfiles/claude/skills/project-kickoff/`, bump its version, then re-pull it - never edit the copy where it landed.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 Capture infrastructure requirements before any code is written. One question at a time.
 Output is a concrete, copy-paste-ready checklist specific to this project.

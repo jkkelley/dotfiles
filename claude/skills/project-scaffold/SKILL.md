@@ -1,10 +1,16 @@
 ---
 name: project-scaffold
 description: Install and maintain the agent context layer in any project - CLAUDE.md, COMPASS.md, BACKLOG.md, ISSUES.md, NAMING.md, plus the scripts that own their formats. Use when starting a new project or directory, when asked to "scaffold this project", "set up the context files", "add COMPASS/BACKLOG/ISSUES", when an agent needs to log an issue or manage a backlog item, or when a project's markdown has drifted from the standard. Not for cloning an existing repo as a template - that is repo-scaffold.
-version: 1.1.0
+version: 1.1.1
 ---
 
 # project-scaffold
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill at `~/dotfiles/claude/skills/project-scaffold/`, bump its version, then re-pull it - never edit the copy where it landed.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 Install the agent context layer into a project, and own the formats of the files that make it up.
 

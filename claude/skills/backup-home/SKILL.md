@@ -1,10 +1,16 @@
 ---
 name: backup-home
 description: Archives $HOME to a timestamped tar.gz and uploads it to S3 (win11-wsl-backups bucket, DevEnv_Internal prefix) using the minecraft-admin profile. Shows a pre-flight size estimate, requires confirmation, then runs the backup script with a status summary.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # backup-home - Archive and Upload $HOME to S3
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill at `~/dotfiles/claude/skills/backup-home/`, bump its version, then re-pull it - never edit the copy where it landed.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 Backs up the user's home directory by creating a compressed archive and uploading it to S3.
 The script lives at `scripts/backup-home.sh` relative to this skill's base directory.

@@ -1,10 +1,16 @@
 ---
 name: repo-sync
 description: Syncs a local git repository to its main branch. Accepts a repo name or full path, finds the repo on disk if needed, runs git checkout main && git pull origin main, and gives the user a verification command that works from any working directory without disrupting their current session.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # repo-sync — Sync a Repo to Main
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill at `~/dotfiles/claude/skills/repo-sync/`, bump its version, then re-pull it - never edit the copy where it landed.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 Syncs a local git repository to its `main` branch.
 Accepts either a full path or a repo name.

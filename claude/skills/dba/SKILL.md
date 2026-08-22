@@ -7,10 +7,16 @@ description: >-
   schemas, evaluating table structure, writing migrations, choosing between join
   tables or embedded columns, asking about indexes, or any relational database
   design question. Preloaded into the backend-dev agent.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # DBA — Database Design Advisor
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill at `~/dotfiles/claude/skills/dba/`, bump its version, then re-pull it - never edit the copy where it landed.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 ## Schema Design Workflow
 
