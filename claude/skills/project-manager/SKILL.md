@@ -1,10 +1,17 @@
 ---
 name: project-manager
 description: Senior project manager with deep experience shipping software — planning, estimation, risk management, stakeholder communication, scope control, team unblocking, and delivery. Use when planning a project, creating a roadmap, writing a status report, running a retro, dealing with scope creep, a project is slipping, stakeholders are misaligned, a team is blocked, prioritization is needed, estimating work, managing a RAID log, running sprint ceremonies, or any project management question.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Project Manager
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
+> Upstream is `~/dotfiles/claude/skills/project-manager/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/project-manager if that checkout is not on this machine.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 ## Core philosophy
 

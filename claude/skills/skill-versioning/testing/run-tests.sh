@@ -62,6 +62,9 @@ description: Fixture skill carrying no version yet.
 ---
 
 # Alpha
+
+> **This copy is read-only.**
+> Upstream is `~/dotfiles/claude/skills/alpha/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/alpha if that checkout is not on this machine.
 EOF
   printf 'echo alpha\n' > "$d/alpha/scripts/run.sh"
   cat > "$d/beta/SKILL.md" <<'EOF'
@@ -72,6 +75,9 @@ version: 2.3.4
 ---
 
 # Beta
+
+> **This copy is read-only.**
+> Upstream is `~/dotfiles/claude/skills/beta/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/beta if that checkout is not on this machine.
 EOF
   # A directory with no SKILL.md is not a skill and must never reach the registry.
   printf 'not a skill\n' > "$d/not-a-skill/README.md"
@@ -139,6 +145,29 @@ bash "$SV" verify > "$WORK/verify-unversioned.out" 2>&1
 check "verify names the unversioned skill" \
   "$(grep -q '^unversioned .*gamma' "$WORK/verify-unversioned.out"; echo $?)"
 rm -rf "$SKILLS/gamma"
+
+# The read-only notice is what a vendored copy carries into a project. A skill
+# without it ships saying nothing, and skill-update.sh will one day replace a
+# local edit with no conflict and no warning. The gate is the only thing that
+# stops a new skill from being born that way.
+cp "$SKILLS/alpha/SKILL.md" "$WORK/alpha-ro.bak"
+grep -v 'This copy is read-only.' "$WORK/alpha-ro.bak" > "$SKILLS/alpha/SKILL.md"
+expect_rc "verify FAILS when a skill has no read-only notice" 1 bash "$SV" verify
+bash "$SV" verify > "$WORK/verify-noro.out" 2>&1
+check "verify names the skill missing the notice" \
+  "$(grep -q '^no read-only notice .*alpha' "$WORK/verify-noro.out"; echo $?)"
+# The URL is half the notice, and the half that still works on a machine with no
+# dotfiles checkout. Checked per skill, because the likeliest way to get it
+# wrong is a copy-paste that kept the neighbour's name - which reads as correct
+# and sends someone to the wrong skill.
+sed 's|claude/skills/alpha|claude/skills/beta|g' "$WORK/alpha-ro.bak" > "$SKILLS/alpha/SKILL.md"
+expect_rc "verify FAILS when the notice names another skill" 1 bash "$SV" verify
+bash "$SV" verify > "$WORK/verify-wrongurl.out" 2>&1
+check "verify names the skill whose notice points elsewhere" \
+  "$(grep -q '^notice has no upstream URL.*alpha' "$WORK/verify-wrongurl.out"; echo $?)"
+
+cp "$WORK/alpha-ro.bak" "$SKILLS/alpha/SKILL.md"
+expect_rc "verify passes once the notice is back" 0 bash "$SV" verify
 
 rm -rf "$SKILLS/beta"
 expect_rc "verify FAILS when the registry lists a skill that is gone" 1 bash "$SV" verify

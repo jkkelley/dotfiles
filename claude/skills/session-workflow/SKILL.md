@@ -1,10 +1,17 @@
 ---
 name: session-workflow
 description: Enforces work → test → verify → checkpoint → stop for multi-session implementation. Use when starting a session from a plan, or when the user says "session-mode" / "start session N" / "use session workflow" / "begin session workflow".
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Session Workflow
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
+> Upstream is `~/dotfiles/claude/skills/session-workflow/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/session-workflow if that checkout is not on this machine.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 One task. One session. Always ends with test → verify → checkpoint → PR → stop.
 

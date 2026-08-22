@@ -1,10 +1,17 @@
 ---
 name: cicd-pipeline-design
 description: Design CI/CD pipelines across Jenkins, GitHub Actions, GitLab CI, and CircleCI. Covers pipeline architecture, stage sequencing, artifact promotion, environment isolation, image tagging strategies to prevent build collisions, secrets management, caching, parallelism, and rollback patterns. Use when designing or debugging pipelines, when concurrent builds are overwriting each other's images or resources, when environments bleed into each other, when asked about pipeline structure, job dependencies, matrix builds, ephemeral environments, or promotion from dev to staging to production.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # CI/CD Pipeline Design
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
+> Upstream is `~/dotfiles/claude/skills/cicd-pipeline-design/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/cicd-pipeline-design if that checkout is not on this machine.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 ## Core mental model: every pipeline is a DAG
 

@@ -1,10 +1,17 @@
 ---
 name: figma-wireframe
 description: Produce structurally-correct wireframes, screen flows, and architecture diagrams as native Figma layers via the Figma MCP server. Use this skill whenever the user mentions wireframes, mockups, screen layouts, UI sketches, user flows, "design this page", "what should this screen look like", Figma, FigJam, or wants to turn a repo, API, PRD, or set of k8s/Terraform manifests into a visual artifact — even if they never say the word "wireframe". Always run the intake questionnaire first; never start drawing from an unstructured request.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Figma Wireframe
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
+> Upstream is `~/dotfiles/claude/skills/figma-wireframe/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/figma-wireframe if that checkout is not on this machine.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 Turns a vague design request into a deterministic, reproducible set of Figma
 frames. The determinism comes from a hard pipeline: **interview -> brief.json ->

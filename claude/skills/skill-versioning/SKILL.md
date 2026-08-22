@@ -1,10 +1,17 @@
 ---
 name: skill-versioning
 description: Semver for the skills in this dotfiles repo, and the machinery that keeps a project's installed copies honest. Use when bumping a skill's version, regenerating claude/skills/registry.json, checking whether a project's .claude/skills are behind the published registry, or applying an update to a project. Triggered by "bump this skill", "is my skill out of date", "update the skill in this project", "regenerate the registry", or by the session-start skill version check in CLAUDE.md.
-version: 1.0.1
+version: 1.0.2
 ---
 
 # Skill versioning
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
+> Upstream is `~/dotfiles/claude/skills/skill-versioning/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/skill-versioning if that checkout is not on this machine.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 Skills are installed into projects as copies.
 A copy has no idea the original moved on, so the moment a skill is edited here, every project holding a copy is silently behind.
@@ -39,7 +46,7 @@ Run from anywhere; the script locates the skills directory from its own path.
 ```bash
 scripts/skill-version.sh init                       # stamp unversioned skills at 1.0.0
 scripts/skill-version.sh bump <skill> --minor       # bump one skill, regen the registry
-scripts/skill-version.sh verify                     # the gate: versions present, registry fresh
+scripts/skill-version.sh verify                     # the gate: versions present, notice present, registry fresh
 scripts/skill-version.sh list                       # every skill and its version
 ```
 
@@ -56,6 +63,25 @@ Bumping in the middle and then editing again leaves the registry stale, and the 
 Harmless, and still a number that describes history inaccurately, which is the one thing this file is supposed to prevent.
 
 The habit is: finish the change, run `verify` to see the drift, then bump once to clear it.
+
+## Every SKILL.md carries the read-only notice
+
+A skill is copied into a project, and the copy is the file an agent reads there.
+If it does not say it is read-only, nothing does - a pointer to a document that did not travel with it is worth nothing at the moment somebody has the copy open and is about to change it.
+
+The stakes are not stylistic.
+`skill-update.sh` replaces the skill's directory rather than merging into it, so an edit made in a project is destroyed by the next update with no conflict and no warning.
+The registry's `sha256` cannot catch that either: a project's copy legitimately differs from upstream, so the hash was never going to match and the drift is invisible from both ends.
+
+`verify` fails on any `SKILL.md` without it, and names the skill.
+That is what stops a new skill from being born without it, which is the failure this repository has already had once - with the session-start check, which lived in exactly one project until somebody asked why.
+
+The block sits under the title and names that skill's own upstream twice: the local path, and the public URL.
+Both, because the local path is worthless on a machine with no dotfiles checkout - which is precisely the machine a vendored copy is most likely to be sitting on.
+A notice that says "edit it upstream" without a reachable upstream is a notice that gets ignored.
+
+Neither is a placeholder. See the documented exception in root `CLAUDE.md`.
+Copy the block from any other skill.
 
 ## The registry is generated, never edited
 

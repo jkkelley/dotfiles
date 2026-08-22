@@ -1,10 +1,17 @@
 ---
 name: homelab-shared-lib
 description: Reference for the homelab jenkins-shared-lib — DevSecOps pipeline steps for the Kaniko/K8s/GHCR stack. Use when writing or debugging Jenkinsfiles that call buildKaniko, deployStaging, dastZap, sastSonarQube, scaSnyk, iacCheckov, imageScanTrivy, deployProduction, updateGitOpsManifest, versionRelease, or pipelineConfig.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Homelab Jenkins Shared Library
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
+> Upstream is `~/dotfiles/claude/skills/homelab-shared-lib/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/homelab-shared-lib if that checkout is not on this machine.
+> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
 **Library declaration:**
 

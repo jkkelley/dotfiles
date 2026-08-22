@@ -205,31 +205,44 @@ Real values belong in:
 - A **`CONTEXT_STATE.md`** file in the project repo (see `context-compaction` skill)
 - Environment variables or a secrets manager — never in this repo
 
-### The one documented exception: the skills registry URL
+### The documented exception: this repo's own public URLs
 
-The skills registry is referenced in full, with the real GitHub owner, wherever
-the session-start skill version check appears:
+Two addresses in this repository are written in full, with the real GitHub
+owner. The skills registry, wherever the session-start skill version check
+appears:
 
 ```
 https://raw.githubusercontent.com/jkkelley/dotfiles/main/claude/skills/registry.json
 ```
 
-**This is not a placeholder violation, and it must not be "fixed" into one.**
+And each skill's own source, in the read-only notice every `SKILL.md` carries:
+
+```
+https://github.com/jkkelley/dotfiles/tree/main/claude/skills/<skill-name>
+```
+
+The second exists because the notice's other pointer, `~/dotfiles/claude/skills/`,
+is worthless on a machine with no dotfiles checkout - which is precisely the
+machine a vendored copy is most likely to be sitting on. A notice that says
+"edit it upstream" without a reachable upstream is a notice that gets ignored.
+
+**Neither is a placeholder violation, and neither must be "fixed" into one.**
 
 The rule above exists to keep _environment-specific_ values out of a public
-repo. This is not an environment-specific value. It is the address of one
-specific published file in this specific public repo, and the whole point of it
-is that any reader can fetch it. Replacing the owner with
+repo. These are not environment-specific values. They are the addresses of
+specific published files in this specific public repo, and the whole point of
+them is that any reader can fetch them. Replacing the owner with
 `<your-github-username>` makes every reader substitute their own handle, which
-resolves to a repository that does not exist. The check then fails silently and
-stays broken forever, which is strictly worse than a visible username on a repo
-that is public by design.
+resolves to a repository that does not exist. The pointer then fails silently
+and stays broken forever, which is strictly worse than a visible username on a
+repo that is public by design.
 
-Anyone forking this repo who wants to publish their own registry edits that one
-line. Everyone else gets a working pointer.
+Anyone forking this repo who wants to publish their own copy edits those lines.
+Everyone else gets a working pointer.
 
-This is the only exception in the repo. Every other environment-specific value
-stays in angle-bracket form.
+These are the only exceptions in the repo, and both point at this repo's own
+public content. Every other environment-specific value stays in angle-bracket
+form.
 
 ## Consuming These Files
 
