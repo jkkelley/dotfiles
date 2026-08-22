@@ -1,7 +1,7 @@
 ---
 name: cover-letter
 description: Build a one-page .docx cover letter for a specific job application. Ingests a job description, picks prose fragments from tone-keyed pools, drafts a "why this company" paragraph, runs a pre-build checklist for user approval, then builds the output. Output lands in work_title/applications/<date>_<company>_<role>/ (gitignored, local-only).
-version: 1.0.1
+version: 2.0.0
 ---
 
 # /cover-letter - Cover Letter Generator
@@ -18,35 +18,17 @@ The prose/content package (`content/`) lives in this repo and is
 version-controlled; per-application output (`work_title/applications/`) is
 gitignored and local-only. The engine lives in `scripts/` alongside this file.
 
-## Maintenance - mirroring to dotfiles
-
-This skill is the source of truth.
-The dotfiles repo at https://github.com/jkkelley/dotfiles mirrors it at
-`claude/skills/cover-letter/` for portability to other machines.
-
-**When this skill's scripts are updated:**
-
-1. Make and test all changes here first.
-2. Copy the updated files to dotfiles:
-   ```bash
-   cp .claude/skills/cover-letter/SKILL.md \
-      .claude/skills/cover-letter/scripts/build_cover_letter.py \
-      .claude/skills/cover-letter/scripts/docx_helpers.py \
-      .claude/skills/cover-letter/scripts/requirements.txt \
-      .claude/skills/cover-letter/scripts/test_design_system.py \
-      ~/dotfiles/claude/skills/cover-letter/scripts/
-   cp .claude/skills/cover-letter/SKILL.md \
-      ~/dotfiles/claude/skills/cover-letter/SKILL.md
-   ```
-3. Commit and open a PR in dotfiles targeting `main`.
-
-Never edit the dotfiles copy directly - changes made there will be overwritten.
-
 ## Prerequisites
 
-- This skill is installed project-locally (already true if you are reading this).
 - `podman` is available.
-- The `content/` package is present in this repo.
+- The `content/` package is present in the project this is vendored into, and it
+  is filled in. The build calls `check_ready('cover_letter')` before rendering
+  anything, so an unfilled package fails with a readable report rather than a
+  letter signed by nobody.
+- `content/profile.py` exports `WHOS_RESUME_IS_THIS` and `OWNER_SLUG`, and
+  `content/validate.py` exports `check_ready`. Nothing in this skill is
+  hardcoded to a person; the owner's name and the output filename both derive
+  from those two values.
 
 ## Phase B - Full per-application workflow
 
@@ -135,8 +117,8 @@ WHY_THIS_COMPANY = (
 CLOSING = CLOSING_<TONE>[<n>]  # <inline comment>
 ```
 
-`OUTPUT_FILENAME` defaults to `james_kelley_cover_letter.docx` - omit it for real applications.
-For test builds only, set `OUTPUT_FILENAME = 'TEST_james_kelley_cover_letter.docx'`.
+`OUTPUT_FILENAME` defaults to `<owner-slug>_cover_letter.docx`, derived from `WHOS_RESUME_IS_THIS` - omit it for real applications.
+For test builds only, set `OUTPUT_FILENAME = 'TEST_<owner-slug>_cover_letter.docx'`.
 
 ### Step 7 - Pre-build checklist
 
@@ -180,7 +162,7 @@ podman run --rm \
 Confirm the build exits 0 and the output exists:
 
 ```
-work_title/applications/<date>_<company>_<role>/james_kelley_cover_letter.docx
+work_title/applications/<date>_<company>_<role>/<owner-slug>_cover_letter.docx
 ```
 
 ### Step 9 - Verify
@@ -196,7 +178,7 @@ import sys
 sys.path.insert(0, '/')
 from docx import Document
 from content.profile import WHOS_RESUME_IS_THIS
-d = Document('/work/james_kelley_cover_letter.docx')
+d = Document('/work/<owner-slug>_cover_letter.docx')
 text = '\n'.join(p.text for p in d.paragraphs)
 assert WHOS_RESUME_IS_THIS in text, 'name missing'
 assert 'Dear Hiring Team' in text, 'greeting missing'
@@ -216,7 +198,7 @@ open a PR for it.
 Deliver to the user:
 
 ```
-Built:     work_title/applications/<date>_<company>_<role>/james_kelley_cover_letter.docx
+Built:     work_title/applications/<date>_<company>_<role>/<owner-slug>_cover_letter.docx
 Selection: work_title/applications/<date>_<company>_<role>/selection.py
 ```
 
