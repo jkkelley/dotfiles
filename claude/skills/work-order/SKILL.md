@@ -1,7 +1,7 @@
 ---
 name: work-order
 description: Deterministic ticketing for agent handoff. Creates and drives work-orders through a validated lifecycle, organises them as epics with children and a dependency graph, records progress notes, and binds acceptance criteria to Figma wireframe evidence when it exists. Use when the user asks for a ticket, a work-order, an epic, "cut me a ticket", "write this up as work", "what should I work on next", when handing a task to another agent, when adding a note or a dependency to existing work, or says "work-order with a side of figma" (run figma-wireframe first, then feed its output in). Not for prioritising a backlog - that is project-scaffold's BACKLOG.md.
-version: 1.0.1
+version: 1.0.2
 ---
 
 # Work Order
@@ -9,7 +9,7 @@ version: 1.0.1
 > **This copy is read-only.**
 > Skills are vendored into a project as copies, and this may be one.
 > Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
-> Upstream is `~/dotfiles/claude/skills/work-order/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/work-order if that checkout is not on this machine.
+> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/work-order/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
 > `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
 > The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 

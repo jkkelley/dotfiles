@@ -1,7 +1,7 @@
 ---
 name: project-scaffold
 description: Install and maintain the agent context layer in any project - CLAUDE.md, COMPASS.md, BACKLOG.md, ISSUES.md, NAMING.md, plus the scripts that own their formats. Use when starting a new project or directory, when asked to "scaffold this project", "set up the context files", "add COMPASS/BACKLOG/ISSUES", when an agent needs to log an issue or manage a backlog item, or when a project's markdown has drifted from the standard. Not for cloning an existing repo as a template - that is repo-scaffold.
-version: 1.1.1
+version: 1.2.0
 ---
 
 # project-scaffold
@@ -9,7 +9,7 @@ version: 1.1.1
 > **This copy is read-only.**
 > Skills are vendored into a project as copies, and this may be one.
 > Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
-> Upstream is `~/dotfiles/claude/skills/project-scaffold/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/project-scaffold if that checkout is not on this machine.
+> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/project-scaffold/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
 > `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
 > The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 

@@ -1,7 +1,7 @@
 ---
 name: cartography
 description: Map a complex system top-down into 3-7 "islands" and generate standalone, locally hostable HTML documents with embedded Mermaid diagrams - each island's execution tickets minted as real work-orders. Use when the user asks to map out, architect, or break down a system, business, or process from the ground up; asks for an island map, a macro map, a system blueprint, or "where do I even start with this"; wants architecture documentation as self-contained HTML; or says "map this out" / "break this into modules" / "cartography". Not for wireframing a UI - that is figma-wireframe. Not for ticketing work that is already understood - that is work-order on its own.
-version: 1.0.1
+version: 1.0.2
 ---
 
 # Cartography
@@ -9,7 +9,7 @@ version: 1.0.1
 > **This copy is read-only.**
 > Skills are vendored into a project as copies, and this may be one.
 > Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
-> Upstream is `~/dotfiles/claude/skills/cartography/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/cartography if that checkout is not on this machine.
+> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/cartography/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
 > `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
 > The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 

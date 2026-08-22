@@ -22,7 +22,7 @@ REGISTRY="$SKILLS_DIR/registry.json"
 # owner is literal on purpose - see the documented exception in root CLAUDE.md.
 # Substituting a placeholder here points every reader at a repo that does not
 # exist, and the notice fails silently rather than loudly.
-SKILL_SRC_URL="https://github.com/jkkelley/dotfiles/tree/main/claude/skills"
+SKILL_SRC_URL="https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills"
 
 die() { printf '%s: %s\n' "$SELF" "$*" >&2; exit 1; }
 
@@ -206,7 +206,7 @@ cmd_verify() {
   if [[ $noro -ne 0 ]]; then
     printf "\nadd the read-only notice under the SKILL.md title, naming that skill's\n" >&2
     printf "own upstream path and its own URL. Copy the block from any other skill:\n" >&2
-    printf "  https://github.com/jkkelley/dotfiles/tree/main/claude/skills\n" >&2
+    printf "  %s/<skill>/SKILL.md\n" "$SKILL_SRC_URL" >&2
     return 1
   fi
 

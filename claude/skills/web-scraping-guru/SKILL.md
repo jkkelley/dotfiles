@@ -1,7 +1,7 @@
 ---
 name: web-scraping-guru
 description: Expert web scraping advisor covering the full stack — HTTP clients, HTML parsing, headless browsers, anti-bot evasion, proxy strategy, TLS fingerprinting, CAPTCHA handling, pagination, infinite scroll, hidden API discovery, distributed crawling, and data normalization. Use when scraping any website, dealing with bot detection, choosing between a plain HTTP client vs headless browser, handling rate limits or bans, extracting data from JS-rendered pages, reverse-engineering undocumented APIs, or building a scraper that needs to survive long-term.
-version: 1.0.1
+version: 1.0.2
 ---
 
 # Web Scraping Guru
@@ -9,7 +9,7 @@ version: 1.0.1
 > **This copy is read-only.**
 > Skills are vendored into a project as copies, and this may be one.
 > Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
-> Upstream is `~/dotfiles/claude/skills/web-scraping-guru/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/web-scraping-guru if that checkout is not on this machine.
+> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/web-scraping-guru/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
 > `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
 > The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
