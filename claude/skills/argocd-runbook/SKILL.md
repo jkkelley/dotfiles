@@ -1,6 +1,7 @@
 ---
 name: argocd-runbook
 description: ArgoCD troubleshooting runbook and GitOps operation reference. Preloaded into the argocd-gitops agent.
+version: 1.0.0
 ---
 
 # ArgoCD Runbook

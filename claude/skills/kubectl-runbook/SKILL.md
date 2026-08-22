@@ -1,6 +1,7 @@
 ---
 name: kubectl-runbook
 description: Quick reference for kubectl commands and Kubernetes troubleshooting workflows. Preloaded into the k8s-master agent.
+version: 1.0.0
 ---
 
 # kubectl Runbook

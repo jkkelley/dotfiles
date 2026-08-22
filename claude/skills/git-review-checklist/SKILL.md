@@ -1,6 +1,7 @@
 ---
 name: git-review-checklist
 description: Git code review checklist, commit hygiene standards, and branching strategy reference. Preloaded into the git-code-reviewer agent.
+version: 1.0.0
 ---
 
 # Git Review Checklist

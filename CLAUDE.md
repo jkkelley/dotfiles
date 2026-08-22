@@ -123,6 +123,33 @@ knows what they are looking at. A digest with no comment is unmaintainable.
 
 This repository is **public and intended to be shared**. The agents, skills, and configurations here are designed to be consumed by anyone. That means every file must be safe to read by the general public at all times.
 
+## Rule 16 — A skill edit is not done until the version and registry move
+
+Every skill carries a `version:` in its SKILL.md frontmatter, and
+`claude/skills/registry.json` is the published index of those versions. Skills
+are installed into projects as **copies**, so a copy has no way of knowing the
+original moved on. The version is the only thing that tells it.
+
+Any PR that touches a file under `claude/skills/<name>/` must, in that same PR:
+
+1. Bump that skill's version - `claude/skills/skill-versioning/scripts/skill-version.sh bump <name> --patch|--minor|--major`
+2. Ship the regenerated `registry.json` that the bump wrote
+
+| Bump      | Trigger                                                                                                                                     |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--major` | A consumer's existing usage breaks: renamed skill, removed or renamed script flag, changed format of a file the skill owns, removed trigger |
+| `--minor` | New capability, backward compatible: new intent, new subcommand, new reference file, new trigger                                            |
+| `--patch` | Wording, script bugfix, doc clarification, test-only change                                                                                 |
+
+**Never hand-edit `version:` or `registry.json`.** The script owns both formats.
+Hand-editing one leaves the other stale, which is precisely the failure
+`skill-version.sh verify` exists to catch. Run `verify` before opening the PR;
+it exits non-zero if any skill is unversioned, if the registry is missing, or if
+a skill's contents changed without a bump.
+
+Adding a brand new skill is the same obligation: `skill-version.sh init` stamps
+it at `1.0.0` and regenerates the registry.
+
 Refer to the user as _they_ for pronouns - never assume who they may be.
 
 ## Feature branches only - never commit to `main`
@@ -177,6 +204,32 @@ Real values belong in:
 - A **project-level `CLAUDE.md`** in the consuming project's repo (not committed here)
 - A **`CONTEXT_STATE.md`** file in the project repo (see `context-compaction` skill)
 - Environment variables or a secrets manager — never in this repo
+
+### The one documented exception: the skills registry URL
+
+The skills registry is referenced in full, with the real GitHub owner, wherever
+the session-start skill version check appears:
+
+```
+https://raw.githubusercontent.com/jkkelley/dotfiles/main/claude/skills/registry.json
+```
+
+**This is not a placeholder violation, and it must not be "fixed" into one.**
+
+The rule above exists to keep _environment-specific_ values out of a public
+repo. This is not an environment-specific value. It is the address of one
+specific published file in this specific public repo, and the whole point of it
+is that any reader can fetch it. Replacing the owner with
+`<your-github-username>` makes every reader substitute their own handle, which
+resolves to a repository that does not exist. The check then fails silently and
+stays broken forever, which is strictly worse than a visible username on a repo
+that is public by design.
+
+Anyone forking this repo who wants to publish their own registry edits that one
+line. Everyone else gets a working pointer.
+
+This is the only exception in the repo. Every other environment-specific value
+stays in angle-bracket form.
 
 ## Consuming These Files
 

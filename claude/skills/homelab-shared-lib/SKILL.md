@@ -1,6 +1,7 @@
 ---
 name: homelab-shared-lib
 description: Reference for the homelab jenkins-shared-lib — DevSecOps pipeline steps for the Kaniko/K8s/GHCR stack. Use when writing or debugging Jenkinsfiles that call buildKaniko, deployStaging, dastZap, sastSonarQube, scaSnyk, iacCheckov, imageScanTrivy, deployProduction, updateGitOpsManifest, versionRelease, or pipelineConfig.
+version: 1.0.0
 ---
 
 # Homelab Jenkins Shared Library

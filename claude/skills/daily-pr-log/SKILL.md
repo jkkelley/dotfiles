@@ -1,6 +1,7 @@
 ---
 name: daily-pr-log
 description: Use when the user says "add to the PR log", "log this PR", or provides a PR URL to record. Appends the URL to the daily PR log file in the knowledge base.
+version: 1.0.0
 ---
 
 # Daily PR Log

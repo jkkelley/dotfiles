@@ -5,6 +5,7 @@ description: >
   Invoke when wiring secrets for a new namespace OR adding a new SSM
   parameter to an existing namespace setup. Covers the full stack:
   Terraform identity, ApplicationSet ARN discovery, ESO delivery.
+version: 1.0.0
 ---
 
 # ESO Secret Workflow — Staff-Level Standard

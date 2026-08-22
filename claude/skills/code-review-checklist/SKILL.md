@@ -1,6 +1,7 @@
 ---
 name: code-review-checklist
 description: Comprehensive code review checklist covering security, performance, correctness, and maintainability across all languages. Preloaded into the polyglot-code-reviewer agent.
+version: 1.0.0
 ---
 
 # Code Review Checklist

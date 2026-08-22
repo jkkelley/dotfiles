@@ -1,6 +1,7 @@
 ---
 name: container-design
 description: Design and sequence multi-container applications — dependency ordering, volume and network attachment, init patterns, health-check gating, and startup scripts. Use when wiring containers together in Docker, Podman, Docker Compose, or Kubernetes; when a container needs multiple resources (volumes, networks, sidecars) attached simultaneously; when deciding between init containers, entrypoint scripts, depends_on, or shell sequencing; or when asked about container startup order, PBF imports, database readiness, or any "container A needs B and C before it can run" problem.
+version: 1.0.0
 ---
 
 # Container Design

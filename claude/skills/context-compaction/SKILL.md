@@ -1,6 +1,7 @@
 ---
 name: context-compaction
 description: Distill a long session into a structured CONTEXT_STATE.md file to prevent context drift across sessions. Use when context usage exceeds 30%, before starting a new thread, or when architecture details feel stale.
+version: 1.0.0
 ---
 
 # Context Compaction Protocol

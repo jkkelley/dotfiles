@@ -1,0 +1,122 @@
+---
+name: skill-versioning
+description: Semver for the skills in this dotfiles repo, and the machinery that keeps a project's installed copies honest. Use when bumping a skill's version, regenerating claude/skills/registry.json, checking whether a project's .claude/skills are behind the published registry, or applying an update to a project. Triggered by "bump this skill", "is my skill out of date", "update the skill in this project", "regenerate the registry", or by the session-start skill version check in CLAUDE.md.
+version: 1.0.0
+---
+
+# Skill versioning
+
+Skills are installed into projects as copies.
+A copy has no idea the original moved on, so the moment a skill is edited here, every project holding a copy is silently behind.
+That is not hypothetical: it is the default state of every project in this setup.
+
+This skill fixes visibility first and updating second.
+The version is metadata the copy carries with it, the registry is the published truth to compare against, and the update is a scripted, repeatable apply.
+
+## The three pieces
+
+| Piece                              | Where                               | Who writes it               |
+| ---------------------------------- | ----------------------------------- | --------------------------- |
+| `version:` in SKILL.md frontmatter | every skill                         | `skill-version.sh`          |
+| `claude/skills/registry.json`      | this repo, published raw over HTTPS | `skill-version.sh`          |
+| The session-start check            | each project's CLAUDE.md            | the agent, once per session |
+
+The version lives in frontmatter because that is the one file `setup.sh` already copies.
+An installed skill therefore self-reports its own version with no extra file and no change to the installer.
+
+## What a version bump means
+
+| Bump  | Trigger                                                                                                                                             |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MAJOR | A consumer's existing usage breaks. Renamed skill, removed or renamed script flag, changed format of a file the skill owns, removed trigger phrase. |
+| MINOR | New capability, backward compatible. New intent, new script subcommand, new reference file, new trigger.                                            |
+| PATCH | Wording, script bugfix, doc clarification, test-only change.                                                                                        |
+
+## Commands
+
+Run from anywhere; the script locates the skills directory from its own path.
+
+```bash
+scripts/skill-version.sh init                       # stamp unversioned skills at 1.0.0
+scripts/skill-version.sh bump <skill> --minor       # bump one skill, regen the registry
+scripts/skill-version.sh verify                     # the gate: versions present, registry fresh
+scripts/skill-version.sh list                       # every skill and its version
+```
+
+`bump` is the only supported way to change a version.
+Hand-editing the field leaves the registry stale, and `verify` exists to catch exactly that.
+
+## The registry is generated, never edited
+
+`render_registry` is a pure function of the skills on disk.
+Same tree in, same bytes out.
+That is what lets `verify` be a straight string comparison against the committed file instead of a JSON parser, and it is why the registry carries no timestamp.
+A timestamp would change on every render and make `verify` fail for no reason.
+When the comparison fails, `verify` walks the entries line-wise and names the skills that drifted rather than printing a byte diff, because the answer the reader wants is which skill to bump.
+That path deliberately shells out to nothing beyond bash, grep and coreutils, so the tests can run on a minimal image.
+
+Each entry carries a version and a `sha256` over the skill's file contents and relative paths.
+The hash is what catches the failure the version alone cannot: contents changed, version did not.
+
+```json
+{
+  "schema": 1,
+  "generator": "skill-version.sh",
+  "skills": {
+    "hydration-prompt": { "version": "1.0.0", "sha256": "..." }
+  }
+}
+```
+
+The hash is a repo-side gate only.
+The session-start check in a project compares versions, because a project's copy legitimately excludes files (`testing/`, for instance) and would never match the hash.
+
+## Applying an update to a project
+
+`scripts/skill-update.sh` implements the two apply modes the session-start check offers.
+
+```bash
+scripts/skill-update.sh --skill hydration-prompt --mode inline     --project ~/projects/foo
+scripts/skill-update.sh --skill hydration-prompt --mode standalone --project ~/projects/foo
+```
+
+**inline** copies the skill into the working tree and stops.
+The change is left uncommitted so it rides the commit the user is already about to make.
+No branch, no PR, no round trip, no interruption.
+
+**standalone** does the whole thing now, inside a throwaway git worktree so the user's dirty working tree is never touched.
+It branches off `origin/main`, copies, commits, pushes, opens a PR, squash-merges it, deletes the remote branch, removes the worktree, fast-forwards local main when that is safe, and prints the PR URL.
+
+The PR is merged without review on purpose.
+The content is a byte copy of a file already reviewed in dotfiles, so there is nothing left for a human to decide.
+
+Both modes replace the destination directory rather than merging into it.
+A file deleted upstream has to disappear downstream too, or a skill goes on executing a script its own SKILL.md no longer mentions.
+
+Every run is logged to `<project>/.claude/logs/skill-update-<skill>-<timestamp>.log`.
+On failure the script names the step it died on, points at the log, and removes the worktree and branch, so a failed run leaves nothing half-applied.
+
+## The obligation this creates on every skill edit
+
+Changing any file under `claude/skills/<name>/` obliges the same PR to bump that skill's version and regenerate the registry.
+This is Rule 16 in this repo's CLAUDE.md.
+`skill-version.sh verify` is the gate that enforces it.
+
+## Testing
+
+Run from this skill's directory. 49 checks, 20 of them negative.
+
+```bash
+podman run --rm --userns=keep-id --network=none --entrypoint="" \
+  -v "$PWD:/skill:ro,Z" -v "$(mktemp -d):/work:Z" -w /work \
+  docker.io/bitnami/git@sha256:1baa6ddbde79fa7ba2fdf441cea47c4f04fae067504d9265e416358db0879ab2 \
+  bash /skill/testing/run-tests.sh
+```
+
+The image is `bitnami/git` rather than `bash:5` because these scripts drive real git: worktrees, a bare remote, push, fast-forward.
+`bash:5` ships no git at all, so testing this against it would test nothing that matters.
+
+The source mount is read-only, which matters here because `init` and `bump` rewrite SKILL.md files in place.
+The tests copy a fixture tree into `/work` and point `SKILL_VERSION_SKILLS_DIR` at it, so a passing run also proves neither script writes back into its own source.
+`--network=none` proves the same about the network.
+Standalone mode is driven against a local bare repo with a stubbed `gh` that performs the merge itself, so the branch, commit, push, merge and delete orchestration is genuinely exercised without ever reaching GitHub.
