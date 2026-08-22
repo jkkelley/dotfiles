@@ -13,7 +13,7 @@ source "${SKILL:-/skill}/testing/assert.sh"
 p=$(scaffolded_project)
 
 assert_contains "$p/CLAUDE.md" "\`BACKLOG.md\`" "CLAUDE.md names BACKLOG in the sliding-window rule"
-assert_contains "$p/CLAUDE.md" "top 10 of \`Done\` only" "CLAUDE.md scopes the window to Done"
+assert_contains "$p/CLAUDE.md" "The window applies to \`Done\` only" "CLAUDE.md scopes the window to Done"
 assert_contains "$p/COMPASS.md" "top 10 entries only" "COMPASS.md carries the window into its routing table"
 assert_contains "$p/BACKLOG.md" "Read protocol:" "BACKLOG.md restates the rule at the point of use"
 assert_contains "$p/BACKLOG.md" "top 10 entries and stop" "BACKLOG.md states the depth"
