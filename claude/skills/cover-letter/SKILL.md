@@ -1,6 +1,7 @@
 ---
 name: cover-letter
 description: Build a one-page .docx cover letter for a specific job application. Ingests a job description, picks prose fragments from tone-keyed pools, drafts a "why this company" paragraph, runs a pre-build checklist for user approval, then builds the output. Output lands in work_title/applications/<date>_<company>_<role>/ (gitignored, local-only).
+version: 1.0.0
 ---
 
 # /cover-letter - Cover Letter Generator

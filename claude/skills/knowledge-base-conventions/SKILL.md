@@ -1,6 +1,7 @@
 ---
 name: knowledge-base-conventions
 description: Directory structure, conventions, templates, and git workflow for the homelab knowledge base at ~/projects/knowledge-base. Preloaded into the tech-writer agent.
+version: 1.0.0
 ---
 
 # Knowledge Base Conventions

@@ -1,6 +1,7 @@
 ---
 name: plan-scaffold
 description: Scaffold a new project workspace inside the claude-plans repo. Creates the full directory structure (project-specific CLAUDE.md additions, README, issues.md, sessions-table, CONTEXT_STATE stub, .claudeignore symlink, .claude/settings.local.json, per-subproject dirs), updates the root README.md project tables, then asks whether to commit/push, sync to S3, or both. Optionally chains into project-kickoff. Use when the user says "plan-scaffold", "scaffold a new project", "set up a project workspace", or after brainstorming when ready to lay down the planning structure.
+version: 1.0.0
 ---
 
 # plan-scaffold

@@ -1,6 +1,7 @@
 ---
 name: test-writer
 description: Write test suites for any programming language by analyzing code structure, public API surface, side effects, and edge cases. Use when the user asks to write tests, generate test cases, add unit or integration tests, improve test coverage, or says "write me a test" for code in any language (Python, JavaScript, TypeScript, Go, Java, Rust, Ruby, C#, PHP, Bash, and more).
+version: 1.0.0
 ---
 
 # Test Writer

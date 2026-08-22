@@ -1,6 +1,7 @@
 ---
 name: log-issue
 description: Append one or more issue/fix entries to the project issue log in ~/projects/knowledge-base. Use when the user says "add to the issue log", "log this issue/fix", "add these issues", or similar. Never read the full issue log file — only append to the top.
+version: 1.0.0
 ---
 
 # Issue Log Skill

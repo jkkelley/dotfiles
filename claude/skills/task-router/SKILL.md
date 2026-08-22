@@ -1,6 +1,7 @@
 ---
 name: task-router
 description: Multi-task project coordinator. Holds the master plan, dispatches tasks as subagents or handoff documents, manages the PR gate (announce URL → stop → wait → merge → log → cleanup). Use when the user says "task-router", "use the task router", "we need the task router here", or invokes /task-router.
+version: 1.0.0
 ---
 
 # Task Router

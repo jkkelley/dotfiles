@@ -1,6 +1,7 @@
 ---
 name: jenkins-job-bootstrap
 description: Use when adding a new GitHub repo to homelab Jenkins and you don't want to click through the multibranch-job creation UI. Generates a Job DSL seed that creates/syncs all multibranch pipeline jobs from a YAML manifest committed to jenkins-shared-lib.
+version: 1.0.0
 ---
 
 # Jenkins Job Bootstrap

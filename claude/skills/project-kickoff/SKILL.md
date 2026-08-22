@@ -1,6 +1,7 @@
 ---
 name: project-kickoff
 description: Run at the start of any new project before brainstorming or writing plans. Interviews the user about project infrastructure needs (AWS, K8s, secrets, CI/CD, DNS) and produces a filled-in, project-specific kickoff checklist with exact commands to run. Use when the user says "new project", "starting a project", "project kickoff", or "set up a new project".
+version: 1.0.0
 ---
 
 # Project Kickoff

@@ -1,6 +1,7 @@
 ---
 name: api-design-checklist
 description: API design checklist covering security, versioning, idempotency, error standards, and OpenAPI conventions. Preloaded into the api-designer agent.
+version: 1.0.0
 ---
 
 # API Design Checklist

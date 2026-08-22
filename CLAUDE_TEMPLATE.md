@@ -38,17 +38,87 @@ when context usage exceeds ~30%, or when starting a new session that needs conti
 
 ---
 
+## Session start — skill version check
+
+Skills are installed into this project as **copies**. A copy has no way of knowing the
+original moved on, so this check is the only thing standing between this project and a
+silently stale skill. Run it once, before the first task of the session.
+
+Skip the whole thing if `.claude/skills/` does not exist.
+
+**1. Read both sides.**
+
+```bash
+curl -fsS --max-time 5 https://raw.githubusercontent.com/jkkelley/dotfiles/main/claude/skills/registry.json
+grep -H '^version:' .claude/skills/*/SKILL.md
+```
+
+That URL is literal and correct. It is **not** a placeholder to be substituted with your
+own handle — see "the one documented exception" in the dotfiles `CLAUDE.md`. Substituting
+it points the check at a repository that does not exist and breaks it silently.
+
+**2. Compare.**
+
+- A skill with no `version:` line predates versioning. Treat it as behind.
+- A skill installed here but absent from the registry is project-local. Ignore it silently.
+- If the fetch fails, say one line — `skill version check skipped, registry unreachable` —
+  and start the work. Never block a session on this.
+
+**3. If everything matches, say nothing.** Start the work. No output, no confirmation,
+no "all skills current" line.
+
+**4. If anything is behind, print the gap, then ask.** One table, then exactly three
+options, then wait for an answer:
+
+| skill            | installed | latest | bump  |
+| ---------------- | --------- | ------ | ----- |
+| hydration-prompt | 1.1.0     | 1.4.0  | minor |
+
+1. **Update now.** Standalone, before the work starts.
+
+   ```bash
+   ~/dotfiles/claude/skills/skill-versioning/scripts/skill-update.sh \
+     --skill <name> --mode standalone --project .
+   ```
+
+   Branches off `origin/main` inside a throwaway worktree, copies, commits, pushes,
+   opens a PR, squash-merges it without review, deletes the branch, fast-forwards local
+   `main`, and prints the PR URL. The working tree is never touched, so work in progress
+   is safe. Merged without review on purpose: the content is a byte copy of a file
+   already reviewed in dotfiles, so there is nothing left for a human to decide.
+
+2. **Fold it into this work.** The update rides the commit that is about to happen anyway.
+
+   ```bash
+   ~/dotfiles/claude/skills/skill-versioning/scripts/skill-update.sh \
+     --skill <name> --mode inline --project .
+   ```
+
+   Copies the skill in and leaves it uncommitted. No branch, no PR, no round trip.
+   Then get straight on with the actual task.
+
+3. **Note it and move on.** The table above was the whole deliverable. Write nothing,
+   start the work.
+
+Report the outcome plainly: the new version and the full path on success, or the failing
+step and the log path on failure. The script captures both.
+
+If `~/dotfiles` is not checked out on this machine, only option 3 is available — report
+the gap and say that updating needs the dotfiles checkout.
+
+---
+
 ## Cluster & Architecture (homelab — non-negotiable defaults)
 
-| Fact | Value |
-|------|-------|
-| Cluster | homelab Kubernetes |
-| Node architecture | **ARM64 (aarch64)** |
-| Default image platform | `linux/arm64` |
-| Multi-arch images | **only when explicitly requested** |
-| Kubernetes version | `<k8s-version>` (e.g. `1.31`) |
-| Control plane | `<control-plane-host>` |
-| Worker nodes | `<worker-node-1>`, `<worker-node-2>` |
+| Fact                   | Value                                |
+| ---------------------- | ------------------------------------ |
+| Cluster                | homelab Kubernetes                   |
+| Node architecture      | **ARM64 (aarch64)**                  |
+| Default image platform | `linux/arm64`                        |
+| Multi-arch images      | **only when explicitly requested**   |
+| Kubernetes version     | `<k8s-version>` (e.g. `1.31`)        |
+| Control plane          | `<control-plane-host>`               |
+| Worker nodes           | `<worker-node-1>`, `<worker-node-2>` |
 
 **Implications Claude must respect without being told:**
 
@@ -72,9 +142,9 @@ services it interacts with>`
 
 `<table of subdirectories / services if monorepo, otherwise delete>`
 
-| Directory | Language | Role |
-|---|---|---|
-| `<dir>` | `<lang>` | `<role>` |
+| Directory | Language | Role     |
+| --------- | -------- | -------- |
+| `<dir>`   | `<lang>` | `<role>` |
 
 ---
 
@@ -114,7 +184,7 @@ cluster drift in the past.
    ephemeral sandbox. Two flavors, pick whichever fits the change:
 
    - **Podman** — for unit tests, integration tests, build verification, and any
-     work that does not require a Kubernetes API. See *Build & Dependency Hygiene*
+     work that does not require a Kubernetes API. See _Build & Dependency Hygiene_
      below for the exact pattern.
    - **Kind** (Kubernetes-in-Docker) — for any change that touches manifests,
      RBAC, NetworkPolicies, CRDs, or anything else that needs a real apiserver.
@@ -130,14 +200,14 @@ cluster drift in the past.
    repo to its `main` (or feature branch). Don't push code that hasn't been
    exercised in step 1.
 
-3. **Manually trigger Jenkins.** Webhooks and SCM polling are *not* the trigger
+3. **Manually trigger Jenkins.** Webhooks and SCM polling are _not_ the trigger
    of record — the operator (the human user) clicks "Build Now" in the Jenkins
    UI when ready. This is intentional: it gives the operator a final chance to
    confirm the right commit will be built. **Claude does not trigger Jenkins.**
 
 4. **Jenkins → Kaniko → GHCR.** The pipeline builds the image, scans it with
    Trivy, and (for ArgoCD-managed apps only) updates the GitOps overlay. See
-   *CI/CD Pipeline*.
+   _CI/CD Pipeline_.
 
 5. **GitOps prerequisite — for ArgoCD-managed apps only.** **The Jenkins
    `Update GitOps` stage will fail unless `apps/<app-name>/{base,overlays/homelab}/`
@@ -187,6 +257,7 @@ podman run --rm -v .:/app:Z -w /app docker.io/python:3.12-slim   sh -c "pip inst
 ```
 
 Notes:
+
 - The `:Z` mount flag is required on SELinux hosts; harmless elsewhere.
 - Podman on WSL2 requires **fully-qualified image names** (`docker.io/golang:1.22`,
   not `golang:1.22`).
@@ -200,27 +271,27 @@ caches and causes "works on my machine" drift between local and CI builds.
 ## CI/CD Pipeline (homelab standard)
 
 **Triggering: manual.** Operator clicks "Build Now" in the Jenkins UI. See
-*Development Workflow*, step 3.
+_Development Workflow_, step 3.
 
 All projects in this homelab use the same pipeline shape:
 
 1. **Kaniko** builds the OCI image inside the cluster (no Docker daemon).
 2. **Trivy** scans the image (non-blocking by default).
 3. **Kustomize** overlay at `k8s/overlays/homelab/` is updated with the new image tag.
-   *(Skip for projects that produce an image-only artifact with no synced k8s resources.)*
+   _(Skip for projects that produce an image-only artifact with no synced k8s resources.)_
 4. **ArgoCD** picks up the manifest change and syncs to the cluster.
 
 **Pre-flight requirement (step 3):** the GitOps overlay path must already exist
-in `homelab-gitops` before the stage runs — see *Development Workflow*, step 5.
+in `homelab-gitops` before the stage runs — see _Development Workflow_, step 5.
 
-| Variable | Value |
-|----------|-------|
-| Image registry | `ghcr.io/<github-username>/<repo-name>` |
-| Image tag scheme | `<tag-scheme>` (typically `${BUILD_NUMBER}` or `${GIT_SHA}`) |
-| Pipeline definition | `jenkins/Jenkinsfile` |
-| Shared library | `jenkins-shared-lib` (see the `homelab-shared-lib` skill) |
-| GitOps repo | `github.com/<github-username>/<gitops-repo-name>` |
-| Overlay path | `apps/<app-name>/overlays/homelab` |
+| Variable            | Value                                                        |
+| ------------------- | ------------------------------------------------------------ |
+| Image registry      | `ghcr.io/<github-username>/<repo-name>`                      |
+| Image tag scheme    | `<tag-scheme>` (typically `${BUILD_NUMBER}` or `${GIT_SHA}`) |
+| Pipeline definition | `jenkins/Jenkinsfile`                                        |
+| Shared library      | `jenkins-shared-lib` (see the `homelab-shared-lib` skill)    |
+| GitOps repo         | `github.com/<github-username>/<gitops-repo-name>`            |
+| Overlay path        | `apps/<app-name>/overlays/homelab`                           |
 
 Standard shared-lib steps used: `buildKaniko`, `imageScanTrivy`, `updateGitOpsManifest`.
 For Jenkinsfile patterns and snippets, see the `jenkinsfile-snippets` skill.
@@ -229,22 +300,22 @@ For Jenkinsfile patterns and snippets, see the `jenkinsfile-snippets` skill.
 
 ## Shared Infrastructure (cluster-wide constants)
 
-| Resource | Value |
-|----------|-------|
-| Cluster name | `<cluster-name>` |
-| Namespace (this project) | `<project-namespace>` |
-| Ingress controller | HAProxy + cert-manager |
-| Cert issuer | `local-ca-issuer` |
-| TLS host(s) | `<host>.homelab` |
-| Storage class | Longhorn (RWO default; RWX where explicitly noted) |
-| Secrets management | external-secrets-operator (`jenkins-ssm-store`) |
-| Service registry pattern | `http://<svc>.<namespace>.svc.cluster.local:<port>` |
-| Image pull secret | `<image-pull-secret-name>` (typically `ghcr-pull-secret`) |
+| Resource                 | Value                                                     |
+| ------------------------ | --------------------------------------------------------- |
+| Cluster name             | `<cluster-name>`                                          |
+| Namespace (this project) | `<project-namespace>`                                     |
+| Ingress controller       | HAProxy + cert-manager                                    |
+| Cert issuer              | `local-ca-issuer`                                         |
+| TLS host(s)              | `<host>.homelab`                                          |
+| Storage class            | Longhorn (RWO default; RWX where explicitly noted)        |
+| Secrets management       | external-secrets-operator (`jenkins-ssm-store`)           |
+| Service registry pattern | `http://<svc>.<namespace>.svc.cluster.local:<port>`       |
+| Image pull secret        | `<image-pull-secret-name>` (typically `ghcr-pull-secret`) |
 
 **In-cluster service URLs (this project):**
 
-| Service | URL |
-|---------|-----|
+| Service       | URL                                                   |
+| ------------- | ----------------------------------------------------- |
 | `<service-1>` | `http://<svc-1>.<namespace>.svc.cluster.local:<port>` |
 | `<service-2>` | `http://<svc-2>.<namespace>.svc.cluster.local:<port>` |
 
@@ -252,14 +323,14 @@ For Jenkinsfile patterns and snippets, see the `jenkinsfile-snippets` skill.
 
 ## Database
 
-| Field | Value |
-|-------|-------|
-| Engine | `<postgres|mysql|sqlite|...>` |
-| Deployment | `<StatefulSet|managed|external>` |
-| Storage | `<longhorn-pvc-size>` |
-| Backup | `<backup-strategy>` (e.g. daily `pg_dump` to S3 at `<time>`) |
-| Connection secret | `<db-secret-name>` |
-| Connection string env var | `DATABASE_URL` |
+| Field                     | Value                                                        |
+| ------------------------- | ------------------------------------------------------------ |
+| Engine                    | `<postgres                                                   | mysql   | sqlite     | ...>` |
+| Deployment                | `<StatefulSet                                                | managed | external>` |
+| Storage                   | `<longhorn-pvc-size>`                                        |
+| Backup                    | `<backup-strategy>` (e.g. daily `pg_dump` to S3 at `<time>`) |
+| Connection secret         | `<db-secret-name>`                                           |
+| Connection string env var | `DATABASE_URL`                                               |
 
 `<schema-flexibility / migration-strategy notes — only what isn't derivable from
 inspecting migration files. Examples: JSONB column for forward-compat, soft-delete
@@ -296,6 +367,7 @@ namespaces, IPs, secret names) live **here** in the project-level `CLAUDE.md` an
 `CONTEXT_STATE.md` — never back in the template.
 
 Once you've filled in every `<placeholder>`, delete:
+
 - The top admonition block
 - The `## TO CLAUDE — read this block FIRST` section
 - This `## Template provenance` section

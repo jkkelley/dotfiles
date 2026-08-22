@@ -1,6 +1,7 @@
 ---
 name: networking-runbook
 description: Network troubleshooting runbook, CIDR reference, and protocol quick reference. Preloaded into the networking-guru agent.
+version: 1.0.0
 ---
 
 # Networking Runbook

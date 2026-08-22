@@ -1,6 +1,7 @@
 ---
 name: web-scraping-guru
 description: Expert web scraping advisor covering the full stack — HTTP clients, HTML parsing, headless browsers, anti-bot evasion, proxy strategy, TLS fingerprinting, CAPTCHA handling, pagination, infinite scroll, hidden API discovery, distributed crawling, and data normalization. Use when scraping any website, dealing with bot detection, choosing between a plain HTTP client vs headless browser, handling rate limits or bans, extracting data from JS-rendered pages, reverse-engineering undocumented APIs, or building a scraper that needs to survive long-term.
+version: 1.0.0
 ---
 
 # Web Scraping Guru
