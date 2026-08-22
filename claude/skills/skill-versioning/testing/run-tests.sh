@@ -62,6 +62,9 @@ description: Fixture skill carrying no version yet.
 ---
 
 # Alpha
+
+> **This copy is read-only.**
+> Edit this skill at `~/dotfiles/claude/skills/alpha/`, bump its version, then re-pull it.
 EOF
   printf 'echo alpha\n' > "$d/alpha/scripts/run.sh"
   cat > "$d/beta/SKILL.md" <<'EOF'
@@ -72,6 +75,9 @@ version: 2.3.4
 ---
 
 # Beta
+
+> **This copy is read-only.**
+> Edit this skill at `~/dotfiles/claude/skills/beta/`, bump its version, then re-pull it.
 EOF
   # A directory with no SKILL.md is not a skill and must never reach the registry.
   printf 'not a skill\n' > "$d/not-a-skill/README.md"
@@ -139,6 +145,19 @@ bash "$SV" verify > "$WORK/verify-unversioned.out" 2>&1
 check "verify names the unversioned skill" \
   "$(grep -q '^unversioned .*gamma' "$WORK/verify-unversioned.out"; echo $?)"
 rm -rf "$SKILLS/gamma"
+
+# The read-only notice is what a vendored copy carries into a project. A skill
+# without it ships saying nothing, and skill-update.sh will one day replace a
+# local edit with no conflict and no warning. The gate is the only thing that
+# stops a new skill from being born that way.
+cp "$SKILLS/alpha/SKILL.md" "$WORK/alpha-ro.bak"
+grep -v 'This copy is read-only.' "$WORK/alpha-ro.bak" > "$SKILLS/alpha/SKILL.md"
+expect_rc "verify FAILS when a skill has no read-only notice" 1 bash "$SV" verify
+bash "$SV" verify > "$WORK/verify-noro.out" 2>&1
+check "verify names the skill missing the notice" \
+  "$(grep -q '^no read-only notice .*alpha' "$WORK/verify-noro.out"; echo $?)"
+cp "$WORK/alpha-ro.bak" "$SKILLS/alpha/SKILL.md"
+expect_rc "verify passes once the notice is back" 0 bash "$SV" verify
 
 rm -rf "$SKILLS/beta"
 expect_rc "verify FAILS when the registry lists a skill that is gone" 1 bash "$SV" verify

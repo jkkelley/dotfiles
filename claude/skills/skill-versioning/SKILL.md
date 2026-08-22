@@ -45,7 +45,7 @@ Run from anywhere; the script locates the skills directory from its own path.
 ```bash
 scripts/skill-version.sh init                       # stamp unversioned skills at 1.0.0
 scripts/skill-version.sh bump <skill> --minor       # bump one skill, regen the registry
-scripts/skill-version.sh verify                     # the gate: versions present, registry fresh
+scripts/skill-version.sh verify                     # the gate: versions present, notice present, registry fresh
 scripts/skill-version.sh list                       # every skill and its version
 ```
 
@@ -62,6 +62,21 @@ Bumping in the middle and then editing again leaves the registry stale, and the 
 Harmless, and still a number that describes history inaccurately, which is the one thing this file is supposed to prevent.
 
 The habit is: finish the change, run `verify` to see the drift, then bump once to clear it.
+
+## Every SKILL.md carries the read-only notice
+
+A skill is copied into a project, and the copy is the file an agent reads there.
+If it does not say it is read-only, nothing does - a pointer to a document that did not travel with it is worth nothing at the moment somebody has the copy open and is about to change it.
+
+The stakes are not stylistic.
+`skill-update.sh` replaces the skill's directory rather than merging into it, so an edit made in a project is destroyed by the next update with no conflict and no warning.
+The registry's `sha256` cannot catch that either: a project's copy legitimately differs from upstream, so the hash was never going to match and the drift is invisible from both ends.
+
+`verify` fails on any `SKILL.md` without it, and names the skill.
+That is what stops a new skill from being born without it, which is the failure this repository has already had once - with the session-start check, which lived in exactly one project until somebody asked why.
+
+The block sits under the title and names that skill's own upstream path rather than a placeholder.
+Copy it from any other skill.
 
 ## The registry is generated, never edited
 

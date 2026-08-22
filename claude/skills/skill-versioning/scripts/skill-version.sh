@@ -40,9 +40,10 @@ SUBCOMMANDS
              --minor   new capability, backward compatible
              --patch   wording, script bugfix, doc clarification, tests
 
-  verify   Exit non-zero if any skill lacks a version, if the registry is
-           missing, or if the registry does not match what the skills on disk
-           would produce. A stale registry means a skill changed without a bump.
+  verify   Exit non-zero if any skill lacks a version, if any SKILL.md is
+           missing the read-only notice, if the registry is missing, or if the
+           registry does not match what the skills on disk would produce. A
+           stale registry means a skill changed without a bump.
 
   list     Print each skill and its current version.
 
@@ -165,7 +166,7 @@ cmd_bump() {
 }
 
 cmd_verify() {
-  local rc=0 d name total=0 expected
+  local rc=0 noro=0 d name total=0 expected
   while IFS= read -r d; do
     name=$(basename "$d")
     total=$((total + 1))
@@ -173,10 +174,24 @@ cmd_verify() {
       printf 'unversioned   %s\n' "$name" >&2
       rc=1
     fi
+    # Every SKILL.md states that a vendored copy is read-only, because the file
+    # copied into a project is the file an agent reads there. A skill without
+    # it ships to projects saying nothing, and skill-update.sh will one day
+    # replace a local edit with no conflict and no warning.
+    if ! grep -qF 'This copy is read-only.' "$d/SKILL.md" 2>/dev/null; then
+      printf 'no read-only notice   %s\n' "$name" >&2
+      noro=1
+    fi
   done < <(skill_dirs)
 
   if [[ $rc -ne 0 ]]; then
     printf "\nrun '%s init' to stamp them\n" "$SELF" >&2
+    return 1
+  fi
+
+  if [[ $noro -ne 0 ]]; then
+    printf "\nadd the read-only notice under the SKILL.md title, naming that skill's\n" >&2
+    printf "own upstream path. Copy the block from any other skill.\n" >&2
     return 1
   fi
 
