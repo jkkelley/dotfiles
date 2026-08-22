@@ -1,7 +1,7 @@
 ---
 name: operator
 description: Personal work-steering system. Captures ideas to a private inbox, tracks projects across multiple life domains (work, weekend-business, personal, etc.), and recommends what to work on weighted by time-of-week. Triggered by phrases like "hey operator", "btw operator", "operator:". Backed by a private git repo at $OPERATOR_REPO (default ~/projects/operator). NOT for kubernetes operators, mathematical operators, or any code-level use of the word "operator".
-version: 1.0.1
+version: 1.0.2
 ---
 
 # Operator — Personal Work-Steering System
@@ -9,7 +9,7 @@ version: 1.0.1
 > **This copy is read-only.**
 > Skills are vendored into a project as copies, and this may be one.
 > Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
-> Upstream is `~/dotfiles/claude/skills/operator/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/operator if that checkout is not on this machine.
+> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/operator/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
 > `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
 > The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 

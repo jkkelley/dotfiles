@@ -1,7 +1,7 @@
 ---
 name: container-design
 description: Design and sequence multi-container applications — dependency ordering, volume and network attachment, init patterns, health-check gating, and startup scripts. Use when wiring containers together in Docker, Podman, Docker Compose, or Kubernetes; when a container needs multiple resources (volumes, networks, sidecars) attached simultaneously; when deciding between init containers, entrypoint scripts, depends_on, or shell sequencing; or when asked about container startup order, PBF imports, database readiness, or any "container A needs B and C before it can run" problem.
-version: 1.0.1
+version: 1.0.2
 ---
 
 # Container Design
@@ -9,7 +9,7 @@ version: 1.0.1
 > **This copy is read-only.**
 > Skills are vendored into a project as copies, and this may be one.
 > Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
-> Upstream is `~/dotfiles/claude/skills/container-design/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/container-design if that checkout is not on this machine.
+> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/container-design/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
 > `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
 > The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 

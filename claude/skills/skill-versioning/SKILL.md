@@ -1,7 +1,7 @@
 ---
 name: skill-versioning
 description: Semver for the skills in this dotfiles repo, and the machinery that keeps a project's installed copies honest. Use when bumping a skill's version, regenerating claude/skills/registry.json, checking whether a project's .claude/skills are behind the published registry, or applying an update to a project. Triggered by "bump this skill", "is my skill out of date", "update the skill in this project", "regenerate the registry", or by the session-start skill version check in CLAUDE.md.
-version: 1.0.2
+version: 1.1.1
 ---
 
 # Skill versioning
@@ -9,7 +9,7 @@ version: 1.0.2
 > **This copy is read-only.**
 > Skills are vendored into a project as copies, and this may be one.
 > Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
-> Upstream is `~/dotfiles/claude/skills/skill-versioning/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/skill-versioning if that checkout is not on this machine.
+> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/skill-versioning/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
 > `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
 > The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 
@@ -76,8 +76,8 @@ The registry's `sha256` cannot catch that either: a project's copy legitimately 
 `verify` fails on any `SKILL.md` without it, and names the skill.
 That is what stops a new skill from being born without it, which is the failure this repository has already had once - with the session-start check, which lived in exactly one project until somebody asked why.
 
-The block sits under the title and names that skill's own upstream twice: the local path, and the public URL.
-Both, because the local path is worthless on a machine with no dotfiles checkout - which is precisely the machine a vendored copy is most likely to be sitting on.
+The block sits under the title and names that skill's own upstream: the raw GitHub URL of its `SKILL.md`.
+One URL and no local path beside it, because the local path was worthless on a machine with no dotfiles checkout - which is precisely the machine a vendored copy is most likely to be sitting on.
 A notice that says "edit it upstream" without a reachable upstream is a notice that gets ignored.
 
 Neither is a placeholder. See the documented exception in root `CLAUDE.md`.
@@ -113,9 +113,19 @@ The session-start check in a project compares versions, because a project's copy
 `scripts/skill-update.sh` implements the two apply modes the session-start check offers.
 
 ```bash
-scripts/skill-update.sh --skill hydration-prompt --mode inline     --project ~/projects/foo
-scripts/skill-update.sh --skill hydration-prompt --mode standalone --project ~/projects/foo
+skill-update.sh --skill hydration-prompt --mode inline     --project ~/projects/foo
+skill-update.sh --skill hydration-prompt --mode standalone --project ~/projects/foo
 ```
+
+**The skill is fetched from GitHub, not from a checkout.**
+`--from remote` is the default: one `codeload` tarball request for `jkkelley/dotfiles@main`, one directory extracted out of it.
+A tarball rather than per-file raw requests, because 20 of the skills ship scripts, tests and references, and a per-file fetch needs a file list nobody maintains.
+
+That is the whole point of the arrangement.
+The script used to derive its source from its own location inside dotfiles, so the only machine that could not update a skill was a machine that had never cloned dotfiles - which is every machine a vendored copy is most likely to be sitting on.
+
+`--from local` reads `--dotfiles` instead, which is how an unpushed change is tested before it ships.
+`--repo` and `--ref` move the remote source, for a fork or a branch.
 
 **inline** copies the skill into the working tree and stops.
 The change is left uncommitted so it rides the commit the user is already about to make.

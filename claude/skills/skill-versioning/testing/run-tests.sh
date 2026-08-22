@@ -64,7 +64,7 @@ description: Fixture skill carrying no version yet.
 # Alpha
 
 > **This copy is read-only.**
-> Upstream is `~/dotfiles/claude/skills/alpha/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/alpha if that checkout is not on this machine.
+> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/alpha/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
 EOF
   printf 'echo alpha\n' > "$d/alpha/scripts/run.sh"
   cat > "$d/beta/SKILL.md" <<'EOF'
@@ -77,7 +77,7 @@ version: 2.3.4
 # Beta
 
 > **This copy is read-only.**
-> Upstream is `~/dotfiles/claude/skills/beta/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/beta if that checkout is not on this machine.
+> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/beta/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
 EOF
   # A directory with no SKILL.md is not a skill and must never reach the registry.
   printf 'not a skill\n' > "$d/not-a-skill/README.md"
@@ -224,6 +224,14 @@ expect_rc "unknown skill rejected"  1 bash "$SU" --skill nope  --mode inline --p
 expect_rc "unknown mode rejected"   1 bash "$SU" --skill alpha --mode sideways --project "$WORK/proj" --dotfiles "$DOT"
 expect_rc "missing --skill rejected" 1 bash "$SU" --mode inline --project "$WORK/proj" --dotfiles "$DOT"
 expect_rc "missing project rejected" 1 bash "$SU" --skill alpha --mode inline --project "$WORK/nosuchdir" --dotfiles "$DOT"
+
+# The remote path. Both of these are safe with --network=none: an unresolvable
+# host and a nonexistent repo both fail the download, and the run must die
+# rather than quietly copy nothing.
+expect_rc "--from with a bad value rejected" 1 \
+  bash "$SU" --skill alpha --mode inline --project "$WORK/proj" --from sideways
+expect_rc "unreachable remote source fails" 1 \
+  bash "$SU" --skill alpha --mode inline --project "$WORK/proj" --repo jkkelley/definitely-not-a-repo
 expect_rc "non-repo rejected in standalone" 1 \
   bash "$SU" --skill alpha --mode standalone --project "$WORK/notarepo" --dotfiles "$DOT"
 

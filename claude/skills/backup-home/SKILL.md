@@ -1,7 +1,7 @@
 ---
 name: backup-home
 description: Archives $HOME to a timestamped tar.gz and uploads it to S3 (win11-wsl-backups bucket, DevEnv_Internal prefix) using the minecraft-admin profile. Shows a pre-flight size estimate, requires confirmation, then runs the backup script with a status summary.
-version: 1.0.1
+version: 1.0.2
 ---
 
 # backup-home - Archive and Upload $HOME to S3
@@ -9,7 +9,7 @@ version: 1.0.1
 > **This copy is read-only.**
 > Skills are vendored into a project as copies, and this may be one.
 > Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
-> Upstream is `~/dotfiles/claude/skills/backup-home/`, or https://github.com/jkkelley/dotfiles/tree/main/claude/skills/backup-home if that checkout is not on this machine.
+> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/backup-home/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
 > `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
 > The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
 

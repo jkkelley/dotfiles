@@ -284,8 +284,8 @@ One table, then exactly three options, then wait for an answer.
 1. **Update now.** Standalone, before the work starts.
 
    ```bash
-   ~/dotfiles/claude/skills/skill-versioning/scripts/skill-update.sh \
-     --skill <name> --mode standalone --project .
+   curl -fsSL https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/skill-versioning/scripts/skill-update.sh -o /tmp/skill-update.sh
+   bash /tmp/skill-update.sh --skill <name> --mode standalone --project .
    ```
 
    Branches off `origin/main` inside a throwaway worktree, copies, commits, pushes, opens a PR, squash-merges it without review, deletes the branch, fast-forwards local `main`, and prints the PR URL.
@@ -295,8 +295,8 @@ One table, then exactly three options, then wait for an answer.
 2. **Fold it into this work.** The update rides the commit that is about to happen anyway.
 
    ```bash
-   ~/dotfiles/claude/skills/skill-versioning/scripts/skill-update.sh \
-     --skill <name> --mode inline --project .
+   curl -fsSL https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/skill-versioning/scripts/skill-update.sh -o /tmp/skill-update.sh
+   bash /tmp/skill-update.sh --skill <name> --mode inline --project .
    ```
 
    Copies the skill in and leaves it uncommitted.
@@ -310,8 +310,9 @@ One table, then exactly three options, then wait for an answer.
 Report the outcome plainly: the new version and the full path on success, or the failing step and the log path on failure.
 The script captures both.
 
-If `~/dotfiles` is not checked out on this machine, only option 3 is available.
-Report the gap and say that updating needs the dotfiles checkout.
+All three options work on any machine with `curl` and `git`.
+The script is fetched from GitHub and it fetches the skill from GitHub, so nothing here needs a dotfiles checkout.
+If this project already vendors `skill-versioning`, run `.claude/skills/skill-versioning/scripts/skill-update.sh` instead and skip the download.
 
 ## Starting a session
 
