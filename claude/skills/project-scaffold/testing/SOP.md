@@ -246,6 +246,27 @@ The silence assertion guards the opposite failure. A check that announces itself
 
 ---
 
+## 150-runbooks-source-of-truth
+
+**Runs:** a scaffold, then inspects `CLAUDE.md` for the rule naming the one repository that holds every runbook and playbook.
+
+**Asserts:** the section is present; the `local-k8s-docs` URL is carried literally, owner and all; it has not been rewritten into an angle-bracket placeholder; runbooks and playbooks are both named; a missing grant is something to ask for rather than route around; a new document follows the format of the ones beside it; working a process out obliges you to write it down; and a documented process beats a locally invented one.
+
+**Why it matters:** an agent that has never been told the documentation exists does the reasonable thing and invents a procedure.
+Inventing it never feels like authoring a runbook - it feels like finishing the task - so it is never written down.
+The knowledge then lives in a session transcript nobody opens again, and the next agent invents a different procedure for the same job.
+Nothing fails at any point. The setup just quietly accumulates N procedures where it should have one, and each is discovered only when it contradicts another.
+
+The URL assertion is sharp for the same reason case 140's is, and guards against this repository's own house style.
+Root `CLAUDE.md` requires environment-specific values to become `<angle-bracket>` placeholders, and this URL is a second documented exception to that.
+Substituting the owner turns the single pointer to the documentation into a link to a repository that does not exist.
+Nothing catches that: an agent that cannot find the repository concludes there is nothing in it and goes back to inventing.
+
+The last two assertions are deliberately separate rather than one combined check.
+"Write the missing one" and "do not invent a parallel one" are opposite failures - the first leaves a gap, the second fills it twice - and a template could easily keep one sentence while losing the other.
+
+---
+
 ## Adding a case
 
 1. Add `testing/cases/NNN-name.sh`, sourcing `testing/assert.sh`.

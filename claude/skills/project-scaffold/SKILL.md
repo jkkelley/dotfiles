@@ -1,7 +1,7 @@
 ---
 name: project-scaffold
 description: Install and maintain the agent context layer in any project - CLAUDE.md, COMPASS.md, BACKLOG.md, ISSUES.md, NAMING.md, plus the scripts that own their formats. Use when starting a new project or directory, when asked to "scaffold this project", "set up the context files", "add COMPASS/BACKLOG/ISSUES", when an agent needs to log an issue or manage a backlog item, or when a project's markdown has drifted from the standard. Not for cloning an existing repo as a template - that is repo-scaffold.
-version: 1.2.1
+version: 1.3.0
 ---
 
 # project-scaffold
