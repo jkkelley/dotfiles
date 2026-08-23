@@ -1,0 +1,52 @@
+# context-compaction - the OS-aware entry point. Root CLAUDE.md Rule 17.
+#
+# Install just:
+#   Windows   winget install Casey.Just
+#   Debian    apt install just
+#
+# Set WSL_DISTRO if the default WSL distribution is not the one holding podman.
+
+set windows-shell := ["bash", "-cu"]
+
+# Pinned by digest per Rule 15. docker.io/bitnami/git:latest as of 2026-08-23
+IMAGE := "docker.io/bitnami/git@sha256:1baa6ddbde79fa7ba2fdf441cea47c4f04fae067504d9265e416358db0879ab2"
+
+_default:
+    @just --list --unsorted
+
+# Run the test suite in a container. Rule 14: never on the host.
+test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    HERE=$(cd "$(dirname "{{justfile()}}")" && pwd)
+    if [ "{{os()}}" = "windows" ]; then
+      SKILL=$(wsl.exe ${WSL_DISTRO:+-d "$WSL_DISTRO"} -- wslpath -a "$(cygpath -w "$HERE")" | tr -d '\r')
+      RUN=(wsl.exe ${WSL_DISTRO:+-d "$WSL_DISTRO"} -- podman)
+    else
+      SKILL="$HERE"
+      RUN=(podman)
+    fi
+    WORK=$("${RUN[@]}" unshare mktemp -d 2>/dev/null || echo /tmp/context-compaction-work)
+    "${RUN[@]}" run --rm --userns=keep-id --network=none --entrypoint="" \
+      -v "$SKILL:/skill:ro,Z" -v "$WORK:/work:Z" -w /work \
+      {{IMAGE}} bash /skill/testing/run-tests.sh
+
+# Write the preamble into a project, once.
+init PROJECT:
+    @bash "$(dirname "{{justfile()}}")/scripts/checkpoint.sh" init --project "{{PROJECT}}"
+
+# Validate a checkpoint body without writing it.
+check BODY:
+    @bash "$(dirname "{{justfile()}}")/scripts/checkpoint.sh" check --body-file "{{BODY}}"
+
+# Prepend one checkpoint. Nothing below it is touched.
+new PROJECT BODY:
+    @bash "$(dirname "{{justfile()}}")/scripts/checkpoint.sh" new --project "{{PROJECT}}" --body-file "{{BODY}}"
+
+# Print the top N checkpoints, default 10.
+read PROJECT *FLAGS:
+    @bash "$(dirname "{{justfile()}}")/scripts/checkpoint.sh" read --project "{{PROJECT}}" {{FLAGS}}
+
+# The gate: ordering, uniqueness, and a complete top checkpoint.
+verify PROJECT:
+    @bash "$(dirname "{{justfile()}}")/scripts/checkpoint.sh" verify --project "{{PROJECT}}"
