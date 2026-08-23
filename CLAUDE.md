@@ -270,6 +270,36 @@ Run a quick self-check:
 
 If any box is unchecked, fix it before pushing.
 
+## Rule 17 - Skills are OS aware, and `justfile` is the entry point
+
+Skills here are used from Linux and from Windows. A skill that works on one and
+fails on the other is not portable code that happened to break; it is a skill
+that was only ever tested on the author's side.
+
+**Every skill that ships executable code carries a `justfile`.** `just` is a
+single binary, installable on both platforms (`winget install Casey.Just`,
+`apt install just`). It is the entry point, never the implementation - every
+recipe has a plain `bash scripts/<tool>.sh ...` equivalent, so a machine without
+`just` is inconvenienced rather than blocked.
+
+The recipes exist to hide the differences that actually bite:
+
+| Assumption | Reality |
+| ---------- | -------- |
+| `flock` exists | Absent from Git Bash on Windows. Lock with `mkdir`, which is atomic everywhere |
+| `podman` is on the host | On Windows it lives inside WSL. `just test` dispatches through WSL and translates the mount path |
+| `cmp`, `diff` are present | Minimal test images ship neither. Check for a utility before depending on it |
+
+The language is not the portability problem. Bash runs on Windows under Git
+Bash. What does not survive the crossing is the assumption that every Linux
+utility came with it.
+
+**A skill that genuinely cannot be cross-platform says so in its own SKILL.md
+and names the platform it requires.** That is a fine outcome. Silently working
+on one OS and failing on the other is not, because the failure surfaces as a
+misleading error at the worst moment - `flock`'s absence is reported as a lock
+timeout that never happened.
+
 ## Adding a New Agent or Skill — Ship the MVP Immediately
 
 Every new agent or skill in this repo must reach `main` through a PR as soon
