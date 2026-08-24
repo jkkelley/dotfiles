@@ -152,6 +152,17 @@ it at `1.0.0` and regenerates the registry.
 
 Refer to the user as _they_ for pronouns - never assume who they may be.
 
+## Starting a session - read `HYDRATION.md` first
+
+`HYDRATION.md` is the prompt that starts this session, and the nine before it.
+
+**Read the top entry only.** It is current and complete on its own; everything below it has been
+superseded and is kept so a question about how we got here can be answered, not so it can be read at
+the start of a session.
+
+The file is owned by `hydration.sh` from the `hydration-prompt` skill. Never hand-edit it, and never
+assemble its launch command by typing one.
+
 ## Feature branches only - never commit to `main`
 
 `main` is written once, at repository creation, and never again directly.
@@ -284,11 +295,11 @@ recipe has a plain `bash scripts/<tool>.sh ...` equivalent, so a machine without
 
 The recipes exist to hide the differences that actually bite:
 
-| Assumption | Reality |
-| ---------- | -------- |
-| `flock` exists | Absent from Git Bash on Windows. Lock with `mkdir`, which is atomic everywhere |
-| `podman` is on the host | On Windows it lives inside WSL. `just test` dispatches through WSL and translates the mount path |
-| `cmp`, `diff` are present | Minimal test images ship neither. Check for a utility before depending on it |
+| Assumption                | Reality                                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------------------------ |
+| `flock` exists            | Absent from Git Bash on Windows. Lock with `mkdir`, which is atomic everywhere                   |
+| `podman` is on the host   | On Windows it lives inside WSL. `just test` dispatches through WSL and translates the mount path |
+| `cmp`, `diff` are present | Minimal test images ship neither. Check for a utility before depending on it                     |
 
 The language is not the portability problem. Bash runs on Windows under Git
 Bash. What does not survive the crossing is the assumption that every Linux
