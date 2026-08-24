@@ -210,32 +210,56 @@ Wrapping treehouse in a skill would recreate the exact problem [skill-distributi
 
 Treehouse went v1.8.0 -> v2.3.0 in a single morning. A skill documenting the v1 `destroy --force` flag would now be actively wrong and nothing would catch it. The tool has `--help` and a self-updater; that is better documentation than a frozen copy.
 
-## Open, undecided
+## Decided, 2026-08-24: the pool stays user-level
 
-**In-project pool vs the user-level default.** `--root .` puts the pool inside the repository, which is discoverable and gitignorable but drags build caches into the working tree. The default `~/.treehouse/` keeps them out but is invisible from the project.
+**`~/.treehouse/<repo>-<hash>/`. In-project `--root .` is rejected.**
 
-This repository currently has hand-rolled worktrees at `.claude/worktrees/` and `.worktrees/`, which is what produced the branch-deletion failure above. Treehouse could own that instead. Real tradeoff, deliberately not decided yet.
+The measurement that settled it: a slot's `.git` is a 108-byte pointer file, so git objects are never duplicated. The weight is build cache written _inside_ the slot - one measured slot carries 171M of `.cache` for a repository whose tracked content is under a megabyte.
 
-## Unverified
+`--root .` puts that cache inside the working tree, which is the thing this repo mounts into containers. Every `podman run -v "$PWD:/work"` under Rule 14 would bind and relabel the pool on every run, `podman build .` would take it as build context, and `git add -A` would stage another branch's cache unless a gitignore line that does not exist today were added to `gitignore.tmpl` and to every existing repo.
+
+The cost of the decision is accepted rather than dismissed: `dotfiles-ff4128` is a hash directory, `ff4128` cannot be reconstructed by hand, and the pool name does not say where its repository lives. That is paid with one paragraph in the `project-scaffold` CLAUDE.md template and with `treehouse status`.
+
+This repository still has hand-rolled worktrees at `.claude/worktrees/` and `.worktrees/`, which is what produced the branch-deletion failure above. Treehouse owning those instead is a separate cleanup, not part of this decision.
+
+## Verified, 2026-08-24
 
 **What `treehouse return` does with unpushed commits left on a branch.**
 
-The detached-HEAD state of idle slots is _observed_ across all 15. `return --force` says "clean, reset, and return". Neither was tested against a slot carrying unpushed work.
+Probed in Podman per Rule 14, using the pattern in `container-sandbox`'s "Verifying a host CLI's behaviour" section: real `treehouse` v2.3.0 bind-mounted read-only, throwaway origin, `TREEHOUSE_ROOT` redirected inside the container, so the live pool was never touched.
 
-Confident: a returned slot holds no branch. Not confident: what happens to commits that never reached a remote. **Test this before it goes into `hydration-prompt`**, because the close-out flow would be the thing running it.
+| Case                                | Observed                                                                                                            |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| unpushed commit, plain `return`     | **survives.** rc 0, slot resets to detached HEAD, the branch ref remains in the repository, the object is reachable |
+| unpushed commit, `return --force`   | **survives.** `--force` cleans the worktree, not the refs                                                           |
+| uncommitted changes, plain `return` | **prompts, takes the no-TTY default, aborts, leaves the slot leased - and exits 0**                                 |
+
+The first two settle the question that was open. `treehouse return` is not a data-loss path, and a slot's `.git` is a pointer file rather than a repository, so objects were never duplicated in the first place.
+
+The third is the finding that changes code:
+
+```
+| Worktree has uncommitted changes. Clean and return? [Y/n] 🌳 Aborted.
+  return rc                          0
+  final pool state                   1  leased  (held by gate-case-3)
+```
+
+With no TTY the prompt takes its default, does nothing, leaves the slot held, and exits 0. **Any script calling `treehouse return` must assert the slot is free afterwards rather than read `$?`.** That applies to the `hydration-prompt` close-out and to `skill-onboard.sh`, and it is written into both acceptance criteria in [the implementation plan](superpowers/plans/2026-08-24-skills-package-manager-implementation.md).
 
 ## After the compaction
 
-Nothing below is built. In rough dependency order:
+This list is superseded. It has been reconciled into [the skills package manager implementation plan](superpowers/plans/2026-08-24-skills-package-manager-implementation.md), which is the ordered plan now; it is kept here so a question about where each item went can be answered.
 
-1. **Test the unverified case above.** Make a commit in a slot, do not push it, return the slot, see whether the commit is still reachable. This gates everything else.
-2. **Decide in-project pool vs `~/.treehouse/`.** Blocks the template wording.
-3. **`project-scaffold`: gitignore `<project>/.claude/skills/`** in the gitignore template. Decided 2026-08-22, still not implemented. Note the consequence: a fresh clone then has **no skills** until the session-start check runs, so that check has to learn to install from cold and not only compare.
-4. **`project-scaffold`: add the treehouse policy section** to the CLAUDE.md template. Depends on 2.
-5. **`hydration-prompt`: acquire and release the slot**, lease labelled with the ticket ID. Depends on 1.
-6. **GitHub Actions on dotfiles**: bump the skill version and regenerate `registry.json` on merge, so versions are allocated at merge time rather than author time. Decided 2026-08-22, not built. See skill-distribution-workflow.md for why.
+| #   | Item                                             | Where it went                                                                   |
+| --- | ------------------------------------------------ | ------------------------------------------------------------------------------- |
+| 1   | Test `treehouse return` with unpushed commits    | **done, 2026-08-24.** See "Verified" above                                      |
+| 2   | In-project pool vs `~/.treehouse/`               | **closed, 2026-08-24.** User-level, unchanged. See "Open, undecided" above      |
+| 3   | `project-scaffold`: gitignore `.claude/skills/`  | plan ticket E2.2, blocked on the sync being proven end to end                   |
+| 4   | `project-scaffold`: treehouse policy section     | plan ticket E2.4, unblocked by 2                                                |
+| 5   | `hydration-prompt`: acquire and release the slot | plan ticket E2.8, unblocked by 1                                                |
+| 6   | GitHub Actions bumps at merge                    | plan tickets E1.1, E1.7 and E1.8. The largest of the six, and why Epic 1 exists |
 
-Each of 3 through 6 is a skill edit, so each carries a version bump and a regenerated registry per root `CLAUDE.md` Rule 16.
+Items 3 through 6 are skill edits, so each carries a version bump and a regenerated registry per root `CLAUDE.md` Rule 16 - until E1.12 rewrites that rule and CI takes the obligation over.
 
 ### Unrelated loose ends from the same session
 
