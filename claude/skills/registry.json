@@ -39,7 +39,7 @@
     "repo-sync": { "version": "1.0.2", "sha256": "861c9dd81401b6b96fdeb48a46768aa785bf9879d909df421936db6038579b02" },
     "screenshot-syncer": { "version": "1.0.2", "sha256": "d8f5bde0fa7aabf24a329969f33696d422a60037cee9967c916f74b6adf27f22" },
     "session-workflow": { "version": "1.0.2", "sha256": "8273f15ab823ac86c9ea9443d63b0a7a1e08082fb56f8fbaa982b5cfc39a89ed" },
-    "skill-versioning": { "version": "1.1.1", "sha256": "f5184e1aba3e66bbaa110eaf996f284bd0b42c71f95f40d112ff3f77880d2a9f" },
+    "skill-versioning": { "version": "1.2.0", "sha256": "147d04a9134685c89e1c691c8f96df3ab043d62d006dfb1640dea063eb1831fe" },
     "task-router": { "version": "1.0.2", "sha256": "60d95bd19655136a019dd6862d21322934e4a1e7dd367dba25be7b192ea04a3b" },
     "terraform-patterns": { "version": "1.0.2", "sha256": "06722f2febf7655ab42d3689603473bdbccdbf21208f3e3ee54ba0dbadf2995d" },
     "test-writer": { "version": "1.0.2", "sha256": "7d163ff3ace4891e9eac9dc72beeb65ac389e88c546c7d406efc94a9a8e1591e" },
