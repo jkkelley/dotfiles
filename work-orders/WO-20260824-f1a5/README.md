@@ -8,7 +8,7 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20260824-0615` | ready | p1 | - | [Confirm whether a SessionStart hook matcher filters by source](WO-20260824-0615-confirm-whether-a-sessionstart-hook-matcher-filt.md) |
+| `WO-20260824-0615` | done | p1 | - | [Confirm whether a SessionStart hook matcher filters by source](WO-20260824-0615-confirm-whether-a-sessionstart-hook-matcher-filt.md) |
 | `WO-20260824-9712` | ready | p1 | WO-20260824-316d | [End-to-end proof in a scratch project, including the lost-receipt case](WO-20260824-9712-end-to-end-proof-in-a-scratch-project-including-.md) |
 | `WO-20260824-2136` | ready | p1 | - | [Extract the read-only notice into a single rendered partial](WO-20260824-2136-extract-the-read-only-notice-into-a-single-rende.md) |
 | `WO-20260824-2ad1` | ready | p1 | WO-20260824-6acf WO-20260824-efb0 | [PR gate workflow: validate the bump intent and run the affected suites](WO-20260824-2ad1-pr-gate-workflow-validate-the-bump-intent-and-ru.md) |
@@ -17,6 +17,6 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20260824-de9e` | ready | p1 | - | [Registry schema 2, with type derived from the tree and requires read from frontmatter](WO-20260824-de9e-registry-schema-2-with-type-derived-from-the-tre.md) |
 | `WO-20260824-8cd1` | ready | p1 | WO-20260824-9712 | [Rewrite root CLAUDE.md for merge-time allocation and the named main exception](WO-20260824-8cd1-rewrite-root-claude-md-for-merge-time-allocation.md) |
 | `WO-20260824-6acf` | ready | p1 | - | [Split verify into a structure check and a full check, and delete the notice assertion](WO-20260824-6acf-split-verify-into-a-structure-check-and-a-full-c.md) |
-| `WO-20260824-bb0d` | ready | p1 | WO-20260824-0615 WO-20260824-efb0 | [setup.sh installs the skill-sync binary, then the SessionStart hook](WO-20260824-bb0d-setup-sh-installs-the-skill-sync-binary-then-the.md) |
+| `WO-20260824-bb0d` | ready | p1 | WO-20260824-efb0 | [setup.sh installs the skill-sync binary, then the SessionStart hook](WO-20260824-bb0d-setup-sh-installs-the-skill-sync-binary-then-the.md) |
 | `WO-20260824-5b89` | ready | p1 | WO-20260824-de9e WO-20260824-2136 | [skill-sync.sh part one: resolution, and the tools test tree it is proved in](WO-20260824-5b89-skill-sync-sh-part-one-resolution-and-the-tools-.md) |
 | `WO-20260824-efb0` | ready | p1 | WO-20260824-5b89 | [skill-sync.sh part two: build, swap, receipt, and self-update](WO-20260824-efb0-skill-sync-sh-part-two-build-swap-receipt-and-se.md) |
