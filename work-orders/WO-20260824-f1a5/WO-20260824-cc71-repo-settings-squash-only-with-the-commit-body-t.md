@@ -4,13 +4,13 @@
   "slug": "repo-settings-squash-only-with-the-commit-body-t",
   "title": "Repo settings: squash-only, with the commit body taken from the PR description",
   "type": "chore",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-08-24",
   "updated": "2026-08-24",
   "created_at": "2026-08-24T13:19:05-05:00",
   "parent": "WO-20260824-f1a5",
-  "branch": null,
+  "branch": "feat/repo-settings-squash-only-with-the-commit-body-t",
   "pr": null,
   "merge_sha": null,
   "closed": null,
@@ -50,8 +50,10 @@ The publisher reads a Bump: trailer out of the merge commit. Under the default s
 ## Acceptance criteria
 
 
-- [ ] `AC-H1` *(human)* all four settings read back from the API with the intended values
-- [ ] `AC-H2` *(human)* a Bump: trailer written in a PR description is returned by git interpret-trailers --parse on the resulting main commit
+- [x] `AC-H1` *(human)* all four settings read back from the API with the intended values
+  - observed `2026-08-24` gh api repos/jkkelley/dotfiles --jq "{squash_merge_commit_title,squash_merge_commit_message,allow_merge_commit,allow_rebase_merge}" read back {"allow_merge_commit":false,"allow_rebase_merge":false,"squash_merge_commit_message":"PR_BODY","squash_merge_commit_title":"PR_TITLE"} on 2026-08-24. Before the change the same read returned COMMIT_MESSAGES, COMMIT_OR_PR_TITLE, true, true. This is a fresh read issued separately from the PATCH, not the PATCH response.
+- [x] `AC-H2` *(human)* a Bump: trailer written in a PR description is returned by git interpret-trailers --parse on the resulting main commit
+  - observed `2026-08-24` Throwaway PR #56 carried "Bump: nothing=patch" in its description and nothing in its branch commit message. After the squash merge, git log -1 --format=%B origin/main | git interpret-trailers --parse printed exactly "Bump: nothing=patch", and the subject was the PR title plus (#56). Merge sha d7f2f8c44ac2b010bed5cf09e43db20b636d5b64. The trailer can only have come from the PR body, so PR_BODY is carrying it through the real merge path.
 
 ## Test plan
 
@@ -71,6 +73,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-08-24` Settings applied and both criteria evidenced. Merge commits and rebase merges are now off repository-wide, so squash is the only path into main for every future PR, including this one. The throwaway probe was PR #56; its branch chore/trailer-probe is deleted locally and on the remote, and the file it added, notes/trailer-probe.md, is removed by this ticket PR so main is left with no scaffolding. Branch protection and required status checks were left alone - they are out of scope and the checks arrive with WO-20260824-2ad1.
 - `2026-08-24` Poker 2026-08-24: 1 points. No code. Sized as a gate rather than as work.
 
 ## Outcome
