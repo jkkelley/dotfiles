@@ -10,6 +10,189 @@ file holds exactly 10 once it has filled up. Entries are never renumbered and
 never edited in place - a correction is a new entry.
 
 Written by `hydration.sh add`. Do not hand-edit.
+<!-- hydration-entry: WO-20260824-0615 -->
+## WO-20260824-0615 - Confirm whether a SessionStart hook matcher filters by source
+_Generated 2026-08-24 by hydration.sh. Newest entry._
+
+### Ticket
+
+`WO-20260824-0615` - `Confirm whether a SessionStart hook matcher filters by source`. Position 2 of 21 children across two epics.
+Predecessor `WO-20260824-cc71` - `Repo settings: squash-only, with the commit body taken from the PR description`, merged, closed and archived.
+
+This is a spike, not a build. Its whole output is a written answer to one question, and the answer changes what two later tickets are allowed to do.
+
+### What just landed
+
+Four repository settings on `jkkelley/dotfiles`, and no code.
+
+```
+squash_merge_commit_title:   COMMIT_OR_PR_TITLE -> PR_TITLE
+squash_merge_commit_message: COMMIT_MESSAGES    -> PR_BODY
+allow_merge_commit:          true               -> false
+allow_rebase_merge:          true               -> false
+```
+
+Squash is now the only path into `main` for every pull request in this repository, and the squash commit body is the pull request description verbatim.
+
+The proof that matters is not the read-back. Throwaway PR #56 carried `Bump: nothing=patch` in its description and deliberately carried no trailer in its branch commit message.
+After the squash merge, `git log -1 --format=%B origin/main | git interpret-trailers --parse` printed exactly `Bump: nothing=patch`, at merge sha `d7f2f8c44ac2b010bed5cf09e43db20b636d5b64`.
+The trailer had nowhere else to come from, so `PR_BODY` is confirmed to carry it through the real merge path rather than merely to have been accepted by the API.
+
+The probe's scaffolding is gone. Branch `chore/trailer-probe` is deleted locally and on the remote, and `notes/trailer-probe.md` was removed in this ticket's own pull request, so `main` carries none of it.
+
+The repository files that changed are the ticket file, `work-orders/INDEX.md`, the epic README, and `HYDRATION.md`. Nothing executable was written.
+
+### What is NOT done
+
+Nothing has been built in either epic. Twenty of the twenty-one tickets have never been started and none of them has a branch.
+
+Each of these is a command whose output proves the claim, measured on `main` after this ticket merged:
+
+- `ls claude/tools` fails. No `skill-sync.sh`, no `skill-onboard.sh`, no notice partial, no tools test suite.
+- `git ls-files .github/workflows` prints nothing. There is no PR gate and no publisher, so nothing yet reads the trailer this ticket just made possible.
+- `head -c 40 claude/skills/registry.json` shows `"schema": 1`. Schema 2 is unwritten.
+- `grep -l "This copy is read-only" claude/skills/*/SKILL.md | wc -l` prints `43`. Every skill still carries the inline notice.
+
+Deliberately out of scope on `WO-20260824-cc71` - `Repo settings: squash-only, with the commit body taken from the PR description`, and still absent: branch protection rules, and required status checks.
+Status checks arrive with `WO-20260824-2ad1` - `PR gate workflow: validate the bump intent and run the affected suites`, which is blocked behind four other tickets. Branch protection is not on any ticket at all and is a decision the user has not been asked for.
+
+Nothing was carried off this ticket onto another one. Both acceptance criteria were met and evidenced separately.
+
+### Stale or false in the docs
+
+`docs/superpowers/plans/2026-08-24-skills-package-manager-implementation.md` section `C2` states the live values as `squash_merge_commit_message=COMMIT_MESSAGES`, `allow_merge_commit=true`, `allow_rebase_merge=true`.
+Those were true on 2026-08-24 when the plan was written and are false now. `WO-20260824-cc71` - `Repo settings: squash-only, with the commit body taken from the PR description` changed all three. The constraint C2 describes is satisfied, not pending.
+
+`docs/superpowers/specs/2026-08-23-skills-package-manager-design.md` section `Repo settings, first` carries the same snapshot under the heading "Checked on 2026-08-24, and one of them would have killed this silently". Same correction. The `gh api -X PATCH` block immediately below it has been run, and does not need running again.
+
+Neither of those is worth a fix-up commit on its own. They are historical statements about a moment, they are labelled with the date they were checked, and the tickets that touch those documents can correct them in passing.
+
+Root `CLAUDE.md` Rule 16 still requires a PR touching a skill to bump the version and ship a regenerated `registry.json` by hand. That is still true today and must still be obeyed today.
+It becomes false at `WO-20260824-8cd1` - `Rewrite root CLAUDE.md for merge-time allocation and the named main exception`, and not before. The new settings do not change it. A `Bump:` trailer reaching `main` does nothing at all until a publisher exists to read it.
+
+This repository has no `CONTEXT_STATE.md`. Several skills assume one and the `hydration-prompt` skill's flow references one. It genuinely does not exist here. Do not create one as a side effect of this ticket.
+
+### Your scope
+
+One question, answered by watching real sessions, and the answer written into the ticket.
+
+Does a `SessionStart` hook with `"matcher": "startup"` fire only on a startup, or does it fire on every source regardless of what the matcher says?
+
+Build a scratch project outside this repository. Install a `SessionStart` hook whose matcher is the literal string `startup` and whose command appends its full stdin payload and a timestamp to a file. Then produce all four session events against that project: a fresh start, a resume, a clear, and a forced compact. Record which of the four caused the hook to fire.
+
+The deliverable is a written decision, not a hook.
+
+If matchers do filter, the answer is the matcher form `startup|resume|clear`, and `WO-20260824-bb0d` - `setup.sh installs the skill-sync binary, then the SessionStart hook` uses it.
+If matchers do not filter, the answer is that `"matcher": ""` is used instead and `claude/tools/skill-sync.sh` must read the source out of the hook payload on stdin and exit early on `compact` by itself. That second outcome adds scope to `WO-20260824-5b89` - `skill-sync.sh part one: resolution, and the tools test tree it is proved in`, so say so plainly in the note if it happens.
+
+Out of scope, and named because they are the obvious next thoughts: writing the real hook, which `WO-20260824-bb0d` - `setup.sh installs the skill-sync binary, then the SessionStart hook` owns, and editing `claude/tools/skill-sync.sh`, which does not exist yet and only gains the stdin read if the answer is no.
+
+Do not modify `~/.claude/settings.json`. Every hook on this machine uses an empty matcher, that is precisely why the question is open, and changing the machine's real settings to run an experiment risks breaking every other project's session start.
+
+Clean the scratch project up afterwards. It is scaffolding, not deliverable.
+
+### Before you start
+
+None.
+
+One thing to be aware of rather than to resolve: forcing a compact costs a real context window, so it is the expensive event of the four and is worth doing last, after the cheap three are already recorded. The poker note on the ticket sized it at 3 points for exactly this reason.
+
+### Read in this order
+
+1. Root `CLAUDE.md`. Rules 12, 14 and 17 bear on this work. There is no `CONTEXT_STATE.md` in this repository, so the usual second step does not apply.
+2. This entry, which is the top entry of `HYDRATION.md`. Read only this one. The entries below it are superseded history.
+3. `docs/superpowers/plans/2026-08-24-skills-package-manager-implementation.md`, the section headed `Sequencing constraints`, specifically `C7`, and then `E1.2`. C7 is why this is a gate and not a detail.
+4. The ticket file itself: `work-orders/WO-20260824-f1a5/WO-20260824-0615-confirm-whether-a-sessionstart-hook-matcher-filt.md`.
+5. `docs/superpowers/specs/2026-08-23-skills-package-manager-design.md`, only the sections describing the SessionStart hook and the never-run-on-compact property. The rest is not needed for this ticket.
+
+### Reuse, it is proven
+
+`claude/skills/work-order/scripts/work-order.sh` owns every ticket transition. Never hand-edit a ticket file. `note` is the only way a note reaches a ticket, and `evidence` is the only way a criterion gets ticked.
+
+`claude/skills/hydration-prompt/scripts/hydration.sh` owns `HYDRATION.md`. Run `check --body-file` before `add`; `add` refuses a body that fails `check`, which is how a malformed entry is kept out of the file.
+
+`claude/skills/container-sandbox/SKILL.md` has a section on verifying a host CLI's behaviour by bind-mounting the real binary read-only. It is the right pattern for a great many things in these two epics, and it is the wrong pattern for this one. A `SessionStart` hook fires from a real interactive Claude Code session on this host; there is no way to produce a genuine resume or a genuine compact inside a container. Rule 14 is not waived, it simply has nothing to bite on, and the ticket's own test plan already calls this rung 5 and manual.
+
+`gh` is authenticated and works in this repository. `gh-axi` wraps it and is preferred where it fits.
+
+`git interpret-trailers --parse` is confirmed working end to end as of PR #56. Use it, not a regular expression, wherever a trailer is read.
+
+### The verification ladder
+
+Rung 1, free: `jq . <scratch>/.claude/settings.json`. Catches a malformed hook definition before any session is spent. A hook that fails to parse is silently absent, which looks identical to a matcher that filtered it out, and that is the one confusion that would make the whole result wrong.
+
+Rung 2, cheap: start one session in the scratch project and confirm the hook file was appended to at all. If a plain startup does not fire, the hook is broken rather than the matcher being strict, and nothing further is worth doing until that is fixed.
+
+Rung 3, the actual experiment: the resume and the clear. Two more sessions, no context cost worth counting.
+
+Rung 4, expensive and last: the forced compact. This is the event the design's safety property is about, so it cannot be skipped, but it is the only one that costs a real context window.
+
+Assert the post-state of the log file every time. Never assert on the exit status of the session command.
+
+### Traps, already paid for
+
+A hook appears not to fire and the conclusion is that matchers filter. The hook was actually never installed, because the settings file did not parse. Rung 1 exists for this.
+
+A command reports success and did nothing. A prompt with no TTY takes its default and exits 0. Assert the post-state, never `$?`.
+
+A loop over IDs passes every ID as one argument. This shell is zsh, which does not word-split an unquoted parameter the way bash does. Use `while read -r`, not `for x in $LIST`.
+
+`git merge --ff-only origin/main` refuses with "diverging branches". You are in a treehouse slot at detached HEAD, not in `/home/luna/dotfiles`. Check `git branch --show-current` first.
+
+`git rebase` refuses with "cannot rebase: You have unstaged changes", immediately after `work-order.sh start`. `start` writes the ticket file, `INDEX.md` and the epic README and leaves them uncommitted. Commit them before rebasing.
+
+`work-order.sh done` refuses with "status is 'in-progress'; this command requires one of: in-review". `done` follows `submit --pr N`, so the pull request has to exist before `done` can be run. Open the PR, `submit`, `done`, then commit and push again onto the same PR.
+
+### Workflow
+
+```bash
+WO=claude/skills/work-order/scripts/work-order.sh
+HP=claude/skills/hydration-prompt/scripts/hydration.sh
+
+bash $WO show    --project . --id WO-20260824-0615
+bash $WO start   --project . --id WO-20260824-0615   # creates the branch, leaves files uncommitted
+
+# ... do the work ...
+
+bash $WO evidence --project . --id WO-20260824-0615 --index 1 --observed "..."
+bash $WO evidence --project . --id WO-20260824-0615 --index 2 --observed "..."
+bash $WO note     --project . --id WO-20260824-0615 --text "..."
+
+bash $HP check   --project . --body-file /tmp/entry.md
+bash $HP add     --project . --id <next> --title "<next title>" --body-file /tmp/entry.md
+
+git push -u origin <branch>
+gh pr create --base main --title "..." --body-file <file>
+
+bash $WO submit  --project . --id WO-20260824-0615 --pr <N>
+bash $WO done    --project . --id WO-20260824-0615   # on the branch, before the merge
+git commit && git push                                # rides the same PR
+
+# after the merge
+bash $WO close   --project . --id WO-20260824-0615 --dry-run
+bash $WO close   --project . --id WO-20260824-0615
+```
+
+`approve` is already done for all 23 tickets and must not be run again.
+
+The pull request description is now the merge commit body verbatim. Write it as something worth reading on `main`, because that is where it ends up.
+
+### Conventions
+
+Every reference to a work-order in a chat reply carries the ticket ID and its full title joined by a dash. A bare ID is a defect, and so is "the next ticket" or "the blocked one".
+
+Feature branches only. `main` is never written directly. The one exception to that rule does not exist yet and arrives with the publish workflow.
+
+Squash is the only merge available in this repository now. Merge commits and rebase merges are disabled at the repository level, so `gh pr merge --merge` and `--rebase` will be refused.
+
+No em dashes anywhere. Use a plain dash.
+
+No agent co-author line in a commit message, and no Claude attribution footer in a PR body. Root `CLAUDE.md` Rule 13 makes the second one absolute.
+
+All testing runs in Podman, per Rule 14, with no size threshold. This ticket's experiment cannot run in one, for the reason given above, and that is stated rather than quietly skipped.
+
+Report failures as failures. A skipped step is not a completed one.
+
 <!-- hydration-entry: WO-20260824-cc71 -->
 ## WO-20260824-cc71 - Repo settings: squash-only, with the commit body taken from the PR description
 _Generated 2026-08-24 by hydration.sh. Newest entry._
