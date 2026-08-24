@@ -15,7 +15,6 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20260824-316d` | ready | p1 | WO-20260824-2ad1 WO-20260824-360d WO-20260824-bb0d | [Pilot: take hydration-prompt through the whole pipeline end to end](WO-20260824-316d-pilot-take-hydration-prompt-through-the-whole-pi.md) |
 | `WO-20260824-360d` | ready | p1 | WO-20260824-efb0 | [Publish workflow: allocate versions on merge to main and regenerate the registry](WO-20260824-360d-publish-workflow-allocate-versions-on-merge-to-m.md) |
 | `WO-20260824-de9e` | ready | p1 | - | [Registry schema 2, with type derived from the tree and requires read from frontmatter](WO-20260824-de9e-registry-schema-2-with-type-derived-from-the-tre.md) |
-| `WO-20260824-cc71` | done | p1 | - | [Repo settings: squash-only, with the commit body taken from the PR description](WO-20260824-cc71-repo-settings-squash-only-with-the-commit-body-t.md) |
 | `WO-20260824-8cd1` | ready | p1 | WO-20260824-9712 | [Rewrite root CLAUDE.md for merge-time allocation and the named main exception](WO-20260824-8cd1-rewrite-root-claude-md-for-merge-time-allocation.md) |
 | `WO-20260824-6acf` | ready | p1 | - | [Split verify into a structure check and a full check, and delete the notice assertion](WO-20260824-6acf-split-verify-into-a-structure-check-and-a-full-c.md) |
 | `WO-20260824-bb0d` | ready | p1 | WO-20260824-0615 WO-20260824-efb0 | [setup.sh installs the skill-sync binary, then the SessionStart hook](WO-20260824-bb0d-setup-sh-installs-the-skill-sync-binary-then-the.md) |

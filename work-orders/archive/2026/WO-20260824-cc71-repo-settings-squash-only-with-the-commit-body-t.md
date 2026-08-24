@@ -12,8 +12,8 @@
   "parent": "WO-20260824-f1a5",
   "branch": "feat/repo-settings-squash-only-with-the-commit-body-t",
   "pr": 57,
-  "merge_sha": null,
-  "closed": null,
+  "merge_sha": "010d84bb705ba823fdfc52182e902aac1c30082c",
+  "closed": "2026-08-24",
   "approval": {
     "via": "override",
     "reason": "Reviewed and approved on PR #55 on GitHub, which is where the whole cut was read as one diff. Lavish was offered and declined in favour of the PR.",
