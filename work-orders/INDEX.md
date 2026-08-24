@@ -26,7 +26,7 @@ Archived tickets drop out of it and into the table below.
 
 ```text
 WO-20260824-f1a5  ready       p1 Skills package manager: prove the path on one skill
-|-- WO-20260824-0615  in-progress p1 Confirm whether a SessionStart hook matcher filters by source
+|-- WO-20260824-0615  done        p1 Confirm whether a SessionStart hook matcher filters by source
 |-- WO-20260824-9712  ready       p1 End-to-end proof in a scratch project, including the lost-r...
 |-- WO-20260824-2136  ready       p1 Extract the read-only notice into a single rendered partial
 |-- WO-20260824-2ad1  ready       p1 PR gate workflow: validate the bump intent and run the affe...
@@ -62,7 +62,7 @@ WO-20260824-00d5  ready       p2 Skills package manager: roll it out across the 
 | `WO-20260824-b21b` | ready | p2 | chore | WO-20260824-00d5 | WO-20260824-9712 | [CLAUDE.md.tmpl: replace the session-start prose, add the skills markers, the treehouse policy and the documentation-lifetime rule](WO-20260824-00d5/WO-20260824-b21b-claude-md-tmpl-replace-the-session-start-prose-a.md) |
 | `WO-20260824-c6b0` | ready | p2 | feature | WO-20260824-00d5 | WO-20260824-9712 | [skill-onboard.sh brings an existing project onto the sync](WO-20260824-00d5/WO-20260824-c6b0-skill-onboard-sh-brings-an-existing-project-onto.md) |
 | `WO-20260824-d058` | ready | p2 | chore | WO-20260824-00d5 | WO-20260824-316d | [Remove the inline read-only notice from the other 42 SKILL.md files](WO-20260824-00d5/WO-20260824-d058-remove-the-inline-read-only-notice-from-the-othe.md) |
-| `WO-20260824-0615` | in-progress | p1 | spike | WO-20260824-f1a5 | - | [Confirm whether a SessionStart hook matcher filters by source](WO-20260824-f1a5/WO-20260824-0615-confirm-whether-a-sessionstart-hook-matcher-filt.md) |
+| `WO-20260824-0615` | done | p1 | spike | WO-20260824-f1a5 | - | [Confirm whether a SessionStart hook matcher filters by source](WO-20260824-f1a5/WO-20260824-0615-confirm-whether-a-sessionstart-hook-matcher-filt.md) |
 | `WO-20260824-2136` | ready | p1 | feature | WO-20260824-f1a5 | - | [Extract the read-only notice into a single rendered partial](WO-20260824-f1a5/WO-20260824-2136-extract-the-read-only-notice-into-a-single-rende.md) |
 | `WO-20260824-2ad1` | ready | p1 | feature | WO-20260824-f1a5 | WO-20260824-6acf WO-20260824-efb0 | [PR gate workflow: validate the bump intent and run the affected suites](WO-20260824-f1a5/WO-20260824-2ad1-pr-gate-workflow-validate-the-bump-intent-and-ru.md) |
 | `WO-20260824-316d` | ready | p1 | chore | WO-20260824-f1a5 | WO-20260824-2ad1 WO-20260824-360d WO-20260824-bb0d | [Pilot: take hydration-prompt through the whole pipeline end to end](WO-20260824-f1a5/WO-20260824-316d-pilot-take-hydration-prompt-through-the-whole-pi.md) |
@@ -71,7 +71,7 @@ WO-20260824-00d5  ready       p2 Skills package manager: roll it out across the 
 | `WO-20260824-6acf` | ready | p1 | feature | WO-20260824-f1a5 | - | [Split verify into a structure check and a full check, and delete the notice assertion](WO-20260824-f1a5/WO-20260824-6acf-split-verify-into-a-structure-check-and-a-full-c.md) |
 | `WO-20260824-8cd1` | ready | p1 | chore | WO-20260824-f1a5 | WO-20260824-9712 | [Rewrite root CLAUDE.md for merge-time allocation and the named main exception](WO-20260824-f1a5/WO-20260824-8cd1-rewrite-root-claude-md-for-merge-time-allocation.md) |
 | `WO-20260824-9712` | ready | p1 | chore | WO-20260824-f1a5 | WO-20260824-316d | [End-to-end proof in a scratch project, including the lost-receipt case](WO-20260824-f1a5/WO-20260824-9712-end-to-end-proof-in-a-scratch-project-including-.md) |
-| `WO-20260824-bb0d` | ready | p1 | feature | WO-20260824-f1a5 | WO-20260824-0615 WO-20260824-efb0 | [setup.sh installs the skill-sync binary, then the SessionStart hook](WO-20260824-f1a5/WO-20260824-bb0d-setup-sh-installs-the-skill-sync-binary-then-the.md) |
+| `WO-20260824-bb0d` | ready | p1 | feature | WO-20260824-f1a5 | WO-20260824-efb0 | [setup.sh installs the skill-sync binary, then the SessionStart hook](WO-20260824-f1a5/WO-20260824-bb0d-setup-sh-installs-the-skill-sync-binary-then-the.md) |
 | `WO-20260824-de9e` | ready | p1 | feature | WO-20260824-f1a5 | - | [Registry schema 2, with type derived from the tree and requires read from frontmatter](WO-20260824-f1a5/WO-20260824-de9e-registry-schema-2-with-type-derived-from-the-tre.md) |
 | `WO-20260824-efb0` | ready | p1 | feature | WO-20260824-f1a5 | WO-20260824-5b89 | [skill-sync.sh part two: build, swap, receipt, and self-update](WO-20260824-f1a5/WO-20260824-efb0-skill-sync-sh-part-two-build-swap-receipt-and-se.md) |
 | `WO-20260824-f1a5` | ready | p1 | feature | - | - | [Skills package manager: prove the path on one skill](WO-20260824-f1a5/WO-20260824-f1a5-skills-package-manager-prove-the-path-on-one-ski.md) |
