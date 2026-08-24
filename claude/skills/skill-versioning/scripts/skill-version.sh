@@ -7,7 +7,8 @@
 #
 #   skill-version.sh init                      stamp unversioned skills at 1.0.0
 #   skill-version.sh bump <skill> --minor      bump one skill, regen registry
-#   skill-version.sh verify                    CI gate: versions present, registry fresh
+#   skill-version.sh verify                    publisher gate: versions present, registry fresh
+#   skill-version.sh verify --structure        PR gate: versions present, registry untouched
 #   skill-version.sh list                      print every skill and its version
 #
 # SKILL_VERSION_SKILLS_DIR overrides the skills directory (used by the tests).
@@ -18,12 +19,6 @@ HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 SKILLS_DIR=${SKILL_VERSION_SKILLS_DIR:-$(cd "$HERE/../../" && pwd)}
 REGISTRY="$SKILLS_DIR/registry.json"
 
-# Where a skill's source lives for someone who does not have this checkout. The
-# owner is literal on purpose - see the documented exception in root CLAUDE.md.
-# Substituting a placeholder here points every reader at a repo that does not
-# exist, and the notice fails silently rather than loudly.
-SKILL_SRC_URL="https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills"
-
 die() { printf '%s: %s\n' "$SELF" "$*" >&2; exit 1; }
 
 usage() {
@@ -31,7 +26,7 @@ usage() {
 USAGE
   $SELF init
   $SELF bump <skill> --major|--minor|--patch
-  $SELF verify
+  $SELF verify [--structure [--base <ref>]]
   $SELF list
   $SELF --help
 
@@ -46,10 +41,21 @@ SUBCOMMANDS
              --minor   new capability, backward compatible
              --patch   wording, script bugfix, doc clarification, tests
 
-  verify   Exit non-zero if any skill lacks a version, if any SKILL.md is
-           missing the read-only notice, if the registry is missing, or if the
-           registry does not match what the skills on disk would produce. A
-           stale registry means a skill changed without a bump.
+  verify   Two forms, for two different callers.
+
+           Plain — the publisher's gate. Exit non-zero if any skill lacks a
+           version, if the registry is missing, or if the registry does not
+           match what the skills on disk would produce. A stale registry means
+           a skill changed without a bump.
+
+           --structure — the PR gate. Exit non-zero if any skill lacks a
+           version, or if this branch's diff touches a version: line or
+           registry.json. It says nothing about whether the registry matches
+           the tree, because under merge-time allocation a skill PR
+           legitimately edits a skill and leaves the registry alone.
+
+             --base <ref>   what to diff against. Default: the first of
+                            origin/main or main that resolves.
 
   list     Print each skill and its current version.
 
@@ -171,30 +177,98 @@ cmd_bump() {
   printf '%s  %s -> %s\n' "$name" "$cur" "$new"
 }
 
+# ── the diff half of verify --structure ────────────────────────────────────────
+# Under merge-time allocation the version and the registry are written by CI on
+# main, never by a contributor on a branch. So the assertion is not "the edit
+# looks wrong" but "there is no edit at all": any version: line or registry.json
+# in this branch's diff is a hand-edit by definition.
+#
+# This lives in --structure alone. Plain verify catches the same hand-edit a
+# different way - the version sits inside SKILL.md, so touching it moves both
+# the rendered version and the content hash, and the registry comparison fails.
+# Plain verify also has to stay usable on the branch that legitimately carries a
+# bump, which is every skill PR until merge-time allocation lands.
+diff_check() {
+  local base=$1 rc=0 mb changed f d
+  git -C "$SKILLS_DIR" rev-parse --git-dir >/dev/null 2>&1 || {
+    printf 'not a git repository: %s\n' "$SKILLS_DIR" >&2
+    printf 'verify --structure diffs a branch; there is nothing here to diff\n' >&2
+    return 1
+  }
+
+  if [[ -n $base ]]; then
+    git -C "$SKILLS_DIR" rev-parse --verify -q "$base^{commit}" >/dev/null \
+      || { printf 'no such ref: %s\n' "$base" >&2; return 1; }
+  else
+    for f in origin/main main; do
+      if git -C "$SKILLS_DIR" rev-parse --verify -q "$f^{commit}" >/dev/null; then base=$f; break; fi
+    done
+    [[ -n $base ]] || {
+      printf 'no base ref found (tried origin/main, main) — pass --base <ref>\n' >&2
+      return 1
+    }
+  fi
+
+  mb=$(git -C "$SKILLS_DIR" merge-base "$base" HEAD 2>/dev/null) || {
+    printf 'no merge base between HEAD and %s\n' "$base" >&2
+    return 1
+  }
+
+  # --relative keeps both the pathspec and the reported names anchored to the
+  # skills directory, so this reads the same whether the skills live at the repo
+  # root or under claude/. Omitting the second rev is deliberate: the comparison
+  # runs against the working tree, so an uncommitted hand-edit is caught too.
+  if [[ -n $(git -C "$SKILLS_DIR" diff --relative --name-only "$mb" -- registry.json) ]]; then
+    printf 'registry.json edited in this diff\n' >&2
+    rc=1
+  fi
+
+  while IFS= read -r f; do
+    [[ $f == */SKILL.md ]] || continue
+    # Captured before grepping rather than piped into it: grep -q closes the
+    # pipe on its first match, git dies of SIGPIPE, and pipefail would report
+    # that as "no match" - the check passing precisely when it should fail.
+    d=$(git -C "$SKILLS_DIR" diff --relative -U0 "$mb" -- "$f")
+    if grep -qE '^[+-]version:' <<< "$d"; then
+      printf 'version: edited in this diff   %s\n' "$f" >&2
+      rc=1
+    fi
+  done < <(git -C "$SKILLS_DIR" diff --relative --name-only "$mb" -- .)
+
+  if [[ $rc -ne 0 ]]; then
+    cat >&2 <<EOF
+
+CI allocates the version at merge and writes the registry itself. A branch
+carries the intent, not the number. Revert both and state the bump in the PR.
+
+  git checkout $mb -- <path>
+EOF
+    return 1
+  fi
+
+  printf 'base: %s\n' "$base"
+  return 0
+}
+
 cmd_verify() {
-  local rc=0 noro=0 d name total=0 expected
+  local structure=0 base="" rc=0 d name total=0 expected
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --structure)    structure=1; shift ;;
+      --base)         base=${2:-}; [[ -n $base ]] || die "--base needs a ref"; shift 2 ;;
+      -h|--help)      usage; return 0 ;;
+      *)              usage >&2; die "unknown option for verify: $1" ;;
+    esac
+  done
+  [[ $structure -eq 1 || -z $base ]] || die "--base only applies to verify --structure"
+
   while IFS= read -r d; do
     name=$(basename "$d")
     total=$((total + 1))
     if [[ -z $(read_version "$d/SKILL.md") ]]; then
       printf 'unversioned   %s\n' "$name" >&2
       rc=1
-    fi
-    # Every SKILL.md states that a vendored copy is read-only, because the file
-    # copied into a project is the file an agent reads there. A skill without
-    # it ships to projects saying nothing, and skill-update.sh will one day
-    # replace a local edit with no conflict and no warning.
-    #
-    # The URL is checked as well as the notice, and checked per skill so a
-    # copy-paste that kept the neighbour's name fails here rather than sending
-    # a reader to the wrong skill. It is the half that still works on a machine
-    # with no dotfiles checkout, which is where a vendored copy usually sits.
-    if ! grep -qF 'This copy is read-only.' "$d/SKILL.md" 2>/dev/null; then
-      printf 'no read-only notice   %s\n' "$name" >&2
-      noro=1
-    elif ! grep -qF "$SKILL_SRC_URL/$name" "$d/SKILL.md" 2>/dev/null; then
-      printf 'notice has no upstream URL, or names another skill   %s\n' "$name" >&2
-      noro=1
     fi
   done < <(skill_dirs)
 
@@ -203,11 +277,10 @@ cmd_verify() {
     return 1
   fi
 
-  if [[ $noro -ne 0 ]]; then
-    printf "\nadd the read-only notice under the SKILL.md title, naming that skill's\n" >&2
-    printf "own upstream path and its own URL. Copy the block from any other skill:\n" >&2
-    printf "  %s/<skill>/SKILL.md\n" "$SKILL_SRC_URL" >&2
-    return 1
+  if [[ $structure -eq 1 ]]; then
+    diff_check "$base" || return 1
+    printf 'ok — %d skills versioned, no version: or registry.json in the diff\n' "$total"
+    return 0
   fi
 
   [[ -f "$REGISTRY" ]] || { printf 'registry missing: %s\n' "$REGISTRY" >&2; return 1; }

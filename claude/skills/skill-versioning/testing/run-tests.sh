@@ -146,28 +146,21 @@ check "verify names the unversioned skill" \
   "$(grep -q '^unversioned .*gamma' "$WORK/verify-unversioned.out"; echo $?)"
 rm -rf "$SKILLS/gamma"
 
-# The read-only notice is what a vendored copy carries into a project. A skill
-# without it ships saying nothing, and skill-update.sh will one day replace a
-# local edit with no conflict and no warning. The gate is the only thing that
-# stops a new skill from being born that way.
+# The read-only notice is no longer verify's business. It is asserted present
+# nowhere and absent nowhere, which is the only state that holds while the
+# repository is mid-rollout and some SKILL.md files carry it and some do not.
+# A skill stripped of its notice is therefore an ordinary edit, and the only
+# thing verify has to say about it is that the registry went stale.
 cp "$SKILLS/alpha/SKILL.md" "$WORK/alpha-ro.bak"
 grep -v 'This copy is read-only.' "$WORK/alpha-ro.bak" > "$SKILLS/alpha/SKILL.md"
-expect_rc "verify FAILS when a skill has no read-only notice" 1 bash "$SV" verify
 bash "$SV" verify > "$WORK/verify-noro.out" 2>&1
-check "verify names the skill missing the notice" \
-  "$(grep -q '^no read-only notice .*alpha' "$WORK/verify-noro.out"; echo $?)"
-# The URL is half the notice, and the half that still works on a machine with no
-# dotfiles checkout. Checked per skill, because the likeliest way to get it
-# wrong is a copy-paste that kept the neighbour's name - which reads as correct
-# and sends someone to the wrong skill.
-sed 's|claude/skills/alpha|claude/skills/beta|g' "$WORK/alpha-ro.bak" > "$SKILLS/alpha/SKILL.md"
-expect_rc "verify FAILS when the notice names another skill" 1 bash "$SV" verify
-bash "$SV" verify > "$WORK/verify-wrongurl.out" 2>&1
-check "verify names the skill whose notice points elsewhere" \
-  "$(grep -q '^notice has no upstream URL.*alpha' "$WORK/verify-wrongurl.out"; echo $?)"
+check "verify says nothing about a missing read-only notice" \
+  "$(neg grep -qi 'read-only' "$WORK/verify-noro.out")"
+check "a stripped notice is reported as ordinary drift" \
+  "$(grep -q '^drifted .*alpha' "$WORK/verify-noro.out"; echo $?)"
 
 cp "$WORK/alpha-ro.bak" "$SKILLS/alpha/SKILL.md"
-expect_rc "verify passes once the notice is back" 0 bash "$SV" verify
+expect_rc "verify passes once the file is restored" 0 bash "$SV" verify
 
 rm -rf "$SKILLS/beta"
 expect_rc "verify FAILS when the registry lists a skill that is gone" 1 bash "$SV" verify
@@ -196,7 +189,86 @@ expect_rc "bump rejects a missing level"      1 bash "$SV" bump alpha
 check "a rejected bump left the version untouched" \
   "$(grep -qx 'version: 2.0.0' "$SKILLS/alpha/SKILL.md"; echo $?)"
 
-# ── 5. skill-update, inline ────────────────────────────────────────────────────
+# ── 5. verify --structure ──────────────────────────────────────────────────────
+# The PR gate. Under merge-time allocation a skill PR edits a skill and leaves
+# the registry alone, which plain verify calls drift and is right to. The whole
+# point of the split is that one state, so it is tested as one pair: --structure
+# exits 0 and plain verify exits non-zero on the same branch.
+#
+# The fixture is a real git repository with the skills under claude/, because
+# every assertion here is about a diff, and because paths anchored to the repo
+# root rather than to the skills directory is the way this silently reads the
+# wrong files.
+hd "verify --structure"
+GITFIX="$WORK/gitrepo"
+GSKILLS="$GITFIX/claude/skills"
+rm -rf "$GITFIX"
+mkdir -p "$GSKILLS"
+git init -q -b main "$GITFIX"
+git -C "$GITFIX" config user.email tester@example.com
+git -C "$GITFIX" config user.name Tester
+mkfixture "$GSKILLS"
+gsv() { SKILL_VERSION_SKILLS_DIR="$GSKILLS" bash "$SV" "$@"; }
+gsv init >/dev/null 2>&1
+git -C "$GITFIX" add -A >/dev/null 2>&1
+git -C "$GITFIX" commit -q -m "skills, versioned and in sync"
+
+# An unknown flag that is silently ignored is the failure that looks like a
+# passing gate: --structure does nothing, the strict path runs, and the exit
+# code is right for the wrong reason. These three prove it is parsed at all.
+expect_rc "verify --help"                    0 gsv verify --help
+expect_rc "verify --structure --help"        0 gsv verify --structure --help
+expect_rc "verify REJECTS an unknown flag"   1 gsv verify --frobnicate
+expect_rc "--base without --structure rejected" 1 gsv verify --base main
+
+expect_rc "--structure passes on a clean checkout" 0 gsv verify --structure
+expect_rc "verify passes on the same checkout"     0 gsv verify
+
+# The case that motivated the split.
+git -C "$GITFIX" checkout -q -b feat/edit-a-skill
+printf 'echo more\n' >> "$GSKILLS/alpha/scripts/run.sh"
+git -C "$GITFIX" add -A >/dev/null 2>&1
+git -C "$GITFIX" commit -q -m "edit a skill, leave the registry alone"
+expect_rc "--structure PASSES with a skill edited and the registry untouched" 0 gsv verify --structure
+expect_rc "plain verify FAILS on that same branch"                            1 gsv verify
+
+expect_rc "--structure takes an explicit --base" 0 gsv verify --structure --base main
+expect_rc "--base rejects a ref that does not exist" 1 gsv verify --structure --base no/such/ref
+
+# A hand-edited version:, uncommitted. Uncommitted on purpose - the diff runs
+# against the working tree, so the gate answers before the commit exists.
+sed 's/^version: 2.3.4/version: 2.3.5/' "$GSKILLS/beta/SKILL.md" > "$WORK/beta.tmp"
+cat "$WORK/beta.tmp" > "$GSKILLS/beta/SKILL.md"
+expect_rc "--structure FAILS on a hand-edited version:" 1 gsv verify --structure
+gsv verify --structure > "$WORK/structure-version.out" 2>&1
+check "--structure names the file whose version: moved" \
+  "$(grep -q '^version: edited in this diff .*beta/SKILL.md' "$WORK/structure-version.out"; echo $?)"
+git -C "$GITFIX" checkout -q -- .
+
+# A registry.json in the diff at all. CI writes it at merge; a branch never does.
+printf '\n' >> "$GSKILLS/registry.json"
+expect_rc "--structure FAILS when registry.json is in the diff" 1 gsv verify --structure
+gsv verify --structure > "$WORK/structure-registry.out" 2>&1
+check "--structure names registry.json" \
+  "$(grep -q '^registry.json edited in this diff' "$WORK/structure-registry.out"; echo $?)"
+git -C "$GITFIX" checkout -q -- .
+
+# Everything plain verify asserts about versions, --structure asserts too.
+mkdir -p "$GSKILLS/gamma"
+printf -- '---\nname: gamma\ndescription: No version on purpose.\n---\n' > "$GSKILLS/gamma/SKILL.md"
+expect_rc "--structure FAILS when any skill has no version" 1 gsv verify --structure
+rm -rf "$GSKILLS/gamma"
+expect_rc "--structure passes again once it is gone" 0 gsv verify --structure
+
+# Outside a repository there is no diff to take, and a gate with nothing to
+# check must say so rather than exit 0 having checked nothing.
+SKILL_VERSION_SKILLS_DIR="$SKILLS" bash "$SV" verify --structure > "$WORK/structure-nogit.out" 2>&1
+STRUCT_NOGIT_RC=$?
+check "--structure FAILS outside a git repository" "$([[ $STRUCT_NOGIT_RC -ne 0 ]]; echo $?)"
+check "--structure says it is not a git repository" \
+  "$(grep -q 'not a git repository' "$WORK/structure-nogit.out"; echo $?)"
+
+# ── 6. skill-update, inline ────────────────────────────────────────────────────
 hd "skill-update --mode inline"
 DOT="$WORK/dotfiles"
 rm -rf "$DOT"
@@ -235,7 +307,7 @@ expect_rc "unreachable remote source fails" 1 \
 expect_rc "non-repo rejected in standalone" 1 \
   bash "$SU" --skill alpha --mode standalone --project "$WORK/notarepo" --dotfiles "$DOT"
 
-# ── 6. skill-update, standalone ────────────────────────────────────────────────
+# ── 7. skill-update, standalone ────────────────────────────────────────────────
 # gh is stubbed rather than mocked away entirely: the stub performs the merge on
 # the local bare repo, so the branch/commit/push/merge/delete orchestration is
 # genuinely exercised end to end without a network.
@@ -310,7 +382,7 @@ check "a second standalone run exits 0" "$([[ $NOOP_RC -eq 0 ]]; echo $?)"
 check "a second standalone run opens no PR" \
   "$(grep -q 'already v1.0.0' "$WORK/standalone2.out"; echo $?)"
 
-# ── 7. failure reporting ───────────────────────────────────────────────────────
+# ── 8. failure reporting ───────────────────────────────────────────────────────
 hd "failure reporting"
 setup_project "$WORK/proj3" "$WORK/origin3.git"
 git -C "$WORK/proj3" remote set-url origin "$WORK/does-not-exist.git"

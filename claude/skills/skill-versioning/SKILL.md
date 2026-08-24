@@ -1,7 +1,7 @@
 ---
 name: skill-versioning
 description: Semver for the skills in this dotfiles repo, and the machinery that keeps a project's installed copies honest. Use when bumping a skill's version, regenerating claude/skills/registry.json, checking whether a project's .claude/skills are behind the published registry, or applying an update to a project. Triggered by "bump this skill", "is my skill out of date", "update the skill in this project", "regenerate the registry", or by the session-start skill version check in CLAUDE.md.
-version: 1.1.1
+version: 1.2.0
 ---
 
 # Skill versioning
@@ -46,12 +46,34 @@ Run from anywhere; the script locates the skills directory from its own path.
 ```bash
 scripts/skill-version.sh init                       # stamp unversioned skills at 1.0.0
 scripts/skill-version.sh bump <skill> --minor       # bump one skill, regen the registry
-scripts/skill-version.sh verify                     # the gate: versions present, notice present, registry fresh
+scripts/skill-version.sh verify                     # the publisher's gate: versions present, registry fresh
+scripts/skill-version.sh verify --structure         # the PR gate: versions present, registry untouched
 scripts/skill-version.sh list                       # every skill and its version
 ```
 
 `bump` is the only supported way to change a version.
 Hand-editing the field leaves the registry stale, and `verify` exists to catch exactly that.
+
+### The two forms of `verify`
+
+They exist because two callers ask different questions, and the answer that is right for one is wrong for the other.
+
+| Form          | Caller        | Asserts                                                                            |
+| ------------- | ------------- | ---------------------------------------------------------------------------------- |
+| `verify`      | the publisher | every skill versioned, and `registry.json` matches what the tree would render      |
+| `--structure` | the PR gate   | every skill versioned, and the branch's diff touches no `version:` and no registry |
+
+Under merge-time allocation the version is allocated by CI when a PR merges, not by the contributor on the branch.
+A skill PR therefore edits a skill and leaves the registry alone - and that state is exactly what plain `verify` calls `drifted`, correctly, because on `main` it would be.
+`--structure` is the form that can gate a branch in that state without also blessing a stale registry on `main`.
+
+`--structure` diffs against the first of `origin/main` or `main` that resolves; `--base <ref>` overrides it.
+Outside a git repository it fails rather than passing with nothing checked.
+The comparison runs against the working tree, so an uncommitted hand-edit is caught before it is ever committed.
+
+Hand-editing is caught by both, by different means.
+`--structure` sees the edit in the diff.
+Plain `verify` sees it in the hash: the `version:` line lives inside `SKILL.md`, so moving it moves the content hash too, and the registry comparison fails.
 
 ### Bump once, last
 
@@ -73,8 +95,14 @@ The stakes are not stylistic.
 `skill-update.sh` replaces the skill's directory rather than merging into it, so an edit made in a project is destroyed by the next update with no conflict and no warning.
 The registry's `sha256` cannot catch that either: a project's copy legitimately differs from upstream, so the hash was never going to match and the drift is invisible from both ends.
 
-`verify` fails on any `SKILL.md` without it, and names the skill.
-That is what stops a new skill from being born without it, which is the failure this repository has already had once - with the session-start check, which lived in exactly one project until somebody asked why.
+**`verify` no longer checks for it, in either form.**
+It used to fail on any `SKILL.md` without the notice and name the skill.
+That check is gone, and nothing has replaced it yet: the notice is asserted present nowhere and absent nowhere.
+
+This is a deliberate middle state, not an oversight.
+The notice is being replaced by a single generated partial that `skill-sync` writes into an installed copy, so the end state asserts the notice is **absent** from every `SKILL.md` in this repository.
+Between here and there the repository is mixed, and a gate that asserts "present" fails the first cleaned file while a gate that asserts "absent" fails the other forty-two.
+Neither assertion is true of the tree, so for now `verify` makes neither.
 
 The block sits under the title and names that skill's own upstream: the raw GitHub URL of its `SKILL.md`.
 One URL and no local path beside it, because the local path was worthless on a machine with no dotfiles checkout - which is precisely the machine a vendored copy is most likely to be sitting on.
@@ -151,7 +179,7 @@ This is Rule 16 in this repo's CLAUDE.md.
 
 ## Testing
 
-Run from this skill's directory. 49 checks, 20 of them negative.
+Run from this skill's directory. 72 checks, 26 of them negative.
 
 ```bash
 podman run --rm --userns=keep-id --network=none --entrypoint="" \
@@ -165,5 +193,6 @@ The image is `bitnami/git` rather than `bash:5` because these scripts drive real
 
 The source mount is read-only, which matters here because `init` and `bump` rewrite SKILL.md files in place.
 The tests copy a fixture tree into `/work` and point `SKILL_VERSION_SKILLS_DIR` at it, so a passing run also proves neither script writes back into its own source.
+`verify --structure` gets a second fixture: a real git repository with its skills under `claude/`, branched and edited, because every assertion that form makes is about a diff.
 `--network=none` proves the same about the network.
 Standalone mode is driven against a local bare repo with a stubbed `gh` that performs the merge itself, so the branch, commit, push, merge and delete orchestration is genuinely exercised without ever reaching GitHub.
