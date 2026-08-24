@@ -10,6 +10,160 @@ file holds exactly 10 once it has filled up. Entries are never renumbered and
 never edited in place - a correction is a new entry.
 
 Written by `hydration.sh add`. Do not hand-edit.
+<!-- hydration-entry: WO-20260824-cc71 -->
+## WO-20260824-cc71 - Repo settings: squash-only, with the commit body taken from the PR description
+_Generated 2026-08-24 by hydration.sh. Newest entry._
+
+### Ticket
+
+`WO-20260824-cc71` - `Repo settings: squash-only, with the commit body taken from the PR description`. Position 1 of 21 children across two epics.
+There is no predecessor. This is the first ticket of the first epic, `WO-20260824-f1a5` - `Skills package manager: prove the path on one skill`.
+
+### What just landed
+
+Five documentation and planning PRs, and nothing executable.
+
+`docs/superpowers/specs/2026-08-23-skills-package-manager-design.md` is the design, 871 lines, with 21 numbered decisions.
+Decision 19 puts the treehouse pool at `~/.treehouse/<repo>-<hash>/`, decision 20 fixes the four default skills as `work-order`, `living-docs`, `container-sandbox` and `context-compaction`, and decision 21 says `type` is derived from the tree it was found in and never declared, while `requires` is an optional comma-separated frontmatter key.
+
+`docs/superpowers/plans/2026-08-24-skills-package-manager-implementation.md` is the implementation plan, 689 lines.
+Its seven sequencing constraints C1 to C7 are the part worth reading twice.
+Its `E1.x` and `E2.x` handles were always plan-internal and are now dead - every piece of work has a real ticket ID.
+
+`docs/worktree-workflow.md` carries the answer to the treehouse gate. `treehouse return` does not lose unpushed commits, with or without `--force`. A dirty working tree is the case that changes code: `return` prompts, takes the no-TTY default, aborts, leaves the slot leased, and exits 0.
+
+`claude/skills/container-sandbox/SKILL.md` gained a section on verifying a host CLI's behaviour by bind-mounting the real binary read-only. That is how the gate was answered and it is reusable.
+
+PR #55 put 23 work-orders on `main`, all `ready`.
+
+### What is NOT done
+
+Nothing has been built. No line of either epic's implementation exists anywhere.
+
+Measured on `main` at the time of writing, and each of these is a command whose output proves it:
+
+- `ls claude/tools` fails. The directory does not exist, so neither `skill-sync.sh`, `skill-onboard.sh`, the notice partial, nor the tools test suite exist.
+- `git ls-files .github/workflows` prints nothing. There is no PR gate and no publisher.
+- `head -c 40 claude/skills/registry.json` shows `"schema": 1`. Schema 2 is unwritten.
+- `grep -l "This copy is read-only" claude/skills/*/SKILL.md | wc -l` prints `43`. Every skill still carries the inline notice.
+- `gh api repos/jkkelley/dotfiles --jq .squash_merge_commit_message` prints `COMMIT_MESSAGES`. This is the exact trap this ticket exists to close, and it is still open.
+
+Every one of the 23 tickets is `ready`. None has been started, so none has a branch.
+
+The 23 were approved with `--no-lavish`, and each records the reason: they were reviewed as one diff on PR #55 rather than in Lavish. That is an honest exception, not a skipped gate, but it is recorded on every ticket and a reader will see the warning.
+
+### Stale or false in the docs
+
+The previous top entry of `HYDRATION.md` said under `Before you start`: "Close the open decision on `type` and `requires`. Ask the user; do not choose." That is closed. Decision 21 in the design doc is the answer and it merged as PR #54. There is no open decision anywhere in this work.
+
+Root `CLAUDE.md` Rule 16 still says a PR touching a skill must bump the version and ship a regenerated `registry.json` by hand. That is true today and must be obeyed today. It becomes false at `WO-20260824-8cd1` - `Rewrite root CLAUDE.md for merge-time allocation and the named main exception`, and not before. Do not pre-empt it.
+
+The design doc's "Open" list still carries the question of who writes the generated skills table into `CLAUDE.md.tmpl`. The body of the same document already answers it: the sync writes it. The body wins, it is the more specific statement, and the sync is the only actor that knows what actually landed. The stale line is recorded in `WO-20260824-b21b` - `CLAUDE.md.tmpl: replace the session-start prose, add the skills markers, the treehouse policy and the documentation-lifetime rule` so it is corrected rather than rediscovered.
+
+This repository has no `CONTEXT_STATE.md`. The `hydration-prompt` skill's one flow references one, and several skills assume it. It genuinely does not exist here. Do not create one as a side effect of this ticket.
+
+### Your scope
+
+Four repository settings, and one throwaway pull request that proves they work.
+
+```bash
+gh api -X PATCH repos/jkkelley/dotfiles \
+  -f squash_merge_commit_title=PR_TITLE \
+  -f squash_merge_commit_message=PR_BODY \
+  -F allow_merge_commit=false \
+  -F allow_rebase_merge=false
+```
+
+Then read all four back, then open a throwaway PR carrying a `Bump: nothing=patch` line in its description, merge it, and read the resulting commit on `main`.
+
+The two acceptance criteria are deliberately different things. Reading the setting back proves the API call worked. Only reading the merged commit proves the trailer survives the path it will actually travel. Do not evidence the second criterion with the first one's output.
+
+Out of scope, and named because they are the obvious next thoughts: branch protection rules, and required status checks. The status checks arrive with `WO-20260824-2ad1` - `PR gate workflow: validate the bump intent and run the affected suites`, which is a different ticket and is blocked behind four others.
+
+Clean the throwaway PR's branch up afterwards. It is scaffolding, not deliverable.
+
+### Before you start
+
+None.
+
+One thing to be aware of rather than to resolve: these settings are repository-wide and take effect immediately for every future merge in this repository, including the ticket's own. Disabling merge commits and rebase merges is intended, not collateral.
+
+### Read in this order
+
+1. Root `CLAUDE.md`. Rules 12 through 17 all bear on this work. There is no `CONTEXT_STATE.md` in this repository, so the usual second step does not apply.
+2. This entry, which is the top entry of `HYDRATION.md`. Read only this one. The entries below it are superseded history.
+3. `docs/superpowers/plans/2026-08-24-skills-package-manager-implementation.md`, the section headed `Sequencing constraints`, specifically C2. That is why this ticket is first.
+4. The ticket file itself: `work-orders/WO-20260824-f1a5/WO-20260824-cc71-*.md`.
+5. `docs/superpowers/specs/2026-08-23-skills-package-manager-design.md`, only the sections on merge-time allocation. The rest is not needed for this ticket.
+
+### Reuse, it is proven
+
+`gh` is authenticated and works in this repository. `gh-axi` wraps it and is preferred where it fits.
+
+`claude/skills/work-order/scripts/work-order.sh` owns every ticket transition. Never hand-edit a ticket file. `note` is the only way a note reaches a ticket, and `evidence` is the only way a criterion gets ticked.
+
+`git interpret-trailers --parse` is the reader the publisher will use later. Use the same command here, not a regular expression, so the proof matches what production will do.
+
+`claude/skills/container-sandbox/SKILL.md` has a section on verifying a host CLI by bind-mounting the real binary read-only. Nothing in this ticket needs it, but it is the pattern for the tickets that do.
+
+### The verification ladder
+
+Rung 1, free: `gh api repos/jkkelley/dotfiles --jq '{squash_merge_commit_title,squash_merge_commit_message,allow_merge_commit,allow_rebase_merge}'`. Catches a typo'd field name or a `-f` that should have been `-F`. Booleans need `-F`; sending `allow_merge_commit=false` as a string with `-f` is accepted and does nothing.
+
+Rung 2, one throwaway PR: merge it and run `git log -1 --format=%B origin/main | git interpret-trailers --parse`. This is the only rung that proves the thing the ticket is actually for, and it cannot be simulated. Everything downstream in both epics depends on it being true.
+
+### Traps, already paid for
+
+A `Bump:` trailer written in the PR description is absent from the merge commit, and every bump silently drops. `squash_merge_commit_message` defaults to `COMMIT_MESSAGES`, which concatenates the branch's commit messages and discards the PR body entirely. It currently reads `COMMIT_MESSAGES` in this repository, so this is the live state, not a hypothetical.
+
+The settings read back correctly and the trailer still does not arrive. The API read only proves the call was accepted. The two acceptance criteria are separate for this reason.
+
+A command reports success and did nothing. A prompt with no TTY takes its default and exits 0. This bit the treehouse gate work: `treehouse return` on a dirty tree aborts, leaks the slot, and exits 0. Assert the post-state, never `$?`.
+
+A loop over IDs passes every ID as one argument. This shell is zsh, which does not word-split an unquoted parameter the way bash does. Use `while read -r`, not `for x in $LIST`.
+
+`git merge --ff-only origin/main` refuses with "diverging branches". You are in a treehouse slot at detached HEAD, not in `/home/luna/dotfiles`. Check `git branch --show-current` first.
+
+### Workflow
+
+```bash
+WO=claude/skills/work-order/scripts/work-order.sh
+
+bash $WO show    --project . --id WO-20260824-cc71
+bash $WO start   --project . --id WO-20260824-cc71
+
+# ... do the work ...
+
+bash $WO evidence --project . --id WO-20260824-cc71 --index 1 --observed "..."
+bash $WO evidence --project . --id WO-20260824-cc71 --index 2 --observed "..."
+bash $WO note     --project . --id WO-20260824-cc71 --text "..."
+
+bash $WO submit  --project . --id WO-20260824-cc71 --pr <N>
+bash $WO done    --project . --id WO-20260824-cc71     # on the branch, before the merge
+
+# after the merge
+bash $WO close   --project . --id WO-20260824-cc71 --dry-run
+bash $WO close   --project . --id WO-20260824-cc71
+```
+
+`approve` is already done for all 23 tickets and must not be run again.
+
+`done` is written on the feature branch before the PR lands, alongside the `HYDRATION.md` entry for the next ticket, so all of it rides one pull request.
+
+### Conventions
+
+Every reference to a work-order in a chat reply carries the ticket ID and its full title joined by a dash. A bare ID is a defect, and so is "the next ticket" or "the blocked one".
+
+Feature branches only. `main` is never written directly. The one exception to that rule does not exist yet and arrives with the publish workflow.
+
+No em dashes anywhere. Use a plain dash.
+
+No agent co-author line in a commit message, and no Claude attribution footer in a PR body. Root `CLAUDE.md` Rule 13 makes the second one absolute.
+
+All testing runs in Podman, per Rule 14, with no size threshold. This ticket has nothing to containerise - it is API calls and a merged PR - but the rule is not waived, it simply does not bite here.
+
+Report failures as failures. A skipped step is not a completed one.
+
 <!-- hydration-entry: none -->
 ## Poker and work-order tickets for the skills package manager
 _Generated 2026-08-24 by hydration.sh. Newest entry._
