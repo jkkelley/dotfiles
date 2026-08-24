@@ -8,7 +8,6 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20260824-0615` | done | p1 | - | [Confirm whether a SessionStart hook matcher filters by source](WO-20260824-0615-confirm-whether-a-sessionstart-hook-matcher-filt.md) |
 | `WO-20260824-9712` | ready | p1 | WO-20260824-316d | [End-to-end proof in a scratch project, including the lost-receipt case](WO-20260824-9712-end-to-end-proof-in-a-scratch-project-including-.md) |
 | `WO-20260824-2136` | ready | p1 | - | [Extract the read-only notice into a single rendered partial](WO-20260824-2136-extract-the-read-only-notice-into-a-single-rende.md) |
 | `WO-20260824-2ad1` | ready | p1 | WO-20260824-6acf WO-20260824-efb0 | [PR gate workflow: validate the bump intent and run the affected suites](WO-20260824-2ad1-pr-gate-workflow-validate-the-bump-intent-and-ru.md) |

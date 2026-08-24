@@ -12,8 +12,8 @@
   "parent": "WO-20260824-f1a5",
   "branch": "feat/confirm-whether-a-sessionstart-hook-matcher-filt",
   "pr": 58,
-  "merge_sha": null,
-  "closed": null,
+  "merge_sha": "1cda4dfd82d145ef3d65ea6ad38e5ef897df7ac1",
+  "closed": "2026-08-24",
   "approval": {
     "via": "override",
     "reason": "Reviewed and approved on PR #55 on GitHub, which is where the whole cut was read as one diff. Lavish was offered and declined in favour of the PR.",
