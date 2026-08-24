@@ -1,7 +1,7 @@
 ---
 name: container-sandbox
 description: Run all dependency-heavy tasks (npm, go, pip) in isolated Podman containers. Also use when showing the user a localhost frontend that makes API calls — a real or mock backend must be running in the same compose stack.
-version: 1.0.2
+version: 1.1.0
 ---
 
 # Dependency Isolation Protocol
@@ -25,6 +25,104 @@ If this file has no section covering the thing being tested, use `references/ski
 - **Cluster Tasks:** Use the **Kind Sandbox** (Kind + Podman).
 - **Terraform Tasks:** Use the **Ministack Sandbox** (see section below).
 - **Testing a skill's or agent's bundled scripts:** see `references/skill-testing.md`.
+- **Finding out what a host CLI actually does:** see "Verifying a host CLI's behaviour" below.
+
+## Verifying a host CLI's behaviour
+
+Sometimes the thing under test is not code in this repo at all. It is a tool
+already installed on the machine - `treehouse`, `gh`, a self-updating binary in
+`~/.local/bin` - and a design is about to depend on what it does in a case
+nobody has run.
+
+`--help` does not answer that. It documents intent, not behaviour, and the gap
+between the two is exactly where the design breaks.
+
+**Run it in a container anyway.** Two reasons, and the second is the one people
+skip:
+
+1. Rule 14 has no exemption for "but it is a host tool".
+2. The tool almost always mutates state you cannot afford to lose - a worktree
+   pool, a config directory, a credential store. On the host, a case that goes
+   wrong takes the real thing with it.
+
+### The pattern
+
+Bind-mount the **real binary** read-only, build a throwaway world inside the
+container, and point the tool's state directory at a path inside it.
+
+```bash
+podman run --rm --network=none \
+  -v "$PWD/gate.sh:/gate.sh:ro,Z" \
+  -v "$HOME/.local/bin/treehouse:/usr/local/bin/treehouse:ro,Z" \
+  -w /tmp localhost/host-cli-probe:local bash /gate.sh
+```
+
+Mount the binary rather than installing it. Installing fetches whatever the
+registry has today; mounting tests the exact build sitting on this machine,
+which is the one the design will run against.
+
+Most Go and Rust CLIs are dynamically linked against glibc only, so a plain
+`debian` base runs them unmodified. Check before assuming:
+
+```bash
+file ~/.local/bin/<tool>     # ELF ... dynamically linked
+ldd  ~/.local/bin/<tool>     # libc.so.6 and the loader, nothing else
+```
+
+Pin the base by digest per root `CLAUDE.md` Rule 15, and reuse a digest already
+in this repo rather than introducing a second one.
+
+### Isolate the state, or the test is on the host
+
+Every such tool has a root it writes to. Find it and redirect it, in the
+container, before the first command runs.
+
+| Tool        | Redirect with                        |
+| ----------- | ------------------------------------ |
+| `treehouse` | `TREEHOUSE_ROOT`, or `--root <path>` |
+| `git`       | `GIT_CONFIG_GLOBAL`, `HOME`          |
+| `gh`        | `GH_CONFIG_DIR`                      |
+
+If you cannot find the redirect, the tool is not safe to probe and that is worth
+reporting rather than working around.
+
+### Report what was observed, not what was expected
+
+A behaviour probe is not a pass/fail suite. The answer **is** the deliverable, so
+print observations in a fixed format and let the reader draw the conclusion:
+
+```
+=== case 1: return a slot carrying an unpushed commit
+  commit                             5bf63f9...
+  return rc                          0
+  object reachable in clone          yes
+  branch anywhere                    1 refs
+  slot HEAD                          HEAD
+```
+
+Writing `assert_equal "$rc" 0` instead would have encoded a guess as a
+requirement, and a probe that only confirms what you already believed has told
+you nothing.
+
+### The trap this pattern exists to catch
+
+**A CLI that prompts falls back to its default with no TTY, and can exit 0
+having done nothing.**
+
+```
+| Worktree has uncommitted changes. Clean and return? [Y/n] 🌳 Aborted.
+  return rc                          0
+  final pool state                   1  leased  (held by gate-case-3)
+```
+
+Exit code zero, no work done, the resource still held. Any script that reads
+`$?` reports success and moves on.
+
+So a probe **always asserts the post-state**, never the exit code alone - and
+any script built on the result does the same. If the tool has a
+`status`-shaped command, call it afterwards and check what it says. That is the
+single most valuable thing these probes find, and it is invisible from
+`--help`, from the host, and from a green exit code.
 
 ## 2. Dependency Management (The "No-Clutter" Way)
 
