@@ -37,6 +37,7 @@ Two more were closed on 2026-08-24, in the session that produced this document.
 | --- | -------------------------------------------------------------------------------------------------------------------------------- |
 | 19  | **The treehouse pool stays user-level**, at `~/.treehouse/<repo>-<hash>/`. In-project `--root .` is rejected                     |
 | 20  | **`project-scaffold`'s default manifest is four skills**: `work-order`, `living-docs`, `container-sandbox`, `context-compaction` |
+| 21  | **`type` is derived from the tree, never declared. `requires` is an optional frontmatter key**, and `verify` resolves it         |
 
 ### 19, and the measurement behind it
 
@@ -282,10 +283,12 @@ Today's `verify` calls that state `drifted`, and under merge-time allocation it 
 - [ ] A `tools` block carrying `skill-sync` and `read-only-notice`, each with a version and a hash
 - [ ] `verify` understands schema 2 and reports a schema mismatch as a distinct failure, not as drift
 
-**One decision this ticket must close first.** See "Open decision" below - where `requires` and `type` are declared.
-The ticket cannot start until it is answered.
+Per decision 21, `type` is derived from the tree it was found in and is never declared, and `requires` is an optional frontmatter key read with one line of `awk`, comma-separated, no YAML list.
 
-**Done when:** `render_registry` reproduces `registry.json` byte for byte, and the two `work-order` edges (`cartography`, `living-docs`) appear in it.
+- [ ] Add `requires: work-order` to `living-docs` and `cartography`, and to nothing else
+- [ ] `verify` asserts every name in a `requires:` resolves to a skill that exists
+
+**Done when:** `render_registry` reproduces `registry.json` byte for byte, the two `work-order` edges appear in it, and a deliberately typo'd `requires:` fails `verify`.
 
 ### E1.5 - The read-only notice partial
 
@@ -633,24 +636,19 @@ It is not a separate stream, and this is where each item lands.
 Items 1 and 2 are closed by this document.
 The other four are tickets.
 
-## One decision this plan cannot make
+## Decision 21, closed 2026-08-24
 
-**Where `type` and `requires` are declared.**
+This section was "One decision this plan cannot make". It is closed, and the full argument now lives in the design doc under "Where `type` and `requires` come from". The short version, because it unblocks E1.4 and therefore E1.6:
 
-E1.4 needs it and the design doc does not contain it.
-The design fixes what the registry emits and names the two `requires` edges, both on `work-order`, both currently prose only in `cartography/SKILL.md:42` and `living-docs/SKILL.md:20,173`.
-It does not say where `render_registry` reads them from.
+**`type` is not a decision.** It is routing, and the thing already sits in `claude/skills/<name>/` or `claude/agents/<name>.md` upstream. `render_registry` walks those trees to find the entries at all, so declaring the type would write down a fact the filesystem states and create a second source of truth that can disagree with the first.
 
-Three shapes, and they are not equivalent:
+**`requires` is an optional frontmatter key** on the skill that has the dependency. Absent in 41 of 43 files. Comma-separated, never a YAML list, because Rule 17 makes Git Bash supported and a bracket list needs a real parser where `requires: a, b` needs one line of `awk`.
 
-| Option                                | Cost                                                                                                                                        |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| A new `requires:` key in frontmatter  | Frontmatter stops being exactly `name`, `description`, `version` across all 43. Every tool that parses it is affected                       |
-| A table inside `skill-version.sh`     | Zero new formats and honest about the scale - two edges. Becomes wrong the moment a skill is added by someone who does not know it is there |
-| A `skill.toml` beside each `SKILL.md` | A second per-skill file, and a second thing that can go stale against the first                                                             |
+**The cost this plan originally claimed for that option was wrong.** It said frontmatter would stop being exactly `name`, `description`, `version`. But the agents in `claude/agents/` already carry `tools:` and `model:`, and `skill-version.sh` reads only `version:` - appending it as the last frontmatter key when it is missing, which already assumes an open-ended key set. Nothing enforces three keys and nothing ever did.
 
-This is a decision for the user at ticket-cutting time.
-E1.4 does not start until it is closed, and E1.6 depends on E1.4.
+The two alternatives lost on **where the fact lives**, not on cost. A table inside `skill-version.sh` is fewer characters and records `cartography`'s dependency inside another skill's script, where the person who needs it is editing a file that never mentions it. A `skill.toml` per skill adds a second format and a second thing to go stale.
+
+**`verify` gains one assertion** and that is what earns the key its keep: every name in a `requires:` resolves to a skill that exists. Free, because `verify` already walks every skill, and it turns a typo'd dependency into a failed PR gate rather than a failed first sync days later in someone else's project.
 
 ## Risks
 
@@ -677,7 +675,7 @@ Not points. The shape the sizing conversation should start from.
 | ------------------- | ---------------------------------------------------------------------------- |
 | E1.1, E1.2          | small, but both are gates. Nothing after them starts until they are answered |
 | E1.3, E1.5, E1.9    | small, well-bounded                                                          |
-| E1.4                | small, once the open decision above is closed                                |
+| E1.4                | small. Decision 21 closed it; nothing blocks it now                          |
 | E1.6                | **large.** The split seam, if it splits, is resolution against application   |
 | E1.7, E1.8          | medium each. Mostly YAML, but the failure modes are subtle                   |
 | E1.10, E1.11, E1.12 | small. E1.11 is manual and cannot be automated - that is the point of rung 5 |

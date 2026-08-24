@@ -234,7 +234,49 @@ They are the half of the library with no loop at all.
 }
 ```
 
-`type` is routing only: `skill` to `.claude/skills/`, `agent` to `.claude/agents/`.
+### Where `type` and `requires` come from
+
+Decided 2026-08-24. This was the last thing left open in the implementation plan, and one half of it turned out not to be a question.
+
+**`type` is never declared.**
+It is routing only - `skill` to `.claude/skills/`, `agent` to `.claude/agents/` - and the thing already sits in one of those two trees upstream:
+
+```
+claude/skills/<name>/SKILL.md     ->  type: skill
+claude/agents/<name>.md           ->  type: agent
+```
+
+`render_registry` walks those directories to find the entries at all, so it already knows.
+Declaring the type would write down a fact the filesystem states, and create a second source of truth that can disagree with the first.
+
+**`requires` is an optional frontmatter key**, on the skill that has the dependency:
+
+```yaml
+---
+name: living-docs
+description: ...
+version: 1.0.1
+requires: work-order
+---
+```
+
+Absent means no dependencies, which is 41 of the 43 files.
+Comma-separated for more than one.
+**Not a YAML list** - Rule 17 makes Git Bash a supported platform, and a bracket list needs a real parser where `requires: a, b` needs one line of `awk`, the same shape as the `read_version` that already exists.
+
+A variable frontmatter key set is not a new thing here.
+The agents in `claude/agents/` already carry `tools:` and `model:` beside `name:` and `description:`, and `skill-version.sh` reads only `version:` - when one is missing it appends it as the last frontmatter key, so the script already treats the key set as open-ended.
+The "exactly `name`, `description`, `version`" line under "The read-only notice becomes a partial" is an observation that the partial does not touch frontmatter, not a constraint on what frontmatter may hold.
+
+The two alternatives were rejected on where the fact lives rather than on cost.
+A lookup table inside `skill-version.sh` is fewer characters and puts `cartography`'s dependency inside another skill's script, where the one person who needs it - someone adding a skill that shells out to another skill - is editing a file that never mentions it.
+A `skill.toml` beside each `SKILL.md` introduces a second per-skill format and a second thing that goes stale against the first.
+
+**`verify` gains one assertion: every name in a `requires:` resolves to a skill that exists.**
+That is what earns the key its keep, and it is free because `verify` already walks every skill.
+A typo'd dependency then fails the PR gate instead of failing some project's first sync, days later and somewhere else.
+
+### The two edges
 
 `requires` is a hard dependency and is auto-installed.
 Two edges exist, both on `work-order`, both currently prose only:
@@ -861,6 +903,17 @@ Decided during the 2026-08-24 revision:
 | 16  | `skill-update.sh` narrows to hand-authored skills                                            |
 | 17  | The pipeline flow is documented in this repo's root `CLAUDE.md`                              |
 | 18  | Pilot on `hydration-prompt`, then a second epic for the remaining 42                         |
+
+Decided during implementation planning, and recorded here because they change what gets built:
+
+| #   | Decision                                                                                                             |
+| --- | -------------------------------------------------------------------------------------------------------------------- |
+| 19  | The treehouse pool stays user-level at `~/.treehouse/<repo>-<hash>/`. In-project `--root .` rejected                 |
+| 20  | `project-scaffold`'s default manifest is `work-order`, `living-docs`, `container-sandbox`, `context-compaction`      |
+| 21  | `type` is derived from the tree, never declared. `requires` is an optional frontmatter key, and `verify` resolves it |
+
+19 and 20 are argued in [the implementation plan](../plans/2026-08-24-skills-package-manager-implementation.md).
+21 is argued above, under "Where `type` and `requires` come from".
 
 ## Open, not designed here
 
