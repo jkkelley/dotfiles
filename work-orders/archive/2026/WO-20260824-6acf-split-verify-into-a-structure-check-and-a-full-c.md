@@ -12,8 +12,8 @@
   "parent": "WO-20260824-f1a5",
   "branch": "feat/split-verify-into-a-structure-check-and-a-full-c",
   "pr": 59,
-  "merge_sha": null,
-  "closed": null,
+  "merge_sha": "e4ede60010b2c571e2b27e376ee03cb1218fe974",
+  "closed": "2026-08-24",
   "approval": {
     "via": "override",
     "reason": "Reviewed and approved on PR #55 on GitHub, which is where the whole cut was read as one diff. Lavish was offered and declined in favour of the PR.",
