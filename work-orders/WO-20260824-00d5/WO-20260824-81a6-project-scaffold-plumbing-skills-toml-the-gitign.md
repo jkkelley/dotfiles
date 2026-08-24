@@ -4,7 +4,7 @@
   "slug": "project-scaffold-plumbing-skills-toml-the-gitign",
   "title": "project-scaffold plumbing: skills.toml, the gitignore blanket, scaffold.json removed, skill-update.sh narrowed",
   "type": "feature",
-  "status": "draft",
+  "status": "ready",
   "priority": "p2",
   "created": "2026-08-24",
   "updated": "2026-08-24",
@@ -14,7 +14,11 @@
   "pr": null,
   "merge_sha": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "Reviewed and approved on PR #55 on GitHub, which is where the whole cut was read as one diff. Lavish was offered and declined in favour of the PR.",
+    "at": "2026-08-24"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [
