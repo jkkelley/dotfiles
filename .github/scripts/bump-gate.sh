@@ -27,6 +27,7 @@
 set -uo pipefail
 
 SELF=$(basename "${BASH_SOURCE[0]}")
+HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
 # Pinned by digest per Rule 15. docker.io/bitnami/git:latest as of 2026-08-23.
 # The same digest the living-docs, context-compaction and skill-versioning
@@ -35,6 +36,13 @@ SELF=$(basename "${BASH_SOURCE[0]}")
 WRAP_IMAGE="docker.io/bitnami/git@sha256:1baa6ddbde79fa7ba2fdf441cea47c4f04fae067504d9265e416358db0879ab2"
 
 die() { printf '%s: %s\n' "$SELF" "$1" >&2; exit 2; }
+
+# The resolution itself is shared with publish.sh. Two halves of one pipeline
+# that reach different conclusions about the same commit is the failure this
+# whole design exists to prevent, so they run one copy of the code rather than
+# two that agree today.
+# shellcheck source=.github/scripts/bump-lib.sh
+. "$HERE/bump-lib.sh"
 
 usage() {
   cat <<EOF
@@ -60,18 +68,7 @@ EOF
 
 # ── shared ─────────────────────────────────────────────────────────────────────
 
-REPO=""
 BASE=""
-
-resolve_repo() {
-  if [[ -z $REPO ]]; then
-    REPO=$(git rev-parse --show-toplevel 2>/dev/null) \
-      || die "not a git repository, and no --repo given"
-  fi
-  REPO=$(cd "$REPO" && pwd) || die "no such directory: $REPO"
-  [[ -d $REPO/.git ]] || git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1 \
-    || die "not a git repository: $REPO"
-}
 
 require_base() {
   [[ -n $BASE ]] || die "--base is required"
@@ -82,80 +79,10 @@ require_base() {
 # Three dots, so the comparison is against the merge base rather than against
 # whatever the base branch has picked up since. A skill someone else changed on
 # main is not a skill this branch has to account for.
-changed_paths() { git -C "$REPO" diff --name-only "$BASE...HEAD" -- "$@"; }
-
-# Every skill directory this branch touched. registry.json sits directly under
-# claude/skills/ and has no directory component, so the pattern excludes it
-# without a special case.
-changed_skills() {
-  local p n
-  while IFS= read -r p; do
-    [[ $p == claude/skills/*/* ]] || continue
-    n=${p#claude/skills/}
-    n=${n%%/*}
-    [[ -n $n ]] || continue
-    printf '%s\n' "$n"
-  done < <(changed_paths claude/skills/) | sort -u
-}
-
-# A skill deleted by this branch is not a skill that needs a bump: the publisher
-# regenerates the registry from the tree, and a row with nothing behind it goes
-# away on its own.
-skill_exists() { [[ -f "$REPO/claude/skills/$1/SKILL.md" ]]; }
-
-# The registry is one entry per line and the skills block ends before the tools
-# block. Scoping the lookup to that range costs one sed and removes the only way
-# a tool name could ever be mistaken for a skill's version.
-registry_version() {
-  local name=$1 line
-  line=$(sed -n '/^  "skills": {/,/^  },/p' "$REPO/claude/skills/registry.json" 2>/dev/null \
-         | grep -m1 -E "^[[:space:]]*\"$name\":") || return 1
-  [[ $line =~ \"version\":[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\" ]] || return 1
-  printf '%s' "${BASH_REMATCH[1]}"
-}
-
-next_version() {
-  local cur=$1 level=$2 ma mi pa
-  IFS=. read -r ma mi pa <<< "$cur"
-  case $level in
-    major) ma=$((ma + 1)); mi=0; pa=0 ;;
-    minor) mi=$((mi + 1)); pa=0 ;;
-    patch) pa=$((pa + 1)) ;;
-    *) return 1 ;;
-  esac
-  printf '%s.%s.%s' "$ma" "$mi" "$pa"
-}
+changed_paths() { paths_in "$BASE...HEAD" "$@"; }
+changed_skills() { skills_in "$BASE...HEAD"; }
 
 # ── resolve ────────────────────────────────────────────────────────────────────
-
-# Trailers beat the title, always. The title is the fallback the spec describes
-# for "anything changed but not listed", which makes it the implicit source and
-# the trailer the explicit one, and an explicit statement that loses to an
-# inferred one is not a statement. The case this gives up on is a breaking title
-# with a patch trailer, and that is the case the printed table exists for: the
-# override is visible in the check output before anyone reaches the merge button.
-title_level() {
-  local title=$1 body=$2 ttype bang breaking
-  breaking=$(grep -cE '^BREAKING[ -]CHANGE:' <<< "$body")
-  if [[ $title =~ ^([a-zA-Z]+)(\([^\)]*\))?(!)?:[[:space:]] ]]; then
-    ttype=${BASH_REMATCH[1]}
-    ttype=$(tr '[:upper:]' '[:lower:]' <<< "$ttype")
-    bang=${BASH_REMATCH[3]}
-  else
-    return 1
-  fi
-  if [[ -n $bang || $breaking -gt 0 ]]; then printf 'major'; return 0; fi
-  case $ttype in
-    feat) printf 'minor' ;;
-    # Rule 16's own table puts wording, script bugfixes, doc clarifications and
-    # test-only changes at patch. These types are that list, so mapping them is
-    # reading the rule rather than guessing at one. revert is deliberately
-    # absent: reverting a feature is not a patch, and the level depends on what
-    # was reverted, so it is left to a trailer.
-    fix|docs|chore|refactor|test|style|perf|ci|build) printf 'patch' ;;
-    *) return 1 ;;
-  esac
-}
 
 cmd_resolve() {
   local title_file="" body_file="" title body

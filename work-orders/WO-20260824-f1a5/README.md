@@ -9,8 +9,7 @@ One level down only. A child of a child is listed in its own directory, not here
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
 | `WO-20260824-9712` | ready | p1 | WO-20260824-316d | [End-to-end proof in a scratch project, including the lost-receipt case](WO-20260824-9712-end-to-end-proof-in-a-scratch-project-including-.md) |
-| `WO-20260824-316d` | ready | p1 | WO-20260824-360d WO-20260824-bb0d | [Pilot: take hydration-prompt through the whole pipeline end to end](WO-20260824-316d-pilot-take-hydration-prompt-through-the-whole-pi.md) |
-| `WO-20260824-360d` | ready | p1 | - | [Publish workflow: allocate versions on merge to main and regenerate the registry](WO-20260824-360d-publish-workflow-allocate-versions-on-merge-to-m.md) |
+| `WO-20260824-316d` | ready | p1 | WO-20260824-bb0d | [Pilot: take hydration-prompt through the whole pipeline end to end](WO-20260824-316d-pilot-take-hydration-prompt-through-the-whole-pi.md) |
 | `WO-20260824-8cd1` | ready | p1 | WO-20260824-9712 | [Rewrite root CLAUDE.md for merge-time allocation and the named main exception](WO-20260824-8cd1-rewrite-root-claude-md-for-merge-time-allocation.md) |
 | `WO-20260824-bb0d` | ready | p1 | - | [setup.sh installs the skill-sync binary, then the SessionStart hook](WO-20260824-bb0d-setup-sh-installs-the-skill-sync-binary-then-the.md) |
 | `WO-20260825-dac4` | ready | p1 | WO-20260824-8cd1 | [verify --structure refuses a brand new skill, whichever way it is written](WO-20260825-dac4-verify-structure-refuses-a-brand-new-skill-which.md) |
