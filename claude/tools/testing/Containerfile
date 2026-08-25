@@ -1,0 +1,28 @@
+# Test image for claude/tools/.
+#
+# bash, awk and coreutils and nothing else. skill-sync.sh reaches for exactly
+# one thing outside that set - curl - and every case here stubs it, because what
+# the registry fetch *reports* is the input under test rather than a dependency
+# to install. Leaving curl out of the image is therefore load-bearing: it proves
+# the stub is the only curl on PATH, and it gives the "curl is not installed"
+# branch a real world to run in instead of a simulated one.
+#
+# git is absent for the same reason it is absent from the skill suites: nothing
+# here touches it, and an image carrying a binary the code must not depend on is
+# an image that hides a dependency until somebody else's machine finds it.
+#
+# Built with the network on, then run with --network=none. The build is the only
+# step allowed to fetch; the cases must prove they reach nothing.
+#
+# Pinned by digest, not by tag, per Rule 15. This is the same digest the
+# work-order and cartography suites already run on - a second base digest for
+# the same purpose is how a repository ends up with two answers to "what do the
+# tests run on". Repin deliberately:
+#   podman pull docker.io/library/debian:stable-slim
+#   podman image inspect docker.io/library/debian:stable-slim \
+#     --format '{{index .RepoDigests 0}}'
+FROM docker.io/library/debian@sha256:328d16499860ae6cb9b345e2e4cebca08c2a36e4f7278482c7bd1f39d71e5bfd
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends bash \
+  && rm -rf /var/lib/apt/lists/*
