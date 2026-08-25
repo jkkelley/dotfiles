@@ -13,7 +13,7 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20260824-2ad1` | ready | p1 | WO-20260824-efb0 | [PR gate workflow: validate the bump intent and run the affected suites](WO-20260824-2ad1-pr-gate-workflow-validate-the-bump-intent-and-ru.md) |
 | `WO-20260824-316d` | ready | p1 | WO-20260824-2ad1 WO-20260824-360d WO-20260824-bb0d | [Pilot: take hydration-prompt through the whole pipeline end to end](WO-20260824-316d-pilot-take-hydration-prompt-through-the-whole-pi.md) |
 | `WO-20260824-360d` | ready | p1 | WO-20260824-efb0 | [Publish workflow: allocate versions on merge to main and regenerate the registry](WO-20260824-360d-publish-workflow-allocate-versions-on-merge-to-m.md) |
-| `WO-20260824-de9e` | ready | p1 | - | [Registry schema 2, with type derived from the tree and requires read from frontmatter](WO-20260824-de9e-registry-schema-2-with-type-derived-from-the-tre.md) |
+| `WO-20260824-de9e` | in-progress | p1 | - | [Registry schema 2, with type derived from the tree and requires read from frontmatter](WO-20260824-de9e-registry-schema-2-with-type-derived-from-the-tre.md) |
 | `WO-20260824-8cd1` | ready | p1 | WO-20260824-9712 | [Rewrite root CLAUDE.md for merge-time allocation and the named main exception](WO-20260824-8cd1-rewrite-root-claude-md-for-merge-time-allocation.md) |
 | `WO-20260824-bb0d` | ready | p1 | WO-20260824-efb0 | [setup.sh installs the skill-sync binary, then the SessionStart hook](WO-20260824-bb0d-setup-sh-installs-the-skill-sync-binary-then-the.md) |
 | `WO-20260824-5b89` | ready | p1 | WO-20260824-de9e WO-20260824-2136 | [skill-sync.sh part one: resolution, and the tools test tree it is proved in](WO-20260824-5b89-skill-sync-sh-part-one-resolution-and-the-tools-.md) |
