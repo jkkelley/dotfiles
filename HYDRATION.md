@@ -10,6 +10,168 @@ file holds exactly 10 once it has filled up. Entries are never renumbered and
 never edited in place - a correction is a new entry.
 
 Written by `hydration.sh add`. Do not hand-edit.
+<!-- hydration-entry: WO-20260824-bb0d -->
+## WO-20260824-bb0d - setup.sh installs the skill-sync binary, then the SessionStart hook
+_Generated 2026-08-25 by hydration.sh. Newest entry._
+
+### Ticket
+
+`WO-20260824-bb0d` - `setup.sh installs the skill-sync binary, then the SessionStart hook`.
+Both of its dependencies are `done`: `WO-20260824-0615` - `Confirm whether a SessionStart hook matcher filters by source`, and `WO-20260824-efb0` - `skill-sync.sh part two: build, swap, receipt, and self-update`.
+`work-order next` returns it first.
+
+It blocks `WO-20260824-316d`, and it is the last thing standing between the pipeline and the pilot, `WO-20260824-f1a5` - `Skills package manager: prove the path on one skill`, which `next` returns second.
+
+The plan sized it as small. Order inside the ticket is the whole difficulty, and constraint `C4` in the plan says why: the hook fires in **every project on this machine**, so a hook pointing at a `skill-sync` that is not yet on `PATH` prints a command-not-found into every session until someone fixes it.
+
+### What just landed
+
+`.github/workflows/skill-publish.yml` exists, as PR #70. The pipeline is complete: `skill-pr-gate.yml` reads a pull request and refuses it, `skill-publish.yml` turns the intent it validated into a number on `main` after the merge.
+
+`.github/scripts/publish.sh` is the shell - `plan` and `apply`. `.github/scripts/bump-lib.sh` is new: the resolution both halves now share, extracted out of `bump-gate.sh` rather than copied.
+
+The gate's suite went from **66 checks to 145**, and it is the one your change does not touch.
+
+Three decisions were taken in the open and are notes on that ticket rather than in either design document.
+
+**The range is `<before>..HEAD`, not the plan's `<before>..<after>`, and levels come from every commit in it rather than from `git log -1`.** `skill-version.sh bump` regenerates the _whole_ registry, so a run that bumps only part of what it checked out writes the rest of the tree's new content hashes under their old version numbers, `verify` passes, and that change ships to every project as a version they already have. There is a check that demonstrates it rather than describing it.
+
+**The publisher stamps `Skill-Publish: true` on its own commits and skips any commit carrying it**, so its `chore(skills):` subject cannot map to `patch` and re-bump the previous run's work.
+
+**The loop guard is load-bearing for correctness, not only for cost.** `verify` green means the batch was already published, so the run exits 0 before it reads a trailer. That is what stops the wide range double-counting.
+
+### What is NOT done
+
+`setup.sh` knows nothing about `claude/tools/`. `grep -n skill-sync setup.sh` prints nothing - the file is 417 lines of agent and skill installation and that is all it does.
+
+`~/.claude/settings.json` has no `SessionStart` hook for the sync. The matcher spike wrote one into a scratch project and deleted it afterwards; the machine's own settings were never touched.
+
+Branch protection is still absent and is still on no ticket. `verify --structure` still cannot pass for a brand new skill - it is on no ticket either, and it will bite the first person who adds one.
+
+None of the publisher's three acceptance criteria has been observed against the real `main`, because the workflow did not exist there until #70 merged. The evidence on that ticket says so in those words. `AC-H2` is the merge of #70 itself; `AC-H1` needs two real back-to-back merges and the pilot is the natural first.
+
+### Stale or false in the docs
+
+**The matcher question is answered and the answer is yes.** `WO-20260824-0615` exercised all four sources against a scratch project and wrote the truth table onto its own ticket. `matcher: "startup"` fired on startup only. `matcher: "startup|resume|clear"` fired on those three and not on compact. The control, `matcher: ""`, fired on all four - which is the load-bearing part, because without it a hook that did not fire is indistinguishable from a session event that never happened.
+
+So **use `"matcher": "startup|resume|clear"`**, which is confirmed working rather than assumed, and the plan's fallback branch - `skill-sync` reading the source off stdin and exiting early itself - does not happen. The payload on stdin does carry `source`, but it does not have to be read, and that is the point.
+
+**`ubuntu-24.04` ships Podman**, 5.8.4. Both design documents still say the runner only has Docker. Not yours, but do not re-add an install step on their say-so.
+
+### Your scope
+
+The plan's `E1.9` is the checklist, and constraint `C4` is why the order inside it is not cosmetic.
+
+- Install `skill-sync` to `~/.local/bin/`, beside the existing `-axi` tools. **Then** the hook.
+- `SessionStart` hook in `~/.claude/settings.json`, `timeout: 30`, `"matcher": "startup|resume|clear"`.
+- Idempotent: running `setup.sh` twice does not produce two hooks.
+- **Done when a session started in a project with no `.claude/skills.toml` prints nothing at all.**
+
+Silence in the no-manifest case is the acceptance criterion because that is the state of almost every project on this machine, and a hook that is noisy there gets deleted by whoever is annoyed by it first - and the whole system goes with it.
+
+### Before you start
+
+`setup.sh` writes to `$HOME`. Decide how you are proving idempotency before you write it: the ticket's own test plan says a container with a fake `HOME`, and that is the shape that works - `HOME=/work/home bash setup.sh` twice, then count the hook entries.
+
+The silence criterion cannot run in a container. A `SessionStart` hook fires from a real Claude Code session on the host and there is no way to produce one inside Podman. `WO-20260824-0615` hit exactly this and stated it rather than quietly skipping it; do the same, and say which rung each check ran on.
+
+### Read in this order
+
+1. Root `CLAUDE.md`. Rules 12, 14 and 17 all bear on this one, and 17 hardest: `setup.sh` runs on Windows too.
+2. This entry, the top entry of `HYDRATION.md`. Read only this one.
+3. The ticket: `work-orders/WO-20260824-f1a5/WO-20260824-bb0d-setup-sh-installs-the-skill-sync-binary-then-the.md`.
+4. **`work-orders/archive/2026/WO-20260824-0615-confirm-whether-a-sessionstart-hook-matcher-filte.md`**, the whole note. It is the truth table, and it is the reason you are not spiking this yourself.
+5. `setup.sh`, all 417 lines. It has a `usage`, a discovery pass, a validation pass and an install pass, and your change is a fourth thing it does rather than a variation on the third.
+6. `claude/tools/skill-sync.sh`, at least its header. `--plan` resolves and prints, `--boot` resolves and applies; the hook calls one of them and the ticket does not say which.
+7. `docs/superpowers/plans/2026-08-24-skills-package-manager-implementation.md`, section `E1.9` and constraint `C4`.
+8. `~/.claude/settings.json` as it is now. Every hook in it uses `"matcher": ""`, so this machine still has no working example of the filtered form outside the spike's write-up.
+
+### Reuse, it is proven
+
+`claude/tools/testing/run-tests.sh` is the suite for the tools tree, at 193 checks, and it re-execs itself into Podman. If `setup.sh` gains logic worth testing, that is where a fixture-with-a-fake-`HOME` belongs rather than in a second harness.
+
+`.github/scripts/testing/run-tests.sh` is the pattern when the thing under test writes: a fixture built in a scratch mount, the script driven against it in a container, refusals as most of the suite. It is at 145 checks now and it is worth reading for shape even though your change is nowhere near it.
+
+`jq` is the only safe way to add a hook to `settings.json`. A `sed` into JSON is how a settings file gets corrupted in every project on the machine at once.
+
+### The verification ladder
+
+Rung 1, free: `shellcheck -x -s bash setup.sh`, from `docker.io/rhysd/actionlint@sha256:9d36088643581e728c969f35141f88139fec77280b2be23c1f66f8e40e1025e7`, which ships it.
+
+Rung 2: `HOME=/work/home bash setup.sh` in a container, twice. The binary is on `PATH` and there is exactly **one** hook entry, not two. Count it with `jq`, not with eyes.
+
+Rung 3: the same, starting from a `settings.json` that already has other hooks in it. They all survive.
+
+Rung 4: the binary lands before the hook. Assert the order by running with the install step made to fail and confirming no hook was written.
+
+Rung 5, on the host and manual: a real session in a project with **no** `.claude/skills.toml`. It prints nothing at all. That is the acceptance criterion and it cannot be containerised.
+
+Rung 6: a real session in a project that **does** have a manifest. The sync runs.
+
+Rung 7: `skill-version.sh verify` green, and the suites still at 193, 103, 299, 145 and 36.
+
+### Traps, already paid for
+
+**A hook installed before the binary breaks every project on the machine**, not just this one, and the error it prints looks like Claude Code's rather than yours. This is the entire reason the ticket names an order.
+
+`jq` reading and writing the same file truncates it. Write to a temp file and move it.
+
+`~/.local/bin` may not be on `PATH` in a non-interactive shell, which is what a hook runs in. The hook's command may need the absolute path even though the install target is the directory.
+
+A command reports success and did nothing. Assert the post-state, never `$?` alone.
+
+`work-order.sh start` refuses with "working tree is dirty", and it leaves the ticket file, `INDEX.md` and the epic README uncommitted. Commit them first.
+
+A markdown formatter re-pads tables in a file you only meant to add one line to. It is a `PostToolUse` hook in the machine's global `~/.claude/settings.json`, not in this repository - which is the same file you are about to edit. `git diff --stat` before committing.
+
+A `grep -q` in a pipeline reports "no match" when it matched: it closes the pipe on the first hit, the upstream dies of SIGPIPE, and `pipefail` turns that into a non-zero pipeline. Capture to a variable and grep the variable.
+
+### Workflow
+
+```bash
+WO=claude/skills/work-order/scripts/work-order.sh
+HP=claude/skills/hydration-prompt/scripts/hydration.sh
+SV=claude/skills/skill-versioning/scripts/skill-version.sh
+
+bash $WO show    --project . --id WO-20260824-bb0d
+bash $WO start   --project . --id WO-20260824-bb0d   # creates the branch, leaves files uncommitted
+
+# ... edit setup.sh, prove rungs 1 to 4 in a container, then rungs 5 and 6 on the host ...
+
+bash $SV verify                                      # this one has to be green
+
+bash $WO evidence --project . --id WO-20260824-bb0d --index 1 --observed "..."
+bash $WO evidence --project . --id WO-20260824-bb0d --index 2 --observed "..."
+
+git push -u origin <branch>
+gh pr create --base main --title "..." --body-file <file>
+
+bash $WO submit  --project . --id WO-20260824-bb0d --pr <N>
+bash $WO done    --project . --id WO-20260824-bb0d   # archives on the branch, commits nothing
+
+bash $HP check   --project . --body-file /tmp/entry.md
+bash $HP add     --project . --id <next> --title "<next title>" --body-file /tmp/entry.md
+
+git add -A && git commit && git push                 # rides the SAME pull request
+
+# after the merge
+bash $WO cleanup --project . --id WO-20260824-bb0d   # deletes both branches, writes nothing
+```
+
+`approve` is already done for every ticket in both epics and must not be run again.
+
+**The publisher is live now.** Merging your pull request starts a run on `main` that will bump anything under `claude/skills/` you touched - so if you touch a skill, the pull request description carries the `Bump:` trailer and never the number, and `registry.json` is not yours to edit. `setup.sh` is at the repository root and is not a skill, so on this ticket that probably means the publisher finds nothing to do, which is `AC-H2` of `WO-20260824-360d` - `Publish workflow: allocate versions on merge to main and regenerate the registry` observed for real. Watch the run either way.
+
+### Conventions
+
+Every reference to a work-order in a chat reply carries the ticket ID and its full title joined by a dash. A bare ID is a defect, and so is "the next ticket" or "the blocked one".
+
+Feature branches only. Nothing writes to `main` except the publisher, which is now the named exception rather than a planned one.
+
+Rule 14 has no size threshold, and Rule 12 is what covers the part of this ticket that cannot obey it: say which rung ran on the host and why, rather than letting it look containerised.
+
+When the ticket contradicts itself, or contradicts the runner, say so and pick one in the open.
+
 <!-- hydration-entry: WO-20260824-360d -->
 ## WO-20260824-360d - Publish workflow: allocate versions on merge to main and regenerate the registry
 _Generated 2026-08-25 by hydration.sh. Newest entry._
@@ -1699,160 +1861,6 @@ No em dashes anywhere. Use a plain dash.
 No agent co-author line in a commit message, and no Claude attribution footer in a PR body. Root `CLAUDE.md` Rule 13 makes the second one absolute.
 
 All testing runs in Podman, per Rule 14, with no size threshold. This ticket's experiment cannot run in one, for the reason given above, and that is stated rather than quietly skipped.
-
-Report failures as failures. A skipped step is not a completed one.
-
-<!-- hydration-entry: WO-20260824-cc71 -->
-## WO-20260824-cc71 - Repo settings: squash-only, with the commit body taken from the PR description
-_Generated 2026-08-24 by hydration.sh. Newest entry._
-
-### Ticket
-
-`WO-20260824-cc71` - `Repo settings: squash-only, with the commit body taken from the PR description`. Position 1 of 21 children across two epics.
-There is no predecessor. This is the first ticket of the first epic, `WO-20260824-f1a5` - `Skills package manager: prove the path on one skill`.
-
-### What just landed
-
-Five documentation and planning PRs, and nothing executable.
-
-`docs/superpowers/specs/2026-08-23-skills-package-manager-design.md` is the design, 871 lines, with 21 numbered decisions.
-Decision 19 puts the treehouse pool at `~/.treehouse/<repo>-<hash>/`, decision 20 fixes the four default skills as `work-order`, `living-docs`, `container-sandbox` and `context-compaction`, and decision 21 says `type` is derived from the tree it was found in and never declared, while `requires` is an optional comma-separated frontmatter key.
-
-`docs/superpowers/plans/2026-08-24-skills-package-manager-implementation.md` is the implementation plan, 689 lines.
-Its seven sequencing constraints C1 to C7 are the part worth reading twice.
-Its `E1.x` and `E2.x` handles were always plan-internal and are now dead - every piece of work has a real ticket ID.
-
-`docs/worktree-workflow.md` carries the answer to the treehouse gate. `treehouse return` does not lose unpushed commits, with or without `--force`. A dirty working tree is the case that changes code: `return` prompts, takes the no-TTY default, aborts, leaves the slot leased, and exits 0.
-
-`claude/skills/container-sandbox/SKILL.md` gained a section on verifying a host CLI's behaviour by bind-mounting the real binary read-only. That is how the gate was answered and it is reusable.
-
-PR #55 put 23 work-orders on `main`, all `ready`.
-
-### What is NOT done
-
-Nothing has been built. No line of either epic's implementation exists anywhere.
-
-Measured on `main` at the time of writing, and each of these is a command whose output proves it:
-
-- `ls claude/tools` fails. The directory does not exist, so neither `skill-sync.sh`, `skill-onboard.sh`, the notice partial, nor the tools test suite exist.
-- `git ls-files .github/workflows` prints nothing. There is no PR gate and no publisher.
-- `head -c 40 claude/skills/registry.json` shows `"schema": 1`. Schema 2 is unwritten.
-- `grep -l "This copy is read-only" claude/skills/*/SKILL.md | wc -l` prints `43`. Every skill still carries the inline notice.
-- `gh api repos/jkkelley/dotfiles --jq .squash_merge_commit_message` prints `COMMIT_MESSAGES`. This is the exact trap this ticket exists to close, and it is still open.
-
-Every one of the 23 tickets is `ready`. None has been started, so none has a branch.
-
-The 23 were approved with `--no-lavish`, and each records the reason: they were reviewed as one diff on PR #55 rather than in Lavish. That is an honest exception, not a skipped gate, but it is recorded on every ticket and a reader will see the warning.
-
-### Stale or false in the docs
-
-The previous top entry of `HYDRATION.md` said under `Before you start`: "Close the open decision on `type` and `requires`. Ask the user; do not choose." That is closed. Decision 21 in the design doc is the answer and it merged as PR #54. There is no open decision anywhere in this work.
-
-Root `CLAUDE.md` Rule 16 still says a PR touching a skill must bump the version and ship a regenerated `registry.json` by hand. That is true today and must be obeyed today. It becomes false at `WO-20260824-8cd1` - `Rewrite root CLAUDE.md for merge-time allocation and the named main exception`, and not before. Do not pre-empt it.
-
-The design doc's "Open" list still carries the question of who writes the generated skills table into `CLAUDE.md.tmpl`. The body of the same document already answers it: the sync writes it. The body wins, it is the more specific statement, and the sync is the only actor that knows what actually landed. The stale line is recorded in `WO-20260824-b21b` - `CLAUDE.md.tmpl: replace the session-start prose, add the skills markers, the treehouse policy and the documentation-lifetime rule` so it is corrected rather than rediscovered.
-
-This repository has no `CONTEXT_STATE.md`. The `hydration-prompt` skill's one flow references one, and several skills assume it. It genuinely does not exist here. Do not create one as a side effect of this ticket.
-
-### Your scope
-
-Four repository settings, and one throwaway pull request that proves they work.
-
-```bash
-gh api -X PATCH repos/jkkelley/dotfiles \
-  -f squash_merge_commit_title=PR_TITLE \
-  -f squash_merge_commit_message=PR_BODY \
-  -F allow_merge_commit=false \
-  -F allow_rebase_merge=false
-```
-
-Then read all four back, then open a throwaway PR carrying a `Bump: nothing=patch` line in its description, merge it, and read the resulting commit on `main`.
-
-The two acceptance criteria are deliberately different things. Reading the setting back proves the API call worked. Only reading the merged commit proves the trailer survives the path it will actually travel. Do not evidence the second criterion with the first one's output.
-
-Out of scope, and named because they are the obvious next thoughts: branch protection rules, and required status checks. The status checks arrive with `WO-20260824-2ad1` - `PR gate workflow: validate the bump intent and run the affected suites`, which is a different ticket and is blocked behind four others.
-
-Clean the throwaway PR's branch up afterwards. It is scaffolding, not deliverable.
-
-### Before you start
-
-None.
-
-One thing to be aware of rather than to resolve: these settings are repository-wide and take effect immediately for every future merge in this repository, including the ticket's own. Disabling merge commits and rebase merges is intended, not collateral.
-
-### Read in this order
-
-1. Root `CLAUDE.md`. Rules 12 through 17 all bear on this work. There is no `CONTEXT_STATE.md` in this repository, so the usual second step does not apply.
-2. This entry, which is the top entry of `HYDRATION.md`. Read only this one. The entries below it are superseded history.
-3. `docs/superpowers/plans/2026-08-24-skills-package-manager-implementation.md`, the section headed `Sequencing constraints`, specifically C2. That is why this ticket is first.
-4. The ticket file itself: `work-orders/WO-20260824-f1a5/WO-20260824-cc71-*.md`.
-5. `docs/superpowers/specs/2026-08-23-skills-package-manager-design.md`, only the sections on merge-time allocation. The rest is not needed for this ticket.
-
-### Reuse, it is proven
-
-`gh` is authenticated and works in this repository. `gh-axi` wraps it and is preferred where it fits.
-
-`claude/skills/work-order/scripts/work-order.sh` owns every ticket transition. Never hand-edit a ticket file. `note` is the only way a note reaches a ticket, and `evidence` is the only way a criterion gets ticked.
-
-`git interpret-trailers --parse` is the reader the publisher will use later. Use the same command here, not a regular expression, so the proof matches what production will do.
-
-`claude/skills/container-sandbox/SKILL.md` has a section on verifying a host CLI by bind-mounting the real binary read-only. Nothing in this ticket needs it, but it is the pattern for the tickets that do.
-
-### The verification ladder
-
-Rung 1, free: `gh api repos/jkkelley/dotfiles --jq '{squash_merge_commit_title,squash_merge_commit_message,allow_merge_commit,allow_rebase_merge}'`. Catches a typo'd field name or a `-f` that should have been `-F`. Booleans need `-F`; sending `allow_merge_commit=false` as a string with `-f` is accepted and does nothing.
-
-Rung 2, one throwaway PR: merge it and run `git log -1 --format=%B origin/main | git interpret-trailers --parse`. This is the only rung that proves the thing the ticket is actually for, and it cannot be simulated. Everything downstream in both epics depends on it being true.
-
-### Traps, already paid for
-
-A `Bump:` trailer written in the PR description is absent from the merge commit, and every bump silently drops. `squash_merge_commit_message` defaults to `COMMIT_MESSAGES`, which concatenates the branch's commit messages and discards the PR body entirely. It currently reads `COMMIT_MESSAGES` in this repository, so this is the live state, not a hypothetical.
-
-The settings read back correctly and the trailer still does not arrive. The API read only proves the call was accepted. The two acceptance criteria are separate for this reason.
-
-A command reports success and did nothing. A prompt with no TTY takes its default and exits 0. This bit the treehouse gate work: `treehouse return` on a dirty tree aborts, leaks the slot, and exits 0. Assert the post-state, never `$?`.
-
-A loop over IDs passes every ID as one argument. This shell is zsh, which does not word-split an unquoted parameter the way bash does. Use `while read -r`, not `for x in $LIST`.
-
-`git merge --ff-only origin/main` refuses with "diverging branches". You are in a treehouse slot at detached HEAD, not in `/home/luna/dotfiles`. Check `git branch --show-current` first.
-
-### Workflow
-
-```bash
-WO=claude/skills/work-order/scripts/work-order.sh
-
-bash $WO show    --project . --id WO-20260824-cc71
-bash $WO start   --project . --id WO-20260824-cc71
-
-# ... do the work ...
-
-bash $WO evidence --project . --id WO-20260824-cc71 --index 1 --observed "..."
-bash $WO evidence --project . --id WO-20260824-cc71 --index 2 --observed "..."
-bash $WO note     --project . --id WO-20260824-cc71 --text "..."
-
-bash $WO submit  --project . --id WO-20260824-cc71 --pr <N>
-bash $WO done    --project . --id WO-20260824-cc71     # on the branch, before the merge
-
-# after the merge
-bash $WO close   --project . --id WO-20260824-cc71 --dry-run
-bash $WO close   --project . --id WO-20260824-cc71
-```
-
-`approve` is already done for all 23 tickets and must not be run again.
-
-`done` is written on the feature branch before the PR lands, alongside the `HYDRATION.md` entry for the next ticket, so all of it rides one pull request.
-
-### Conventions
-
-Every reference to a work-order in a chat reply carries the ticket ID and its full title joined by a dash. A bare ID is a defect, and so is "the next ticket" or "the blocked one".
-
-Feature branches only. `main` is never written directly. The one exception to that rule does not exist yet and arrives with the publish workflow.
-
-No em dashes anywhere. Use a plain dash.
-
-No agent co-author line in a commit message, and no Claude attribution footer in a PR body. Root `CLAUDE.md` Rule 13 makes the second one absolute.
-
-All testing runs in Podman, per Rule 14, with no size threshold. This ticket has nothing to containerise - it is API calls and a merged PR - but the rule is not waived, it simply does not bite here.
 
 Report failures as failures. A skipped step is not a completed one.
 
