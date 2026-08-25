@@ -1,7 +1,7 @@
 ---
 name: hydration-prompt
 description: Writes the prompt that starts the next session, and hands back the exact command to launch it. Maintains HYDRATION.md as a 10-entry sliding window, newest on top. Use at close-out, after CONTEXT_STATE.md is written and before the pull request is opened, or whenever the user asks for a hydration prompt, a handoff, or how to start the next ticket.
-version: 2.0.3
+version: 2.0.4
 ---
 
 # Hydration prompt
