@@ -305,11 +305,18 @@ Byte-identical output is the acceptance criterion because it is the only way to 
 The largest ticket in the plan.
 It is a candidate for splitting at poker; if it splits, the seam is between resolution (manifest, registry, receipt, the owned set) and application (temp build, render, swap, receipt write).
 
-- [ ] `--boot`: no `.claude/skills.toml` here, or a stamp under 15 minutes old, exits 0 and prints nothing
-- [ ] Manifest parse. Minimal, hand-rolled: no TOML parser exists on Git Bash and Rule 17 says Windows is supported
-- [ ] Registry fetch, three attempts, then the loud two-line failure and exit 0
-- [ ] Resolve `requires` into the owned set
-- [ ] Read the receipt for the previously owned set
+It did split, at poker on 2026-08-24, on exactly that seam.
+`WO-20260824-5b89` is resolution and the `claude/tools/testing/` tree; `WO-20260824-efb0` is application.
+The horizontal rule below is the seam, and it sits one box higher than the wording above implies: the sweep clears temp directories that only the application half creates, so it went with the thing it cleans up rather than with the half that creates none.
+
+- [x] `--boot`: no `.claude/skills.toml` here, or a stamp under 15 minutes old, exits 0 and prints nothing
+- [x] Manifest parse. Minimal, hand-rolled: no TOML parser exists on Git Bash and Rule 17 says Windows is supported
+- [x] Registry fetch, three attempts, then the loud two-line failure and exit 0
+- [x] Resolve `requires` into the owned set
+- [x] Read the receipt for the previously owned set
+
+---
+
 - [ ] Sweep `.claude/cache/.sync.*` older than an hour **before** starting, because the one failure mode that skips the `trap` is a hook timeout, which is the likeliest one
 - [ ] Build into `.claude/cache/.sync.XXXXXX`, render the notice into each `SKILL.md`, swap each owned directory individually
 - [ ] Remove directories dropped from the manifest **only when the receipt says sync installed them**
