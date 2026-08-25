@@ -14,5 +14,5 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20260824-360d` | ready | p1 | WO-20260824-efb0 | [Publish workflow: allocate versions on merge to main and regenerate the registry](WO-20260824-360d-publish-workflow-allocate-versions-on-merge-to-m.md) |
 | `WO-20260824-8cd1` | ready | p1 | WO-20260824-9712 | [Rewrite root CLAUDE.md for merge-time allocation and the named main exception](WO-20260824-8cd1-rewrite-root-claude-md-for-merge-time-allocation.md) |
 | `WO-20260824-bb0d` | ready | p1 | WO-20260824-efb0 | [setup.sh installs the skill-sync binary, then the SessionStart hook](WO-20260824-bb0d-setup-sh-installs-the-skill-sync-binary-then-the.md) |
-| `WO-20260824-5b89` | ready | p1 | - | [skill-sync.sh part one: resolution, and the tools test tree it is proved in](WO-20260824-5b89-skill-sync-sh-part-one-resolution-and-the-tools-.md) |
+| `WO-20260824-5b89` | in-progress | p1 | - | [skill-sync.sh part one: resolution, and the tools test tree it is proved in](WO-20260824-5b89-skill-sync-sh-part-one-resolution-and-the-tools-.md) |
 | `WO-20260824-efb0` | ready | p1 | WO-20260824-5b89 | [skill-sync.sh part two: build, swap, receipt, and self-update](WO-20260824-efb0-skill-sync-sh-part-two-build-swap-receipt-and-se.md) |
