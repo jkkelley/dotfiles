@@ -47,7 +47,7 @@
     "work-order": { "version": "2.0.0", "sha256": "9bd8b0db69fb8bbd0ac07a19d5d0f8d08a225ca7b1430712b152b448544ce60e", "type": "skill", "requires": [] }
   },
   "tools": {
-    "skill-sync": { "version": "1.0.0", "sha256": "419f25a7a63c226df4a68fe6df5b40be3d17cfa4ed4185571358bed4419928b7" },
+    "skill-sync": { "version": "2.0.0", "sha256": "6904c94714c37720ecf20027c1104f51363ae7298e0f9934633d40fb71ef5e63" },
     "read-only-notice": { "version": "1.0.0", "sha256": "345225f2757216bfdddb690bc96d90fc61d9771f4c47efe0cc2e14f0952d3928" }
   }
 }
