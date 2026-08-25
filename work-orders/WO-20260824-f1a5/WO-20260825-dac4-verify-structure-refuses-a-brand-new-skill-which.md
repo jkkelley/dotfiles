@@ -4,7 +4,7 @@
   "slug": "verify-structure-refuses-a-brand-new-skill-which",
   "title": "verify --structure refuses a brand new skill, whichever way it is written",
   "type": "bug",
-  "status": "draft",
+  "status": "ready",
   "priority": "p1",
   "created": "2026-08-25",
   "updated": "2026-08-25",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "Approved in session on 2026-08-25. The ticket was read as a diff on PR #68, which is where its scope, its dependency on WO-20260824-8cd1 and its blocks edge to WO-20260824-238b were all visible as one change. Lavish was not used.",
+    "at": "2026-08-25"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [
