@@ -354,6 +354,347 @@ bash "$GATE" detect --repo "$P" >/dev/null 2>&1; want_rc 'detect with no --base 
 bash "$GATE" detect --repo "$P" --base nope >/dev/null 2>&1; want_rc 'detect with a bad --base exits 2' 2 $?
 bash "$GATE" run-suite /repo/docs --print >/dev/null 2>&1; want_rc 'run-suite on a dir with no suite exits 2' 2 $?
 
+# ══ the publisher ══════════════════════════════════════════════════════════════
+#
+# publish.sh writes, which the gate never does, so its fixture has to be a
+# repository the real skill-version.sh can operate on: a copy of that script
+# lives inside each fixture and renders the registry itself. That makes the
+# registry real - real hashes over the real tree - which is the only way verify
+# can be exercised as the loop guard rather than mocked.
+#
+# It is a second builder rather than a flag on mkfixture because the gate's
+# fixture states a different contract: a hand-written registry, with a tools
+# block whose key collides with a skill name, which is what proves the skills
+# block is scoped. Rendering that registry would delete the collision.
+
+PUB=/repo/.github/scripts/publish.sh
+SVREL=claude/skills/skill-versioning/scripts/skill-version.sh
+
+mkpub() {
+  local p="$WORK/$1"
+  rm -rf "$p"; mkdir -p "$p"
+  (
+    cd "$p" || exit 1
+    git init -q -b main .
+    mkdir -p "claude/skills/skill-versioning/scripts" claude/tools docs \
+             claude/skills/alpha claude/skills/beta claude/skills/gamma
+    printf -- '---\nname: skill-versioning\nversion: 1.0.0\n---\n\nOwns the registry.\n' \
+      > claude/skills/skill-versioning/SKILL.md
+    cp "/repo/$SVREL" "$SVREL"
+    printf -- '---\nname: alpha\nversion: 1.2.3\n---\n\nalpha.\n' > claude/skills/alpha/SKILL.md
+    printf -- '---\nname: beta\nversion: 2.0.0\n---\n\nbeta.\n'  > claude/skills/beta/SKILL.md
+    printf -- '---\nname: gamma\nversion: 0.9.9\n---\n\ngamma.\n' > claude/skills/gamma/SKILL.md
+    printf 'docs\n' > docs/README.md
+    # The registry is generated, not written here. A hand-written one would put
+    # the fixture in the state verify exists to detect, and every check below
+    # would start from red.
+    bash "$SVREL" init >/dev/null || exit 1
+    git add -A && git commit -qm 'base'
+  ) || { printf 'publisher fixture build failed\n' >&2; exit 1; }
+  printf '%s' "$p"
+}
+
+svin() { bash "$1/$SVREL" "${@:2}"; }
+head_of() { git -C "$1" rev-parse HEAD; }
+
+# Reads the version out of the registry rather than out of SKILL.md, because a
+# bump that moved one and not the other is precisely the drift being guarded
+# against, and reading the file the consumers read is what proves it landed.
+regver() {
+  sed -n '/^  "skills": {/,/^  },/p' "$1/claude/skills/registry.json" \
+    | grep -m1 "\"$2\":" | sed 's/.*"version": "\([^"]*\)".*/\1/'
+}
+mdver() {
+  grep -m1 '^version:' "$1/claude/skills/$2/SKILL.md" | sed 's/^version:[[:space:]]*//'
+}
+treehash() {
+  (cd "$1" && find . -path ./.git -prune -o -type f -print0 \
+    | sort -z | xargs -0 sha256sum 2>/dev/null | sha256sum)
+}
+
+pcommit() { # dir subject [body]
+  git -C "$1" add -A
+  if [[ -n ${3:-} ]]; then
+    git -C "$1" commit -q -m "$2" -m "$3"
+  else
+    git -C "$1" commit -q -m "$2"
+  fi
+}
+
+pplan()  { OUT=$(bash "$PUB" plan  --repo "$1" --before "$2" 2>&1); RC=$?; }
+papply() { OUT=$(bash "$PUB" apply --repo "$1" --before "$2" 2>&1); RC=$?; }
+
+printf '\n\n.github/scripts - the publisher\n'
+
+# ── the loop guard ─────────────────────────────────────────────────────────────
+hd 'the loop guard - a run with nothing to do is free'
+
+# AC-H2's shape. It is also what stops the second run of a batch re-bumping what
+# the first one already did, so it comes before anything reads a trailer.
+P=$(mkpub g1); B=$(head_of "$P"); H=$B
+papply "$P" "$B"
+want_rc  'verify green: exit 0' 0 $RC "$OUT"
+want_has 'verify green: says there is nothing to allocate' 'Nothing to allocate' "$OUT"
+want_eq  'verify green: no commit made' "$H" "$(head_of "$P")"
+want_not 'verify green: never got as far as a range' 'range   ' "$OUT"
+
+# ── a single skill ─────────────────────────────────────────────────────────────
+hd 'one skill, one commit'
+
+P=$(mkpub s1); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'chore(skills): tweak alpha' 'Bump: alpha=minor'
+
+SNAP=$(treehash "$P")
+pplan "$P" "$B"
+want_rc  'plan: exit 0' 0 $RC "$OUT"
+want_has 'plan: 1.2.3 -> 1.3.0 from the trailer' '1.2.3     -> 1.3.0     minor  trailer' "$OUT"
+want_has 'plan: names the commit it read'        'chore(skills): tweak alpha' "$OUT"
+want_eq  'plan writes nothing' "$SNAP" "$(treehash "$P")"
+
+papply "$P" "$B"
+want_rc  'apply: exit 0' 0 $RC "$OUT"
+want_eq  'apply: SKILL.md carries the new version'  '1.3.0' "$(mdver  "$P" alpha)"
+want_eq  'apply: the registry agrees'               '1.3.0' "$(regver "$P" alpha)"
+want_eq  'apply: nothing else moved'                '2.0.0' "$(regver "$P" beta)"
+svin "$P" verify >/dev/null 2>&1
+want_rc  'apply: verify is green afterwards' 0 $?
+want_has 'apply: the commit carries the marker' 'Skill-Publish: true' "$(git -C "$P" log -1 --format=%B)"
+want_has 'apply: the commit says what it allocated' 'alpha -> 1.3.0 (minor, from the trailer)' \
+  "$(git -C "$P" log -1 --format=%B)"
+
+# The publisher writes version: lines and registry.json. A file it touched
+# outside claude/skills/ would mean the scoped add is not doing its job.
+OUT=$(git -C "$P" show --name-only --format= HEAD)
+want_has 'apply: it wrote the registry'   'claude/skills/registry.json' "$OUT"
+want_has 'apply: and the version line'    'claude/skills/alpha/SKILL.md' "$OUT"
+want_not 'apply: and nothing outside the skills tree' 'docs/README.md' "$OUT"
+
+# A run against a tree the publisher has already published finds verify green.
+papply "$P" "$B"
+want_rc  'a second run over the same range: exit 0' 0 $RC "$OUT"
+want_has 'a second run over the same range: nothing to do' 'Nothing to allocate' "$OUT"
+
+P=$(mkpub s2); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/beta/SKILL.md"
+pcommit "$P" 'fix(skills): beta typo'
+pplan "$P" "$B"
+want_has 'title fix: patch, from the title' '2.0.0     -> 2.0.1     patch  title' "$OUT"
+
+P=$(mkpub s3); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/beta/SKILL.md"
+pcommit "$P" 'feat(skills)!: beta loses a flag'
+pplan "$P" "$B"
+want_has 'title feat!: major' '2.0.0     -> 3.0.0     major  title' "$OUT"
+
+# ── a new skill ────────────────────────────────────────────────────────────────
+hd 'a skill absent from the registry needs no trailer'
+
+P=$(mkpub n1); B=$(head_of "$P")
+mkdir -p "$P/claude/skills/delta"
+printf -- '---\nname: delta\n---\n\nNew.\n' > "$P/claude/skills/delta/SKILL.md"
+pcommit "$P" 'a subject with no conventional type at all'
+pplan "$P" "$B"
+want_rc  'new skill: plan exits 0 with no trailer and no type' 0 $RC "$OUT"
+want_has 'new skill: stamped at 1.0.0' '-> 1.0.0     new    absent from the registry' "$OUT"
+
+papply "$P" "$B"
+want_rc  'new skill: apply exits 0' 0 $RC "$OUT"
+want_eq  'new skill: 1.0.0 in the registry' '1.0.0' "$(regver "$P" delta)"
+want_eq  'new skill: 1.0.0 in the frontmatter' '1.0.0' "$(mdver "$P" delta)"
+svin "$P" verify >/dev/null 2>&1
+want_rc  'new skill: verify green afterwards' 0 $?
+
+# ── deletion ───────────────────────────────────────────────────────────────────
+hd 'a deleted skill needs no bump, only a regenerated registry'
+
+P=$(mkpub k1); B=$(head_of "$P")
+rm -rf "$P/claude/skills/gamma"
+pcommit "$P" 'a subject with no conventional type at all'
+papply "$P" "$B"
+want_rc  'deleted skill: exit 0, nothing to resolve' 0 $RC "$OUT"
+want_not 'deleted skill: no row survives' '"gamma"' "$(cat "$P/claude/skills/registry.json")"
+want_eq  'deleted skill: nothing else moved' '1.2.3' "$(regver "$P" alpha)"
+svin "$P" verify >/dev/null 2>&1
+want_rc  'deleted skill: verify green afterwards' 0 $?
+
+# ── the refusal ────────────────────────────────────────────────────────────────
+hd 'an unresolvable level fails the run and bumps nothing'
+
+# AC-H3. The assertion that matters is the second one: a refusal that had
+# already written half the registry would be worse than no refusal at all.
+P=$(mkpub f1); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'a subject with no conventional type at all'
+SNAP=$(treehash "$P"); H=$(head_of "$P")
+
+papply "$P" "$B"
+want_rc  'unresolvable: exit 1' 1 $RC "$OUT"
+want_has 'unresolvable: names the skill'  'unresolved          alpha' "$OUT"
+want_has 'unresolvable: names the commit' 'a subject with no conventional type at all' "$OUT"
+want_eq  'unresolvable: every version unchanged' "$SNAP" "$(treehash "$P")"
+want_eq  'unresolvable: no commit made' "$H" "$(head_of "$P")"
+want_eq  'unresolvable: alpha still 1.2.3' '1.2.3' "$(regver "$P" alpha)"
+
+# revert is unmapped on purpose: what the right level is depends on what was
+# reverted, so it forces an explicit trailer rather than guessing.
+P=$(mkpub f2); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'revert: undo the thing'
+papply "$P" "$B"
+want_rc 'revert has no fallback level: exit 1' 1 $RC "$OUT"
+
+# One bad level in a batch stops the whole batch. Publishing the resolvable half
+# would leave the other half's new content hash in the registry under its old
+# version - the exact silent failure the wide range exists to prevent.
+P=$(mkpub f3); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'feat(skills): alpha gains a thing'
+printf 'x\n' >> "$P/claude/skills/beta/SKILL.md"
+pcommit "$P" 'a subject with no conventional type at all'
+papply "$P" "$B"
+want_rc 'one bad commit in a batch: exit 1' 1 $RC "$OUT"
+want_eq 'one bad commit in a batch: alpha not bumped either' '1.2.3' "$(regver "$P" alpha)"
+
+P=$(mkpub f4); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'chore(skills): tweak alpha' 'Bump: alpha=mayor'
+papply "$P" "$B"
+want_rc  'a typo in the level: exit 1' 1 $RC "$OUT"
+want_has 'a typo in the level: names it' 'malformed trailer' "$OUT"
+want_eq  'a typo in the level: nothing bumped' '1.2.3' "$(regver "$P" alpha)"
+
+# ── the batch ──────────────────────────────────────────────────────────────────
+hd 'two merges in one push - AC-H1, and why the range is <before>..HEAD'
+
+P=$(mkpub b1); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'feat(skills): alpha gains a thing'
+printf 'x\n' >> "$P/claude/skills/beta/SKILL.md"
+pcommit "$P" 'fix(skills): beta typo'
+
+pplan "$P" "$B"
+want_rc  'batch: plan exits 0' 0 $RC "$OUT"
+want_has 'batch: alpha takes its own commit type' 'alpha                      1.2.3     -> 1.3.0     minor  title' "$OUT"
+want_has 'batch: beta takes its own'              'beta                       2.0.0     -> 2.0.1     patch  title' "$OUT"
+
+papply "$P" "$B"
+want_rc  'batch: apply exits 0' 0 $RC "$OUT"
+want_eq  'batch: alpha allocated' '1.3.0' "$(regver "$P" alpha)"
+want_eq  'batch: beta allocated'  '2.0.1' "$(regver "$P" beta)"
+svin "$P" verify >/dev/null 2>&1
+want_rc  'batch: verify green afterwards' 0 $?
+# One publisher commit covering both skills, not one per skill. Counted by the
+# marker, because the range also holds the two merges that caused the run.
+want_eq  'batch: one publisher commit for both' '1' \
+  "$(git -C "$P" log "$B..HEAD" --format=%B | grep -c '^Skill-Publish: true')"
+
+# The trap the wide range exists for, demonstrated rather than described.
+# skill-version.sh bump regenerates the WHOLE registry, so bumping one of two
+# changed skills silently writes the other's new content hash under its old
+# version - and verify then reports green, forever.
+P=$(mkpub b2)
+printf 'x\n' >> "$P/claude/skills/alpha/SKILL.md"
+printf 'x\n' >> "$P/claude/skills/beta/SKILL.md"
+pcommit "$P" 'both'
+svin "$P" bump alpha --patch >/dev/null
+svin "$P" verify >/dev/null 2>&1
+want_rc 'bumping one of two changed skills leaves verify green' 0 $?
+want_eq 'and beta ships its change under its old number' '2.0.0' "$(regver "$P" beta)"
+
+# Two commits touching the same skill resolve to the larger level. Taking the
+# last one would make the answer depend on the order two unrelated pull
+# requests happened to be merged in.
+P=$(mkpub b3); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'fix(skills): a small one'
+printf 'y\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'feat(skills): a bigger one'
+pplan "$P" "$B"
+want_has 'same skill twice: the higher level wins' '1.2.3     -> 1.3.0     minor' "$OUT"
+
+P=$(mkpub b4); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'feat(skills): a bigger one'
+printf 'y\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'fix(skills): a small one'
+pplan "$P" "$B"
+want_has 'same skill twice, other order: still the higher' '1.2.3     -> 1.3.0     minor' "$OUT"
+
+# ── the publisher's own commits ────────────────────────────────────────────────
+hd "the publisher skips its own commits"
+
+# The loop guard normally exits before this matters. It matters anyway: without
+# it, a chore(skills): subject maps to patch and the publisher bumps every skill
+# its previous run touched a second time.
+P=$(mkpub m1); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'chore(skills): allocate versions on main' 'Skill-Publish: true'
+pplan "$P" "$B"
+want_rc  'a marked commit: exit 0' 0 $RC "$OUT"
+want_has 'a marked commit: reported as skipped' "this publisher's own commit, skipped" "$OUT"
+want_has 'a marked commit: allocates nothing'   'No skill changed in this range' "$OUT"
+
+# Only the marked one is skipped. A real merge sitting beside it still resolves.
+P=$(mkpub m2); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'chore(skills): allocate versions on main' 'Skill-Publish: true'
+printf 'x\n' >> "$P/claude/skills/beta/SKILL.md"
+pcommit "$P" 'fix(skills): beta typo'
+pplan "$P" "$B"
+want_has 'a marked commit beside a real one: beta resolves' '2.0.0     -> 2.0.1     patch  title' "$OUT"
+want_not 'a marked commit beside a real one: alpha does not appear' 'alpha  ' "$OUT"
+
+# ── stray trailers ─────────────────────────────────────────────────────────────
+hd 'a trailer naming a skill that commit never changed'
+
+# The gate refuses this on the pull request. Arriving here means it was added
+# afterwards, and a stale registry is a worse outcome than a trailer nobody
+# acted on - so it is reported, not refused.
+P=$(mkpub t1); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'chore(skills): tweak alpha' 'Bump: alpha=minor
+Bump: beta=major'
+pplan "$P" "$B"
+want_rc  'stray trailer: exit 0' 0 $RC "$OUT"
+want_has 'stray trailer: reported'  'ignored trailer' "$OUT"
+want_has 'stray trailer: names it'  'Bump: beta=major' "$OUT"
+want_has 'stray trailer: alpha still resolves' '-> 1.3.0     minor  trailer' "$OUT"
+want_not 'stray trailer: beta is not in the table' 'beta   ' "$OUT"
+
+# ── the range ──────────────────────────────────────────────────────────────────
+hd '--before, and what happens when it is not a commit'
+
+P=$(mkpub e1); B=$(head_of "$P")
+printf 'x\n' >> "$P/claude/skills/alpha/SKILL.md"
+pcommit "$P" 'fix(skills): alpha'
+pplan "$P" '0000000000000000000000000000000000000000'
+want_rc  'forty zeroes: falls back rather than failing' 0 $RC "$OUT"
+want_has 'forty zeroes: says it fell back' 'fell back to HEAD~1..HEAD' "$OUT"
+want_has 'forty zeroes: and still resolves the tip' '-> 1.2.4     patch  title' "$OUT"
+
+pplan "$P" 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef'
+want_rc  'an unknown sha: falls back' 0 $RC "$OUT"
+want_has 'an unknown sha: says which one' 'is not a commit in this repository' "$OUT"
+
+pplan "$P" "$B"
+want_has 'a good --before: no fallback note' 'range   ' "$OUT"
+want_not 'a good --before: says nothing about falling back' 'fell back' "$OUT"
+
+# ── the interface ──────────────────────────────────────────────────────────────
+hd "the publisher's interface"
+
+bash "$PUB" --help >/dev/null 2>&1;  want_rc 'publish --help exits 0' 0 $?
+bash "$PUB" >/dev/null 2>&1;         want_rc 'publish with no arguments exits 2' 2 $?
+bash "$PUB" nonsense >/dev/null 2>&1; want_rc 'publish with an unknown command exits 2' 2 $?
+bash "$PUB" plan --repo "$WORK" --before HEAD >/dev/null 2>&1
+want_rc 'publish outside a repository exits 2' 2 $?
+P=$(mkpub i1); rm -f "$P/$SVREL"
+bash "$PUB" plan --repo "$P" --before HEAD >/dev/null 2>&1
+want_rc 'publish where the repo has no skill-version.sh exits 2' 2 $?
+bash "$PUB" plan --repo "$P" --nonsense x >/dev/null 2>&1
+want_rc 'publish with an unknown option exits 2' 2 $?
+
 # ── ─────────────────────────────────────────────────────────────────────────────
 printf '\n%d passed, %d failed\n\n' "$PASS" "$FAIL"
 [[ $FAIL -eq 0 ]]

@@ -1,0 +1,101 @@
+# The publisher. It is the one actor in this repository permitted to write main
+# directly, and the only job here that holds a token which can.
+#
+# A pull request carries the *intent* to bump and never the number, because a
+# number allocated on a branch is a number two branches can allocate at once -
+# which is exactly what made registry.json a conflict point. skill-pr-gate.yml
+# checks that intent while a human is still looking at it. This is where the
+# intent becomes a version, at the first moment ordering is actually known: on
+# main, after the merge, in a run that is serialised against every other one.
+#
+#   guard      verify. Green means the registry already matches the tree, so
+#              there is nothing unpublished and the run exits 0. Free, because
+#              verify is a pure check
+#   allocate   init for anything new, one bump per changed skill, verify again,
+#              then commit
+#   push       the only step that needs the token
+#
+# The shell lives in .github/scripts/publish.sh. A shell block in a workflow can
+# only be tested by pushing, and this one writes to main; the script is driven
+# against a fixture repository by .github/scripts/testing/run-tests.sh, in a
+# container, refusals included.
+#
+# runs-on is ubuntu-24.04 and never ubuntu-latest, per the gate's note: Rule 15
+# wants an immutable identifier and GitHub publishes none for runner images, so
+# a dated label is as far as the rule reaches. The images inside the suites are
+# digest-pinned already, and the publisher runs no suites at all - the gate ran
+# them on the pull request, and re-running them here would only delay the
+# registry and add a second place for it to go red.
+name: skill publish
+
+on:
+  push:
+    branches: [main]
+
+# The one exception to "nothing writes to main". Named here rather than left
+# implied, so that a second workflow wanting the same permission has to argue
+# for it rather than cite this one as precedent.
+permissions:
+  contents: write
+
+# Serialised, and deliberately not cancelled. A cancelled run is a bump that
+# never happened, and the change it would have covered is already on main - so
+# the registry keeps naming a version that no longer matches the tree, and the
+# next run finds a range that no longer contains the commit that caused it.
+concurrency:
+  group: skill-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: allocate versions
+    runs-on: ubuntu-24.04
+    steps:
+      # ref: main, not the default github.sha. This is the batching case and it
+      # is not a detail: if a second pull request merges while this run is still
+      # going, github.sha is a tree that is no longer main and the push at the
+      # end is rejected non-fast-forward whether or not the runs are serialised.
+      #
+      # fetch-depth: 0 because the range read is <before>..HEAD, and <before> is
+      # not reachable from a shallow clone.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      # apply is the whole of it: the loop guard, the resolution, init, the
+      # bumps, the post-state assertion and the commit. It exits 0 having done
+      # nothing when verify was already green, and non-zero without writing
+      # anything when a level cannot be resolved.
+      #
+      # tee into the step summary so the allocation table is readable on the run
+      # page rather than only in the log. pipefail is what makes tee's own exit
+      # status stop hiding the script's.
+      #
+      # 2>&1 where the gate has none: a refusal is the output that most needs
+      # reading here, and it is on stderr. The gate's refusal is attached to a
+      # pull request someone is already looking at; this one is not.
+      - name: allocate
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          bash .github/scripts/publish.sh apply --before "$BEFORE" 2>&1 \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Separate from allocate so that "the commit was made" and "the commit
+      # reached main" are two outcomes in the log rather than one. A rejected
+      # push is the only failure mode left here and it has to be legible.
+      #
+      # No rebase on rejection, on purpose: the registry is a function of the
+      # tree it was rendered from, so replaying a bump onto a tree whose content
+      # moved produces a registry that matches neither. Fail, and let the push
+      # event for whatever landed in the meantime start a run that gets it right.
+      - name: push
+        run: |
+          set -euo pipefail
+          if [ -z "$(git log origin/main..HEAD --oneline)" ]; then
+            echo "nothing to push"
+            exit 0
+          fi
+          git push origin HEAD:main
