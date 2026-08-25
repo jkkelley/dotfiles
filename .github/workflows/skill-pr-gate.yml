@@ -31,8 +31,14 @@
 # digest already, and that is the part that governs what the tests run against.
 name: skill PR gate
 
+# edited is not padding. The Bump: trailer and the conventional title both live
+# in the pull request itself, not in a file, so a verdict reached before someone
+# fixed a typo in the description is a verdict about text that no longer exists.
+# The default set stops at opened, synchronize and reopened, and would leave a
+# green check standing over a description that had since been rewritten.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     branches: [main]
 
 # The gate reads. Nothing below needs more than this, and a token that cannot
