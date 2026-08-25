@@ -4,16 +4,16 @@
   "slug": "pr-gate-workflow-validate-the-bump-intent-and-ru",
   "title": "PR gate workflow: validate the bump intent and run the affected suites",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-08-24",
   "updated": "2026-08-25",
   "created_at": "2026-08-24T13:19:08-05:00",
   "parent": "WO-20260824-f1a5",
   "branch": "feat/pr-gate-workflow-validate-the-bump-intent-and-ru",
-  "pr": null,
+  "pr": 66,
   "merge_sha": null,
-  "closed": null,
+  "closed": "2026-08-25",
   "approval": {
     "via": "override",
     "reason": "Reviewed and approved on PR #55 on GitHub, which is where the whole cut was read as one diff. Lavish was offered and declined in favour of the PR.",
@@ -57,9 +57,12 @@ Merge-time allocation means the PR carries intent and CI carries out the allocat
 ## Acceptance criteria
 
 
-- [ ] `AC-H1` *(human)* a docs-only PR is green with the matrix skipped and no empty-matrix error
-- [ ] `AC-H2` *(human)* a PR editing hydration-prompt runs exactly one matrix leg
-- [ ] `AC-H3` *(human)* a PR whose trailer names a skill it did not change is refused, and the message says which
+- [x] `AC-H1` *(human)* a docs-only PR is green with the matrix skipped and no empty-matrix error
+  - observed `2026-08-25` Live on PR #66, run 32844584754, the gate running against its own pull request. This branch touches .github/ and no skill, which is the docs-only shape. detect emitted skills=[], tools=false, gate=true. The matrix job reported conclusion 'skipped' rather than erroring - the if: needs.detect.outputs.skills != '[]' guard held, and an empty matrix did not become a workflow error. claude/tools also skipped. bump intent green: 'No skill changed on this branch. Nothing to resolve.' followed by verify --structure at base a22c58fd, 'ok - 43 skills versioned, no version: or registry.json in the diff'. The gate's own suite ran on podman 5.8.4 and reported 66 passed, 0 failed. Whole run: success.
+- [x] `AC-H2` *(human)* a PR editing hydration-prompt runs exactly one matrix leg
+  - observed `2026-08-25` Live on throwaway PR #67, run 32844674771, a branch off this one carrying one added line in claude/skills/hydration-prompt/SKILL.md. detect emitted skills=["hydration-prompt"] and the matrix expanded to exactly one leg, named hydration-prompt - no second leg, and claude/tools skipped. The resolution table printed 'hydration-prompt 2.0.3 -> 2.0.4 patch title', the title being fix(skills) with no trailer. The leg logged 'is wrapped', which is run-suite dispatching hydration-prompt into the pinned bitnami/git container because its suite does not containerise itself, and the suite reported 47 passed, 0 failed on podman 5.8.4. Whole run: success. PR #67 was closed unmerged and its branch deleted.
+- [x] `AC-H3` *(human)* a PR whose trailer names a skill it did not change is refused, and the message says which
+  - observed `2026-08-25` Live on the same throwaway PR #67, run 32844764709. Its description was edited to add 'Bump: work-order=major' while the branch changed only hydration-prompt. The edit alone re-triggered the workflow, which is the types: [..., edited] entry doing its job - without it the earlier green check would have stood over a description that no longer existed. bump intent failed with 'not changed here work-order (the trailer names it, this branch never touched it)' followed by the Refusing block. The message names the skill, as required. The table above it still resolved hydration-prompt 2.0.3 -> 2.0.4 patch title, so the refusal is scoped to the trailer rather than swallowing the rest of the report.
 
 ## Test plan
 
