@@ -4,7 +4,7 @@
   "slug": "pilot-take-hydration-prompt-through-the-whole-pi",
   "title": "Pilot: take hydration-prompt through the whole pipeline end to end",
   "type": "chore",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-08-24",
   "updated": "2026-08-25",
@@ -13,7 +13,7 @@
   "branch": "feat/pilot-take-hydration-prompt-through-the-whole-pi",
   "pr": 73,
   "merge_sha": null,
-  "closed": null,
+  "closed": "2026-08-25",
   "approval": {
     "via": "override",
     "reason": "Reviewed and approved on PR #55 on GitHub, which is where the whole cut was read as one diff. Lavish was offered and declined in favour of the PR.",
@@ -56,9 +56,12 @@ Every piece of the pipeline has been tested on its own. Nothing has yet proved t
 ## Acceptance criteria
 
 
-- [ ] `AC-H1` *(human)* main carries a bumped hydration-prompt version that nobody typed by hand
-- [ ] `AC-H2` *(human)* the registry on main matches render_registry immediately after the publish run
-- [ ] `AC-H3` *(human)* verify is green on main afterwards
+- [x] `AC-H1` *(human)* main carries a bumped hydration-prompt version that nobody typed by hand
+  - observed `2026-08-25` Observed on the real main, 2026-08-25, after PR #73 squashed as fe62080. The publisher run 32861246926 (skill-publish.yml) succeeded and produced commit 16541f6 'chore(skills): allocate versions on main', authored and committed by github-actions[bot], body '- hydration-prompt -> 2.0.4 (patch, from the trailer)' and 'Allocated by .github/workflows/skill-publish.yml over 75725db..HEAD. skill-version.sh owns both formats; nothing here was written by hand.', carrying Skill-Publish: true so its own push cannot re-trigger allocation. git show origin/main:claude/skills/hydration-prompt/SKILL.md reads version: 2.0.4 and the registry row reads "hydration-prompt": { "version": "2.0.4", ... }, up from 2.0.3. Nobody typed either. The branch touched neither file, which the gate asserted before the merge: skill-version.sh verify --structure --base main returned 'ok - 43 skills versioned, no version: or registry.json in the diff'. The level travelled the intended path end to end - the PR body's last paragraph carried 'Bump: hydration-prompt=patch', the gate resolved 'hydration-prompt 2.0.3 -> 2.0.4 patch trailer' in run 32860649099 and again in 32861130304, and git interpret-trailers --parse on the squash commit fe62080 on main still reads 'Bump: hydration-prompt=patch', proving the trailer survived squash_merge_commit_message=PR_BODY. detect emitted skills=["hydration-prompt"], tools=false, gate=false, so exactly one matrix leg ran, named hydration-prompt, and it passed 47 checks; 'the gate's own suite' and 'claude/tools' were skipped.
+- [x] `AC-H2` *(human)* the registry on main matches render_registry immediately after the publish run
+  - observed `2026-08-25` Observed on the real main, 2026-08-25, immediately after publisher run 32861246926 and against the fast-forwarded main at 16541f6. skill-version.sh verify returned 'ok - 43 skills versioned, registry in sync', rc=0, in Podman on the digest-pinned bitnami/git base with the repository mounted read-only. That message is the assertion this criterion asks for rather than a proxy for it: verify computes expected=$(render_registry) over the tree and compares it byte-for-byte with the committed registry.json, printing named drift per skill on any mismatch. A byte-identical comparison means the registry the publisher committed is exactly what render_registry produces from the tree it committed alongside - including hydration-prompt's new sha256 ce66fada2bf857b11c917e9f9ea6405847a450039e2577fd9d388e25479cf68b, which moved because the notice came out of SKILL.md, under its newly allocated 2.0.4. The read-only mount also means the check could not have made itself true.
+- [x] `AC-H3` *(human)* verify is green on main afterwards
+  - observed `2026-08-25` Observed on the real main, 2026-08-25, at 16541f6 with main in sync with origin/main. Rung 6 of the ladder: plain skill-version.sh verify - not --structure - green, 'ok - 43 skills versioned, registry in sync', rc=0, in a container. Rung 7, the suites, all green afterwards and at the counts the hydration entry recorded: claude/tools 251 pass 0 fail, skill-versioning 103 pass 0 fail, work-order 299 checks across 22 case files all passing, the gate's own suite .github/scripts/testing/run-tests.sh 145 passed 0 failed, and hydration-prompt itself 47 passed 0 failed both locally and as the single CI matrix leg. Nothing on main was left red by the allocation, and the skill whose version moved still passes its own suite.
 
 ## Test plan
 
