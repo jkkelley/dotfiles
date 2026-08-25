@@ -1,7 +1,7 @@
 ---
 name: work-order
 description: Deterministic ticketing for agent handoff. Creates and drives work-orders through a validated lifecycle, organises them as epics with children and a dependency graph, records progress notes, and binds acceptance criteria to Figma wireframe evidence when it exists. Use when the user asks for a ticket, a work-order, an epic, "cut me a ticket", "write this up as work", "what should I work on next", when handing a task to another agent, when adding a note or a dependency to existing work, or says "work-order with a side of figma" (run figma-wireframe first, then feed its output in). Not for prioritising a backlog - that is project-scaffold's BACKLOG.md.
-version: 1.0.3
+version: 2.0.0
 ---
 
 # Work Order
@@ -42,7 +42,7 @@ Commit messages, PR titles and bodies, and the ticket files themselves keep what
 
 ## Requirements
 
-- `bash` 4+, `jq`, `git`. `gh` for `submit` and `close`.
+- `bash` 4+, `jq`, `git`. `gh` for `submit` and `cleanup`.
 - `lavish-axi` to approve a ticket. Without it, `approve` refuses unless you pass
   `--no-lavish --reason "..."`, which records the exception in the ticket.
 
@@ -124,22 +124,29 @@ it refuse, is in `references/lifecycle.md`.
 | 2   | `ready`       | `approve` | Lavish approval. Lavish is done here | `in-progress`, `stale`   |
 | 3   | `in-progress` | `start`   | Creates and stamps the branch        | `in-review`              |
 | 4   | `in-review`   | `submit`  | Human review gate on the PR          | `done`                   |
-| 5   | `done`        | `done`    | Last feature commit, at compaction   | _(archived by `close`)_  |
+| 5   | `done`        | `done`    | Every criterion evidenced            | _(archived by `done`)_   |
 | -   | `cancelled`   | `cancel`  | A stated reason. Nothing shipped     | _(archived immediately)_ |
 | —   | `stale`       | `verify`  | Frozen block drifted                 | `ready` via `resync`     |
 
-`done` is written on the feature branch **before** the PR lands, alongside the
-`context-compaction` update to `CONTEXT_STATE.md`. That is a deliberate choice: it
-means a rejected PR leaves a ticket claiming done, which is what `reopen` exists
-to correct.
+`done` is the whole close-out and it runs on the feature branch **before** the PR
+lands, alongside the `context-compaction` update to `CONTEXT_STATE.md`. It stamps
+the status, stamps `closed`, moves the ticket to `work-orders/archive/<year>/`,
+prunes an emptied epic directory, regenerates `INDEX.md` and the epic READMEs -
+and commits none of it. The move rides the ticket's own pull request, so the
+record lands on `main` in the same commit range as the work it records.
+
+That is a deliberate choice: it means a rejected PR leaves a ticket claiming done,
+which is what `reopen` exists to correct. In a roll-forward repository that is the
+cheap side of the trade, and the expensive side - a second commit written to
+`main` after every merge - is gone.
 
 `cancel` is the other terminal state, and the only one a ticket can reach without
 shipping anything. It takes a required `--reason`, writes it into `## Outcome`,
-archives the file exactly where `close` files one, and does no git and no `gh`
+archives the file exactly where `done` files one, and does no git and no `gh`
 work at all - the move is left staged for you to commit. `--superseded-by` is
 written to a `superseded_by` field as well as into the prose, so the graph can be
-asked what replaced it. A `done` ticket is refused: that one is finished, and
-`close` is its verb.
+asked what replaced it. A `done` ticket is refused: that one is already finished
+and already archived.
 
 `link`, `note`, `resolve`, `next`, `tree`, `reindex`, `reflow` and `repair` sit
 outside the status set: they change the graph, the record, the layout or the view, never the state. So
@@ -175,8 +182,8 @@ bash $WO approve --id WO-20260805-3f2a     # after Lavish review
 bash $WO start   --id WO-20260805-3f2a     # creates feat/<slug>
 bash $WO submit  --id WO-20260805-3f2a --pr 42
 bash $WO done    --id WO-20260805-3f2a     # last feature commit
-bash $WO close   --id WO-20260805-3f2a --dry-run
-bash $WO close   --id WO-20260805-3f2a     # post-merge only
+bash $WO cleanup --id WO-20260805-3f2a --dry-run
+bash $WO cleanup --id WO-20260805-3f2a     # post-merge only. Deletes branches, writes nothing
 
 # the other ending: work that is not going to happen
 bash $WO cancel  --id WO-20260805-3f2a --reason "superseded by the queue rewrite" \
@@ -339,49 +346,79 @@ Use `--frames` to cut one ticket per screen off a multi-screen brief.
 
 ## The close-out
 
-`close` is the only command that touches git history, and the only parameter it
-accepts is `--id`. Everything else it discovers:
+**It all happens on the branch.** `done` is the close-out; nothing follows the
+merge except deleting branches. `workflows/close-out-procedure.md` carries the
+full procedure with a diagram.
+
+```text
+submit --pr N  ->  done  ->  hydration entry  ->  commit  ->  push  ->  merge  ->  cleanup
+                    ^                                                              ^
+                    archives, commits nothing                    deletes branches, writes nothing
+```
+
+`submit` must precede `done`, because the lifecycle is
+`in-progress --submit--> in-review --done--> done`. That pins both into the window
+between `gh pr create` and the merge, which is exactly where they belong: they are
+part of the pull request.
+
+### `cleanup`
+
+Deletes the branches a merged pull request left behind. The only parameter it
+accepts is `--id`; everything else it discovers:
 
 | Fact       | Source                            |
 | ---------- | --------------------------------- |
 | branch     | recorded in the ticket at `start` |
 | PR number  | recorded at `submit`              |
 | merged y/n | `gh pr view --json state`         |
-| merge SHA  | `gh pr view --json mergeCommit`   |
 
-**It never trusts a claim that a PR merged.** It asks `gh`, refuses anything but
-`MERGED`, and refuses a `MERGED` with no merge commit. After checking out `main`
-it re-reads the ticket, because the checkout swaps the file for main's copy.
+**It never trusts a claim that a PR merged.** It asks `gh` and refuses anything
+but `MERGED`. That assertion is the one thing that survived this command
+shrinking, and it now guards an actual delete rather than a bookkeeping commit.
 
-**One pull request per ticket.** Cleanup, then the archive committed straight to
-`main` and pushed. `close` used to open a second PR whose entire content was a
-file move and a regenerated index; that doubled the review surface for one piece
-of work and bought nothing, because `close` cannot run at all until the ticket's
-own PR is `MERGED` and main's copy says `done`. The record follows the work.
+It writes nothing at all - no commit, no push, no archive - so there is no
+partially-applied state to repair. It is idempotent by construction: a branch
+already gone is the expected state on a re-run, which makes it safe days later, or
+on a second machine that still holds the local branch after the merge happened
+somewhere else. `--dry-run` prints the plan and executes nothing.
 
-The branch-and-PR route survives as a **fallback**, for a repository that
-protects `main`. Nothing selects it - a rejected push does. It peels the commit
-onto `close-out/<id>`, puts `main` back, opens a PR and merges it. Every step of
-that path is repeatable, because the dead end it was written for is still
-reachable there: an attempt that dies after the branch is cut must never leave a
-ticket only a human can close.
+`gh pr merge <N> --squash --delete-branch` deletes both branches too and is the
+faster path from the same clone. `cleanup` is the deterministic one.
 
-You end on `main` when it succeeds, and back on the branch you started on when
-anything fails - and a failed run is always safe to re-run, which is the only
-repair that should ever be needed. `--dry-run` prints the whole plan and every
-assertion result and executes nothing.
+### There is no `merge_sha`
+
+It was the only field that could not be known on the branch, because a commit
+cannot contain its own merge SHA - and storing it was the single reason close-out
+used to need a second act. `pr` is the durable pointer:
+
+```sh
+gh pr view 60 --json mergeCommit -q .mergeCommit.oid   # with a network
+git log --grep='(#60)' --oneline                       # without one
+```
+
+### What this replaced
+
+`close` used to write the archive straight to `main` in a second commit after the
+merge, and fall back to cutting a `close-out/<id>` branch and opening a second
+pull request when that push was rejected.
+
+It produced an ordering trap with no good failure mode. If `done` and the
+hydration entry did not reach the pull request before the merge, they were
+stranded on a deleted branch and `close` refused, naming a state the caller had
+just watched be true on their own branch. The only way out was a second pull
+request carrying two stranded files - the exact cost the design was avoiding.
+
+The window that trap lived in no longer exists.
 
 ### Where the hydration prompt fits
 
-`close` is step 6 of the one flow, not the end of it:
-
 ```text
-CONTEXT_STATE.md -> hydration prompt -> ONE pull request -> merge -> close -> hand back the command
+CONTEXT_STATE.md -> done -> hydration prompt -> ONE pull request -> merge -> cleanup
 ```
 
-`context-compaction` and `hydration-prompt` both write on the feature branch,
-alongside `done`, so all three ride the ticket's single PR. See the
-`hydration-prompt` skill for the entry format and the launch command.
+`context-compaction`, `done` and `hydration-prompt` all write on the feature
+branch, so all three ride the ticket's single PR. See the `hydration-prompt` skill
+for the entry format and the launch command.
 
 ## Testing
 
@@ -389,9 +426,11 @@ alongside `done`, so all three ride the ticket's single PR. See the
 per root CLAUDE.md Rule 14. The suite builds its own image because no stock slim
 image carries both `jq` and `git`; the base is pinned by digest per Rule 15.
 
-`gh` is never installed - each case stubs it, because the point of the close tests
-is controlling what `gh` reports. Cases 070 and 090 run against a real bare
-repository, so branch deletion and archiving are genuinely exercised.
+`gh` is never installed - each case stubs it, because the point of the close-out
+tests is controlling what `gh` reports. Cases 070 and 095 run against a real bare
+repository, so branch deletion is genuinely exercised, and 090 asserts the
+property the whole redesign turns on: `done` moves the ticket and commits
+nothing.
 
 Cases 110-130 cover the hierarchy, the dependency graph, notes, and the index
 gate. The assertions that earn their keep are the refusals: an edge to a missing

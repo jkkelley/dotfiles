@@ -3,7 +3,7 @@
 # work-order.sh - deterministic ticketing for agent handoff.
 #
 # Every mutation refuses rather than guesses. The agent supplies an identifier;
-# this script establishes the facts. That is the whole design: `close` calls gh
+# this script establishes the facts. That is the whole design: `cleanup` calls gh
 # to find out whether a PR merged instead of believing what it was told.
 #
 # work-order-version: 1
@@ -50,7 +50,7 @@ Usage:
   work-order.sh start   [--project DIR] --id WO-... [--json]
   work-order.sh submit  [--project DIR] --id WO-... --pr N [--json]
   work-order.sh done    [--project DIR] --id WO-... [--json]
-  work-order.sh close   [--project DIR] --id WO-... [--dry-run] [--json]
+  work-order.sh cleanup [--project DIR] --id WO-... [--dry-run] [--json]
   work-order.sh cancel  [--project DIR] --id WO-... --reason T
                         [--superseded-by WO-...] [--json]
   work-order.sh reopen  [--project DIR] --id WO-... --reason T [--json]
@@ -61,7 +61,8 @@ Usage:
 
 Lifecycle:
   draft --approve--> ready --start--> in-progress --submit--> in-review
-        --done--> done --close--> done (archived, merge SHA recorded)
+        --done--> done (archived, on the branch, inside the ticket's own PR)
+  `cleanup` follows the merge and only deletes branches. It changes no status.
   Any of draft/ready/in-progress/in-review may become `cancelled` via cancel,
   which archives the ticket with nothing shipped. It is the other terminal state.
   Any of ready/in-progress/in-review may become `stale` via verify; resync returns it.
@@ -160,23 +161,22 @@ repair:
   line and nothing else - never the frontmatter, never the body.
   --dry-run    list what would change and write nothing.
 
-close:
-  Three phases: clean up the feature branch, land a close-out PR that archives the
-  ticket, clean up the close-out branch. The close-out PR is opened and merged
-  without asking, because close has already proved with `gh` that the ticket's own
-  PR is MERGED - what is left is bookkeeping behind a merge a human approved.
-  The caller ends on `main` when it succeeds, and back on the branch they started
-  on when anything fails. A failed run is always safe to re-run: close reuses and
-  resets the close-out branch, reuses a PR already open on it, and skips work a
-  previous attempt already landed. Nothing here has to be finished by hand.
-  --dry-run    print the phase plan and every assertion result, execute nothing.
+cleanup:
+  Deletes the branches a merged pull request left behind, and writes nothing.
+  The archive landed with `done`, on the branch, inside the ticket's own PR, so
+  there is no bookkeeping left to do here and no commit to make.
+
+  It refuses unless `gh` reports the pull request MERGED, which is the one
+  assertion worth keeping because it now guards an actual delete. Idempotent: a
+  branch already gone is not an error, so it is safe to re-run, or to run days
+  later on a second machine that still holds the local branch.
 
 cancel:
   Terminates a `draft`, `ready`, `in-progress` or `in-review` ticket that is not
-  going to be built. It archives the file exactly where `close` would, and does no
+  going to be built. It archives the file exactly where `done` would, and does no
   git and no gh work at all: no branch, no PR, no merge. The move is left staged in
   your working tree - commit it yourself, in whatever change explains it.
-  A `done` ticket is refused: that one is finished, and `close` is its verb.
+  A `done` ticket is refused: that one is already finished and already archived.
   --reason     REQUIRED. A cancellation with no stated reason is how the same idea
                gets cut again a month later. It is written into `## Outcome`.
   --superseded-by  the WO that replaced this one. Validated like any other edge
@@ -496,14 +496,14 @@ cmd_new() {
     '{id:$id, slug:$slug, title:$title, type:$type, status:"draft", priority:$pri,
       created:$today, updated:$today, created_at:$now,
       parent:(if $parent == "" then null else $parent end),
-      branch:null, pr:null, merge_sha:null, closed:null,
+      branch:null, pr:null, closed:null,
       approval:null, evidence:$ev, surfaces:$surfaces,
       depends_on:$deps, blocks:$blocks}')
 
   tmp=$(ps_tempfile)
   {
     printf -- '---\n%s\n---\n\n' "$fm"
-    render_body "$criteria" "_Written by \`work-order close\`. Empty until then._"
+    render_body "$criteria" "_Written by \`work-order done\`. Empty until then._"
   } >"$tmp"
   render_guard "$tmp"
   ps_atomic_install "$tmp" "$file"
@@ -765,9 +765,38 @@ cmd_done() {
   work-order.sh evidence --id $id --index N --observed 'what was seen'
 A criterion that was not observed is not met, and this refusal is the point."
 
-  wo_fm_set "$file" '.status="done" | .updated=$d' --arg d "$(ps_today)"
+  # done is the whole close-out. The ticket is stamped, moved to the archive and
+  # the index regenerated, all on the feature branch and all left uncommitted, so
+  # the record lands on main inside the same pull request as the work it records.
+  #
+  # This used to be split: done stamped the status here, and a separate close
+  # wrote the archive straight to main after the merge. The only fact forcing
+  # that split was merge_sha, which cannot be known on the branch because a
+  # commit cannot contain its own merge SHA. It is no longer written - .pr is
+  # the durable pointer and `gh pr view <n> --json mergeCommit` resolves it
+  # forever, so nothing was lost and a whole second act went away with it.
+  local year archive_dir dest
+  year=$(ps_today); year="${year%%-*}"
+  archive_dir="$root/archive/$year"
+  dest="$archive_dir/$(basename -- "$file")"
+
+  wo_fm_set "$file" '.status="done" | .closed=$d | .updated=$d' --arg d "$(ps_today)"
+
+  if ! wo_is_archived "$file"; then
+    mkdir -p "$archive_dir"
+    [[ -e $dest ]] && ps_die "$PS_VALIDATION" "path_collision" \
+      "$dest already exists and is not this ticket's file - resolve it by hand"
+    git -C "$project" mv "$file" "$dest" >/dev/null 2>&1 || mv -- "$file" "$dest"
+    # An epic archived after its last child leaves would otherwise hold an empty
+    # directory open with nothing but its own generated README inside it.
+    prune_dir "$(dirname -- "$file")"
+    file=$dest
+  fi
+
   reindex
-  ps_info "status: done. CONTEXT_STATE.md should be updated in this same commit."
+  archive_readmes
+  ps_info "status: done, archived to ${dest#"$project"/}."
+  ps_info "nothing was committed - commit the move with the change that explains it."
   emit_ok "$id" done "$file"
 }
 
@@ -780,7 +809,7 @@ cmd_reopen() {
     "$id is archived; reopening a closed-out ticket is a new work-order"
 
   wo_fm_set "$file" \
-    '.status="in-progress" | .merge_sha=null | .closed=null | .updated=$d
+    '.status="in-progress" | .closed=null | .updated=$d
      | .reopened=((.reopened // []) + [{at:$d, reason:$r}])' \
     --arg d "$(ps_today)" --arg r "$reason"
   reindex
@@ -788,73 +817,43 @@ cmd_reopen() {
 }
 
 # ---------------------------------------------------------------------------
-# close - the only command that touches git history. Every fact is discovered,
-# never accepted from the caller.
+# cleanup - deletes the branches a merged pull request left behind.
+#
+# It was called `close` and it used to write the archive straight to main in a
+# second commit after the merge. That whole act now happens in `done`, on the
+# branch, inside the ticket's own pull request. What is left here writes nothing
+# at all: no commit, no push, no bookkeeping, nothing that can be half-applied.
+#
+# The name changed with the behaviour on purpose. A command called `close` that
+# no longer closes anything is how somebody runs it at the wrong point in the
+# sequence and only finds out from a refusal two steps later.
+#
+# One assertion survives the shrink, and it is the one that was always earning
+# its keep: the pull request must be MERGED before anything is deleted. It now
+# guards an actual delete rather than a bookkeeping commit, which is the job it
+# should have had all along.
+#
+# Idempotent by construction. A branch already gone is not an error, so this is
+# safe to run days later, or on a second machine that still has the local branch
+# after the merge happened somewhere else.
 # ---------------------------------------------------------------------------
-
-# The branch the caller stood on when close started, and the trap that puts them
-# back. close checks out main and then cuts close-out/<id>, so every refusal
-# after that point used to end with the caller somewhere they never asked to be -
-# which is how a failed close turns into a lost afternoon rather than a retry.
-WO_CLOSE_RETURN=""
-
-# close_restore_branch - EXIT/INT/TERM hook. Only acts on a failure: finishing on
-# main is the correct end state once the archive has landed, so a clean run is
-# left exactly where it stopped.
-close_restore_branch() {
-  local rc=$? cur back
-  ((rc == 0)) && return 0
-  [[ -n $WO_CLOSE_RETURN ]] || return 0
-  cur=$(git -C "$project" symbolic-ref --quiet --short HEAD 2>/dev/null) || cur=""
-  back="$WO_CLOSE_RETURN"
-  # Phase 1 deletes the feature branch deliberately, and close is normally run
-  # from it. Recreating it here would undo the one thing phase 1 got right, so
-  # when the branch the caller started on is the branch that just went, main is
-  # the honest answer: it is where their work lives now.
-  if ! git -C "$project" rev-parse --verify --quiet "$back" >/dev/null 2>&1; then
-    back=main
-    ps_warn "$WO_CLOSE_RETURN was deleted by phase 1 - leaving you on main instead"
-  fi
-  [[ $cur == "$back" ]] && return 0
-  # --force is safe here and nowhere else: close refuses a dirty tree before it
-  # touches anything, so the only uncommitted work at this point is close's own
-  # half-finished archive move, and carrying that back onto the caller's branch
-  # would be worse than dropping it.
-  git -C "$project" checkout --force "$back" >/dev/null 2>&1 \
-    || ps_warn "could not return you to $back - you are on ${cur:-a detached HEAD}"
-  return 0
-}
-
-# gh_in_project - gh infers the repository from the working directory, and every
-# other fact in this command is read from $project. A write aimed at whatever
-# repository the caller happened to be standing in is not a risk worth taking.
 gh_in_project() { (cd -- "$project" && gh "$@"); }
 
-cmd_close() {
+cmd_cleanup() {
   wo_require_jq; wo_require_git "$project"; wo_require_gh; require_id
   local file; file=$(wo_find "$project" "$id")
-  wo_require_status "$file" done
-  wo_is_archived "$file" && ps_die "$PS_VALIDATION" "already_archived" "$id is already archived"
 
-  local branch pr_num state sha
+  local branch pr_num state
   branch=$(wo_field "$file" '.branch')
   pr_num=$(wo_field "$file" '.pr')
   [[ -n $pr_num ]] || ps_die "$PS_VALIDATION" "no_pr" "$id has no PR recorded - run submit first"
 
   state=$(gh_in_project pr view "$pr_num" --json state -q .state 2>/dev/null) \
     || ps_die "$PS_IO" "gh_failed" "gh could not read PR #$pr_num"
-  sha=$(gh_in_project pr view "$pr_num" --json mergeCommit -q '.mergeCommit.oid // ""' 2>/dev/null)
 
-  # The whole point of this command.
+  # The whole point of the command.
   [[ $state == MERGED ]] || ps_die "$PS_VALIDATION" "pr_not_merged" \
     "PR #$pr_num reports state=$state, not MERGED - refusing to delete anything"
-  [[ -n $sha ]] || ps_die "$PS_VALIDATION" "no_merge_commit" \
-    "PR #$pr_num is MERGED but has no merge commit - refusing"
-
-  local year archive_dir dest
-  year=$(ps_today); year="${year%%-*}"
-  archive_dir="$root/archive/$year"
-  dest="$archive_dir/$(basename -- "$file")"
 
   if ((dry_run)); then
     cat <<EOF
@@ -864,163 +863,49 @@ DRY RUN - nothing will be executed
   branch    ${branch:-<none recorded>}
   PR        #$pr_num
   gh state  $state          <- must be MERGED
-  merge sha $sha
 
-  phase 1   git fetch --prune; checkout main; merge --ff-only origin/main
-            git branch -D ${branch:-<none>}; git push origin --delete ${branch:-<none>}
-  phase 2   on main: backfill merge_sha + closed; archive to ${archive_dir#"$project"/}/
-            regenerate INDEX.md; commit; push origin main
-            ONE pull request per ticket - this is bookkeeping after #$pr_num merged
-  fallback  only if that push is rejected (protected main, or origin moved):
-            peel onto close-out/$id, reset main, PR it, merge, clean up
+            git fetch --prune; checkout main; merge --ff-only origin/main
+            git branch -D ${branch:-<none>}
+            git push origin --delete ${branch:-<none>}
 
-  assertions passed: status=done, not archived, PR MERGED, merge commit present
+  This command writes nothing. The archive landed with PR #$pr_num.
 EOF
     exit "$PS_OK"
   fi
 
-  git -C "$project" diff --quiet && git -C "$project" diff --cached --quiet \
-    || ps_die "$PS_VALIDATION" "dirty_tree" "working tree is dirty - refusing"
-
-  # Remember where the caller stood, and arm the trap before the first checkout.
-  # ps_scratch_init is called first on purpose: it installs the cleanup traps
-  # lazily on the first temp file, and doing that after this point would silently
-  # replace the handler below with one that no longer restores the branch.
-  ps_scratch_init
-  WO_CLOSE_RETURN=$(git -C "$project" symbolic-ref --quiet --short HEAD 2>/dev/null) \
-    || WO_CLOSE_RETURN=""
-  trap 'close_restore_branch; ps_cleanup' EXIT
-  trap 'close_restore_branch; ps_cleanup; trap - INT; kill -INT $$' INT
-  trap 'close_restore_branch; ps_cleanup; trap - TERM; kill -TERM $$' TERM
-
-  # phase 1
   git -C "$project" fetch origin --prune >/dev/null 2>&1
   git -C "$project" checkout main >/dev/null 2>&1 \
     || ps_die "$PS_IO" "checkout_failed" "cannot check out main"
   git -C "$project" merge --ff-only origin/main >/dev/null 2>&1 \
     || ps_die "$PS_VALIDATION" "main_diverged" "main cannot fast-forward to origin/main"
 
-  # Checking out main swapped the ticket for main's copy of it. The status
-  # verified before the checkout says nothing about the file we now hold, and a
-  # PR that gh calls MERGED whose ticket never reached done on main means the
-  # two disagree. Refuse rather than stamp a merge SHA onto the wrong state.
-  # The refusal names the actual cause rather than the raw status. A caller who
-  # just watched the ticket say `done` on the feature branch reads
-  # "status is 'in-review'" as the script being wrong, and goes looking in the
-  # wrong place; what it means is that the commit carrying the transition has
-  # not reached main.
-  file=$(wo_find "$project" "$id")
-  local main_status; main_status=$(wo_field "$file" '.status')
-  [[ $main_status == done ]] || ps_die "$PS_VALIDATION" "done_not_merged" \
-    "$id reached done on the feature branch, but main's copy still says '$main_status': the PR carrying that transition has not merged to main yet. Merge it first, then run close again."
+  # -D, not -d: a squash or rebase merge rewrites the SHA, so -d refuses the
+  # delete even though the work landed. Both deletes are best-effort because a
+  # branch already gone is the expected state on a re-run.
   if [[ -n $branch ]]; then
     git -C "$project" branch -D "$branch" >/dev/null 2>&1 || true
     git -C "$project" push origin --delete "$branch" >/dev/null 2>&1 || true
   fi
 
-  # phase 2 - the bookkeeping, committed straight to main.
-  #
-  # This used to cut a close-out/<id> branch, open a PR for it and merge that
-  # PR. It produced a second pull request for every ticket whose entire content
-  # was a file move and a regenerated index, which doubles the review surface
-  # for one piece of work and buys nothing: close cannot run at all until the
-  # ticket's own PR is MERGED and main's copy says done, both asserted above.
-  # So the record follows the work directly onto main.
-  #
-  # The branch-and-PR route survives as a fallback for a repository that
-  # protects main. It is a fallback, not a mode: nothing chooses it, a rejected
-  # push does.
-  mkdir -p "$archive_dir"
-  # Assigning the same SHA and date twice is a no-op, so this needs no guard.
-  # Moving a file onto itself is not, so the move does: a previous attempt may
-  # already have landed the archive on main.
-  wo_fm_set "$file" '.merge_sha=$s | .closed=$d | .updated=$d' \
-    --arg s "$sha" --arg d "$(ps_today)"
-  if [[ $file != "$dest" ]]; then
-    [[ -e $dest ]] && ps_die "$PS_VALIDATION" "path_collision" \
-      "$dest already exists and is not this ticket's file - resolve it by hand"
-    git -C "$project" mv "$file" "$dest" >/dev/null 2>&1 || mv -- "$file" "$dest"
-  fi
-  # An epic archived after its last child leaves would otherwise hold an empty
-  # directory open with nothing but its own generated README inside it.
-  prune_dir "$(dirname -- "$file")"
-  reindex
-  archive_readmes
-  git -C "$project" add -A "$root" >/dev/null 2>&1
-
-  if git -C "$project" diff --cached --quiet; then
-    # Nothing staged means main already carries this exact archive - an earlier
-    # attempt landed it and died afterwards. Nothing to commit, nothing to push.
-    ps_warn "$id is already archived on main - nothing left to commit"
-  else
-    git -C "$project" commit -m "chore($id): close out and archive" >/dev/null 2>&1 \
-      || ps_die "$PS_IO" "commit_failed" "nothing to commit for $id"
-
-    if git -C "$project" push origin main >/dev/null 2>&1; then
-      : # done - one pull request for this ticket, which is the whole point
-    else
-      # Either main is protected or origin moved under us. Peel the commit onto
-      # a branch, put main back where it was, and go round through a PR.
-      ps_warn "cannot push to main directly - falling back to a close-out PR"
-      local cob="close-out/$id"
-      # -B, not -b: reuse and reset a branch an earlier attempt abandoned.
-      git -C "$project" branch -f "$cob" HEAD >/dev/null 2>&1 \
-        || ps_die "$PS_IO" "branch_failed" "cannot create $cob"
-      git -C "$project" reset --hard origin/main >/dev/null 2>&1 \
-        || ps_die "$PS_IO" "reset_failed" "cannot restore main after a rejected push"
-      git -C "$project" checkout "$cob" >/dev/null 2>&1 \
-        || ps_die "$PS_IO" "checkout_failed" "cannot check out $cob"
-      git -C "$project" push -u --force-with-lease origin "$cob" >/dev/null 2>&1 \
-        || ps_die "$PS_IO" "push_failed" \
-          "cannot push $cob - origin moved since the fetch in phase 1. Run close again."
-
-      # An earlier attempt may have opened the PR and then failed to merge it,
-      # and gh refuses a second PR for the same branch. Ask first.
-      local co_pr
-      co_pr=$(gh_in_project pr list --head "$cob" --state open --json number \
-        -q '.[0].number // ""' 2>/dev/null) || co_pr=""
-      if [[ -n $co_pr ]]; then
-        ps_info "reusing close-out PR #$co_pr, left open by an earlier attempt"
-      else
-        gh_in_project pr create --base main --head "$cob" \
-          --title "chore($id): close out and archive" \
-          --body "Archives $id after PR #$pr_num merged as $sha. Generated by work-order.sh close, because a direct push to main was rejected." \
-          >/dev/null 2>&1 \
-          || ps_die "$PS_IO" "pr_create_failed" \
-            "could not open the close-out PR for $cob. Nothing is lost: the branch is pushed and close is safe to re-run."
-      fi
-      gh_in_project pr merge "$cob" --squash --delete-branch >/dev/null 2>&1 \
-        || ps_die "$PS_IO" "pr_merge_failed" \
-          "the close-out PR for $cob is open but would not merge. Clear whatever is blocking it and run close again."
-
-      git -C "$project" fetch origin --prune >/dev/null 2>&1 || true
-      git -C "$project" checkout main >/dev/null 2>&1 \
-        || ps_die "$PS_IO" "checkout_failed" "cannot check out main after merging $cob"
-      git -C "$project" merge --ff-only origin/main >/dev/null 2>&1 \
-        || ps_die "$PS_VALIDATION" "main_diverged" \
-          "$cob merged, but main cannot fast-forward - reconcile main by hand"
-      git -C "$project" branch -D "$cob" >/dev/null 2>&1 || true
-    fi
-  fi
-
-  emit_ok "$id" done "$dest"
+  ps_info "branches deleted for $id; main is at origin/main. Nothing was written."
+  emit_ok "$id" done "$file"
 }
 
 # ---------------------------------------------------------------------------
 # cancel - the other terminal state.
 #
 # Before this verb, a ticket that was never going to be built could only leave
-# the active tree through `close`, which demands a branch, a merged PR and an
+# the active tree through `done`, which demands a branch, a PR and an
 # observation against every acceptance criterion. Nobody produces that for work
 # that was abandoned, so the ticket sat in the index forever or was deleted by
 # hand - and a deleted ticket takes the reason with it.
 #
 # It touches no git history at all: no branch, no PR, no merge. It moves the file
 # and reindexes, and leaves the result staged for the caller to commit inside
-# whatever change explains the cancellation. That asymmetry with `close` is
-# deliberate: close has to prove something about main, cancel has nothing to
-# prove, and a verb that opens a PR to record "we are not doing this" would be
-# ceremony charged for nothing.
+# whatever change explains the cancellation. Its symmetry with `done` is now
+# exact: both archive on the branch and leave the move uncommitted for the
+# caller. The two differ only in what they demand first - done wants a PR and an
+# observation against every criterion, cancel wants a reason and nothing else.
 # ---------------------------------------------------------------------------
 
 cmd_cancel() {
@@ -1087,7 +972,7 @@ cmd_cancel() {
      | .superseded_by=(if $s == "" then null else $s end)' \
     --arg d "$stamp" --arg s "$superseded_by"
 
-  # Archived exactly where close files a ticket, because the question a reader
+  # Archived exactly where done files a ticket, because the question a reader
   # asks later is "where did this ticket go", and one answer is easier to hold
   # than two.
   local year archive_dir dest
@@ -1860,7 +1745,7 @@ cmd_list() {
     for f in "${rows[@]+"${rows[@]}"}"; do
       ((first)) || printf ','
       first=0
-      wo_fm "$f" | jq -c '{id,title,status,type,priority,pr,merge_sha}'
+      wo_fm "$f" | jq -c '{id,title,status,type,priority,pr}'
     done
     printf ']\n'
   else
@@ -1871,7 +1756,7 @@ cmd_list() {
 }
 
 # INDEX.md is generated, never edited. It is what keeps an archived ticket
-# findable after close moves it out of the active directory.
+# findable after done moves it out of the active directory.
 #
 # It leads with what is startable rather than with a full list, because the
 # question an agent arrives with is "what may I pick up", and a flat table of
@@ -1998,11 +1883,11 @@ readme_link() {
 # construction - so no generated README has ever reached archive/ or archive/
 # <year>/. The two that exist there were written by hand after `rolodex.sh check`
 # failed on them, which means rolling into a new year reproduces that failure
-# exactly. close and cancel are the only things that create those directories, so
+# exactly. done and cancel are the only things that create those directories, so
 # they are the only things that can write the explainer at the same moment.
 #
 # Written only when missing. The hand-written pair say more about the archive
-# than a generator can, and regenerating over them every close would trade a good
+# than a generator can, and regenerating over them every close-out would trade a good
 # document for a consistent one.
 # ---------------------------------------------------------------------------
 
@@ -2011,9 +1896,10 @@ build_archive_readme() {
   printf 'Written by `work-order.sh` the first time a ticket is archived into a year that had no\n'
   printf 'explainer yet. One level down only: what is inside each year is that year'"'"'s own README.\n\n'
   printf 'A ticket arrives here two ways, and only these two:\n\n'
-  printf -- '- `work-order.sh close` - the work shipped. It refuses unless `gh` reports the pull\n'
-  printf '  request `MERGED` and it can read a merge commit, so every file it files here carries a\n'
-  printf '  `merge_sha` that exists in `main`.\n'
+  printf -- '- `work-order.sh done` - the work shipped. It archives the ticket on the feature branch,\n'
+  printf '  uncommitted, so the record lands on `main` inside the same pull request as the work it\n'
+  printf '  records. Every file here carries the `pr` that brought it, which resolves to a merge\n'
+  printf '  commit through `gh pr view <n> --json mergeCommit` for as long as the repository exists.\n'
   printf -- '- `work-order.sh cancel` - the work was abandoned. No branch, no PR, no merge commit;\n'
   printf '  the `Outcome` block says why and what superseded it, if anything did.\n\n'
   printf 'Nothing here is edited, ever. A closed ticket that turns out to be wrong is reopened with\n'
@@ -2037,7 +1923,7 @@ build_archive_year_readme() {
   printf 'Read one to see what was asked for, which acceptance criteria were observed and what was\n'
   printf 'observed for each, and either the merge SHA that landed it or the reason it was cancelled.\n'
   printf 'The `Outcome` block at the bottom is the only part added after the work stopped.\n\n'
-  printf 'Filed here by `close` and `cancel`, never by hand. What the archive is and why it is\n'
+  printf 'Filed here by `done` and `cancel`, never by hand. What the archive is and why it is\n'
   printf 'immutable is one level up in [../README.md](../README.md).\n'
 }
 
@@ -2288,7 +2174,7 @@ case $command in
   start) cmd_start ;;
   submit) cmd_submit ;;
   done) cmd_done ;;
-  close) cmd_close ;;
+  cleanup) cmd_cleanup ;;
   cancel) cmd_cancel ;;
   reopen) cmd_reopen ;;
   verify) cmd_verify ;;
@@ -2299,5 +2185,5 @@ case $command in
   # only listing an agent that guessed wrong ever sees. `evidence` and `reflow`
   # were missing from it for as long as they have existed.
   *) ps_die "$PS_USAGE" "unknown_command" \
-       "unknown command: $command (new|amend|link|note|resolve|evidence|approve|start|submit|done|close|cancel|reopen|verify|resync|show|list|next|tree|reindex|reflow|repair)" ;;
+       "unknown command: $command (new|amend|link|note|resolve|evidence|approve|start|submit|done|cleanup|cancel|reopen|verify|resync|show|list|next|tree|reindex|reflow|repair)" ;;
 esac

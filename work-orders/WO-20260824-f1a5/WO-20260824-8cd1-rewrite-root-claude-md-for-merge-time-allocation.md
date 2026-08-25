@@ -69,6 +69,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-08-24` Heads-up from WO-20260824-7a63 - Close-out moves onto the branch: done archives, cleanup only deletes branches, which merged before this ticket is started. The named exception to the never-write-main rule got NARROWER and this ticket should not write the version it was scoped against. work-order close used to commit its archive straight to main after every merge; it is now named cleanup, it deletes branches only, and it writes nothing at all. So the only process that writes main is the publish workflow, WO-20260824-360d - Publish workflow: allocate versions on merge to main and regenerate the registry. Word the exception against that one process, not two. Also already done and not left for this ticket: root CLAUDE.md section "Post-merge cleanup" was rewritten into "Close-out and post-merge cleanup" and now points at workflows/close-out-procedure.md. Rule 16 was NOT touched and is still entirely this ticket - it still tells contributors to hand-bump and hand-ship a regenerated registry.
 - `2026-08-24` Poker 2026-08-24: 3 points. Prose, but it is the repository's constitution and is easy to get subtly wrong.
 
 ## Outcome

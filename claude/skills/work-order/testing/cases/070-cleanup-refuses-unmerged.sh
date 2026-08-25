@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # The reason this command exists.
 #
-# `close` runs git branch -D, git push --delete and gh pr merge. If it believes
-# the caller's claim that a PR merged, it deletes unmerged work. So it asks gh
-# instead, and refuses anything that is not MERGED.
+# `cleanup` runs git branch -D and git push --delete. If it believed the caller's
+# claim that a PR merged, it would delete unmerged work. So it asks gh instead
+# and refuses anything that is not MERGED. That is the one assertion that
+# survived the command shrinking, and it is now guarding an actual delete rather
+# than a bookkeeping commit.
 source "${SKILL:-/skill}/testing/assert.sh"
 
 d=$(git_project); fig=$(figma_dir "$WORK/fig070")
@@ -15,7 +17,6 @@ id=$(wo list --project "$d" --json | jq -r '.[0].id')
 git -C "$d" add -A && git -C "$d" commit -qm "add $id"
 
 wo approve --project "$d" --id "$id" --no-lavish --reason "test" >/dev/null
-# approve rewrites the ticket; commit it or start will refuse a dirty tree.
 git -C "$d" add -A && git -C "$d" commit -qm "approve"
 wo start --project "$d" --id "$id" >/dev/null
 branch=$(git -C "$d" rev-parse --abbrev-ref HEAD)
@@ -23,24 +24,28 @@ assert_eq "feat/cart-empty" "$branch" "start created the branch from the slug"
 
 wo submit --project "$d" --id "$id" --pr 7 >/dev/null
 git -C "$d" add -A && git -C "$d" commit -qm "work"
-# Tick the criteria, as `done` requires.
 f=$(find "$d/work-orders" -name 'WO-*.md')
 sed -i 's/^- \[ \] /- [x] /' "$f"
 git -C "$d" add -A && git -C "$d" commit -qm "tick"
 wo done --project "$d" --id "$id" >/dev/null
 git -C "$d" add -A && git -C "$d" commit -qm "done"
 
+arch=$(find "$d/work-orders/archive" -name 'WO-*.md' | head -1)
+
 # gh says OPEN. Nothing may be destroyed.
-run 3 "close refuses when gh reports the PR is not MERGED" \
-  wo close --project "$d" --id "$id"
+run 3 "cleanup refuses when gh reports the PR is not MERGED" \
+  wo cleanup --project "$d" --id "$id"
 
 git -C "$d" rev-parse --verify "$branch" >/dev/null 2>&1 \
   && _pass "the feature branch still exists after the refusal" \
   || _fail "the feature branch still exists after the refusal" "branch was deleted"
-assert_file "$f" "the ticket was not archived"
-assert_contains "$f" '"merge_sha": null' "no merge SHA was invented"
 
-# MERGED but with no merge commit is also refused - a half-answer is not a yes.
-export PATH="$(gh_stub "$WORK/stub-nosha" MERGED ""):$PATH"
-run 3 "close refuses MERGED with no merge commit" wo close --project "$d" --id "$id"
+# The archive is untouched by the refusal, because cleanup never owned it. done
+# archived it on the branch and it is already committed.
+assert_file "$arch" "the ticket stays archived - cleanup does not own the archive"
+
+# A ticket that never reached submit has no PR to ask gh about.
+wo new --project "$d" --title "No pr here" --type chore --problem P --out X --ac "w" --top-level >/dev/null
+id2=$(wo list --project "$d" --status draft --json | jq -r '.[0].id')
+run 3 "cleanup refuses a ticket with no PR recorded" wo cleanup --project "$d" --id "$id2"
 finish

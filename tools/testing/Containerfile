@@ -1,0 +1,23 @@
+# Test image for the repo-local tools in tools/.
+#
+# Only bash and coreutils are needed: workflow-version.sh shells out to nothing
+# beyond awk, find, sort and head, which is deliberate. Nothing here touches git
+# or jq, so neither is installed - an image that carries a binary the code must
+# not depend on is an image that hides a dependency until somebody else's machine
+# finds it.
+#
+# Built with the network on, then run with --network=none. The build is the only
+# step allowed to fetch; the cases must prove they reach nothing.
+#
+# Pinned by digest, not by tag, per Rule 15. `debian:stable-slim` moves when a
+# new point release lands, and a suite that silently rebases its own base image
+# starts failing for reasons unrelated to the change under test. Repin
+# deliberately:
+#   podman pull docker.io/library/debian:stable-slim
+#   podman image inspect docker.io/library/debian:stable-slim \
+#     --format '{{index .RepoDigests 0}}'
+FROM docker.io/library/debian@sha256:328d16499860ae6cb9b345e2e4cebca08c2a36e4f7278482c7bd1f39d71e5bfd
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends bash \
+  && rm -rf /var/lib/apt/lists/*

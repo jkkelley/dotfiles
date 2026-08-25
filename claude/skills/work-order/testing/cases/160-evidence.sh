@@ -83,6 +83,12 @@ assert_contains "$d/done-refusal.txt" "work-order.sh evidence" \
 run 0 "the second criterion evidences by substring" \
   wo evidence --project "$d" --id "$id" --match "DNS" --observed "dig returned the A record"
 run 0 "only now does the ticket reach done" wo done --project "$d" --id "$id"
+
+# done archives, so the ticket is no longer at the path it was written to. Every
+# assertion after this point has to follow it, and a case that kept using the old
+# path would pass on a stale file for as long as one happened to be left behind.
+f=$(find "$d/work-orders/archive" -name "$id-*.md" | head -1)
+assert_file "$f" "done moved the ticket into the archive"
 assert_contains "$f" '"status": "done"' "done was reached through script verbs alone"
 assert_contains "$f" 'dig returned the A record' "both observations survive into the done ticket"
 
