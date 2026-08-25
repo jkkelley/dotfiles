@@ -167,19 +167,39 @@ assemble its launch command by typing one.
 
 `main` is written once, at repository creation, and never again directly.
 
-## Post-merge cleanup
+## Close-out and post-merge cleanup
 
-When the user says a PR is merged, perform this cleanup automatically without being asked.
-Do not wait for the user to spell out the steps each time.
+`workflows/close-out-procedure.md` is the procedure, in full, with a diagram.
+Read it once. What follows is the part that must not be got wrong.
 
-1. `git fetch origin --prune`
-2. `git checkout main`
-3. `git merge --ff-only origin/main` to fast-forward local `main` to the merged state.
-4. Delete the feature branch locally: `git branch -D <feature-branch>`.
-   Use `-D`, not `-d`: squash and rebase merges rewrite the SHA, so `-d` refuses the delete even though the work landed.
-5. Delete the feature branch on the remote: `git push origin --delete <feature-branch>`.
-6. Verify the result: on `main`, in sync with `origin/main`, and the feature branch gone from both local and remote.
-7. Remove any temporary or scratch directories and scaffolding created during the work.
+**Close-out happens on the feature branch, inside the pull request.**
+`work-order.sh done` stamps the ticket, moves it to `work-orders/archive/<year>/`, regenerates `INDEX.md`, and commits nothing.
+You commit that move, along with the hydration entry, onto the same pull request as the work it records.
+Nothing is written to `main` afterwards.
+
+The order is fixed and the middle two steps are the ones that get stranded:
+
+1. `gh pr create`
+2. `work-order.sh submit --id <id> --pr <N>` - `submit` must precede `done`
+3. `work-order.sh done --id <id>` - **on the branch, before the merge**
+4. `hydration.sh check --body-file <file>` then `hydration.sh add ...`
+5. `git add -A && git commit && git push` - rides the same pull request
+
+**After the merge, when the user says a PR is merged**, perform this automatically without being asked:
+
+1. `work-order.sh cleanup --id <id>`.
+   It fetches, fast-forwards `main`, and deletes the branch locally and on the remote.
+   It refuses unless `gh` reports the pull request `MERGED`, and it writes nothing.
+   Idempotent, so it is safe to re-run and safe days later on another machine.
+2. Verify the result: on `main`, in sync with `origin/main`, and the branch gone from both local and remote.
+3. Remove any temporary or scratch directories and scaffolding created during the work.
+
+`gh pr merge <N> --squash --delete-branch` deletes both branches too, and is the faster path when you are merging from the same clone.
+`cleanup` is the deterministic version that also works when the merge happened elsewhere.
+
+There is no `merge_sha`.
+A commit cannot contain its own merge SHA, and storing one was the only reason close-out ever needed a second act after the merge.
+`pr` is the pointer, and `gh pr view <N> --json mergeCommit` resolves it for as long as the repository exists.
 
 ## PII & PHI Policy — Strictly Enforced
 

@@ -7,7 +7,7 @@ run 0 "--help exits 0" wo --help
 run 2 "no arguments is a usage error" wo
 run 2 "an unknown command is a usage error" wo nonsense
 
-verbs=(new amend link note resolve evidence approve start submit done close cancel
+verbs=(new amend link note resolve evidence approve start submit done cleanup cancel
        reopen verify resync show list next tree reindex reflow repair)
 for c in "${verbs[@]}"; do
   run 0 "$c --help loads" wo "$c" --help

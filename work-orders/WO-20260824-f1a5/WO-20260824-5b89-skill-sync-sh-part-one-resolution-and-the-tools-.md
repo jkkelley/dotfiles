@@ -77,6 +77,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-08-24` Scope note from WO-20260824-7a63 - Close-out moves onto the branch: done archives, cleanup only deletes branches. That ticket created a repo-local tools/ tree at the repository root with its own suite at tools/testing/, for tooling that maintains this repository and is never vendored. It deliberately did NOT create claude/tools/testing/, which is still this ticket to stand up, so nothing here shrinks. What it does give you is a worked example of the shape: tools/testing/run-tests.sh re-execs itself into Podman on the pinned debian digest with --network=none and the repo mounted read-only, and it uses set -uo pipefail rather than -e, because over half the checks run a command expected to fail and -e ends the run on the first of them while reporting the assertion as an error.
 - `2026-08-24` Poker 2026-08-24: 5 points. Was half of a 13. Includes standing up claude/tools/testing/, which goes here so part two is never the ticket where part one first gets tested.
 
 ## Outcome
