@@ -1,0 +1,25 @@
+<!-- skill-tool-version: 1.0.0 -->
+<!--
+  The read-only notice, held once instead of pasted into 43 SKILL.md files.
+  skill-sync.sh renders this and inserts it after the first `# ` heading of the
+  installed copy. Upstream SKILL.md files carry no notice of their own.
+  RENDERING CONTRACT, and the renderer that has to honour it does not exist yet:
+    1. Discard every line up to and including the FIRST BLANK LINE. That is this
+       header. The version marker above lives in it so `read_tool_version` finds
+       it in the first 20 lines, and so it can never reach the output — the
+       output has to match six specific lines exactly.
+    2. Substitute %%SKILL_NAME%% with the skill's directory name.
+    3. Emit the rest byte for byte, one trailing newline, nothing else.
+  There is deliberately no placeholder for the tool name. It is skill-sync.sh,
+  hardcoded, because skill-update.sh does not install synced skills and a copy
+  naming it would be wrong. Changing that text is a bump of this partial's
+  version, which is the whole point: one bump re-renders every project.
+  The header has no blank line inside it, because a blank line ends it.
+-->
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
+> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/%%SKILL_NAME%%/SKILL.md, and `skill-sync.sh` pulls it from there - no dotfiles checkout is needed on this machine.
+> `skill-sync.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
