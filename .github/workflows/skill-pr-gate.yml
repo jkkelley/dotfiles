@@ -1,0 +1,167 @@
+# The PR gate. It reads, and it refuses. It writes nothing at all.
+#
+# Version allocation happens at merge, on main, in skill-publish.yml. That is
+# what makes registry.json stop being a conflict point between concurrent skill
+# pull requests - no branch allocates a number, so no two branches allocate the
+# same one. The cost is that a branch now carries only the *intent*, and an
+# intent nobody checked is an intent that fails after the merge, in the
+# publisher, where the failure looks like nothing happening.
+#
+# This workflow is where that intent is checked, while there is still a human
+# looking at the pull request.
+#
+#   validate   the Bump: trailers hold up, every changed skill resolves to a
+#              level, no version: or registry.json was hand-edited, and the
+#              resolution table is printed so the outcome is readable before the
+#              merge button rather than after it
+#   detect     which suites this branch has to run
+#   test       one runner per changed skill that ships a suite
+#   tools      claude/tools/, which has no registry row and cannot appear in a
+#              matrix keyed on skill names
+#   gate       this workflow's own script, when this workflow changes
+#
+# The shell lives in .github/scripts/bump-gate.sh rather than in this file. A
+# shell block inside a workflow can only be tested by pushing, and CI has the
+# worst iteration loop in this repository; the script is driven against a
+# fixture repository by .github/scripts/testing/run-tests.sh, in a container.
+#
+# runs-on is ubuntu-24.04 and never ubuntu-latest. Rule 15 wants an immutable
+# identifier and GitHub does not publish one for runner images, so a dated label
+# is as far as the rule reaches here. The images inside each suite are pinned by
+# digest already, and that is the part that governs what the tests run against.
+name: skill PR gate
+
+# edited is not padding. The Bump: trailer and the conventional title both live
+# in the pull request itself, not in a file, so a verdict reached before someone
+# fixed a typo in the description is a verdict about text that no longer exists.
+# The default set stops at opened, synchronize and reopened, and would leave a
+# green check standing over a description that had since been rewritten.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    branches: [main]
+
+# The gate reads. Nothing below needs more than this, and a token that cannot
+# write is a stronger statement than a comment saying it will not.
+permissions:
+  contents: read
+
+concurrency:
+  group: skill-pr-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: bump intent
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # The title and body are written to files rather than interpolated into
+      # the shell. A pull request description is attacker-controlled text and
+      # ${{ }} pastes it into the script before bash ever sees a quote.
+      - name: the pull request description, as the squash commit will carry it
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title.txt"
+          printf '%s\n' "$PR_BODY"  > "$RUNNER_TEMP/pr-body.txt"
+
+      - name: resolve every changed skill to a level
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          bash .github/scripts/bump-gate.sh resolve \
+            --base "$BASE" \
+            --title-file "$RUNNER_TEMP/pr-title.txt" \
+            --body-file  "$RUNNER_TEMP/pr-body.txt" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # verify --structure is the split that exists for exactly this call site.
+      # It asserts every skill is versioned, that every requires: resolves, and
+      # that this branch edited neither a version: line nor registry.json -
+      # those are CI's files now. Plain verify cannot run here: a branch that
+      # edits a skill moves its content hash while correctly leaving the
+      # registry alone, and plain verify calls that drift.
+      - name: no hand-edited version, no hand-edited registry
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          bash claude/skills/skill-versioning/scripts/skill-version.sh verify \
+            --structure --base "$BASE"
+
+  detect:
+    name: what has to run
+    runs-on: ubuntu-24.04
+    outputs:
+      skills: ${{ steps.detect.outputs.skills }}
+      tools: ${{ steps.detect.outputs.tools }}
+      gate: ${{ steps.detect.outputs.gate }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - id: detect
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          bash .github/scripts/bump-gate.sh detect --base "$BASE" \
+            | tee -a "$GITHUB_OUTPUT"
+
+  # An empty matrix is a workflow error in Actions, not a skipped job. A
+  # docs-only pull request produces [] and is the common case, so this guard is
+  # load-bearing rather than defensive - and it is the one thing in this file
+  # that cannot be proved anywhere but here.
+  test:
+    name: ${{ matrix.skill }}
+    needs: detect
+    if: needs.detect.outputs.skills != '[]'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        skill: ${{ fromJSON(needs.detect.outputs.skills) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: podman
+        run: bash .github/scripts/require-podman.sh
+
+      # One line per skill, because run-suite works out how a given suite wants
+      # to be started. Three of the seven re-exec themselves into Podman; the
+      # rest expect to be started inside a container already.
+      - run: bash .github/scripts/bump-gate.sh run-suite "claude/skills/${{ matrix.skill }}"
+
+  tools:
+    name: claude/tools
+    needs: detect
+    if: needs.detect.outputs.tools == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: podman
+        run: bash .github/scripts/require-podman.sh
+
+      - run: bash .github/scripts/bump-gate.sh run-suite claude/tools
+
+  gate:
+    name: the gate's own suite
+    needs: detect
+    if: needs.detect.outputs.gate == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: podman
+        run: bash .github/scripts/require-podman.sh
+
+      - run: bash .github/scripts/testing/run-tests.sh
