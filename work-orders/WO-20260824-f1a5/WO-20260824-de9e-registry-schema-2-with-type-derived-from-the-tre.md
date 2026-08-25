@@ -4,7 +4,7 @@
   "slug": "registry-schema-2-with-type-derived-from-the-tre",
   "title": "Registry schema 2, with type derived from the tree and requires read from frontmatter",
   "type": "feature",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-08-24",
   "updated": "2026-08-24",
