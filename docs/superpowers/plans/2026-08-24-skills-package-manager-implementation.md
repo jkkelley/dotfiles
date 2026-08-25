@@ -317,14 +317,14 @@ The horizontal rule below is the seam, and it sits one box higher than the wordi
 
 ---
 
-- [ ] Sweep `.claude/cache/.sync.*` older than an hour **before** starting, because the one failure mode that skips the `trap` is a hook timeout, which is the likeliest one
-- [ ] Build into `.claude/cache/.sync.XXXXXX`, render the notice into each `SKILL.md`, swap each owned directory individually
-- [ ] Remove directories dropped from the manifest **only when the receipt says sync installed them**
-- [ ] Touch nothing else under `.claude/skills/`. Never `rm -rf` the parent
-- [ ] Write the receipt, including `owned` and `status`; write the stamp
-- [ ] Self-update: `mv` to `.bak`, fork with `SKILL_SYNC_CHILD=1`, roll back on failure. The comment explaining why it is `mv` and not `cp` is part of the deliverable
-- [ ] Always exit 0. Always print a failure loudly
-- [ ] Rule 17: no `flock`, no `cmp`, no `diff`. Lock with `mkdir`, which is atomic everywhere
+- [x] Sweep `.claude/cache/.sync.*` older than an hour **before** starting, because the one failure mode that skips the `trap` is a hook timeout, which is the likeliest one
+- [x] Build into `.claude/cache/.sync.XXXXXX`, render the notice into each `SKILL.md`, swap each owned directory individually
+- [x] Remove directories dropped from the manifest **only when the receipt says sync installed them**
+- [x] Touch nothing else under `.claude/skills/`. Never `rm -rf` the parent
+- [x] Write the receipt, including `owned` and `status`; write the stamp
+- [x] Self-update: `mv` to `.bak`, fork with `SKILL_SYNC_CHILD=1`, roll back on failure. The comment explaining why it is `mv` and not `cp` is part of the deliverable
+- [x] Always exit 0. Always print a failure loudly
+- [x] Rule 17: no `flock`, no `cmp`, no `diff`. Lock with `mkdir`, which is atomic everywhere
 
 **Done when:** the suite in E1.6's testing tree passes in Podman, including the ownership matrix and the four failure modes below.
 
@@ -617,9 +617,9 @@ Two concurrent syncs, assert one waits and neither corrupts the tree.
 
 ### What the notice partial's tests must cover
 
-- [ ] Rendering for a given skill produces the exact current text for that skill
-- [ ] Rendering is idempotent: a `SKILL.md` that already has a rendered notice does not get a second one
-- [ ] Insertion lands after the first `# ` heading, not before it and not in the frontmatter
+- [x] Rendering for a given skill produces the exact current text for that skill
+- [x] Rendering is idempotent: a `SKILL.md` that already has a rendered notice does not get a second one
+- [x] Insertion lands after the first `# ` heading, not before it and not in the frontmatter
 
 ### Determinism
 
