@@ -14,6 +14,26 @@ DEST_BASE="$HOME/.claude"
 AGENTS_DST="$HOME/.claude/agents"
 SKILLS_DST="$HOME/.claude/skills"
 
+# ── skill-sync — machine level, never per-destination ──────────────────────────
+# The SessionStart hook fires in *every* project on this machine, so it belongs
+# in ~/.claude/settings.json even when --dest points at one project's .claude/.
+# These four are deliberately not derived from DEST_BASE.
+SKILL_SYNC_SRC="$DOTFILES/claude/tools/skill-sync.sh"
+BIN_DST="$HOME/.local/bin"
+SKILL_SYNC_DST="$BIN_DST/skill-sync"
+SETTINGS_FILE="$HOME/.claude/settings.json"
+
+# WO-20260824-0615 exercised all four SessionStart sources and wrote down which
+# fired: matchers do filter, and alternation is honoured. `compact` is absent on
+# purpose — a sync must never run in the middle of a session.
+HOOK_MATCHER="startup|resume|clear"
+HOOK_TIMEOUT=30
+
+# $HOME is expanded by the shell the hook runs in, and the path is absolute
+# because ~/.local/bin is not reliably on PATH in a non-interactive shell. The
+# inner quotes matter on Windows, where $HOME routinely contains a space.
+HOOK_COMMAND="\"\$HOME/.local/bin/skill-sync\" --boot"
+
 # Set by the install-type prompt: "link" or "copy"
 INSTALL_TYPE="link"
 
@@ -34,13 +54,33 @@ DESCRIPTION
   .claude/ directory. Runs interactively — choose symlink or copy, pick what
   to install, and confirm before anything is written.
 
+  It also installs skill-sync and the SessionStart hook that calls it, in that
+  order. Both are machine level, not per-destination: the hook fires in every
+  project on this machine, so it goes into ~/.claude/settings.json even when
+  --dest points somewhere else. Running setup.sh twice replaces that hook rather
+  than adding a second one.
+
 OPTIONS
   --dest <path>   Exact directory to install into.
                   Agents are placed under <path>/agents/
                   Skills are placed under <path>/skills/
                   Default: ~/.claude/
 
+                  Does not move skill-sync or its hook — see DESCRIPTION.
+
   --help, -h      Show this message and exit
+
+SKILL SYNC  (always installed, after the confirmation prompt)
+  Binary   ~/.local/bin/skill-sync — a copy, never a symlink, because it
+           replaces itself in place when a newer version is published.
+
+  Hook     SessionStart in ~/.claude/settings.json, matcher
+           "startup|resume|clear", timeout 30. It runs skill-sync --boot,
+           which is silent and exits 0 in a project with no
+           .claude/skills.toml — which is most of them.
+
+  Requires jq. Without it the binary is still installed, the hook is not, and
+  setup.sh exits non-zero saying so.
 
 INSTALL TYPES  (chosen at runtime)
   Symlink   Live link back to this repo. Changes here are reflected instantly.
@@ -280,6 +320,99 @@ install_selections() {
   fi
 }
 
+# ── skill-sync: the binary first, then the hook that calls it ─────────────────
+# The order is the whole point and is not cosmetic. A SessionStart hook fires in
+# every project on this machine, so a hook written before the binary exists
+# prints a command-not-found into every session until somebody removes it — and
+# the error looks like Claude Code's rather than this script's. install_hook is
+# therefore only ever reached when install_skill_sync returned 0.
+#
+# Always a copy, whatever INSTALL_TYPE says. skill-sync replaces itself in place
+# when the registry publishes a newer version of it, so a symlink here would be
+# swapped for a real file on the first self-update — silently turning a "live
+# link to the repo" install into a stale copy nobody knows is stale.
+install_skill_sync() {
+  if [[ ! -f "$SKILL_SYNC_SRC" ]]; then
+    _red "  ✗ skill-sync source not found: $SKILL_SYNC_SRC"
+    return 1
+  fi
+  if ! mkdir -p "$BIN_DST"; then
+    _red "  ✗ Could not create $BIN_DST"
+    return 1
+  fi
+  if ! cp "$SKILL_SYNC_SRC" "$SKILL_SYNC_DST" || ! chmod +x "$SKILL_SYNC_DST"; then
+    _red "  ✗ Could not install $SKILL_SYNC_DST"
+    return 1
+  fi
+  _green "  ✓ tool: skill-sync → $SKILL_SYNC_DST"
+}
+
+# jq is the only safe way to edit settings.json. A sed into JSON is how every
+# project on the machine loses its settings at once, so a missing jq means the
+# hook is not written rather than written badly.
+install_session_hook() {
+  if ! command -v jq >/dev/null 2>&1; then
+    _red "  ✗ jq not found — the SessionStart hook was NOT installed."
+    _yellow "    settings.json is JSON, and jq is the only safe way to edit it."
+    _yellow "    Install jq and re-run ./setup.sh."
+    return 1
+  fi
+
+  if ! mkdir -p "$(dirname "$SETTINGS_FILE")"; then
+    _red "  ✗ Could not create $(dirname "$SETTINGS_FILE")"
+    return 1
+  fi
+  [[ -f "$SETTINGS_FILE" ]] || printf '{}\n' > "$SETTINGS_FILE"
+
+  if ! jq -e . "$SETTINGS_FILE" >/dev/null 2>&1; then
+    _red "  ✗ $SETTINGS_FILE is not valid JSON — refusing to touch it."
+    _yellow "    Fix or move the file, then re-run ./setup.sh."
+    return 1
+  fi
+
+  # jq reading and writing the same file truncates it, so this writes beside it
+  # and moves. Every existing skill-sync entry is dropped before the new one is
+  # appended: that is what makes a second run replace rather than duplicate, and
+  # it is also how a changed matcher or timeout lands instead of accumulating
+  # beside the old one.
+  local tmp="${SETTINGS_FILE}.setup.$$"
+  if ! jq \
+        --arg cmd "$HOOK_COMMAND" \
+        --arg matcher "$HOOK_MATCHER" \
+        --argjson timeout "$HOOK_TIMEOUT" '
+          .hooks //= {}
+        | .hooks.SessionStart //= []
+        | .hooks.SessionStart |= map(
+            select(any(.hooks[]?; ((.command? // "") | tostring | contains("skill-sync"))) | not))
+        | .hooks.SessionStart += [{
+            matcher: $matcher,
+            hooks: [{ type: "command", command: $cmd, timeout: $timeout }]
+          }]
+        ' "$SETTINGS_FILE" > "$tmp"; then
+    rm -f "$tmp"
+    _red "  ✗ Could not write the SessionStart hook into $SETTINGS_FILE"
+    return 1
+  fi
+  if ! mv "$tmp" "$SETTINGS_FILE"; then
+    rm -f "$tmp"
+    _red "  ✗ Could not replace $SETTINGS_FILE"
+    return 1
+  fi
+  _green "  ✓ hook: SessionStart (${HOOK_MATCHER}) → $SETTINGS_FILE"
+}
+
+# Returns 1 if either half failed. The caller reports it rather than swallowing
+# it: "Done." printed over a hook that was never written is the failure this
+# whole ticket exists to avoid.
+install_skill_sync_and_hook() {
+  _bold "\nInstalling skill-sync..."
+  if ! install_skill_sync; then
+    _yellow "  ⚠ The SessionStart hook was NOT written: the binary it calls is missing."
+    return 1
+  fi
+  install_session_hook
+}
+
 # ── main ───────────────────────────────────────────────────────────────────────
 main() {
   # ── parse args ──
@@ -388,9 +521,14 @@ main() {
       ;;
   esac
 
+  # An empty selection used to mean "exit without changes". It no longer can:
+  # skill-sync and its hook are installed on every run, so exiting here would
+  # skip them, and there is a real reason to want exactly that run - installing
+  # the hook on a machine whose agents and skills are already in place. The
+  # summary below lists what is about to happen either way, and the confirmation
+  # prompt is still the only thing that lets anything be written.
   if [[ ${#SEL_AGENTS[@]} -eq 0 && ${#SEL_SKILLS[@]} -eq 0 ]]; then
-    _yellow "\nNothing valid to install. Exiting without changes."
-    exit 0
+    _yellow "\nNo agents or skills selected — skill-sync and its hook only."
   fi
 
   echo
@@ -400,6 +538,8 @@ main() {
   [[ ${#SEL_AGENTS[@]} -gt 0 ]] && printf "           %s\n" "${SEL_AGENTS[*]}"
   [[ ${#SEL_SKILLS[@]} -gt 0 ]] && printf "  Skills → %s/skills/\n" "$DEST_BASE"
   [[ ${#SEL_SKILLS[@]} -gt 0 ]] && printf "           %s\n" "${SEL_SKILLS[*]}"
+  printf "  Tool   → %s\n" "$SKILL_SYNC_DST"
+  printf "  Hook   → SessionStart in %s\n" "$SETTINGS_FILE"
   echo
   printf "Proceed? [y/N]: "
   read -r confirm
@@ -410,7 +550,15 @@ main() {
 
   install_selections SEL_AGENTS SEL_SKILLS
 
+  local sync_ok=0
+  install_skill_sync_and_hook || sync_ok=1
+
   echo
+  if (( sync_ok )); then
+    _red "Finished with errors — skill-sync is not fully installed. See above."
+    _yellow "Agents and skills were installed into ${DEST_BASE}/"
+    exit 1
+  fi
   _bold "Done. Items installed into ${DEST_BASE}/"
 }
 
