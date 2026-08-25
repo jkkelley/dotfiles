@@ -284,3 +284,5 @@ Runs in a container per the `container-sandbox` skill. Covers rotation at the
 window boundary, refusal of a duplicated section, refusal of an empty
 `Before you start`, and that the emitted command matches the template byte for
 byte.
+
+<!-- gate proof, not for merge -->
