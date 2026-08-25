@@ -268,7 +268,139 @@ check "--structure FAILS outside a git repository" "$([[ $STRUCT_NOGIT_RC -ne 0 
 check "--structure says it is not a git repository" \
   "$(grep -q 'not a git repository' "$WORK/structure-nogit.out"; echo $?)"
 
-# ── 6. skill-update, inline ────────────────────────────────────────────────────
+# ── 6. registry schema 2 ───────────────────────────────────────────────────────
+# type, requires, the tools block, and a schema mismatch reported as its own
+# failure. None of this needs git or a network - it is a pure function of a
+# directory - so the plain fixture is used rather than section 5's git repo.
+hd "registry schema 2"
+mkfixture "$SKILLS"
+export SKILL_VERSION_SKILLS_DIR="$SKILLS"
+bash "$SV" init >/dev/null 2>&1
+
+check "the registry declares schema 2" \
+  "$(grep -q '"schema": 2,' "$SKILLS/registry.json"; echo $?)"
+check "every entry carries a derived type" \
+  "$(grep -q '"alpha": {.*"type": "skill"' "$SKILLS/registry.json"; echo $?)"
+check "a skill with no requires: renders an empty array" \
+  "$(grep -q '"alpha": {.*"requires": \[\] }' "$SKILLS/registry.json"; echo $?)"
+check "the registry is still valid JSON to a line-wise reader (one entry per line)" \
+  "$([[ "$(grep -c '^    "' "$SKILLS/registry.json")" -eq 2 ]]; echo $?)"
+
+# requires is read from the leading fenced block only, exactly as version: is.
+# The prose case is the reason read_version was written that way and it has to
+# hold here too, or a SKILL.md documenting the key acquires a dependency on it.
+sed 's/^version: 2.3.4/version: 2.3.4\nrequires: alpha/' "$SKILLS/beta/SKILL.md" > "$WORK/beta.tmp"
+cat "$WORK/beta.tmp" > "$SKILLS/beta/SKILL.md"
+bash "$SV" bump beta --patch >/dev/null 2>&1
+check "requires: in frontmatter reaches the registry" \
+  "$(grep -q '"beta": {.*"requires": \["alpha"\] }' "$SKILLS/registry.json"; echo $?)"
+expect_rc "verify passes when a requires: resolves" 0 bash "$SV" verify
+
+printf '\nrequires: not-a-real-skill\n' >> "$SKILLS/beta/SKILL.md"
+bash "$SV" bump beta --patch >/dev/null 2>&1
+check "a requires: in the body is prose and is ignored" \
+  "$(neg grep -q 'not-a-real-skill' "$SKILLS/registry.json")"
+expect_rc "verify still passes with a requires: in the body" 0 bash "$SV" verify
+
+# The typo. This is what earns the key its keep: caught at the gate rather than
+# on some project's first sync.
+mkfixture "$SKILLS"
+sed 's/^version: 2.3.4/version: 2.3.4\nrequires: work-ordr/' "$SKILLS/beta/SKILL.md" > "$WORK/beta.tmp"
+cat "$WORK/beta.tmp" > "$SKILLS/beta/SKILL.md"
+bash "$SV" init >/dev/null 2>&1
+expect_rc "verify FAILS on a requires: that resolves to nothing" 1 bash "$SV" verify
+bash "$SV" verify > "$WORK/verify-req.out" 2>&1
+check "verify names both the skill and the missing dependency" \
+  "$(grep -q '^unresolved requires   beta -> work-ordr' "$WORK/verify-req.out"; echo $?)"
+check "an unresolved requires: does not tell you to run init" \
+  "$(neg grep -q "run '.*' init" "$WORK/verify-req.out")"
+
+# --structure asserts it too. A typo'd dependency is a property of the tree, not
+# of the registry, so the PR gate is the right place to reject it.
+expect_rc "--structure FAILS on a requires: that resolves to nothing" 1 \
+  bash "$SV" verify --structure
+
+# A comma-separated list, which is the whole reason it is not a YAML list.
+mkfixture "$SKILLS"
+mkdir -p "$SKILLS/delta"
+printf -- '---\nname: delta\ndescription: Fixture.\nversion: 1.0.0\n---\n\n# Delta\n' > "$SKILLS/delta/SKILL.md"
+sed 's/^version: 2.3.4/version: 2.3.4\nrequires: alpha, delta/' "$SKILLS/beta/SKILL.md" > "$WORK/beta.tmp"
+cat "$WORK/beta.tmp" > "$SKILLS/beta/SKILL.md"
+bash "$SV" init >/dev/null 2>&1
+check "a comma-separated requires: renders both names, in declared order" \
+  "$(grep -q '"beta": {.*"requires": \["alpha", "delta"\] }' "$SKILLS/registry.json"; echo $?)"
+expect_rc "verify passes when every name in the list resolves" 0 bash "$SV" verify
+
+# ── 6b. the tools block ────────────────────────────────────────────────────────
+# Option A: an entry is rendered only for a registered tool that exists. The
+# empty case is the one that ships today, so it is asserted first and by name -
+# an empty block that quietly became a missing key would break every consumer.
+hd "registry tools block"
+mkfixture "$SKILLS"
+rm -rf "$WORK/tools"
+bash "$SV" init >/dev/null 2>&1
+check "an absent claude/tools/ renders an empty tools block, not a missing key" \
+  "$(grep -qx '  "tools": {}' "$SKILLS/registry.json"; echo $?)"
+check "no tool is invented when none is on disk" \
+  "$(neg grep -q 'skill-sync' "$SKILLS/registry.json")"
+
+# The populated case. Proved against a fixture tool rather than the real one,
+# because the real one does not exist yet and hashing a placeholder is precisely
+# what this design refuses to do.
+mkdir -p "$WORK/tools/partials"
+printf '<!-- skill-tool-version: 2.1.0 -->\nnotice for {{SKILL_NAME}}\n' \
+  > "$WORK/tools/partials/read-only-notice.md.tmpl"
+bash "$SV" init >/dev/null 2>&1
+check "a tool that exists gets an entry with its marker version" \
+  "$(grep -q '"read-only-notice": { "version": "2.1.0"' "$SKILLS/registry.json"; echo $?)"
+check "the entry carries the file's own sha256" \
+  "$(grep -q "\"read-only-notice\": {.*\"sha256\": \"$(sha256sum "$WORK/tools/partials/read-only-notice.md.tmpl" | cut -d' ' -f1)\"" "$SKILLS/registry.json"; echo $?)"
+check "a registered tool still absent is skipped rather than stubbed" \
+  "$(neg grep -q 'skill-sync' "$SKILLS/registry.json")"
+expect_rc "verify passes with a populated tools block" 0 bash "$SV" verify
+
+# A tool present but unversioned is a hard failure. Rendering it without a
+# version would put an entry in the registry that no consumer could compare.
+printf 'no marker here\n' > "$WORK/tools/skill-sync.sh"
+expect_rc "verify FAILS when a tool carries no version marker" 1 bash "$SV" verify
+bash "$SV" verify > "$WORK/verify-tool.out" 2>&1
+check "the failure names the tool and the marker it wants" \
+  "$(grep -q 'skill-sync.sh has no skill-tool-version: marker' "$WORK/verify-tool.out"; echo $?)"
+rm -rf "$WORK/tools"
+
+# ── 6c. schema mismatch is not drift ───────────────────────────────────────────
+# The failure this exists to prevent: a registry from an older generator reads as
+# every skill having drifted at once, which names them all and explains none.
+hd "schema mismatch"
+mkfixture "$SKILLS"
+bash "$SV" init >/dev/null 2>&1
+expect_rc "verify passes before the schema is touched" 0 bash "$SV" verify
+
+sed 's/"schema": 2,/"schema": 1,/' "$SKILLS/registry.json" > "$WORK/reg-old.json"
+cat "$WORK/reg-old.json" > "$SKILLS/registry.json"
+expect_rc "verify FAILS on a registry written to another schema" 1 bash "$SV" verify
+bash "$SV" verify > "$WORK/verify-schema.out" 2>&1
+check "verify reports it as a schema mismatch" \
+  "$(grep -q '^schema mismatch: registry is schema 1, this generator writes schema 2' "$WORK/verify-schema.out"; echo $?)"
+check "a schema mismatch does NOT report any skill as drifted" \
+  "$(neg grep -q '^drifted' "$WORK/verify-schema.out")"
+check "a schema mismatch does NOT report a stale entry" \
+  "$(neg grep -q '^stale entry' "$WORK/verify-schema.out")"
+check "the schema failure says how to rewrite the registry" \
+  "$(grep -q "init    rewrite the registry" "$WORK/verify-schema.out"; echo $?)"
+
+# A registry with no schema key at all is the same failure, not a crash.
+grep -v '"schema"' "$SKILLS/registry.json" > "$WORK/reg-noschema.json"
+cat "$WORK/reg-noschema.json" > "$SKILLS/registry.json"
+expect_rc "verify FAILS on a registry with no schema key" 1 bash "$SV" verify
+bash "$SV" verify > "$WORK/verify-noschema.out" 2>&1
+check "a missing schema key is reported as a mismatch, not as a crash" \
+  "$(grep -q '^schema mismatch: registry is schema <none>' "$WORK/verify-noschema.out"; echo $?)"
+
+bash "$SV" init >/dev/null 2>&1
+expect_rc "init rewrites the registry to the current schema" 0 bash "$SV" verify
+
+# ── 7. skill-update, inline ────────────────────────────────────────────────────
 hd "skill-update --mode inline"
 DOT="$WORK/dotfiles"
 rm -rf "$DOT"
@@ -307,7 +439,7 @@ expect_rc "unreachable remote source fails" 1 \
 expect_rc "non-repo rejected in standalone" 1 \
   bash "$SU" --skill alpha --mode standalone --project "$WORK/notarepo" --dotfiles "$DOT"
 
-# ── 7. skill-update, standalone ────────────────────────────────────────────────
+# ── 8. skill-update, standalone ────────────────────────────────────────────────
 # gh is stubbed rather than mocked away entirely: the stub performs the merge on
 # the local bare repo, so the branch/commit/push/merge/delete orchestration is
 # genuinely exercised end to end without a network.
@@ -382,7 +514,7 @@ check "a second standalone run exits 0" "$([[ $NOOP_RC -eq 0 ]]; echo $?)"
 check "a second standalone run opens no PR" \
   "$(grep -q 'already v1.0.0' "$WORK/standalone2.out"; echo $?)"
 
-# ── 8. failure reporting ───────────────────────────────────────────────────────
+# ── 9. failure reporting ───────────────────────────────────────────────────────
 hd "failure reporting"
 setup_project "$WORK/proj3" "$WORK/origin3.git"
 git -C "$WORK/proj3" remote set-url origin "$WORK/does-not-exist.git"

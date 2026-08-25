@@ -1,7 +1,8 @@
 ---
 name: living-docs
 description: The documentation standard for a project, and the machinery that keeps it true. Installs a Diataxis-shaped docs/ layer, owns the formats of decision records and SOPs, and makes documentation a gate rather than an intention by binding it to the ticket that changed the system. Use when starting documentation in a project, when asked to "document this", "write an ADR", "write an SOP", "set up docs", when a system change needs its documentation updated, or when documentation has drifted from what the code does.
-version: 1.0.0
+version: 1.0.1
+requires: work-order
 ---
 
 # living-docs

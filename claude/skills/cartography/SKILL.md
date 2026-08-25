@@ -1,7 +1,8 @@
 ---
 name: cartography
 description: Map a complex system top-down into 3-7 "islands" and generate standalone, locally hostable HTML documents with embedded Mermaid diagrams - each island's execution tickets minted as real work-orders. Use when the user asks to map out, architect, or break down a system, business, or process from the ground up; asks for an island map, a macro map, a system blueprint, or "where do I even start with this"; wants architecture documentation as self-contained HTML; or says "map this out" / "break this into modules" / "cartography". Not for wireframing a UI - that is figma-wireframe. Not for ticketing work that is already understood - that is work-order on its own.
-version: 1.0.2
+version: 1.0.3
+requires: work-order
 ---
 
 # Cartography
