@@ -12,8 +12,8 @@
   "parent": "WO-20260824-f1a5",
   "branch": "feat/registry-schema-2-with-type-derived-from-the-tre",
   "pr": 60,
-  "merge_sha": null,
-  "closed": null,
+  "merge_sha": "78917b7305409a307c766314e501b968f1acea5d",
+  "closed": "2026-08-24",
   "approval": {
     "via": "override",
     "reason": "Reviewed and approved on PR #55 on GitHub, which is where the whole cut was read as one diff. Lavish was offered and declined in favour of the PR.",
