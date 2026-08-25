@@ -1,7 +1,7 @@
 ---
 name: skill-versioning
 description: Semver for the skills in this dotfiles repo, and the machinery that keeps a project's installed copies honest. Use when bumping a skill's version, regenerating claude/skills/registry.json, checking whether a project's .claude/skills are behind the published registry, or applying an update to a project. Triggered by "bump this skill", "is my skill out of date", "update the skill in this project", "regenerate the registry", or by the session-start skill version check in CLAUDE.md.
-version: 1.2.0
+version: 2.0.0
 ---
 
 # Skill versioning
@@ -58,10 +58,10 @@ Hand-editing the field leaves the registry stale, and `verify` exists to catch e
 
 They exist because two callers ask different questions, and the answer that is right for one is wrong for the other.
 
-| Form          | Caller        | Asserts                                                                            |
-| ------------- | ------------- | ---------------------------------------------------------------------------------- |
-| `verify`      | the publisher | every skill versioned, and `registry.json` matches what the tree would render      |
-| `--structure` | the PR gate   | every skill versioned, and the branch's diff touches no `version:` and no registry |
+| Form          | Caller        | Asserts                                                                                                              |
+| ------------- | ------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `verify`      | the publisher | every skill versioned, every `requires:` resolves, the registry is this schema, and it matches what the tree renders |
+| `--structure` | the PR gate   | every skill versioned, every `requires:` resolves, and the branch's diff touches no `version:` and no registry       |
 
 Under merge-time allocation the version is allocated by CI when a PR merges, not by the contributor on the branch.
 A skill PR therefore edits a skill and leaves the registry alone - and that state is exactly what plain `verify` calls `drifted`, correctly, because on `main` it would be.
@@ -74,6 +74,18 @@ The comparison runs against the working tree, so an uncommitted hand-edit is cau
 Hand-editing is caught by both, by different means.
 `--structure` sees the edit in the diff.
 Plain `verify` sees it in the hash: the `version:` line lives inside `SKILL.md`, so moving it moves the content hash too, and the registry comparison fails.
+
+Both forms assert that every name in a `requires:` resolves to a skill that exists.
+That is a property of the tree rather than of the registry, so the PR gate is the right place to reject it.
+A typo'd dependency is the one failure the auto-install path cannot recover from: uncaught, it surfaces on some project's first sync, days later and somewhere else.
+
+### A schema mismatch is its own failure
+
+Plain `verify` reads the `schema` number out of the committed registry before comparing anything, and stops if it is not the number this generator writes.
+
+The comparison is a string comparison, so a registry from an older generator differs on every single line.
+Left to run, it names all forty-three skills as `drifted` and explains none of them - the reader is told forty-three times to bump a skill, when the actual fix is one `init`.
+Refusing to compare is the more useful answer, and it is the only one that names the real cause.
 
 ### Bump once, last
 
@@ -125,13 +137,78 @@ The hash is what catches the failure the version alone cannot: contents changed,
 
 ```json
 {
-  "schema": 1,
+  "schema": 2,
   "generator": "skill-version.sh",
   "skills": {
-    "hydration-prompt": { "version": "1.0.0", "sha256": "..." }
-  }
+    "hydration-prompt": {
+      "version": "1.0.0",
+      "sha256": "...",
+      "type": "skill",
+      "requires": []
+    },
+    "living-docs": {
+      "version": "1.0.0",
+      "sha256": "...",
+      "type": "skill",
+      "requires": ["work-order"]
+    }
+  },
+  "tools": {}
 }
 ```
+
+One entry per line, and every entry the same shape.
+The line is what `verify` compares and what it prints when a skill drifts, so nothing may split an entry across lines.
+`requires` is rendered even when empty so a consumer never branches on key presence.
+
+### `type` is derived, never declared
+
+`type` is routing and nothing else: `skill` to `.claude/skills/`, `agent` to `.claude/agents/`.
+It is a property of the tree an entry was found in, and the entry never states it.
+
+Declaring it in frontmatter would write down a fact the filesystem already states, and create a second source of truth that can disagree with the first.
+`render_registry` has to walk those directories to find the entries at all, so it already knows.
+
+Today it walks the skills tree and nothing else, so every entry renders as `skill`.
+`claude/agents/` carries no version and no registry row yet.
+
+### `requires` is comma-separated, and it is not a YAML list
+
+An optional frontmatter key, on the skill that has the dependency.
+Absent means no dependencies, which is forty-one of the forty-three skills.
+
+```yaml
+---
+name: living-docs
+description: ...
+version: 1.0.0
+requires: work-order
+---
+```
+
+Two or more names are separated by commas.
+**Not a bracket list.** Rule 17 makes Git Bash a supported platform, and a bracket list needs a real parser where `requires: a, b` needs one line of `awk` - the same shape as the `read_version` beside it.
+
+It is read from the leading fenced block only, exactly as `version:` is, so a `requires:` line in the body is prose and is ignored.
+A skill that documents the key does not thereby acquire a dependency on it.
+
+### The `tools` block
+
+Shared infrastructure that is not a skill: the sync binary, and the read-only notice template that replaces the copy currently inlined in forty-three `SKILL.md` files.
+A version and a hash here are the only thing that lets a change to either one reach an installed project.
+
+| Tool               | File                                             |
+| ------------------ | ------------------------------------------------ |
+| `skill-sync`       | `claude/tools/skill-sync.sh`                     |
+| `read-only-notice` | `claude/tools/partials/read-only-notice.md.tmpl` |
+
+A tool has no frontmatter, so its version is a marker token instead - `skill-tool-version: 1.0.0`, readable under any comment syntax and impossible to confuse with a `version:` in prose.
+A registered tool that is present but carries no marker is a hard failure, not a version-less entry.
+
+**An entry is rendered only for a tool that exists on disk.**
+`claude/tools/` has not been built yet, so the block renders as `{}` today.
+That is the intended output, not a stub: `render_registry` is a pure function of the tree and cannot hash a file nobody has written, and a placeholder hash would be strictly worse than an absent entry because it would stay green after the real file landed.
+Each entry appears on its own as its file lands, with no edit to `render_tools`.
 
 The hash is a repo-side gate only.
 The session-start check in a project compares versions, because a project's copy legitimately excludes files (`testing/`, for instance) and would never match the hash.
@@ -179,7 +256,7 @@ This is Rule 16 in this repo's CLAUDE.md.
 
 ## Testing
 
-Run from this skill's directory. 72 checks, 26 of them negative.
+Run from this skill's directory. 103 checks, 42 of them negative.
 
 ```bash
 podman run --rm --userns=keep-id --network=none --entrypoint="" \

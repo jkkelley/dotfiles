@@ -52,9 +52,12 @@ The sync needs to know what an entry is, what it depends on, and which shared to
 ## Acceptance criteria
 
 
-- [ ] `AC-H1` *(human)* render_registry reproduces registry.json byte for byte
-- [ ] `AC-H2` *(human)* both work-order edges appear in the rendered registry and no other entry has one
-- [ ] `AC-H3` *(human)* a deliberately mistyped requires: name fails verify
+- [x] `AC-H1` *(human)* render_registry reproduces registry.json byte for byte
+  - observed `2026-08-24` Container, real 43-skill tree copied out of a read-only mount, bitnami/git pinned by digest, --network=none. skill-version.sh verify printed "ok - 43 skills versioned, registry in sync" at rc 0. verify is a byte-for-byte string comparison of render_registry output against the committed registry.json, so rc 0 is the reproduction.
+- [x] `AC-H2` *(human)* both work-order edges appear in the rendered registry and no other entry has one
+  - observed `2026-08-24` Same container run. Grepping the rendered registry for a non-empty requires returned exactly two lines - cartography 1.0.3 and living-docs 1.0.1, each carrying ["work-order"]. Count of entries with a non-empty requires: 2, against 43 entries total. The other 41 render an empty array.
+- [x] `AC-H3` *(human)* a deliberately mistyped requires: name fails verify
+  - observed `2026-08-24` Same container. living-docs requires rewritten to work-ordr, one character short. Plain verify printed "unresolved requires living-docs -> work-ordr (no such skill)" then "fix the requires: line, or add the skill it names" at rc 1, and did NOT emit the run-init advice that belongs to an unversioned skill. verify --structure rejected it identically at rc 1, so the typo fails at the PR gate rather than on some project first sync.
 
 ## Test plan
 
