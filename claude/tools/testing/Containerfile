@@ -1,11 +1,19 @@
 # Test image for claude/tools/.
 #
-# bash, awk and coreutils and nothing else. skill-sync.sh reaches for exactly
-# one thing outside that set - curl - and every case here stubs it, because what
+# bash, awk, coreutils and jq. skill-sync.sh reaches for exactly one thing
+# outside the first three - curl - and every case here stubs it, because what
 # the registry fetch *reports* is the input under test rather than a dependency
 # to install. Leaving curl out of the image is therefore load-bearing: it proves
 # the stub is the only curl on PATH, and it gives the "curl is not installed"
 # branch a real world to run in instead of a simulated one.
+#
+# jq is here for setup.sh, which edits ~/.claude/settings.json and is the only
+# thing in this suite that genuinely needs it. It is not stubbed, because a
+# stubbed jq would prove nothing about a JSON edit. The obvious hazard is that a
+# jq on PATH lets skill-sync.sh quietly acquire a dependency this suite would
+# then fail to catch - so the suite asserts skill-sync.sh names no jq at all,
+# and that assertion is what keeps this line honest. setup.sh's own "jq is
+# missing" branch runs against a hand-built PATH rather than against the image.
 #
 # git is absent for the same reason it is absent from the skill suites: nothing
 # here touches it, and an image carrying a binary the code must not depend on is
@@ -24,5 +32,5 @@
 FROM docker.io/library/debian@sha256:328d16499860ae6cb9b345e2e4cebca08c2a36e4f7278482c7bd1f39d71e5bfd
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends bash \
+  && apt-get install -y --no-install-recommends bash jq \
   && rm -rf /var/lib/apt/lists/*

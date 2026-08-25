@@ -28,7 +28,12 @@ set -uo pipefail
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 TOOLS_DIR=$(cd "$HERE/.." && pwd)
 REPO_ROOT=$(cd "$TOOLS_DIR/../.." && pwd)
-IMAGE="${CLAUDE_TOOLS_TEST_IMAGE:-localhost/dotfiles-claude-tools-test:1}"
+# The tag is bumped whenever the Containerfile changes. `podman image exists`
+# below only builds when the tag is absent, so an edited Containerfile under an
+# unchanged tag means every machine that already ran this suite keeps the old
+# image and the new checks fail for a reason that has nothing to do with them.
+# :2 added jq.
+IMAGE="${CLAUDE_TOOLS_TEST_IMAGE:-localhost/dotfiles-claude-tools-test:2}"
 
 # Re-exec inside the container unless we are already in it.
 if [[ ${IN_CLAUDE_TOOLS_CONTAINER:-0} != 1 ]]; then
@@ -1112,6 +1117,256 @@ check "a published version older than this one is not a downgrade loop" \
   "$([[ ! -e "$SS.bak" && "$(self_version "$SS")" == "$REAL_VER" ]]; echo $?)"
 mkregistry
 restore_self
+
+# ── setup.sh: the binary, then the hook ────────────────────────────────────────
+# setup.sh writes into $HOME and nowhere else, so every case below runs against
+# a fake one under the scratch mount. It is interactive, so each run is fed the
+# same five answers from a file rather than from a pipe - a `printf | setup.sh`
+# dies of SIGPIPE the moment setup.sh stops reading, and pipefail turns that
+# into a failure that has nothing to do with the case.
+#
+# The property under test is an *order*, not an output. C4 of the plan: a
+# SessionStart hook fires in every project on this machine, so a hook written
+# before the binary exists breaks every session on the machine rather than only
+# this one. The two cases that carry the ticket are therefore the idempotency of
+# the hook and the refusal to write it at all when the binary did not land.
+hd "setup.sh - skill-sync, then the SessionStart hook"
+
+SETUP_HOME="$WORK/home"
+SETTINGS="$SETUP_HOME/.claude/settings.json"
+BIN="$SETUP_HOME/.local/bin/skill-sync"
+ANSWERS="$WORK/answers"
+BASH_BIN=$(command -v bash)
+
+# install type 1 (symlink), mode 3 (type names), no agents, one skill, confirm.
+printf '1\n3\n\ncontainer-sandbox\ny\n' > "$ANSWERS"
+
+fresh_home() { rm -rf "$SETUP_HOME"; mkdir -p "$SETUP_HOME"; }
+
+setup_run() { # $@ = extra args passed through to setup.sh
+  ( cd "$WORK" && HOME="$SETUP_HOME" bash /repo/setup.sh "$@" ) \
+    < "$ANSWERS" > "$OUT" 2> "$ERR"
+}
+
+# The number of SessionStart entries that call skill-sync. Counting entries the
+# script wrote, rather than entries in total, is what makes "exactly one" a
+# statement about idempotency instead of a statement about an empty file.
+hook_count() {
+  jq '[.hooks.SessionStart[]?
+       | select(any(.hooks[]?; ((.command? // "") | tostring | contains("skill-sync"))))]
+      | length' "$SETTINGS" 2>/dev/null
+}
+last_hook() { jq -r ".hooks.SessionStart[-1]$1" "$SETTINGS" 2>/dev/null; }
+
+fresh_home
+setup_run
+rc=$?
+check "a first run exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+check "the binary is installed under the fake HOME" "$([[ -f $BIN ]]; echo $?)"
+check "the binary is executable" "$([[ -x $BIN ]]; echo $?)"
+check "the binary is a copy, not a symlink into the repo" "$([[ ! -L $BIN ]]; echo $?)"
+check "the copy is byte-identical to the repo source" \
+  "$([[ "$(sha256sum < "$BIN")" == "$(sha256sum < /repo/claude/tools/skill-sync.sh)" ]]; echo $?)"
+check "the chosen skill was installed as well" \
+  "$([[ -L "$SETUP_HOME/.claude/skills/container-sandbox" ]]; echo $?)"
+check "exactly one skill-sync SessionStart hook" "$([[ "$(hook_count)" == 1 ]]; echo $?)"
+check "the matcher is the filtered form WO-20260824-0615 confirmed" \
+  "$([[ "$(last_hook .matcher)" == 'startup|resume|clear' ]]; echo $?)"
+check "compact is nowhere in the written settings" "$(neg grep -q compact "$SETTINGS")"
+check "the timeout is 30" "$([[ "$(last_hook '.hooks[0].timeout')" == 30 ]]; echo $?)"
+check "the hook calls --boot, not --plan" \
+  "$([[ "$(last_hook '.hooks[0].command')" == *' --boot' ]]; echo $?)"
+check "the hook names an absolute path, since ~/.local/bin may not be on PATH" \
+  "$(jq -e '.hooks.SessionStart[-1].hooks[0].command
+            | startswith("\"$HOME/.local/bin/skill-sync\"")' "$SETTINGS" >/dev/null 2>&1; echo $?)"
+check "the path in the hook is quoted, because \$HOME can contain a space" \
+  "$([[ "$(last_hook '.hooks[0].command')" == '"'* ]]; echo $?)"
+
+# AC-H2. The whole ticket in one assertion.
+setup_run
+rc=$?
+check "a second run exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+check "a second run leaves exactly ONE skill-sync hook, not two" \
+  "$([[ "$(hook_count)" == 1 ]]; echo $?)"
+check "a second run adds no SessionStart entry of any kind" \
+  "$([[ "$(jq '.hooks.SessionStart | length' "$SETTINGS")" == 1 ]]; echo $?)"
+setup_run
+check "a third run is still exactly one" "$([[ "$(hook_count)" == 1 ]]; echo $?)"
+
+# Rung 3. This is the settings.json every real machine actually has.
+fresh_home
+mkdir -p "$SETUP_HOME/.claude"
+cat > "$SETTINGS" <<'EOF'
+{
+  "model": "opus",
+  "hooks": {
+    "PostToolUse": [
+      { "matcher": "Write|Edit",
+        "hooks": [ { "type": "command", "command": "prettier --write" } ] }
+    ],
+    "SessionStart": [
+      { "matcher": "", "hooks": [ { "type": "command", "command": "gh-axi", "timeout": 10 } ] }
+    ]
+  }
+}
+EOF
+setup_run
+check "an unrelated top-level key survives" \
+  "$([[ "$(jq -r .model "$SETTINGS")" == opus ]]; echo $?)"
+check "an unrelated PostToolUse hook survives" \
+  "$([[ "$(jq '.hooks.PostToolUse | length' "$SETTINGS")" == 1 ]]; echo $?)"
+check "an unrelated SessionStart hook survives" \
+  "$(jq -e '[.hooks.SessionStart[].hooks[0].command] | index("gh-axi")' "$SETTINGS" >/dev/null 2>&1; echo $?)"
+check "the skill-sync hook lands beside it rather than replacing it" \
+  "$([[ "$(jq '.hooks.SessionStart | length' "$SETTINGS")" == 2 ]]; echo $?)"
+setup_run
+check "a second run over a populated file still leaves one skill-sync hook" \
+  "$([[ "$(hook_count)" == 1 ]]; echo $?)"
+check "a second run over a populated file does not duplicate the others" \
+  "$([[ "$(jq '.hooks.SessionStart | length' "$SETTINGS")" == 2 ]]; echo $?)"
+
+# A hook this script wrote under an older matcher. Replacing it is the reason
+# the jq drops by command rather than by exact-entry equality: an entry that
+# only differs in its matcher would otherwise accumulate beside the new one.
+fresh_home
+mkdir -p "$SETUP_HOME/.claude"
+cat > "$SETTINGS" <<'EOF'
+{
+  "hooks": {
+    "SessionStart": [
+      { "matcher": "",
+        "hooks": [ { "type": "command", "command": "skill-sync --boot", "timeout": 10 } ] }
+    ]
+  }
+}
+EOF
+setup_run
+check "a stale skill-sync hook is replaced, not duplicated" \
+  "$([[ "$(hook_count)" == 1 ]]; echo $?)"
+check "the replacement carries the current matcher" \
+  "$([[ "$(last_hook .matcher)" == 'startup|resume|clear' ]]; echo $?)"
+check "the replacement carries the current timeout" \
+  "$([[ "$(last_hook '.hooks[0].timeout')" == 30 ]]; echo $?)"
+
+# A settings.json that is not JSON is the one file that must not be rewritten.
+# Every project on the machine reads it.
+fresh_home
+mkdir -p "$SETUP_HOME/.claude"
+printf 'not json at all\n' > "$SETTINGS"
+setup_run
+rc=$?
+check "invalid settings.json makes setup.sh exit non-zero" "$([[ $rc -ne 0 ]]; echo $?)"
+check "invalid settings.json is left exactly as it was" \
+  "$([[ "$(cat "$SETTINGS")" == 'not json at all' ]]; echo $?)"
+check "the refusal names the file rather than failing silently" \
+  "$(grep -q 'not valid JSON' "$ERR"; echo $?)"
+shopt -s nullglob
+LEFTOVERS=("$SETTINGS".setup.*)
+shopt -u nullglob
+check "no half-written temp file is left beside it" \
+  "$([[ ${#LEFTOVERS[@]} -eq 0 ]]; echo $?)"
+check "the binary is installed even so, because it comes first" \
+  "$([[ -x $BIN ]]; echo $?)"
+
+# Rung 4. The order, asserted by breaking the first step. A file where the bin
+# directory should be is the cheapest way to make the install fail for a real
+# reason rather than a stubbed one.
+fresh_home
+mkdir -p "$SETUP_HOME/.local"
+printf 'a file, not a directory\n' > "$SETUP_HOME/.local/bin"
+setup_run
+rc=$?
+check "a binary that cannot be installed makes setup.sh exit non-zero" \
+  "$([[ $rc -ne 0 ]]; echo $?)"
+check "no binary was installed" "$([[ ! -f $BIN ]]; echo $?)"
+check "NO hook was written, because the binary did not land" \
+  "$([[ ! -e $SETTINGS ]]; echo $?)"
+check "the failure says the hook was skipped and why" \
+  "$(grep -q 'hook was NOT written' "$OUT"; echo $?)"
+check "the failing step is named on stderr" \
+  "$(grep -q 'Could not create' "$ERR"; echo $?)"
+
+# jq missing. Built as a PATH rather than by removing the image's jq: this is
+# the Git Bash case, and it has to fail as a refusal rather than as a sed.
+fresh_home
+NOJQ="$WORK/nojq"
+rm -rf "$NOJQ"; mkdir -p "$NOJQ"
+for b in cp mkdir chmod mv rm ln basename dirname cat; do
+  ln -s "$(command -v "$b")" "$NOJQ/$b"
+done
+( cd "$WORK" && HOME="$SETUP_HOME" PATH="$NOJQ" "$BASH_BIN" /repo/setup.sh ) \
+  < "$ANSWERS" > "$OUT" 2> "$ERR"
+rc=$?
+check "a missing jq still installs the binary" "$([[ -x $BIN ]]; echo $?)"
+check "a missing jq writes no hook at all" "$([[ ! -e $SETTINGS ]]; echo $?)"
+check "a missing jq is reported rather than worked around with sed" \
+  "$(grep -q 'jq not found' "$ERR"; echo $?)"
+check "a missing jq makes setup.sh exit non-zero" "$([[ $rc -ne 0 ]]; echo $?)"
+
+# --dest moves the skills. It must not move the hook, which is machine level.
+fresh_home
+PROJDEST="$WORK/otherproj/.claude"
+rm -rf "$WORK/otherproj"
+setup_run --dest "$PROJDEST"
+check "--dest puts the skills where it was told" \
+  "$([[ -L "$PROJDEST/skills/container-sandbox" ]]; echo $?)"
+check "--dest leaves the hook in the machine's own settings.json" \
+  "$([[ "$(hook_count)" == 1 ]]; echo $?)"
+check "--dest writes no settings.json beside the skills" \
+  "$([[ ! -e "$PROJDEST/settings.json" ]]; echo $?)"
+check "--dest still installs the binary to ~/.local/bin" "$([[ -x $BIN ]]; echo $?)"
+
+# Selecting nothing is a real run, not a no-op: it is how the hook is installed
+# on a machine whose agents and skills are already in place. It used to exit
+# before anything was written, which would now skip the whole point of the run.
+fresh_home
+printf '1\n3\n\n\ny\n' > "$WORK/answers-none"
+( cd "$WORK" && HOME="$SETUP_HOME" bash /repo/setup.sh ) \
+  < "$WORK/answers-none" > "$OUT" 2> "$ERR"
+rc=$?
+check "selecting no agents and no skills still exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+check "selecting nothing still installs the binary" "$([[ -x $BIN ]]; echo $?)"
+check "selecting nothing still installs the hook" "$([[ "$(hook_count)" == 1 ]]; echo $?)"
+check "selecting nothing installs no skills" \
+  "$([[ ! -e "$SETUP_HOME/.claude/skills/container-sandbox" ]]; echo $?)"
+check "the run says why it installed nothing else" \
+  "$(grep -q 'skill-sync and its hook only' "$OUT"; echo $?)"
+
+# Answering N at the confirmation prompt writes nothing, including the hook.
+# That prompt is the only gate in front of a file every project on the machine
+# reads, so it has to hold for the new step as well as the old ones.
+fresh_home
+printf '1\n3\n\ncontainer-sandbox\nn\n' > "$WORK/answers-abort"
+( cd "$WORK" && HOME="$SETUP_HOME" bash /repo/setup.sh ) \
+  < "$WORK/answers-abort" > "$OUT" 2> "$ERR"
+rc=$?
+check "declining the confirmation exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+check "declining the confirmation installs no binary" "$([[ ! -e $BIN ]]; echo $?)"
+check "declining the confirmation writes no hook" "$([[ ! -e $SETTINGS ]]; echo $?)"
+check "the summary named the hook before it was declined" \
+  "$(grep -q 'SessionStart in' "$OUT"; echo $?)"
+
+# The containerisable half of AC-H1. A real session cannot be produced in here,
+# so what is proved is that the binary setup.sh installed is silent in a project
+# with no manifest. That the hook then fires at all is rung 5, on the host.
+fresh_home
+setup_run
+NOMAN="$WORK/no-manifest"
+rm -rf "$NOMAN"; mkdir -p "$NOMAN"
+( cd "$NOMAN" && bash "$BIN" --boot ) > "$OUT" 2> "$ERR"
+rc=$?
+check "the installed binary exits 0 where there is no manifest" "$([[ $rc -eq 0 ]]; echo $?)"
+check "it prints nothing on stdout there" "$([[ ! -s $OUT ]]; echo $?)"
+check "it prints nothing on stderr there" "$([[ ! -s $ERR ]]; echo $?)"
+check "it creates nothing there either" \
+  "$([[ ! -e "$NOMAN/.claude" ]]; echo $?)"
+
+# This image now carries jq for setup.sh's sake. That is only safe while
+# skill-sync.sh does not reach for it, so the guard is an assertion rather than
+# a comment. The one mention in the source is the comment saying why it is not
+# a dependency.
+check "no runnable line of skill-sync.sh names jq" \
+  "$([[ "$(grep -vE '^[[:space:]]*#' /repo/claude/tools/skill-sync.sh | grep -cE '\bjq\b')" -eq 0 ]]; echo $?)"
 
 # ── summary ────────────────────────────────────────────────────────────────────
 printf '\n=========================================\n'
