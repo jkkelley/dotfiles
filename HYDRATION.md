@@ -10,6 +10,106 @@ file holds exactly 10 once it has filled up. Entries are never renumbered and
 never edited in place - a correction is a new entry.
 
 Written by `hydration.sh add`. Do not hand-edit.
+<!-- hydration-entry: WO-20260826-9037 -->
+## WO-20260826-9037 - Credential rotation workflow - KMS free tier fix
+_Generated 2026-08-26 by hydration.sh. Newest entry._
+
+### Ticket
+
+`WO-20260826-9037` - `Credential rotation workflow - KMS free tier fix` is `done` and archived, on the branch, inside PR #75.
+
+It has no parent and no dependencies. It is the fourth and last repository in the KMS free-tier work, and the only one of the four that ships a tool rather than a configuration change.
+
+### What just landed
+
+`workflows/credential-rotation.md` at 1.0.0, a 14-credential manifest, a driver with `list`, `due`, `verify` and `rotate --dry-run`, and two test suites.
+
+**Nothing in the driver reads a credential value.** `due` and `verify` compare the parameter's `LastModifiedDate` against the `ExternalSecret`'s `status.refreshTime` - if the cluster last refreshed before the parameter last changed, the cluster is stale. That answers the question completely, works for the templated secrets where no plain key holds the raw value, and spends zero KMS requests. The obvious alternative would cost one billable `Decrypt` per credential per run and undo the whole point of the 168h change. The offline suite asserts the absence of that call, not the absence of an error.
+
+**The manifest lists no consumers on purpose.** The fan-out is discovered from the cluster at run time, so it cannot go stale, and the file stays free of cluster object names in a public repository.
+
+Two suites, because neither is sufficient alone. `run-tests.sh` stubs `aws` and `kubectl` with `--network=none`, which is what makes the no-KMS assertion possible; the cost is that the `go-template` behind `verify` is never rendered by a real `kubectl`. `live-check.sh` closes that gap against the real account and cluster, read-only subcommands only.
+
+Green in Podman: credential-rotation **75**, live-check **10**, tools **38**, skill-versioning **103**.
+
+Also fixed a latent bug in `tools/testing/run-tests.sh`. Piping `list` into `grep -q` was safe while `workflows/` held one document; the second one made `list` die on SIGPIPE mid-write and `pipefail` promoted that to the pipeline's status, failing a check whose subject was correct.
+
+### What is NOT done
+
+PR #75 is open and **must not merge until the other three do**. Until they land it describes a cluster that does not exist yet: it tells the reader a rotated credential will not propagate on its own, which only becomes true when `refreshInterval` is actually `168h`.
+
+homelab-gitops #88, yieldpoint-gitops #10, local-k8s-docs #31. All three open and mergeable.
+
+Nothing has been rotated. The driver has never run `rotate` against the real account - only `list`, `due` and `verify`.
+
+Phase 5, confirmation, cannot start until those merge: re-measure CloudTrail 48 hours after the last one and expect roughly 292 KMS calls a day, cross-check Cost Explorer, arm a KMS budget alarm.
+
+Phase 6 is seven follow-up tickets, none of them filed yet, and they are to be filed separately rather than folded into anything: the `eso-secret-workflow` skill mandating the deprecated `vault-seed.sh`; the Jenkins rebuild runbook missing the IRSA annotation on `jenkins-eso-sa`; that same runbook lacking the SecretStore and ExternalSecret steps; `homelab-gitops-index.md` listing a `ghcr-pull-secret/` directory that does not exist; the job-hunter migration to Vault; the GitHub PAT duplication across four namespaces; and `argocd-eso-role` being shared by three namespaces.
+
+### Stale or false in the docs
+
+**Root `CLAUDE.md` Rule 16 describes a flow the repository no longer uses.** It says a PR that touches a skill must bump the version and ship the regenerated `registry.json` in that same PR. `.github/scripts/bump-gate.sh` says the opposite in its own header: "Version allocation happens at merge, on main, in the publisher. A pull request therefore carries the intent and never the number." The publisher is the newer and the tested one. `WO-20260824-8cd1` - `Rewrite root CLAUDE.md for merge-time allocation and the named main exception` is the ticket that already covers this.
+
+`workflows/credential-rotation.md` states as present tense that the interval is `168h`. That is true of the merged end state and not of the cluster today.
+
+### Your scope
+
+Merging, in order: the three gitops PRs first, then #75. Then Phase 5.
+
+Do not start Phase 6 by folding tickets into existing work - each of the seven is its own ticket.
+
+### Before you start
+
+Check whether the three gitops PRs have merged. `gh pr view 88 --repo jkkelley/homelab-gitops --json state` and the same for yieldpoint-gitops #10 and local-k8s-docs #31. Everything downstream depends on that answer and nothing else does.
+
+### Read in this order
+
+1. `workflows/credential-rotation.md` - the procedure, and the reasoning behind the timestamp comparison
+2. `workflows/credential-rotation/credentials.tsv` - the header comment explains what is deliberately not a column
+3. `local-k8s-docs`, `runbooks/kms-cost-and-eso-refresh/` - the cost model, the free-tier arithmetic, the `OnChange` trap
+4. `claude/skills/container-sandbox/references/skill-testing.md`, "Verifying against live infrastructure" - why there are two suites
+
+### Reuse, it is proven
+
+`workflows/credential-rotation/testing/live-check.sh` is the pattern for any tool that has to talk to AWS or the cluster: the image is built from `tools/testing/Containerfile.live` with `aws` and `kubectl` pinned to exact versions, credentials mount read-only, and only read-only subcommands run. It answered the go-template question that a stub could not.
+
+The stub-plus-call-log shape in `run-tests.sh` is how you assert that a call was never made rather than that no error appeared. That is the assertion that protects the KMS saving.
+
+`tools/testing/Containerfile` is bash and coreutils on a pinned debian, and it is now shared by two suites. Reuse it rather than pinning a second digest.
+
+### The verification ladder
+
+1. `bash workflows/credential-rotation/testing/run-tests.sh` - offline, 75 checks
+2. `bash tools/testing/run-tests.sh` - 38 checks, includes the real `workflows/` tree
+3. `AWS_PROFILE=minecraft-admin bash workflows/credential-rotation/testing/live-check.sh` - 10 checks against the real account and cluster
+4. `bash tools/workflow-version.sh verify` - every procedure document carries a version
+
+### Traps, already paid for
+
+**A `local` referenced from an `EXIT` trap is out of scope when the trap fires.** Under `set -u` that turns a clean exit into an unbound-variable failure with all the work already done - `rotate` did every write correctly and returned 1. The scratch file variable and the trap both live at file scope now.
+
+**`done < <(parser)` runs the parser in a subshell, so a `die()` in it kills only the subshell.** The refusal prints and the exit code is 0. A refusal that does not fail is not a refusal. Read into a variable with `$( )` instead, where a failed substitution fails the assignment and `set -e` takes it from there.
+
+**`cmd | grep -q` under `pipefail`.** `grep -q` exits at the first match; if the producer still has output to write it dies on SIGPIPE and `pipefail` makes 141 the pipeline's status. Capture first, match second.
+
+**The global prettier hook in `~/.claude/settings.json` reformats markdown tables and language-tagged code fences on every `Write`/`Edit`.** In this repository that matches the convention and is fine. It will also convert `*italic*` to `_italic_` on lines you did not touch, which is a Rule 3 violation - check `git diff` and revert the churn.
+
+### Workflow
+
+The close-out ran as `workflows/close-out-procedure.md` describes: `gh pr create`, `submit --pr 75`, `done` on the branch, this entry, one commit riding the same PR.
+
+After the merge, `work-order.sh cleanup --id WO-20260826-9037` without being asked. It refuses unless `gh` reports the PR `MERGED` and it writes nothing.
+
+`work-order.sh start` needs a clean tree, and the ticket `new` just wrote makes the tree dirty. `INDEX.md` is the only tracked file in the way - restore it and `start` regenerates it on the branch. Do not stash, because stashing takes the untracked ticket with it and `start` then cannot find the ticket it was asked about.
+
+### Conventions
+
+The branch is `feat/credential-rotation-workflow-kms-free-tier-fix`, cut by `work-order.sh start` from the ticket slug. The other three repositories use `feat/kms-free-tier-fix`; they diverge because `start` owns the branch name here and `cleanup` depends on the ticket's record of it.
+
+PR bodies carry no agent attribution, Rule 13. Skill versions are not hand-edited - the PR body carries `Bump: <skill>=<level>` and the publisher allocates on `main`.
+
+Rule 14 has no host escape hatch. If a verification pattern is undocumented, write the section rather than falling back to the host.
+
 <!-- hydration-entry: WO-20260824-9712 -->
 ## WO-20260824-9712 - End-to-end proof in a scratch project, including the lost-receipt case
 _Generated 2026-08-25 by hydration.sh. Newest entry._
@@ -1624,202 +1724,4 @@ Every reference to a work-order in a chat reply carries the ticket ID and its fu
 Feature branches only. `main` is never written directly by hand. The one exception is `work-order.sh close`, which commits its archive straight to `main` and falls back to a pull request only when that push is rejected.
 
 Rule 14 has no size threshold. A single `--help` run whose purpose is to check that something works goes in a container.
-
-<!-- hydration-entry: WO-20260824-de9e -->
-## WO-20260824-de9e - Registry schema 2, with type derived from the tree and requires read from frontmatter
-_Generated 2026-08-24 by hydration.sh. Newest entry._
-
-### Ticket
-
-`WO-20260824-de9e` - `Registry schema 2, with type derived from the tree and requires read from frontmatter`. Position 4 of 21 children across two epics.
-Predecessor `WO-20260824-6acf` - `Split verify into a structure check and a full check, and delete the notice assertion`, merged, closed and archived.
-
-It is the second of the two tickets that touch `skill-version.sh`, and it is the larger one: rendering, frontmatter reading, a hash block, and a new distinct failure mode. Poker put it at 5 points against the split's 3.
-
-`WO-20260824-2136` - `Extract the read-only notice into a single rendered partial` is also startable and is not blocked by this. Take that one instead if the tools directory is the more useful thing to have first; the two do not collide.
-
-### What just landed
-
-`verify` has two forms, and the read-only notice check is gone.
-
-```
-verify              versions present + registry.json matches render_registry
-verify --structure  versions present + this branch's diff touches no version:
-                    and no registry.json
-```
-
-`--structure` says nothing about whether the registry matches the tree. That is the entire point: under merge-time allocation a skill PR edits a skill and leaves the registry alone, and plain `verify` calls that state `drifted` - correctly, because on `main` it would be.
-
-Measured on the branch before its own Rule 16 bump, in the container with the repo mounted read-only: `--structure` printed `base: origin/main` and `ok - 43 skills versioned, no version: or registry.json in the diff` at rc 0, and plain `verify` printed `drifted skill-versioning` with both hashes at rc 1. Two exit codes, one tree.
-
-The diff half resolves a base from the first of `origin/main` or `main` that exists, `--base <ref>` overrides it, and it compares against the working tree rather than `HEAD` so an uncommitted hand-edit is caught before it is ever committed. Outside a git repository it fails and says so rather than passing with nothing checked.
-
-The notice check at `skill-version.sh:192-197` is deleted, and `SKILL_SRC_URL` with it - it had no other caller. Nothing replaced it. `verify` now asserts the notice neither present nor absent, which is the only state that holds while the repository is mid-rollout.
-
-The suite is at 72 checks, 26 negative, green in Podman on `bitnami/git` pinned by digest with `--network=none`. Section 5 is new and drives `--structure` against a real git repository with its skills under `claude/`, because every assertion that form makes is about a diff.
-
-### What is NOT done
-
-Nothing has been built in either epic beyond `skill-version.sh`. Eighteen of the twenty-one tickets have never been started and none of them has a branch.
-
-Each of these is a command whose output proves the claim, measured on `main` after this ticket merged:
-
-- `ls claude/tools` fails. No `skill-sync.sh`, no `skill-onboard.sh`, no notice partial, no tools test suite.
-- `git ls-files .github/workflows` prints nothing. There is no PR gate and no publisher, so nothing yet calls `verify --structure` and nothing yet reads the `Bump:` trailer.
-- `head -c 40 claude/skills/registry.json` shows `"schema": 1`. **This is your ticket.**
-- `grep -l "This copy is read-only" claude/skills/*/SKILL.md | wc -l` prints `43`. Every skill still carries the inline notice. Only the check on it is gone.
-- `grep -c 'requires' claude/skills/skill-versioning/scripts/skill-version.sh` prints `0`, and no `SKILL.md` carries a `requires:` key.
-
-`verify --structure` exists but has no caller. Its first one is `WO-20260824-2ad1` - `PR gate workflow: validate the bump intent and run the affected suites`, which is blocked on `WO-20260824-efb0` - `skill-sync.sh part two: build, swap, receipt, and self-update` and is several tickets away.
-
-Nothing was carried off `WO-20260824-6acf` - `Split verify into a structure check and a full check, and delete the notice assertion`. Both acceptance criteria were met and evidenced separately.
-
-Branch protection rules and required status checks are still absent, and are still on no ticket at all.
-
-### Stale or false in the docs
-
-`docs/superpowers/plans/2026-08-24-skills-package-manager-implementation.md` and `docs/superpowers/specs/2026-08-23-skills-package-manager-design.md` both still state the repository settings as `squash_merge_commit_message=COMMIT_MESSAGES`, `allow_merge_commit=true`, `allow_rebase_merge=true`, at `C2` in the plan and under `Repo settings, first` in the spec. All three were changed by `WO-20260824-cc71` - `Repo settings: squash-only, with the commit body taken from the PR description` and the stated values are false.
-
-Both documents also still carry the `SessionStart` matcher question as open - in the plan at `C7` and in `E1.2`, in the spec under `Problem A - a sync fires while an agent is mid-task`. It was answered by `WO-20260824-0615` - `Confirm whether a SessionStart hook matcher filters by source`: matchers do filter by source, alternation is honoured, and the stdin-read fallback is dead.
-
-Neither correction is worth a fix-up commit on its own, and neither is this ticket's business. `WO-20260824-bb0d` - `setup.sh installs the skill-sync binary, then the SessionStart hook` touches the matcher material and `WO-20260824-8cd1` - `Rewrite root CLAUDE.md for merge-time allocation and the named main exception` touches the settings material; each can correct its own in passing.
-
-Root `CLAUDE.md` Rule 16 still requires a PR touching a skill to bump the version and ship a regenerated `registry.json` by hand. That is true today and **it binds this ticket**, which edits `claude/skills/skill-versioning/`. It becomes false at `WO-20260824-8cd1` - `Rewrite root CLAUDE.md for merge-time allocation and the named main exception`, and not before.
-
-One consequence of that is worth expecting rather than discovering. Because Rule 16 obliges the branch to carry the bump and the regenerated registry, `verify --structure` reports both and exits 1 on this ticket's own PR, exactly as it did on the last one. Plain `verify` is the one that has to be green. That inverts at `WO-20260824-8cd1`, and it is on the predecessor's ticket as a note.
-
-`claude/skills/skill-versioning/SKILL.md` is current. It documents both forms of `verify`, states that the notice check is gone and why the middle state is deliberate, and gives the check count as 72. If you change the suite, that number moves with it.
-
-### Your scope
-
-One script, its suite, and two frontmatter keys: `claude/skills/skill-versioning/scripts/skill-version.sh`, `claude/skills/skill-versioning/testing/run-tests.sh`, and `requires: work-order` added to `claude/skills/living-docs/SKILL.md` and `claude/skills/cartography/SKILL.md`.
-
-`render_registry` emits schema 2. Per decision 21, `type` is **derived from the directory the entry was found in and never declared** - `skill` or `agent`, routing only. `requires` is an optional frontmatter key, read with one line of `awk`, comma-separated, no YAML list, because Git Bash has no YAML parser and Rule 17 makes that a portability defect rather than a preference.
-
-`verify` gains one new failure that is its own thing rather than drift: a schema mismatch. Today a registry written by an older generator reads as every skill having drifted at once, which names 43 skills and explains none of them.
-
-`verify` also asserts that every name in a `requires:` resolves to a skill that exists. A typo'd dependency that resolves to nothing is the failure mode the auto-install path cannot recover from later.
-
-**One thing to settle before writing the tools block.** The ticket asks for a `tools` block carrying `skill-sync` and `read-only-notice`, each with a version and a hash. Neither file exists: `claude/tools/` is created by `WO-20260824-2136` - `Extract the read-only notice into a single rendered partial` and `WO-20260824-5b89` - `skill-sync.sh part one: resolution, and the tools test tree it is proved in`. `render_registry` is a pure function of what is on disk and cannot hash a file that is not there. Decide deliberately between rendering the block only for tools that exist, and taking `WO-20260824-2136` first so the partial is there to hash. Do not hash a placeholder - a stable hash over a file nobody wrote is the kind of green that stays green after the real file lands.
-
-Out of scope, and named because they are the obvious next thoughts: declaring `type` in frontmatter, which decision 21 rejected outright; YAML list syntax for `requires`; and soft or optional dependencies.
-
-### Before you start
-
-Settle the `tools` block question above. It is the one thing in this ticket that cannot be answered from the ticket text alone, and it decides whether this ticket or `WO-20260824-2136` - `Extract the read-only notice into a single rendered partial` goes first.
-
-### Read in this order
-
-1. Root `CLAUDE.md`. Rules 12, 14, 15, 16 and 17 bear on this work. There is no `CONTEXT_STATE.md` in this repository, so the usual second step does not apply.
-2. This entry, which is the top entry of `HYDRATION.md`. Read only this one. The entries below it are superseded history.
-3. `docs/superpowers/specs/2026-08-23-skills-package-manager-design.md`, decision 21. It is the argument for deriving `type` rather than declaring it, and the reason `requires` is comma-separated.
-4. `docs/superpowers/plans/2026-08-24-skills-package-manager-implementation.md`, section `E1.4`.
-5. The ticket file: `work-orders/WO-20260824-f1a5/WO-20260824-de9e-registry-schema-2-with-type-derived-from-the-tre.md`.
-6. `claude/skills/skill-versioning/scripts/skill-version.sh`, `render_registry` and `hash_skill` together, before changing either.
-7. `claude/skills/skill-versioning/testing/run-tests.sh`, section 5, which is the newest case shape in the file and the one a schema case should look like.
-
-### Reuse, it is proven
-
-`render_registry` is already a pure function of the tree: same tree in, same bytes out. That property is what lets `verify` be a string comparison instead of a JSON parser, and it is why the registry carries no timestamp. Schema 2 keeps it or it breaks `verify`.
-
-`read_version` is the frontmatter reader to copy for `requires:`. It reads the leading fenced block only, so a `requires:` line in prose is ignored - which is the whole reason it is written that way.
-
-`claude/skills/skill-versioning/testing/run-tests.sh` is the suite to extend, not to replace. Section 5 builds a real git repository fixture; sections 2 to 4 use a plain directory. A schema case needs neither git nor a network.
-
-`claude/skills/work-order/scripts/work-order.sh` owns every ticket transition. Never hand-edit a ticket file. `note` is the only way a note reaches a ticket, and `evidence` is the only way a criterion gets ticked.
-
-`claude/skills/hydration-prompt/scripts/hydration.sh` owns `HYDRATION.md`. Run `check --body-file` before `add`; `add` refuses a body that fails `check`.
-
-`claude/skills/container-sandbox/SKILL.md`, and `references/skill-testing.md` beside it, define how a skill's own bundled scripts are tested. This is an ordinary bash script with an ordinary suite, so Rule 14 applies with full force and there is no exemption to claim.
-
-`gh` is authenticated and works in this repository. `gh-axi` wraps it and is preferred where it fits.
-
-### The verification ladder
-
-Rung 1, free: `bash -n claude/skills/skill-versioning/scripts/skill-version.sh`. A syntax error in a script that is only ever run through a container is otherwise found several minutes later.
-
-Rung 2, cheap: render the registry and compare it to the committed file by hand, in a container. `render_registry` reproducing `registry.json` byte for byte is `AC-H1` and it is the cheapest of the three to check.
-
-Rung 3: `grep` the rendered registry for the two `work-order` edges and for the absence of any other, which is `AC-H2`. Assert both halves - that they are there, and that nothing else has one.
-
-Rung 4: a deliberately mistyped `requires:` fails `verify`, which is `AC-H3`. Assert the exit code deliberately, with `if ! cmd; then` or `cmd; rc=$?`. A check that is expected to fail is the one place where `set -e` will end the run for you and report it as an error rather than as the assertion passing.
-
-Rung 5: `bash claude/skills/skill-versioning/testing/run-tests.sh` in Podman, the full suite, with the new cases included and the 72 existing ones still green.
-
-### Traps, already paid for
-
-`render_registry` no longer reproduces the file byte for byte and every skill reads as drifted at once. A trailing newline, a key order change, or a space after a colon does it. Compare the rendered output to the file before touching any test.
-
-`verify` passes when it should have failed. An unknown flag was accepted and ignored. `verify` now rejects unknown options, and the suite asserts it - keep that assertion working if you add a flag.
-
-A `grep -q` in a pipeline reports "no match" when it matched. `grep -q` closes the pipe on the first hit, the upstream command dies of SIGPIPE, and `pipefail` turns that into a non-zero pipeline. Capture to a variable and grep the variable. `diff_check` in `skill-version.sh` is written that way and says why.
-
-The test suite passes on a machine and fails in the container, or the reverse. Minimal images ship neither `cmp` nor `diff`, and Git Bash on Windows has no `flock`. Root `CLAUDE.md` Rule 17 lists what actually bites.
-
-`skill-version.sh verify` refuses the PR with a version and registry mismatch. The skill was edited without a bump. Rule 16, and it applies to `skill-versioning` editing itself.
-
-A command reports success and did nothing. A prompt with no TTY takes its default and exits 0. Assert the post-state, never `$?` alone.
-
-A loop over IDs passes every ID as one argument. This shell is zsh, which does not word-split an unquoted parameter the way bash does. Use `while read -r`, not `for x in $LIST`.
-
-`git merge --ff-only origin/main` refuses with "diverging branches". You are in a treehouse slot at detached HEAD, not in `/home/luna/dotfiles`. Check `git branch --show-current` first.
-
-`git rebase` refuses with "cannot rebase: You have unstaged changes", immediately after `work-order.sh start`. `start` writes the ticket file, `INDEX.md` and the epic README and leaves them uncommitted. Commit them before rebasing.
-
-`work-order.sh done` refuses with "status is 'in-progress'; this command requires one of: in-review". `done` follows `submit --pr N`, so the pull request has to exist before `done` can be run. Open the PR, `submit`, `done`, then commit and push again onto the same PR.
-
-### Workflow
-
-```bash
-WO=claude/skills/work-order/scripts/work-order.sh
-HP=claude/skills/hydration-prompt/scripts/hydration.sh
-SV=claude/skills/skill-versioning/scripts/skill-version.sh
-
-bash $WO show    --project . --id WO-20260824-de9e
-bash $WO start   --project . --id WO-20260824-de9e   # creates the branch, leaves files uncommitted
-
-# ... do the work, in a container ...
-
-bash $SV bump    skill-versioning --minor            # Rule 16, and it writes registry.json too
-bash $SV verify                                      # this one has to be green
-
-bash $WO evidence --project . --id WO-20260824-de9e --index 1 --observed "..."
-bash $WO evidence --project . --id WO-20260824-de9e --index 2 --observed "..."
-bash $WO evidence --project . --id WO-20260824-de9e --index 3 --observed "..."
-bash $WO note     --project . --id WO-20260824-de9e --text "..."
-
-bash $HP check   --project . --body-file /tmp/entry.md
-bash $HP add     --project . --id <next> --title "<next title>" --body-file /tmp/entry.md
-
-git push -u origin <branch>
-gh pr create --base main --title "..." --body-file <file>
-
-bash $WO submit  --project . --id WO-20260824-de9e --pr <N>
-bash $WO done    --project . --id WO-20260824-de9e   # on the branch, before the merge
-git commit && git push                               # rides the same PR
-
-# after the merge
-bash $WO close   --project . --id WO-20260824-de9e --dry-run
-bash $WO close   --project . --id WO-20260824-de9e
-```
-
-`approve` is already done for all 23 tickets and must not be run again.
-
-The pull request description is the merge commit body verbatim. Write it as something worth reading on `main`, because that is where it ends up.
-
-### Conventions
-
-Every reference to a work-order in a chat reply carries the ticket ID and its full title joined by a dash. A bare ID is a defect, and so is "the next ticket" or "the blocked one".
-
-Feature branches only. `main` is never written directly. The one exception to that rule does not exist yet and arrives with the publish workflow.
-
-Squash is the only merge available in this repository. Merge commits and rebase merges are disabled at the repository level, so `gh pr merge --merge` and `--rebase` will be refused.
-
-No em dashes anywhere. Use a plain dash.
-
-No agent co-author line in a commit message, and no Claude attribution footer in a PR body. Root `CLAUDE.md` Rule 13 makes the second one absolute.
-
-All testing runs in Podman, per Rule 14, with no size threshold. This ticket has no exemption to claim: it is a bash script with an existing suite.
-
-Report failures as failures. A skipped step is not a completed one.
 

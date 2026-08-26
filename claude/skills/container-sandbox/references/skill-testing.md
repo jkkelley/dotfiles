@@ -384,3 +384,50 @@ Two cases carry the weight, and the refusal is the more important of the two:
 
 Point 2 is not hypothetical either.
 The work-order suite originally stubbed `MERGED` without performing the merge, which hid a real bug: checking out `main` replaces the ticket file on disk, so the status verified before the checkout said nothing about the file being held afterwards.
+
+## Verifying against live infrastructure
+
+Stubbing is right, and it leaves a hole.
+
+A stub proves how a script reacts to an answer. It cannot prove the script asked the question correctly.
+A `kubectl -o go-template=...` that returns nothing because the template is malformed and one that returns nothing because no object matched are the same empty string, and a stub hands back a fixture either way.
+The same goes for an `aws --query` expression, a `jq` filter over an API response, and any SQL the suite mocks.
+
+That gap does not license running the check on the host.
+Rule 14 has no host escape hatch and this section is the pattern that removes the excuse: **the offline suite and the live check are two containers, not one container and a shell.**
+
+| Suite           | Network | Credentials | Subcommands           | Proves                                           |
+| --------------- | ------- | ----------- | --------------------- | ------------------------------------------------ |
+| `run-tests.sh`  | none    | none        | all, including writes | logic, arithmetic, every refusal, determinism    |
+| `live-check.sh` | on      | mounted ro  | **read-only only**    | the queries are well-formed against the real API |
+
+Three rules make the live half safe.
+
+**Read-only subcommands only, and no flag that changes that.**
+A check that writes to production is not a check.
+If the only way to exercise a write path is against the real thing, that is a signal the write path needs a dry-run mode, not that the check needs more permission.
+
+**Credentials mount read-only, never copy in.**
+`-v "$HOME/.aws:/creds/aws:ro,Z"` with `--userns=keep-id`, and point the tool at the mount with `AWS_CONFIG_FILE` / `KUBECONFIG` rather than writing to `$HOME` inside the container.
+A credential baked into an image is a credential in a layer, and layers get pushed.
+
+**Pin the client to the server it talks to.**
+A `kubectl` two minors ahead of the cluster renders differently from the one operators actually run, so the check passes on a template that fails in practice.
+Pin the exact client version in the Containerfile - a versioned download URL is an immutable identifier in the sense Rule 15 means, the same as a digest.
+
+The assertion that earns the second container is the one the stub could never make: that the query matched real objects.
+
+```bash
+# The stubbed suite can only assert "the fixture was parsed".
+# This asserts "the template rendered against real objects and matched them".
+check "the template rendered - at least one real consumer was matched" \
+  "$(if grep -q 'no consumer found' /tmp/verify.out \
+      && [[ "$(grep -cv 'no consumer found\|^ID ' /tmp/verify.out)" -eq 0 ]]; \
+     then echo 1; else echo 0; fi)"
+```
+
+Write it so an empty result fails.
+"Nothing matched" is the exact output a broken query produces, and a check that treats it as a pass is worse than no check at all.
+
+A worked example is `workflows/credential-rotation/testing/`: `run-tests.sh` stubs `aws` and `kubectl` with the network off, which is what lets it assert that no code path ever spends a billable KMS request, and `live-check.sh` runs the read-only subcommands against the real account and cluster to prove the `go-template` behind that assertion actually renders.
+Neither suite is sufficient alone, and the header of each says which half it owns.

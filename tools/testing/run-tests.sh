@@ -197,8 +197,24 @@ check "list reports the version bump wrote" \
 hd "the repository's own workflows/"
 expect_rc "every document in the real workflows/ carries a version" 0 \
   env WORKFLOW_VERSION_DIR=/repo/workflows bash "$WV" verify
+
+# Captured first, then matched. Piping straight into `grep -q` was fine while
+# workflows/ held exactly one document: grep exits at the first match, and with
+# nothing left to print list never noticed the closed pipe. The second document
+# made list die on SIGPIPE mid-write, and `set -o pipefail` promoted that 141 to
+# the status of the whole pipeline - so the check failed while the thing it was
+# checking was correct. A test that breaks when the repository grows is not
+# asserting what it claims to.
+real_list=$(WORKFLOW_VERSION_DIR=/repo/workflows bash "$WV" list)
 check "close-out-procedure.md is one of them" \
-  "$(WORKFLOW_VERSION_DIR=/repo/workflows bash "$WV" list | grep -q '^close-out-procedure'; echo $?)"
+  "$(grep -q '^close-out-procedure' <<< "$real_list"; echo $?)"
+check "credential-rotation.md is one of them" \
+  "$(grep -q '^credential-rotation' <<< "$real_list"; echo $?)"
+# A directory of supporting material beside a procedure is not itself a
+# procedure. workflows/credential-rotation/ is the first one, and doc_files
+# taking -type f at depth 1 is what keeps it out.
+check "a supporting directory beside a document is not listed as one" \
+  "$([[ "$(wc -l <<< "$real_list")" -eq "$(find /repo/workflows -maxdepth 1 -type f -name '*.md' | wc -l)" ]]; echo $?)"
 
 # ── summary ────────────────────────────────────────────────────────────────────
 printf '\n=========================================\n'

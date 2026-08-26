@@ -1,0 +1,41 @@
+# Image for live-check.sh - the half of this driver a stubbed suite cannot reach.
+#
+# run-tests.sh runs with --network=none and stubs `aws` and `kubectl`, which is
+# what makes it able to assert that no code path ever spends a KMS request. The
+# cost of that isolation is that the go-template turning real ExternalSecrets
+# into rows is never rendered by a real kubectl. This image exists to close
+# exactly that gap and nothing else.
+#
+# It is therefore the opposite image in every way that matters: it has the
+# network, it has credentials mounted, and it runs only read-only subcommands.
+# See references/skill-testing.md, "Verifying against live infrastructure".
+#
+# Base pinned by digest, per Rule 15. Same digest as tools/testing/Containerfile
+# so the repository repins one debian rather than two.
+#   podman pull docker.io/library/debian:stable-slim
+#   podman image inspect docker.io/library/debian:stable-slim \
+#     --format '{{index .RepoDigests 0}}'
+FROM docker.io/library/debian@sha256:328d16499860ae6cb9b345e2e4cebca08c2a36e4f7278482c7bd1f39d71e5bfd
+
+# Both tools are pinned to an exact version. A versioned URL is an immutable
+# identifier in the sense Rule 15 means: "latest" would let the thing under test
+# change without a commit.
+#
+# kubectl matches the cluster's own server version. A client more than one minor
+# ahead or behind is unsupported by upstream, and the whole point of this check
+# is that it renders the way the real thing does.
+ARG AWSCLI_VERSION=2.33.28
+ARG KUBECTL_VERSION=v1.31.14
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends bash ca-certificates curl unzip \
+  && curl -fsSL -o /tmp/awscli.zip \
+     "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${AWSCLI_VERSION}.zip" \
+  && unzip -q /tmp/awscli.zip -d /tmp \
+  && /tmp/aws/install \
+  && curl -fsSL -o /usr/local/bin/kubectl \
+     "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" \
+  && chmod +x /usr/local/bin/kubectl \
+  && rm -rf /tmp/awscli.zip /tmp/aws /var/lib/apt/lists/* \
+  && aws --version \
+  && kubectl version --client
