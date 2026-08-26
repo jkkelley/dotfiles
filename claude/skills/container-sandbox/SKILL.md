@@ -1,7 +1,7 @@
 ---
 name: container-sandbox
 description: Run all dependency-heavy tasks (npm, go, pip) in isolated Podman containers. Also use when showing the user a localhost frontend that makes API calls — a real or mock backend must be running in the same compose stack.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Dependency Isolation Protocol
