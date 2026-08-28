@@ -123,32 +123,98 @@ knows what they are looking at. A digest with no comment is unmaintainable.
 
 This repository is **public and intended to be shared**. The agents, skills, and configurations here are designed to be consumed by anyone. That means every file must be safe to read by the general public at all times.
 
-## Rule 16 — A skill edit is not done until the version and registry move
+## Rule 16 - A skill edit carries the intent to bump. CI allocates the number
 
 Every skill carries a `version:` in its SKILL.md frontmatter, and
 `claude/skills/registry.json` is the published index of those versions. Skills
 are installed into projects as **copies**, so a copy has no way of knowing the
 original moved on. The version is the only thing that tells it.
 
-Any PR that touches a file under `claude/skills/<name>/` must, in that same PR:
+**A branch never allocates a version.** A number chosen on a branch is a number
+two branches can choose at once, which is what made `registry.json` a conflict
+point between concurrent skill pull requests. So a pull request states only what
+it _wants_, and the number is allocated on `main` after the merge - the first
+moment at which the ordering is actually known.
 
-1. Bump that skill's version - `claude/skills/skill-versioning/scripts/skill-version.sh bump <name> --patch|--minor|--major`
-2. Ship the regenerated `registry.json` that the bump wrote
+Nothing you do on a branch touches a `version:` line or `registry.json`. If
+either appears in your diff, the gate refuses the pull request.
 
-| Bump      | Trigger                                                                                                                                     |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--major` | A consumer's existing usage breaks: renamed skill, removed or renamed script flag, changed format of a file the skill owns, removed trigger |
-| `--minor` | New capability, backward compatible: new intent, new subcommand, new reference file, new trigger                                            |
-| `--patch` | Wording, script bugfix, doc clarification, test-only change                                                                                 |
+### The path, end to end
 
-**Never hand-edit `version:` or `registry.json`.** The script owns both formats.
-Hand-editing one leaves the other stale, which is precisely the failure
-`skill-version.sh verify` exists to catch. Run `verify` before opening the PR;
-it exits non-zero if any skill is unversioned, if the registry is missing, or if
-a skill's contents changed without a bump.
+A skill edit reaches a project through eight steps. A contributor performs steps
+1, 2, 3 and 5; steps 4, 6 and 8 are automatic; step 7 is done once per project
+and never again. No step anywhere is a human choosing a version number.
 
-Adding a brand new skill is the same obligation: `skill-version.sh init` stamps
-it at `1.0.0` and regenerates the registry.
+1. **Edit** a file under `claude/skills/<name>/`, on a feature branch.
+
+2. **Check locally** with
+   `claude/skills/skill-versioning/scripts/skill-version.sh verify --structure`.
+   It asserts that every skill has a `version:`, that every `requires:` names a
+   skill that exists, and that neither a `version:` line nor `registry.json`
+   appears anywhere in the branch's diff. It allocates nothing and writes
+   nothing.
+
+3. **State the intent in the pull request body** - last paragraph, nothing after
+   it, one line per changed skill:
+
+   ```text
+   Bump: <skill>=major|minor|patch
+   ```
+
+   A single-skill pull request needs no trailer when the title carries a
+   conventional type: `feat` is minor, `fix` is patch, and a `!` or a
+   `BREAKING CHANGE:` footer is major. A brand new skill needs no trailer
+   either - absence from the registry is unambiguous, and the publisher stamps
+   it at `1.0.0`.
+
+4. **The gate reads it.** `.github/workflows/skill-pr-gate.yml` resolves a level
+   for every skill the branch changed, prints the `current -> next` table on the
+   pull request, and runs each changed skill's suite. It reads and it refuses;
+   it writes nothing. A level it cannot resolve is a red check while a human is
+   still looking at the description, rather than a silent no-op after the merge.
+
+5. **Squash merge**, with the pull request body as the commit message. That is
+   what carries the trailer onto `main`, so the body is not decoration.
+
+6. **The publisher allocates.** `.github/workflows/skill-publish.yml` reads the
+   trailer with `git interpret-trailers --parse` and drives `skill-version.sh`,
+   which writes each skill's new `version:` and renders `registry.json` from the
+   tree; the workflow commits both to `main`. It runs no logic of its own beyond
+   that script, and its commit carries a `Skill-Publish` marker so the resulting
+   push cannot re-trigger it. If it cannot resolve a level it fails having
+   written nothing: the registry keeps naming the old version, projects keep the
+   skill they already have, and plain `skill-version.sh verify` stays red until
+   someone fixes it.
+
+7. **A project declares the skill** by name in its `.claude/skills.toml`.
+
+8. **A session starts.** The `SessionStart` hook runs
+   `claude/tools/skill-sync.sh --boot`, which installs every declared skill from
+   the published source at the registry's version, renders the read-only notice
+   into each copy, and writes a receipt naming what it installed. It removes
+   only what the previous receipt claimed and the manifest no longer asks for,
+   so a hand-authored skill sitting beside the managed ones is never its
+   business.
+
+That is the whole path: an edit, a stated intent, a check that refuses, an
+allocation on `main`, and a sync at the next session start.
+
+| Level   | Trigger                                                                                                                                     |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `major` | A consumer's existing usage breaks: renamed skill, removed or renamed script flag, changed format of a file the skill owns, removed trigger |
+| `minor` | New capability, backward compatible: new intent, new subcommand, new reference file, new trigger                                            |
+| `patch` | Wording, script bugfix, doc clarification, test-only change                                                                                 |
+
+### `skill-update.sh` is the hand-authored path, and nothing else
+
+`claude/skills/skill-versioning/scripts/skill-update.sh` refreshes one skill in a
+project that has **not** declared it in `.claude/skills.toml`, and it fetches
+from GitHub so it works on a machine with no dotfiles checkout. That is its
+entire remit.
+
+A skill the manifest declares is owned by `skill-sync`, and pointing
+`skill-update.sh` at one only produces a copy that the next session start
+replaces.
 
 Refer to the user as _they_ for pronouns - never assume who they may be.
 
@@ -165,7 +231,17 @@ assemble its launch command by typing one.
 
 ## Feature branches only - never commit to `main`
 
-`main` is written once, at repository creation, and never again directly.
+`main` is written once and never again directly, with one exception: the publish
+workflow commits the version bump and the regenerated registry after a merge.
+It is the only actor permitted to, it runs no logic beyond `skill-version.sh`,
+and `verify` is the assertion that it did the right thing.
+
+The exception is named here, in the same file that defines the pipeline it
+serves, so that the next thing wanting to skip review has to argue for itself
+rather than cite this one as precedent. It covers
+`.github/workflows/skill-publish.yml` and nothing else. No other workflow, no
+script, and no agent writes `main` - close-out included, which happens on the
+feature branch inside the pull request and leaves nothing to do afterwards.
 
 ## Close-out and post-merge cleanup
 
