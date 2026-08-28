@@ -8,5 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20260824-8cd1` | in-progress | p1 | - | [Rewrite root CLAUDE.md for merge-time allocation and the named main exception](WO-20260824-8cd1-rewrite-root-claude-md-for-merge-time-allocation.md) |
-| `WO-20260825-dac4` | ready | p1 | WO-20260824-8cd1 | [verify --structure refuses a brand new skill, whichever way it is written](WO-20260825-dac4-verify-structure-refuses-a-brand-new-skill-which.md) |
+| `WO-20260825-dac4` | ready | p1 | - | [verify --structure refuses a brand new skill, whichever way it is written](WO-20260825-dac4-verify-structure-refuses-a-brand-new-skill-which.md) |
