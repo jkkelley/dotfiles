@@ -58,10 +58,10 @@ Hand-editing the field leaves the registry stale, and `verify` exists to catch e
 
 They exist because two callers ask different questions, and the answer that is right for one is wrong for the other.
 
-| Form          | Caller        | Asserts                                                                                                              |
-| ------------- | ------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `verify`      | the publisher | every skill versioned, every `requires:` resolves, the registry is this schema, and it matches what the tree renders |
-| `--structure` | the PR gate   | every skill versioned, every `requires:` resolves, and the branch's diff touches no `version:` and no registry       |
+| Form          | Caller        | Asserts                                                                                                                     |
+| ------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `verify`      | the publisher | every skill versioned, every `requires:` resolves, the registry is this schema, and it matches what the tree renders        |
+| `--structure` | the PR gate   | every _registered_ skill versioned, every `requires:` resolves, and the branch's diff touches no `version:` and no registry |
 
 Under merge-time allocation the version is allocated by CI when a PR merges, not by the contributor on the branch.
 A skill PR therefore edits a skill and leaves the registry alone - and that state is exactly what plain `verify` calls `drifted`, correctly, because on `main` it would be.
@@ -74,6 +74,28 @@ The comparison runs against the working tree, so an uncommitted hand-edit is cau
 Hand-editing is caught by both, by different means.
 `--structure` sees the edit in the diff.
 Plain `verify` sees it in the hash: the `version:` line lives inside `SKILL.md`, so moving it moves the content hash too, and the registry comparison fails.
+
+#### A skill the registry has never carried
+
+`--structure` makes none of its version assertions about a skill that is absent from `registry.json`.
+Absence is the test for "this skill is new", and it is the same test `bump-gate.sh resolve` already makes before reporting a row as `- -> 1.0.0 new`.
+Nothing was ever published under that name, so there is no allocated number for a branch to contradict.
+
+That covers three shapes, and it has to cover all three or adding a skill becomes the one change the pipeline cannot land:
+
+- a new skill with no `version:` line, which is what the publisher expects - it stamps the skill at `1.0.0` with `init` after the merge
+- a new skill whose author wrote the line by hand anyway
+- a renamed directory, which arrives under a name `main` has never seen, as an added file whose every line including `version:` is a `+`
+
+The other half of a rename is the old path, and a `SKILL.md` that is gone from the tree is exempt too.
+Its `version:` line leaves the diff as a `-`, which is a removal rather than a choice of number.
+`bump-lib.sh`'s `skill_exists` exempts the same case for the same reason: a skill the change deletes needs no bump.
+
+Every skill the registry does carry is held to the rule exactly as before, on the same tree, in the same run.
+The exemption is per skill and not a switch a branch can flip.
+
+Plain `verify` is unchanged and still refuses any unversioned skill.
+It runs on `main` after the publisher, where everything has been stamped already, so one found there means `init` did not run - which is the post-state assertion the publisher depends on.
 
 Both forms assert that every name in a `requires:` resolves to a skill that exists.
 That is a property of the tree rather than of the registry, so the PR gate is the right place to reject it.

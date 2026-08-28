@@ -65,6 +65,12 @@ SUBCOMMANDS
            under merge-time allocation a skill PR legitimately edits a skill
            and leaves the registry alone.
 
+           A skill absent from registry.json is new, and none of the three
+           version assertions applies to it: nothing was ever published under
+           that name, so there is no number for a branch to contradict. It may
+           carry a version: line or not, and a renamed directory reads as new
+           under its new name for the same reason.
+
              --base <ref>   what to diff against. Default: the first of
                             origin/main or main that resolves.
 
@@ -264,6 +270,19 @@ render_registry() {
   printf '}\n'
 }
 
+# Is this name published? Absence from registry.json is the test for "the skill
+# is new", and it is the same test bump-gate.sh cmd_resolve already makes before
+# reporting a row as "- -> 1.0.0 new absent from the registry". Nothing else can
+# answer it: a new skill and a renamed one both arrive as a directory the branch
+# invented, and the tree cannot tell you which names main has already seen.
+#
+# Scoped to the skills block with sed, exactly as bump-lib.sh's registry_version
+# is, so a tool name can never be mistaken for a skill's.
+registry_has() {
+  [[ -f "$REGISTRY" ]] || return 1
+  sed -n '/^  "skills": {/,/^  },/p' "$REGISTRY" | grep -qE "^[[:space:]]*\"$1\":"
+}
+
 # The schema number the registry on disk claims. Read with a match rather than a
 # parser for the same reason verify is a byte comparison: bash, grep, coreutils
 # and awk, nothing else.
@@ -327,7 +346,7 @@ cmd_bump() {
 # Plain verify also has to stay usable on the branch that legitimately carries a
 # bump, which is every skill PR until merge-time allocation lands.
 diff_check() {
-  local base=$1 rc=0 mb changed f d
+  local base=$1 rc=0 mb changed f d name
   git -C "$SKILLS_DIR" rev-parse --git-dir >/dev/null 2>&1 || {
     printf 'not a git repository: %s\n' "$SKILLS_DIR" >&2
     printf 'verify --structure diffs a branch; there is nothing here to diff\n' >&2
@@ -363,6 +382,23 @@ diff_check() {
 
   while IFS= read -r f; do
     [[ $f == */SKILL.md ]] || continue
+    name=${f%/SKILL.md}; name=${name##*/}
+
+    # A skill the registry has never carried is new, and a number nobody has
+    # allocated cannot be contradicted. The publisher stamps it at 1.0.0 with
+    # init after the merge whether or not the author wrote the line by hand, so
+    # both spellings of "a new skill" are green here. This is also the whole of
+    # the rename case: a renamed directory arrives under a name main has never
+    # seen, as an added file whose every line - version: included - is a +.
+    registry_has "$name" || continue
+
+    # The other side of that rename. A SKILL.md gone from the tree takes its
+    # version: line out of the diff as a -, which is a removal and not a choice
+    # of number, and naming a file that no longer exists would be a worse
+    # message than no message. bump-lib.sh's skill_exists exempts the same case
+    # for the same reason: a skill the change deletes needs no bump.
+    [[ -f "$SKILLS_DIR/$f" ]] || continue
+
     # Captured before grepping rather than piped into it: grep -q closes the
     # pipe on its first match, git dies of SIGPIPE, and pipefail would report
     # that as "no match" - the check passing precisely when it should fail.
@@ -390,7 +426,8 @@ EOF
 
 cmd_verify() {
   local structure=0 base="" rc=0 d name total=0 expected req found
-  local unversioned=0 unresolved=0
+  local unversioned=0 unresolved=0 is_new=0
+  local -a new_skills=()
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -410,7 +447,23 @@ cmd_verify() {
   while IFS= read -r d; do
     name=$(basename "$d")
     total=$((total + 1))
-    if [[ -z $(read_version "$d/SKILL.md") ]]; then
+    # Under --structure a skill absent from the registry is new, and having no
+    # version: line is the correct state for it rather than an incomplete one:
+    # the publisher stamps it at 1.0.0 with init after the merge, and there is
+    # nothing on main for the branch to be inconsistent with. Collected whether
+    # or not it carries a line, because a new skill written either way is one
+    # this run declined to hold to the registry.
+    #
+    # Plain verify keeps refusing an unversioned skill, and must. That form runs
+    # on main after the publisher has already stamped everything, so one found
+    # there means init did not run - which is exactly the post-state assertion
+    # the publisher depends on.
+    is_new=0
+    if [[ $structure -eq 1 ]] && ! registry_has "$name"; then
+      is_new=1
+      new_skills+=("$name")
+    fi
+    if [[ $is_new -eq 0 && -z $(read_version "$d/SKILL.md") ]]; then
       printf 'unversioned   %s\n' "$name" >&2
       unversioned=1
       rc=1
@@ -431,7 +484,14 @@ cmd_verify() {
 
   if [[ $structure -eq 1 ]]; then
     diff_check "$base" || return 1
-    printf 'ok — %d skills versioned, no version: or registry.json in the diff\n' "$total"
+    # Named, and on stdout rather than stderr. A skill this run declined to
+    # require a version of is a fact the reader of a green gate wants stated,
+    # not one they have to infer from a count that went up.
+    for name in ${new_skills[@]+"${new_skills[@]}"}; do
+      printf 'new           %s  (absent from the registry, CI stamps it at 1.0.0)\n' "$name"
+    done
+    printf 'ok - %d skills, %d new, no version: or registry.json in the diff\n' \
+      "$total" "${#new_skills[@]}"
     return 0
   fi
 

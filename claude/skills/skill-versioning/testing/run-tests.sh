@@ -253,12 +253,19 @@ check "--structure names registry.json" \
   "$(grep -q '^registry.json edited in this diff' "$WORK/structure-registry.out"; echo $?)"
 git -C "$GITFIX" checkout -q -- .
 
-# Everything plain verify asserts about versions, --structure asserts too.
-mkdir -p "$GSKILLS/gamma"
-printf -- '---\nname: gamma\ndescription: No version on purpose.\n---\n' > "$GSKILLS/gamma/SKILL.md"
-expect_rc "--structure FAILS when any skill has no version" 1 gsv verify --structure
-rm -rf "$GSKILLS/gamma"
-expect_rc "--structure passes again once it is gone" 0 gsv verify --structure
+# Everything plain verify asserts about versions, --structure asserts too - for
+# a skill the registry already carries. Stripping beta's line is a hand-edit of
+# a published skill twice over: the version is gone from the tree, and its
+# removal is a - in the diff. The first of those is what answers, because the
+# version loop runs before diff_check is reached.
+grep -v '^version: 2.3.4' "$GSKILLS/beta/SKILL.md" > "$WORK/beta.tmp"
+cat "$WORK/beta.tmp" > "$GSKILLS/beta/SKILL.md"
+expect_rc "--structure FAILS when a registered skill loses its version" 1 gsv verify --structure
+gsv verify --structure > "$WORK/structure-stripped.out" 2>&1
+check "--structure names the registered skill it found unversioned" \
+  "$(grep -qE '^unversioned +beta' "$WORK/structure-stripped.out"; echo $?)"
+git -C "$GITFIX" checkout -q -- .
+expect_rc "--structure passes again once the version is back" 0 gsv verify --structure
 
 # Outside a repository there is no diff to take, and a gate with nothing to
 # check must say so rather than exit 0 having checked nothing.
@@ -267,6 +274,89 @@ STRUCT_NOGIT_RC=$?
 check "--structure FAILS outside a git repository" "$([[ $STRUCT_NOGIT_RC -ne 0 ]]; echo $?)"
 check "--structure says it is not a git repository" \
   "$(grep -q 'not a git repository' "$WORK/structure-nogit.out"; echo $?)"
+
+# ── 5b. a skill the registry has never carried ─────────────────────────────────
+# Under merge-time allocation a new skill arrives with no version: line, because
+# the publisher stamps it at 1.0.0 with init after the merge. Both spellings of
+# that change used to be refused: written without a line, the version loop
+# reported it unversioned before diff_check was reached; written with one,
+# diff_check read the + as a hand-edit. Adding a skill was the one change the
+# pipeline could not land, so both spellings are asserted green here.
+hd "verify --structure: a new skill"
+
+mkdir -p "$GSKILLS/gamma"
+printf -- '---\nname: gamma\ndescription: New on this branch, no version yet.\n---\n\n# Gamma\n' \
+  > "$GSKILLS/gamma/SKILL.md"
+git -C "$GITFIX" add -A >/dev/null 2>&1
+git -C "$GITFIX" commit -q -m "add a brand new skill"
+
+expect_rc "--structure PASSES on a new skill with no version:" 0 gsv verify --structure
+gsv verify --structure > "$WORK/structure-new.out" 2>&1
+check "--structure names it as new" \
+  "$(grep -qE '^new +gamma' "$WORK/structure-new.out"; echo $?)"
+check "--structure does not also call it unversioned" \
+  "$(neg grep -qE '^unversioned +gamma' "$WORK/structure-new.out")"
+
+# The non-goal, and the one a fix here can silently break. Plain verify runs on
+# main after the publisher, where an unversioned skill means init did not run.
+expect_rc "plain verify STILL FAILS on that same unversioned skill" 1 gsv verify
+gsv verify > "$WORK/verify-new.out" 2>&1
+check "plain verify still names it unversioned" \
+  "$(grep -qE '^unversioned +gamma' "$WORK/verify-new.out"; echo $?)"
+
+# The other spelling: the author wrote the line by hand. Uncommitted, so the
+# assertion covers the working tree the gate actually reads.
+sed 's/^description: .*/&\nversion: 1.0.0/' "$GSKILLS/gamma/SKILL.md" > "$WORK/gamma.tmp"
+cat "$WORK/gamma.tmp" > "$GSKILLS/gamma/SKILL.md"
+check "the hand-written version: really is a + in the diff" \
+  "$(git -C "$GITFIX" diff -U0 main -- claude/skills/gamma/SKILL.md | grep -q '^+version:'; echo $?)"
+expect_rc "--structure PASSES on a new skill carrying a hand-written version:" 0 \
+  gsv verify --structure
+
+# The exemption is per skill and not a switch the branch flips: a registered
+# skill is still held to the rule on the same tree that carries an exempt one.
+sed 's/^version: 2.3.4/version: 9.9.9/' "$GSKILLS/beta/SKILL.md" > "$WORK/beta.tmp"
+cat "$WORK/beta.tmp" > "$GSKILLS/beta/SKILL.md"
+expect_rc "--structure still FAILS on a registered skill's version, beside a new one" 1 \
+  gsv verify --structure
+gsv verify --structure > "$WORK/structure-mixed.out" 2>&1
+check "the refusal names beta" \
+  "$(grep -q '^version: edited in this diff .*beta/SKILL.md' "$WORK/structure-mixed.out"; echo $?)"
+check "the refusal says nothing about gamma" \
+  "$(neg grep -q 'gamma' "$WORK/structure-mixed.out")"
+git -C "$GITFIX" checkout -q -- .
+
+# ── 5c. a renamed, and a deleted, skill directory ──────────────────────────────
+# Why this is p1 rather than a backlog item: WO-20260824-238b renames
+# skill-versioning to skill-registry. A rename has two halves and git pairs them
+# only when it can - how much else the commit changed decides that - so both are
+# exercised rather than one and an assumption.
+hd "verify --structure: a renamed skill"
+
+rm -rf "$GSKILLS/gamma"
+git -C "$GITFIX" add -A >/dev/null 2>&1
+git -C "$GITFIX" commit -q -m "drop the new skill again"
+expect_rc "--structure passes on the restored tree" 0 gsv verify --structure
+
+# The new half. beta-renamed is a name main has never seen, so every line of its
+# SKILL.md including version: 2.3.4 arrives as a +.
+git -C "$GITFIX" mv claude/skills/beta claude/skills/beta-renamed >/dev/null 2>&1
+git -C "$GITFIX" commit -q -m "rename a skill directory"
+expect_rc "--structure PASSES on a renamed skill directory" 0 gsv verify --structure
+gsv verify --structure > "$WORK/structure-rename.out" 2>&1
+check "the renamed directory reads as new" \
+  "$(grep -qE '^new +beta-renamed' "$WORK/structure-rename.out"; echo $?)"
+
+# The old half, on its own, where there is nothing for git to pair it with: the
+# registered skill beta is simply gone, and its version: line leaves as a -.
+git -C "$GITFIX" rm -rq claude/skills/beta-renamed
+git -C "$GITFIX" commit -q -m "delete the skill outright"
+check "the deleted SKILL.md is in the diff under its registered name" \
+  "$(git -C "$GITFIX" diff --name-only main -- claude/skills/ \
+     | grep -qx 'claude/skills/beta/SKILL.md'; echo $?)"
+check "and it takes a -version: into that diff" \
+  "$(git -C "$GITFIX" diff -U0 main -- claude/skills/beta/SKILL.md | grep -q '^-version:'; echo $?)"
+expect_rc "--structure PASSES when a registered skill is deleted" 0 gsv verify --structure
 
 # ── 6. registry schema 2 ───────────────────────────────────────────────────────
 # type, requires, the tools block, and a schema mismatch reported as its own
