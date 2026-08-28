@@ -8,4 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20260825-dac4` | ready | p1 | - | [verify --structure refuses a brand new skill, whichever way it is written](WO-20260825-dac4-verify-structure-refuses-a-brand-new-skill-which.md) |
+| `WO-20260825-dac4` | in-progress | p1 | - | [verify --structure refuses a brand new skill, whichever way it is written](WO-20260825-dac4-verify-structure-refuses-a-brand-new-skill-which.md) |
