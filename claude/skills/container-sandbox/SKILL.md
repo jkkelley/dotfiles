@@ -26,6 +26,7 @@ If this file has no section covering the thing being tested, use `references/ski
 - **Terraform Tasks:** Use the **Ministack Sandbox** (see section below).
 - **Testing a skill's or agent's bundled scripts:** see `references/skill-testing.md`.
 - **Finding out what a host CLI actually does:** see "Verifying a host CLI's behaviour" below.
+- **Proving a machine-level hook actually fires:** see "Verifying a hook that only fires on a real session start" below.
 
 ## Verifying a host CLI's behaviour
 
@@ -123,6 +124,88 @@ any script built on the result does the same. If the tool has a
 `status`-shaped command, call it afterwards and check what it says. That is the
 single most valuable thing these probes find, and it is invisible from
 `--help`, from the host, and from a green exit code.
+
+## Verifying a hook that only fires on a real session start
+
+The section above containerises a host CLI by mounting the binary.
+That works because the binary is the whole subject.
+It stops working the moment the subject is not the binary but the **wiring** - a hook registered in the machine's `~/.claude/settings.json`, which no container has and no container can be given honestly.
+
+Mounting a copy of `settings.json` into a container and running the agent there proves a copy of the hook.
+It cannot prove the entry that is live on this machine right now, and that entry is usually the thing in doubt.
+A green suite is not a fired hook: a `SessionStart` hook can sit correctly installed for weeks and do nothing every single time, because no project on the machine has yet met its precondition.
+
+So split it, exactly as `references/skill-testing.md` splits `run-tests.sh` from `live-check.sh`.
+
+| Half            | Where                     | Proves                                                              |
+| --------------- | ------------------------- | ------------------------------------------------------------------- |
+| Behaviour probe | container, binary mounted | what the command does in every case, including the destructive ones |
+| Wiring probe    | host, real session start  | that the hook is registered, matches, and runs that command         |
+
+**Report which half produced which observation.** A reader who cannot tell them apart cannot tell whether the hook was ever exercised.
+
+### Fire the session, do not simulate it
+
+```bash
+cd /tmp/<scratch-project> && claude -p "reply OK"
+```
+
+Print mode is a real session start with source `startup`, so the hook fires under the same matcher a human's session would.
+Running the command by hand instead proves the command, which is the other half's job.
+
+**Confirm the scratch project is disposable before the first session, not after.**
+A machine-level hook fires in _every_ project on the machine, so choosing the directory is choosing what the hook is allowed to write into.
+Assert the path does not already exist rather than assuming it:
+
+```bash
+[ -e "$S" ] && { echo "EXISTS - inspect before use"; exit 1; }
+```
+
+### Read the hook's output from the transcript, never from the agent's reply
+
+The obvious move is to ask the spawned agent to quote the hook output back.
+It is a relay, and a relay paraphrases.
+
+Asked to print the hook output verbatim, a run of this pattern returned two lines and silently dropped a third, and the dropped line was a plan tag that changed the meaning of the observation.
+Nothing in the reply indicated a line was missing.
+
+The transcript is the raw record and is written whether anyone reads it:
+
+```bash
+~/.claude/projects/<cwd-with-slashes-as-dashes>/<session-id>.jsonl
+```
+
+Walk every string in the parsed JSON and match on a token the hook prints.
+Grep the serialised line and the escapes will mislead you; parse first, then match.
+
+```python
+def strings(o):
+    if isinstance(o, str): yield o
+    elif isinstance(o, dict):
+        for v in o.values(): yield from strings(v)
+    elif isinstance(o, list):
+        for v in o: yield from strings(v)
+```
+
+This is also the only sound way to prove a **negative** - that the hook never named a file it was supposed to leave alone.
+"The agent did not mention it" is not evidence; "the token does not occur in the hook's stdout" is.
+
+### Exit codes tell you nothing here, by design
+
+A `SessionStart` hook that fails must not take the session with it, so a well-written one catches every failure and exits 0 anyway, reporting on stdout because stdout reaches the agent's context and stderr does not.
+
+Assert the post-state on the filesystem after every session, the same way the host-CLI probe asserts it after every case.
+
+### Clear the churn guard between steps, and say that you did
+
+A hook that runs on every session start usually carries a freshness stamp so two sessions a minute apart do not both do the work.
+Four session starts in quick succession then look like one sync and three no-ops, and a reader who does not know about the stamp will read that as three failures.
+
+Remove the stamp between steps, confirm the guard first so it is observed rather than assumed, and record the removal as setup rather than leaving it out:
+
+```bash
+rm -f .claude/cache/.sync-stamp   # churn guard only, not the thing under test
+```
 
 ## 2. Dependency Management (The "No-Clutter" Way)
 
