@@ -52,8 +52,10 @@ Rule 16 currently instructs every contributor to bump a version and ship a regen
 ## Acceptance criteria
 
 
-- [ ] `AC-H1` *(human)* an agent reading only root CLAUDE.md can describe the whole path from a skill edit to a project receiving it
-- [ ] `AC-H2` *(human)* no instruction to hand-edit a version: or registry.json survives anywhere in the file
+- [x] `AC-H1` *(human)* an agent reading only root CLAUDE.md can describe the whole path from a skill edit to a project receiving it
+  - observed `2026-08-28` Rung 5, run in a fresh subagent given only a copy of the finished CLAUDE.md at /tmp/.../rung5-CLAUDE.md and told to read nothing else. It reproduced all eight steps of the path unaided - edit under claude/skills/<name>/, skill-version.sh verify --structure, the Bump: trailer in the PR body, skill-pr-gate.yml resolving and printing, squash merge carrying the body as the commit message, skill-publish.yml allocating on main via git interpret-trailers --parse with the Skill-Publish marker, .claude/skills.toml declaring it, and skill-sync.sh --boot installing it at the next SessionStart with a receipt. It also answered correctly that the number is allocated at step 6 and never by hand, that the never-write-main exception is exactly one thing (skill-publish.yml), and what skill-update.sh is for. It found one real defect in the new prose - the intro sentence undercounted the hand-run steps - which was fixed before this evidence was recorded. Two out-of-scope contradictions it raised are surfaced on the PR rather than fixed here, per the non-goal.
+- [x] `AC-H2` *(human)* no instruction to hand-edit a version: or registry.json survives anywhere in the file
+  - observed `2026-08-28` Rung 1, in a container (bitnami/git pinned by digest, --network=none, repo mounted ro): grep -rniE "skill-version.sh (bump|init)|regenerated registry|hand-edit" CLAUDE.md returns exactly two lines, neither of which instructs anyone to hand-edit anything. Line 229 is the pre-existing HYDRATION.md prohibition "Never hand-edit it", about a different file and untouched by this ticket. Line 235 is "workflow commits the version bump and the regenerated registry after a merge", which describes what the publisher does inside the named exception, in the wording the design doc fixes. Zero occurrences of skill-version.sh bump or skill-version.sh init anywhere in the file. The old Rule 16 instructions to run bump and to ship a regenerated registry.json are gone, confirmed by git diff -U0 showing those exact lines among the deletions.
 
 ## Test plan
 
