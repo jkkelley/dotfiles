@@ -630,10 +630,14 @@ EOF
   if [[ $named_tool -ne 0 ]]; then
     cat >&2 <<EOF
 
-A tool under $TOOLS_DIR no longer matches its registry row. bump does not apply
-here - a tool carries no frontmatter, so its version is the skill-tool-version:
-marker inside the file, raised by hand. Raise it, and the registry is written
-from it: by the publisher on main, or by '$SELF init' locally.
+A tool named above no longer matches its registry row. They live in
+
+  $TOOLS_DIR
+
+bump does not apply here - a tool carries no frontmatter, so its version is the
+skill-tool-version: marker inside the file, raised by hand. Raise it, and the
+registry is written from it: by the publisher on main, or by '$SELF init'
+locally.
 EOF
   fi
 
