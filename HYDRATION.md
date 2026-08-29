@@ -10,6 +10,162 @@ file holds exactly 10 once it has filled up. Entries are never renumbered and
 never edited in place - a correction is a new entry.
 
 Written by `hydration.sh add`. Do not hand-edit.
+<!-- hydration-entry: none -->
+## Epic 1 is closed - pick the next p2 from the rollout epic
+_Generated 2026-08-29 by hydration.sh. Newest entry._
+
+### Ticket
+
+Nothing is assigned. Pick from `work-order next`, which returns eight, all `p2`, all `ready`:
+
+`WO-20260824-00d5` - `Skills package manager: roll it out across the repository` and its seven startable children - `WO-20260824-81a6` - `project-scaffold plumbing: skills.toml, the gitignore blanket, scaffold.json removed, skill-update.sh narrowed`, `WO-20260824-a6cb` - `The hydration-prompt close-out acquires and releases a treehouse slot`, `WO-20260824-b21b` - `CLAUDE.md.tmpl: replace the session-start prose, add the skills markers, the treehouse policy and the documentation-lifetime rule`, `WO-20260824-c6b0` - `skill-onboard.sh brings an existing project onto the sync`, `WO-20260824-d058` - `Remove the inline read-only notice from the other 42 SKILL.md files`, `WO-20260824-6a33` - `Checklist for the four repositories carrying the stale session-start check`, and `WO-20260824-79b6` - `Invert the notice assertion: verify --structure now fails on an inline notice`.
+
+The eighth child, `WO-20260824-238b` - `Rename skill-versioning to skill-registry, the closing commit`, is the epic's closing commit and waits on the other seven.
+
+There is also one `draft`, deliberately unapproved and therefore not in `next`: `WO-20260829-f97b` - `verify names nothing when only a tool has drifted`. Read it and approve or cancel it before starting anything else, because it records a regression this session shipped knowingly.
+
+**Ask the user which one, rather than choosing.** They are all p2 and the ordering between them is a judgement about what the repository needs next, not something `next` can answer.
+
+### What just landed
+
+**Epic 1 closed, and the defect it surfaced was fixed.** Three pull requests.
+
+PR #78 - `WO-20260825-dac4` - `verify --structure refuses a brand new skill, whichever way it is written`. `registry_has` is a new function in `claude/skills/skill-versioning/scripts/skill-version.sh`, and absence from `registry.json` is now the test for "this skill is new" - the same test `bump-gate.sh cmd_resolve` already made. Two call sites, both gated on `--structure`: `cmd_verify`'s version loop no longer calls an unregistered skill `unversioned`, and `diff_check` no longer reads its `version:` line as a hand-edit. `diff_check` also exempts a `SKILL.md` gone from the working tree, the deletion half of a rename. All three criteria observed on the real gate, not locally: runs 33203202657, 33203318713 and 33203392408. Two throwaway probes were reverted inside that same pull request and neither reached `main`.
+
+PR #79 - `WO-20260824-f1a5` - `Skills package manager: prove the path on one skill` is `done` and archived, after all fourteen children shipped. It touched no skill; `detect` emitted `skills=[]`, `tools=false`, `gate=false`.
+
+PR #80 - `WO-20260829-5ad4` - `verify's drift report walks the registry's tools block and names tools as missing skills`. Both of `cmd_verify`'s reporting loops walked every four-space-indented entry in the whole registry, and `render_tools` writes at that indent, so a failing plain `verify` printed `stale entry       skill-sync (no such skill)` and the same for `read-only-notice`. `skills_block` is a stdin filter using the same `sed` range `bump-lib.sh`'s `registry_version` uses; both loops and the `grep -m1` inside the drift loop now go through it. No exit code moved.
+
+`skill-versioning`'s suite went 103 -> 120 -> **131**. `container-sandbox/references/skill-testing.md` gained `Driving a repository-level gate against the real tree`.
+
+The publisher allocated `skill-versioning -> 2.0.1` and `container-sandbox -> 1.4.0` at `e292575`. Nobody typed either.
+
+### What is NOT done
+
+**A regression was shipped knowingly on PR #80 and it is on a ticket.** Scoping the drift loops means a tree where every skill is in sync and only a _tool_ has changed now fails `verify` and names nothing - the reader gets the generic trailer and no line saying it was a tool or which one. Before, they got the right filename under the wrong label. `WO-20260829-f97b` - `verify names nothing when only a tool has drifted` is cut as a `p3` and left in `draft` for review rather than self-approved. `claude/tools/` is a live workflow, so this is a shape someone will hit.
+
+**The eight children of `WO-20260824-00d5` - `Skills package manager: roll it out across the repository` are all still `ready`.** Nothing in epic 2 has started.
+
+Branch protection is still absent and is still on no ticket.
+
+Root `CLAUDE.md`'s `## Consuming These Files` section still contradicts Rule 16 steps 7 and 8, and **it is still on no ticket** after four cycles of being named here. It tells a consumer to clone or symlink `claude/skills/` via `setup.sh` and never mentions `.claude/skills.toml` or `skill-sync.sh`. If it is not going to be fixed, it wants a ticket saying so, so it stops being carried forward as a loose end nobody owns.
+
+### Stale or false in the docs
+
+**`claude/skills/hydration-prompt/SKILL.md:38` still puts `archive - work-order.sh close, straight to main` under `AFTER THE MERGE`.**
+There is no `close` verb. The lifecycle ends at `done`, on the branch, inside the PR. Do not follow the diagram.
+
+The same dead reference lives at `claude/skills/project-scaffold/references/templates/CLAUDE.md.tmpl:207` and `:248`, which is `WO-20260824-b21b` - `CLAUDE.md.tmpl: replace the session-start prose, add the skills markers, the treehouse policy and the documentation-lifetime rule`, and at `claude/skills/work-order/settings.local.json.tmpl:6`, which is on no ticket.
+
+**Both design documents still say the runner only has Docker.** `ubuntu-24.04` ships Podman 5.8.4.
+
+`claude/skills/skill-versioning/SKILL.md` is accurate about `--structure`. Root `CLAUDE.md` Rule 16 is accurate.
+
+### Your scope
+
+Whichever ticket the user names, and nothing beside it.
+
+If it is `WO-20260824-d058` - `Remove the inline read-only notice from the other 42 SKILL.md files`, note that it and `WO-20260824-79b6` - `Invert the notice assertion: verify --structure now fails on an inline notice` are two halves of one change and the order matters: inverting the assertion first turns 42 files red at once.
+
+If it is `WO-20260824-238b` - `Rename skill-versioning to skill-registry, the closing commit`, the gate is now ready for it - PR #78 proved a renamed directory green both when git pairs the two paths and when it cannot - but the other seven children come first, and the rename also moves paths that `.github/workflows/skill-pr-gate.yml` and `bump-gate.sh run-suite` name literally.
+
+**Non-goal for every one of them: do not start a second ticket in the same branch.** Epic 2 is eight tickets, not one.
+
+### Before you start
+
+`work-order.sh start` needs a clean tree and creates the branch for you. It leaves the ticket file and `INDEX.md` uncommitted, so commit them before anything else.
+
+Every ticket named above is already `approved`. Do not run `approve` again. `WO-20260829-f97b` - `verify names nothing when only a tool has drifted` is the exception and is `draft` on purpose.
+
+**`.claude/worktrees/smoke-tests` is a locked git worktree sitting untracked inside this repository**, left by a session before epic 1. It is not yours. It means `git add -A` at close-out is unsafe here - add explicit paths instead, which is what PR #76 through #80 all did.
+
+### Read in this order
+
+1. `work-order.sh next`, then the ticket the user names, and every note on it.
+2. This entry, the top entry of `HYDRATION.md`. Read only this one.
+3. `work-orders/WO-20260824-00d5/` - the epic README, for how its eight children fit together.
+4. Root `CLAUDE.md` Rule 16 and `## Close-out and post-merge cleanup`. Both accurate.
+5. `workflows/close-out-procedure.md`, once.
+
+### Reuse, it is proven
+
+`skills_block` in `skill-version.sh` and `registry_version` in `bump-lib.sh` are the same idiom, and between them they are now the only correct way to read a name out of `registry.json`. Anything new that reads that file goes through one of them rather than grepping the whole thing.
+
+`bump-gate.sh detect` answers "which suites must run", `resolve` answers "what level does each changed skill get". They disagree by design for a skill that ships no suite. Do not reconcile them.
+
+`container-sandbox/references/skill-testing.md` now covers three shapes: the bundled-script case, the live-infrastructure split, and `Driving a repository-level gate against the real tree` - clone inside the container from a read-only `/repo` mount so `origin/main` resolves. If a check here needs a container and the pattern is not documented, write the section rather than falling back to the host.
+
+Section 6b of `claude/skills/skill-versioning/testing/run-tests.sh` builds a fixture tool with a `skill-tool-version:` marker and drives a populated tools block. Any assertion about the tools block wants that fixture.
+
+### The verification ladder
+
+Rung 1: the changed skill's own suite, via `bash .github/scripts/bump-gate.sh run-suite claude/skills/<name>`. Never `bash <suite>` directly.
+
+Rung 2: `skill-version.sh verify --structure --base origin/main` on the branch. Green.
+
+Rung 3: for anything touching the registry's readers, plain `verify` on a clone of `main` in a container. Green, `ok - 43 skills versioned, registry in sync`.
+
+Rung 4: the nine suites, at 251, 299, 161, 145, **131**, 85, 47, 41 and 39. Only run all nine when the change reaches beyond one skill; a single-skill change wants rung 1 and the gate.
+
+Rung 5: the gate on the pull request. It is the only place the gate exists, so a green local `--structure` is not the same claim.
+
+### Traps, already paid for
+
+**A markdown formatter re-pads tables in a file you only meant to add a line to.** It is a `PostToolUse` hook in the machine's global `~/.claude/settings.json`. `git diff -U0 | grep '^-'` before committing and account for every deleted line.
+
+**`work-order.sh start` moves you to a new branch and there is no flag to stop it.** That is what kept epic 1 from closing inside its last child's pull request, and it cost an extra ticket cycle. Plan the branch before running it, never during a close-out.
+
+**A suite with no self re-exec, run as `bash <suite>`, runs on the host and fails with `mkdir: cannot create directory '/work'`.** Use `bump-gate.sh run-suite`, which dispatches `self` or `wrapped` correctly.
+
+**A `grep -q` in a pipeline reports "no match" when it matched.** It closes the pipe on the first hit, the upstream dies of SIGPIPE, and `pipefail` turns that into a non-zero pipeline. Capture to a variable and grep the variable.
+
+**A digest you did not copy from a real registry does not exist.** `podman pull` fails with `manifest unknown`, which reads like a network problem and is not. Reuse the `bitnami/git` digest this repository already pins.
+
+**Scoping a report can silence it.** PR #80 stopped two false lines and, in the same move, stopped a true one nobody had asked about. Assert the positive and the negative on the same tree in the same run, or the wrong implementation passes.
+
+`gh pr create` warns `1 uncommitted change` because of the untracked `.claude/worktrees/`. Expected, not your branch.
+
+### Workflow
+
+```bash
+WO=claude/skills/work-order/scripts/work-order.sh
+HP=claude/skills/hydration-prompt/scripts/hydration.sh
+
+bash $WO next    --project .
+bash $WO show    --project . --id <the one the user named>
+bash $WO start   --project . --id <id>
+git add work-orders && git commit -m "chore(work-orders): start <id>"
+
+# ... the work ...
+
+bash .github/scripts/bump-gate.sh run-suite claude/skills/<skill>
+
+bash $WO evidence --project . --id <id> --index N --observed '...'
+git add <explicit paths>            # NOT -A, see .claude/worktrees/smoke-tests above
+git commit && git push -u origin <branch>
+gh pr create --base main --title "..." --body-file <file>
+bash $WO submit  --project . --id <id> --pr <N>
+bash $WO done    --project . --id <id>              # on the branch, before the merge
+bash $HP check   --project . --body-file /tmp/entry.md
+bash $HP add     --project . --id <next> --title "<next title>" --body-file /tmp/entry.md
+git add <explicit paths> && git commit && git push  # rides the SAME pull request
+
+# after the merge
+bash $WO cleanup --project . --id <id>
+```
+
+**A pull request touching `claude/skills/` needs a level.** A conventional title resolves it for a single-skill change; otherwise state `Bump: <skill>=major|minor|patch` as the last paragraph of the body, one line per changed skill, nothing after it. **Never run `skill-version.sh bump`.** The publisher allocates on `main`.
+
+### Conventions
+
+Every reference to a work-order in a chat reply carries the ticket ID and its full title joined by a dash. A bare ID is a defect, and so is "the next ticket" or "the draft one".
+
+Feature branches only. `skill-publish.yml` is the one named exception, and root `CLAUDE.md` says so.
+
+PR bodies carry no agent attribution, Rule 13.
+
+No em dashes. Plain dashes only, in every file and every reply.
+
 <!-- hydration-entry: WO-20260829-5ad4 -->
 ## WO-20260829-5ad4 - verify's drift report walks the registry's tools block and names tools as missing skills
 _Generated 2026-08-29 by hydration.sh. Newest entry._
@@ -1433,164 +1589,4 @@ Feature branches only, and nothing writes to `main` any more - except, from this
 Rule 14 has no size threshold. A single `--help` run whose purpose is to check that something works goes in a container.
 
 When the ticket contradicts itself, or contradicts the runner, say so and pick one in the open. The gate found two: the suites are not uniform, and `ubuntu-24.04` already has Podman. Both are notes on that ticket rather than smoothed over.
-
-<!-- hydration-entry: WO-20260824-2ad1 -->
-## WO-20260824-2ad1 - PR gate workflow: validate the bump intent and run the affected suites
-_Generated 2026-08-24 by hydration.sh. Newest entry._
-
-### Ticket
-
-`WO-20260824-2ad1` - `PR gate workflow: validate the bump intent and run the affected suites`.
-Both of its dependencies are `done`: `WO-20260824-6acf` - `Split verify into a structure check and a full check, and delete the notice assertion`, and `WO-20260824-efb0` - `skill-sync.sh part two: build, swap, receipt, and self-update`, which merged as PR #65.
-`work-order next` returns it first.
-
-It blocks `WO-20260824-316d`, and `WO-20260824-360d` - `Publish workflow: allocate versions on merge to main and regenerate the registry` is the other half of the same pipeline: this one reads and refuses, that one writes.
-
-Poker put it at 8, above the plan's medium. Three non-trivial shell blocks inside YAML, and CI has the worst iteration loop in the plan - every fix costs a push.
-
-### What just landed
-
-`claude/tools/skill-sync.sh` is complete at version `2.0.0`. It resolves *and* applies: sweep, lock, build into `.claude/cache/.sync.XXXXXX`, render the notice, swap each owned directory individually, remove only what the receipt claims, write the receipt and the stamp, then replace itself if the registry publishes a newer version.
-
-The suite went from 80 checks to **193**, and it is the thing your matrix has to run. `claude/tools/testing/run-tests.sh` re-execs itself into Podman, so a runner that invokes it directly gets the container for free - but only if Podman is on the runner, which is a checkbox on your ticket.
-
-Three decisions were taken in the open and are notes on that ticket rather than in either design document: the lock has its own five-minute stale window separate from the build sweep's hour, a failed sync deliberately does not write the stamp, and the receipt's `source` is `jkkelley/dotfiles@main` rather than `@<sha>` because a codeload fetch does not yield one.
-
-Two bugs part one shipped were found by the new cases and fixed in the same PR. `load_registry` read its awk output with `IFS=$'\t'`; a tab is IFS whitespace, so bash collapsed two of them and every skill with an empty `requires` - 41 of the 43 - shifted its version into the next field. And the lock is a directory inside `.claude/cache/`, so a project on its first ever sync could not take it.
-
-Suites at the moment you start: `claude/tools/` **193**, `skill-versioning` 103, `work-order` 299 across 22 case files, repo-local `testing/` 36. All green in Podman on digest-pinned bases with `--network=none`.
-
-### What is NOT done
-
-`git ls-files .github/workflows` still prints nothing. **The directory does not exist.** You are creating it, and `skill-pr-gate.yml` is the first file in it.
-
-Branch protection is still absent and is still on no ticket. Your gate is the thing that would eventually be required, but requiring it is not your ticket either.
-
-The publisher, `.github/workflows/skill-publish.yml`, is `WO-20260824-360d` - `Publish workflow: allocate versions on merge to main and regenerate the registry`. Do not write half of it here. Your workflow writes nothing at all, which is the scope line worth holding: the gate reads and refuses.
-
-`setup.sh` installing the binary and the SessionStart hook is `WO-20260824-bb0d` - `setup.sh installs the skill-sync binary, then the SessionStart hook`. Removing the notice from any `SKILL.md` is epic 2.
-
-### Stale or false in the docs
-
-Both design documents still state the repository settings as `squash_merge_commit_message=COMMIT_MESSAGES`, `allow_merge_commit=true`, `allow_rebase_merge=true` - at `C2` in the plan and under `Repo settings, first` in the spec. All three were changed by `WO-20260824-cc71` - `Repo settings: squash-only, with the commit body taken from the PR description`. **This one bears directly on you**: the `Bump:` trailer arrives in the squash commit body because the body is the PR description, and the spec's paragraph explaining why a trailer in the description would never reach the commit is describing settings this repository no longer has.
-
-Both also still carry the `SessionStart` matcher question as open, at `C7` and `E1.2` in the plan and under `Problem A` in the spec. It was answered by `WO-20260824-0615` - `Confirm whether a SessionStart hook matcher filters by source`. It bears on `WO-20260824-bb0d`, not on you.
-
-`E1.6` in the plan is now fully ticked, both halves. So are the three boxes under `What the notice partial's tests must cover`.
-
-Rule 16 does not bind this ticket unless you touch something under `claude/skills/`. `.github/workflows/` is neither a skill nor a registered tool, so nothing is owed - but `skill-version.sh verify` must still be green before the PR, and your workflow is the thing that will run it on everyone else's.
-
-### Your scope
-
-The plan's `E1.7` is the checklist, in order, and it is two jobs plus a matrix rather than one.
-
-- **Validate the intent.** Every skill a trailer names exists and actually changed in this PR; every level is `major`, `minor` or `patch`; no skill named twice; every changed skill resolves to a level from a trailer or a parseable conventional title.
-- **Refuse a hand-edited `version:` or `registry.json`.** Those are CI's files now.
-- **`verify --structure`**, which is the split `WO-20260824-6acf` - `Split verify into a structure check and a full check, and delete the notice assertion` delivered for exactly this call site.
-- **Print the resolution table**, so the outcome is readable before the merge button rather than after it.
-- **Detect job** emits changed skills that ship `testing/run-tests.sh`, as JSON. **Test job** is a matrix, one runner per skill, guarded by `if: needs.detect.outputs.skills != '[]'`.
-- **A separate tools job** for `claude/tools/`, which has no registry row and cannot appear in a matrix keyed on skill names.
-- **Podman on the runner.** `ubuntu-24.04` ships Docker and Rule 14 requires Podman.
-- `runs-on: ubuntu-24.04`, never `ubuntu-latest`.
-
-Out: writing anything. The gate only reads.
-
-### Before you start
-
-`AC-H1` is the one that only shows up live: an empty matrix is a workflow error, not a skipped job, unless the `if:` guard is there. A docs-only PR is the common case and it must be green.
-
-Decide how a level is resolved before writing the YAML, because the trailer and the title are two sources and the precedence between them is a decision the plan states but does not defend.
-
-### Read in this order
-
-1. Root `CLAUDE.md`. Rules 12, 14, 15 and 16 all bear on this one, and Rule 15's limit on runner labels is recorded in the plan rather than worked around.
-2. This entry, the top entry of `HYDRATION.md`. Read only this one.
-3. The ticket: `work-orders/WO-20260824-f1a5/WO-20260824-2ad1-pr-gate-workflow-validate-the-bump-intent-and-ru.md`.
-4. `docs/superpowers/plans/2026-08-24-skills-package-manager-implementation.md` section `E1.7`, and `The test matrix`.
-5. `docs/superpowers/specs/2026-08-23-skills-package-manager-design.md`, sections `The `Bump:` trailer`, `The PR gate`, `verify splits` and `Failure is closed, not guessed`.
-6. `claude/skills/skill-versioning/scripts/skill-version.sh`, the `verify` path, which is what the gate calls.
-7. `claude/tools/testing/run-tests.sh`, the first 51 lines: it re-execs into Podman itself, which decides what the tools job actually has to do.
-
-### Reuse, it is proven
-
-Every suite in this repository re-execs into its own container and is invoked the same way, so the matrix leg is one line per skill rather than a per-skill recipe.
-
-`skill-version.sh verify` already exits non-zero with a readable message on every condition your gate needs to refuse. Call it; do not re-implement its checks in YAML.
-
-### The verification ladder
-
-Rung 1, free: `actionlint` or a YAML parse. A workflow that does not parse is a push wasted.
-
-Rung 2: a docs-only PR. Green, matrix skipped, no empty-matrix error. That is `AC-H1`.
-
-Rung 3: a PR editing `hydration-prompt`. Exactly one matrix leg. That is `AC-H2`.
-
-Rung 4: a PR whose trailer names a skill it did not change. Refused, and the message says which. That is `AC-H3`.
-
-Rung 5: a PR touching `claude/tools/` runs the tools job and not the matrix.
-
-Rung 6: `skill-version.sh verify` still green, and all four suites still at 193, 103, 299 and 36.
-
-### Traps, already paid for
-
-An empty matrix is a workflow error rather than a skipped job. The `if:` guard on the matrix job is not defensive, it is load-bearing, and it is the one thing that cannot be proved locally.
-
-`ubuntu-24.04` ships Docker, not Podman. A suite that re-execs into Podman fails on a runner where Podman is absent, and the error names the missing binary rather than the missing install step.
-
-CI iteration costs a push each time. Everything that can be checked locally - YAML parse, the shell blocks run as plain scripts against a fixture - should be, before the first push.
-
-A `grep -q` in a pipeline reports "no match" when it matched: `grep -q` closes the pipe on the first hit, the upstream dies of SIGPIPE, and `pipefail` turns that into a non-zero pipeline. Capture to a variable and grep the variable.
-
-A markdown formatter re-pads tables in a file you only meant to add one line to. It is a `PostToolUse` hook in the machine's global `~/.claude/settings.json`, not in this repository. `git diff --stat` before committing; a two-line change reporting forty is this.
-
-`work-order.sh start` refuses with "working tree is dirty", and `git rebase` refuses immediately after `start` because `start` leaves the ticket file, `INDEX.md` and the epic README uncommitted. Commit them first.
-
-A command reports success and did nothing. Assert the post-state, never `$?` alone.
-
-### Workflow
-
-```bash
-WO=claude/skills/work-order/scripts/work-order.sh
-HP=claude/skills/hydration-prompt/scripts/hydration.sh
-SV=claude/skills/skill-versioning/scripts/skill-version.sh
-
-bash $WO show    --project . --id WO-20260824-2ad1
-bash $WO start   --project . --id WO-20260824-2ad1   # creates the branch, leaves files uncommitted
-
-# ... write .github/workflows/skill-pr-gate.yml, prove what can be proved locally ...
-
-bash $SV verify                                      # this one has to be green
-
-bash $WO evidence --project . --id WO-20260824-2ad1 --index 1 --observed "..."
-bash $WO evidence --project . --id WO-20260824-2ad1 --index 2 --observed "..."
-bash $WO evidence --project . --id WO-20260824-2ad1 --index 3 --observed "..."
-
-git push -u origin <branch>
-gh pr create --base main --title "..." --body-file <file>
-
-bash $WO submit  --project . --id WO-20260824-2ad1 --pr <N>
-bash $WO done    --project . --id WO-20260824-2ad1   # archives on the branch, commits nothing
-
-bash $HP check   --project . --body-file /tmp/entry.md
-bash $HP add     --project . --id <next> --title "<next title>" --body-file /tmp/entry.md
-
-git add -A && git commit && git push                 # rides the SAME pull request
-
-# after the merge
-bash $WO cleanup --project . --id WO-20260824-2ad1   # deletes both branches, writes nothing
-```
-
-`approve` is already done for every ticket in both epics and must not be run again.
-
-The pull request description is the merge commit body verbatim. Write it as something worth reading on `main`, because that is where it ends up - and on this ticket it is also where the `Bump:` trailer lands.
-
-### Conventions
-
-Every reference to a work-order in a chat reply carries the ticket ID and its full title joined by a dash. A bare ID is a defect, and so is "the next ticket" or "the blocked one".
-
-Feature branches only, and nothing writes to `main` any more.
-
-Rule 14 has no size threshold. A single `--help` run whose purpose is to check that something works goes in a container.
-
-When the ticket contradicts itself, say so and pick one in the open. Both halves of `skill-sync.sh` did, and each recorded the reasoning as a note on its ticket rather than smoothing it over.
 
