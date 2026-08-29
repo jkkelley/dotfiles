@@ -284,6 +284,15 @@ render_registry() {
 # mistaken for a skill's version".
 skills_block() { sed -n '/^  "skills": {/,/^  },/p'; }
 
+# The other half, for the reader that wants tools and nothing else. The block is
+# last, so it ends at the closing brace that has no comma after it.
+#
+# An empty tools block is one line, `  "tools": {}`, with no `  }` line after it
+# to close the range - so this runs to the end of the file and emits the final
+# `}` as well. Nothing downstream matches that, because every caller filters for
+# an entry line first, and an empty block has no entries by definition.
+tools_block() { sed -n '/^  "tools": {/,/^  }$/p'; }
+
 # Is this name published? Absence from registry.json is the test for "the skill
 # is new", and it is the same test bump-gate.sh cmd_resolve already makes before
 # reporting a row as "- -> 1.0.0 new absent from the registry". Nothing else can
@@ -542,34 +551,105 @@ EOF
   # under a trailer telling the reader to run `bump skill-sync --patch` - which
   # dies with `no such skill`, because a tool is not one. Everything this block
   # prints is advice, and advice that cannot be followed is worse than silence.
-  local line name actual_line
+  # Captured up front rather than re-filtered inside each loop: four reads of
+  # two blocks, and every comparison below is then against a variable rather
+  # than against a pipeline that a grep -q could close early.
+  local line name actual_line reg_skills reg_tools exp_skills exp_tools
+  local named_skill=0 named_tool=0
+  reg_skills=$(skills_block < "$REGISTRY")
+  reg_tools=$(tools_block < "$REGISTRY")
+  exp_skills=$(skills_block <<< "$expected")
+  exp_tools=$(tools_block <<< "$expected")
+
   while IFS= read -r line; do
     [[ $line == '    "'* ]] || continue
     name=${line#*\"}; name=${name%%\"*}
-    actual_line=$(skills_block < "$REGISTRY" | grep -m1 "^    \"$name\":" || true)
+    actual_line=$(grep -m1 "^    \"$name\":" <<< "$reg_skills" || true)
     if [[ -z $actual_line ]]; then
       printf 'not in registry   %s\n' "$name" >&2
+      named_skill=1
     elif [[ ${actual_line%,} != "${line%,}" ]]; then
       printf 'drifted           %s\n    registry: %s\n    on disk:  %s\n' \
         "$name" "${actual_line#*: }" "${line#*: }" >&2
+      named_skill=1
     fi
-  done < <(printf '%s\n' "$expected" | skills_block)
+  done <<< "$exp_skills"
 
   # And the same scoping here, where the symptom was visible: every registered
   # tool was named as a skill that no longer exists, on every failing run.
   while IFS= read -r line; do
     [[ $line == '    "'* ]] || continue
     name=${line#*\"}; name=${name%%\"*}
-    [[ -d "$SKILLS_DIR/$name" ]] || printf 'stale entry       %s (no such skill)\n' "$name" >&2
-  done < <(skills_block < "$REGISTRY")
+    if [[ ! -d "$SKILLS_DIR/$name" ]]; then
+      printf 'stale entry       %s (no such skill)\n' "$name" >&2
+      named_skill=1
+    fi
+  done <<< "$reg_skills"
 
-  cat >&2 <<EOF
+  # The tools block, in its own words. Scoping the two loops above stopped them
+  # calling a tool a skill, and left the case where only a tool moved reporting
+  # nothing at all - a failing verify that names no cause, which is worse than
+  # the wrong label it replaced. Compared both ways for the same reason the
+  # skills block is: a tool can be added, changed or removed just as a skill can.
+  while IFS= read -r line; do
+    [[ $line == '    "'* ]] || continue
+    name=${line#*\"}; name=${name%%\"*}
+    actual_line=$(grep -m1 "^    \"$name\":" <<< "$reg_tools" || true)
+    if [[ -z $actual_line ]]; then
+      printf 'tool unregistered %s (on disk, and the registry has no row for it)\n' "$name" >&2
+      named_tool=1
+    elif [[ ${actual_line%,} != "${line%,}" ]]; then
+      printf 'tool drifted      %s\n    registry: %s\n    on disk:  %s\n' \
+        "$name" "${actual_line#*: }" "${line#*: }" >&2
+      named_tool=1
+    fi
+  done <<< "$exp_tools"
+
+  while IFS= read -r line; do
+    [[ $line == '    "'* ]] || continue
+    name=${line#*\"}; name=${name%%\"*}
+    if ! grep -q "^    \"$name\":" <<< "$exp_tools"; then
+      printf 'tool gone         %s (registered, and no longer on disk)\n' "$name" >&2
+      named_tool=1
+    fi
+  done <<< "$reg_tools"
+
+  # One trailer per kind, and only for a kind that was actually named. The
+  # advice differs because the fix differs, and a reader handed the skills
+  # advice for a tool is handed a command that exits non-zero.
+  if [[ $named_skill -ne 0 ]]; then
+    cat >&2 <<EOF
 
 registry is stale. A skill's contents changed without a version bump, or the
 registry was hand-edited. Fix it with:
 
   $SELF bump <skill> --patch    # or --minor / --major
 EOF
+  fi
+
+  if [[ $named_tool -ne 0 ]]; then
+    cat >&2 <<EOF
+
+A tool under $TOOLS_DIR no longer matches its registry row. bump does not apply
+here - a tool carries no frontmatter, so its version is the skill-tool-version:
+marker inside the file, raised by hand. Raise it, and the registry is written
+from it: by the publisher on main, or by '$SELF init' locally.
+EOF
+  fi
+
+  # Neither named. The registry differs somewhere outside both blocks, which a
+  # hand-edit to the generator line can do. Saying so beats exiting 1 in silence.
+  if [[ $named_skill -eq 0 && $named_tool -eq 0 ]]; then
+    cat >&2 <<EOF
+
+registry differs from what this tree renders, and no skill or tool entry
+accounts for it. The difference is outside both blocks - the schema or
+generator line, or formatting. Rewrite it with:
+
+  $SELF init
+EOF
+  fi
+
   return 1
 }
 
