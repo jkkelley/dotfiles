@@ -504,7 +504,86 @@ check "a changed tool is NOT reported as a drifted skill" \
   "$(neg grep -qE '^drifted .*read-only-notice' "$WORK/verify-tool-drift.out")"
 check "and no skill is falsely blamed for it" \
   "$(neg grep -qE '^(drifted|stale entry|not in registry)' "$WORK/verify-tool-drift.out")"
+
+# ...but it IS named, as a tool. Scoping the two loops above stopped them calling
+# a tool a skill and left this case reporting nothing at all, which is a failing
+# verify that names no cause - worse than the wrong label it replaced.
+check "a changed tool is named, as a tool" \
+  "$(grep -qE '^tool drifted +read-only-notice' "$WORK/verify-tool-drift.out"; echo $?)"
+check "the tool report shows both sides, as the skill report does" \
+  "$(grep -q '^    registry: ' "$WORK/verify-tool-drift.out" \
+     && grep -q '^    on disk:  ' "$WORK/verify-tool-drift.out"; echo $?)"
+check "the advice for a tool does not tell the reader to run bump" \
+  "$(neg grep -q 'bump <skill>' "$WORK/verify-tool-drift.out")"
+check "the advice names the marker that actually moves a tool's version" \
+  "$(grep -q 'skill-tool-version:' "$WORK/verify-tool-drift.out"; echo $?)"
+check "a tool-only drift is still exit 1" \
+  "$(bash "$SV" verify >/dev/null 2>&1; [[ $? -eq 1 ]]; echo $?)"
+
+# A registered tool that is gone from disk. render_tools skips a file that does
+# not exist, so the row survives in the registry with nothing behind it.
+rm -f "$WORK/tools/partials/read-only-notice.md.tmpl"
+expect_rc "verify FAILS when a registered tool is gone from disk" 1 bash "$SV" verify
+bash "$SV" verify > "$WORK/verify-tool-gone.out" 2>&1
+check "the vanished tool is named" \
+  "$(grep -qE '^tool gone +read-only-notice' "$WORK/verify-tool-gone.out"; echo $?)"
+check "and it is not called a stale skill" \
+  "$(neg grep -qE '^stale entry .*read-only-notice' "$WORK/verify-tool-gone.out")"
+
+# A tool on disk that the registry has no row for - the state render_tools's own
+# comment describes, where a registered tool lands before the registry is rewritten.
+printf '<!-- skill-tool-version: 2.1.0 -->\nnotice\n' \
+  > "$WORK/tools/partials/read-only-notice.md.tmpl"
+grep -v 'read-only-notice' "$SKILLS/registry.json" > "$WORK/reg-notool.json"
+cat "$WORK/reg-notool.json" > "$SKILLS/registry.json"
+bash "$SV" verify > "$WORK/verify-tool-new.out" 2>&1
+check "a tool with no registry row is named as unregistered" \
+  "$(grep -qE '^tool unregistered +read-only-notice' "$WORK/verify-tool-new.out"; echo $?)"
+
+# Both kinds on one tree. Each gets its own line and its own advice, because the
+# fixes differ - and a reader handed the skills advice for a tool gets a command
+# that exits non-zero.
+mkfixture "$SKILLS"
+bash "$SV" init >/dev/null 2>&1
+printf 'echo drift\n' >> "$SKILLS/alpha/scripts/run.sh"
+printf 'another byte\n' >> "$WORK/tools/partials/read-only-notice.md.tmpl"
+bash "$SV" verify > "$WORK/verify-both.out" 2>&1
+check "a skill and a tool drifting together are both named" \
+  "$(grep -q '^drifted .*alpha' "$WORK/verify-both.out" \
+     && grep -qE '^tool drifted +read-only-notice' "$WORK/verify-both.out"; echo $?)"
+check "and both trailers are printed" \
+  "$(grep -q 'bump <skill>' "$WORK/verify-both.out" \
+     && grep -q 'skill-tool-version:' "$WORK/verify-both.out"; echo $?)"
+
+# An empty tools block must not produce a tool line. It is one line with no
+# closing brace of its own, so the range runs to EOF - and nothing there is an
+# entry, which is the assertion.
 rm -rf "$WORK/tools"
+mkfixture "$SKILLS"
+bash "$SV" init >/dev/null 2>&1
+check "the fixture registry now has an empty tools block" \
+  "$(grep -qx '  "tools": {}' "$SKILLS/registry.json"; echo $?)"
+printf 'echo drift\n' >> "$SKILLS/alpha/scripts/run.sh"
+bash "$SV" verify > "$WORK/verify-notools.out" 2>&1
+check "an empty tools block produces no tool line at all" \
+  "$(neg grep -qE '^tool ' "$WORK/verify-notools.out")"
+check "and the skill is still named" \
+  "$(grep -q '^drifted .*alpha' "$WORK/verify-notools.out"; echo $?)"
+
+# A registry that differs outside both blocks. Gating each trailer on something
+# having been named is what makes this reachable, so it gets an answer rather
+# than exit 1 in silence.
+mkfixture "$SKILLS"
+bash "$SV" init >/dev/null 2>&1
+sed 's/"generator": "skill-version.sh"/"generator": "someone-elses-hand"/' \
+  "$SKILLS/registry.json" > "$WORK/reg-hand.json"
+cat "$WORK/reg-hand.json" > "$SKILLS/registry.json"
+expect_rc "verify FAILS on a difference outside both blocks" 1 bash "$SV" verify
+bash "$SV" verify > "$WORK/verify-neither.out" 2>&1
+check "no skill and no tool is invented to explain it" \
+  "$(neg grep -qE '^(drifted|stale entry|not in registry|tool )' "$WORK/verify-neither.out")"
+check "and the failure still says what to do" \
+  "$(grep -q 'no skill or tool entry' "$WORK/verify-neither.out"; echo $?)"
 
 # ── 6c. schema mismatch is not drift ───────────────────────────────────────────
 # The failure this exists to prevent: a registry from an older generator reads as

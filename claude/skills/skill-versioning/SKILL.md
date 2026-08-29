@@ -101,6 +101,29 @@ Both forms assert that every name in a `requires:` resolves to a skill that exis
 That is a property of the tree rather than of the registry, so the PR gate is the right place to reject it.
 A typo'd dependency is the one failure the auto-install path cannot recover from: uncaught, it surfaces on some project's first sync, days later and somewhere else.
 
+### The drift report names skills and tools separately
+
+`registry.json` has two blocks and they are not the same kind of thing, so a stale registry is reported in two vocabularies rather than one.
+
+| Line                        | Means                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------- |
+| `drifted           <skill>` | the skill's contents moved and its `version:` did not                        |
+| `not in registry   <skill>` | on disk, no row for it                                                       |
+| `stale entry       <skill>` | a row with no directory behind it                                            |
+| `tool drifted      <tool>`  | the tool's bytes moved and its `skill-tool-version:` marker did not          |
+| `tool unregistered <tool>`  | on disk, no row for it                                                       |
+| `tool gone         <tool>`  | a row with nothing behind it - `render_tools` skips a file that is not there |
+
+Both blocks are compared in both directions, and each half is read through its own filter - `skills_block` and `tools_block`, the same `sed` range idiom `bump-lib.sh`'s `registry_version` uses.
+A reader that walks the whole file instead sees `render_tools`'s entries at the same four-space indent as a skill's and calls a tool a skill that does not exist.
+
+**The advice differs because the fix differs, and only the kind that was named gets a trailer.**
+A skill is fixed with `bump`.
+A tool is not: it has no frontmatter, so its version is the `skill-tool-version:` marker inside the file, raised by hand - and the registry is written from that marker, by the publisher on `main` or by `init` locally.
+Handing a reader `bump <tool>` hands them a command that exits non-zero with `no such skill`.
+
+If the registry differs and neither block accounts for it - a hand-edited `generator` line will do it - the failure says exactly that and points at `init`, rather than exiting non-zero in silence.
+
 ### A schema mismatch is its own failure
 
 Plain `verify` reads the `schema` number out of the committed registry before comparing anything, and stops if it is not the number this generator writes.
