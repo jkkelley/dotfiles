@@ -4,7 +4,7 @@
   "slug": "verify-names-nothing-when-only-a-tool-has-drifte",
   "title": "verify names nothing when only a tool has drifted",
   "type": "bug",
-  "status": "draft",
+  "status": "ready",
   "priority": "p3",
   "created": "2026-08-29",
   "updated": "2026-08-29",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "Approved by the user in session on 2026-08-29, in the reply that read the regression, the ticket and its non-goals and said 'approve f97b and fix it'. Lavish was not used.",
+    "at": "2026-08-29"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
