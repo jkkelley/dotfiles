@@ -458,6 +458,54 @@ check "the failure names the tool and the marker it wants" \
   "$(grep -q 'skill-sync.sh has no skill-tool-version: marker' "$WORK/verify-tool.out"; echo $?)"
 rm -rf "$WORK/tools"
 
+# The tools block is not the skills block, and the drift report's two loops must
+# not confuse them. Both walk lines beginning with four spaces and a quote, and
+# render_tools writes its entries at exactly that indent - so unscoped, every
+# registered tool was named as a skill that does not exist, on every failing run.
+hd "the drift report reads the skills block only"
+mkdir -p "$WORK/tools/partials"
+printf '<!-- skill-tool-version: 2.1.0 -->\nnotice for {{SKILL_NAME}}\n' \
+  > "$WORK/tools/partials/read-only-notice.md.tmpl"
+mkfixture "$SKILLS"
+bash "$SV" init >/dev/null 2>&1
+check "the fixture registry really does carry a populated tools block" \
+  "$(grep -q '"read-only-notice": {' "$SKILLS/registry.json"; echo $?)"
+
+# A genuine skill drift, with that tools block sitting on the same registry.
+printf 'echo drift\n' >> "$SKILLS/alpha/scripts/run.sh"
+expect_rc "verify FAILS on a skill drift beside a populated tools block" 1 bash "$SV" verify
+bash "$SV" verify > "$WORK/verify-tools-scope.out" 2>&1
+check "the drifted skill is still named" \
+  "$(grep -q '^drifted .*alpha' "$WORK/verify-tools-scope.out"; echo $?)"
+check "no tool is reported as a stale entry" \
+  "$(neg grep -qE '^stale entry .*read-only-notice' "$WORK/verify-tools-scope.out")"
+check "no tool is named anywhere in the failure" \
+  "$(neg grep -q 'read-only-notice' "$WORK/verify-tools-scope.out")"
+
+# The narrowing must not become a silencing. This is the assertion a careless
+# fix breaks: a registry row whose skill directory is gone is still reported.
+rm -rf "$SKILLS/beta"
+bash "$SV" verify > "$WORK/verify-tools-stale.out" 2>&1
+check "a genuinely stale skill entry is still named" \
+  "$(grep -q '^stale entry .*beta' "$WORK/verify-tools-stale.out"; echo $?)"
+check "and still no tool is named beside it" \
+  "$(neg grep -q 'read-only-notice' "$WORK/verify-tools-stale.out")"
+
+# A changed tool. It still fails verify, because the registry genuinely is
+# stale - but it is not attributed to a skill, and no skill is blamed for it.
+mkfixture "$SKILLS"
+bash "$SV" init >/dev/null 2>&1
+expect_rc "verify passes with every skill and the tool in sync" 0 bash "$SV" verify
+printf 'a line the committed registry has not hashed\n' \
+  >> "$WORK/tools/partials/read-only-notice.md.tmpl"
+expect_rc "verify FAILS when a tool changes without its marker moving" 1 bash "$SV" verify
+bash "$SV" verify > "$WORK/verify-tool-drift.out" 2>&1
+check "a changed tool is NOT reported as a drifted skill" \
+  "$(neg grep -qE '^drifted .*read-only-notice' "$WORK/verify-tool-drift.out")"
+check "and no skill is falsely blamed for it" \
+  "$(neg grep -qE '^(drifted|stale entry|not in registry)' "$WORK/verify-tool-drift.out")"
+rm -rf "$WORK/tools"
+
 # ── 6c. schema mismatch is not drift ───────────────────────────────────────────
 # The failure this exists to prevent: a registry from an older generator reads as
 # every skill having drifted at once, which names them all and explains none.

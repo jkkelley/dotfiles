@@ -270,17 +270,28 @@ render_registry() {
   printf '}\n'
 }
 
+# Registry entries, one per line, skills only. A filter on stdin so it serves
+# both a reader of the file and a reader of render_registry's output.
+#
+# Every reader of a "    \"" line goes through this. render_tools writes its
+# entries at exactly the same four-space indent as render_registry writes a
+# skill's, so a reader that walks the whole file reads a tool as a skill - and
+# then says something false about it, because claude/skills/skill-sync/ is not a
+# directory and never will be.
+#
+# The same sed range bump-lib.sh's registry_version uses, for the reason stated
+# there in its own words: it "removes the only way a tool name could ever be
+# mistaken for a skill's version".
+skills_block() { sed -n '/^  "skills": {/,/^  },/p'; }
+
 # Is this name published? Absence from registry.json is the test for "the skill
 # is new", and it is the same test bump-gate.sh cmd_resolve already makes before
 # reporting a row as "- -> 1.0.0 new absent from the registry". Nothing else can
 # answer it: a new skill and a renamed one both arrive as a directory the branch
 # invented, and the tree cannot tell you which names main has already seen.
-#
-# Scoped to the skills block with sed, exactly as bump-lib.sh's registry_version
-# is, so a tool name can never be mistaken for a skill's.
 registry_has() {
   [[ -f "$REGISTRY" ]] || return 1
-  sed -n '/^  "skills": {/,/^  },/p' "$REGISTRY" | grep -qE "^[[:space:]]*\"$1\":"
+  skills_block < "$REGISTRY" | grep -qE "^[[:space:]]*\"$1\":"
 }
 
 # The schema number the registry on disk claims. Read with a match rather than a
@@ -525,24 +536,32 @@ EOF
   # Named drift beats a raw diff here: the answer the reader wants is which
   # skill to bump, not which byte moved. Compared line-wise rather than shelled
   # out to diff so the only dependencies stay bash, grep and coreutils.
+  #
+  # Both sides go through skills_block. Unscoped, this loop reaches the tools
+  # block on both of them and reports a changed tool as `drifted skill-sync`,
+  # under a trailer telling the reader to run `bump skill-sync --patch` - which
+  # dies with `no such skill`, because a tool is not one. Everything this block
+  # prints is advice, and advice that cannot be followed is worse than silence.
   local line name actual_line
   while IFS= read -r line; do
     [[ $line == '    "'* ]] || continue
     name=${line#*\"}; name=${name%%\"*}
-    actual_line=$(grep -m1 "^    \"$name\":" "$REGISTRY" || true)
+    actual_line=$(skills_block < "$REGISTRY" | grep -m1 "^    \"$name\":" || true)
     if [[ -z $actual_line ]]; then
       printf 'not in registry   %s\n' "$name" >&2
     elif [[ ${actual_line%,} != "${line%,}" ]]; then
       printf 'drifted           %s\n    registry: %s\n    on disk:  %s\n' \
         "$name" "${actual_line#*: }" "${line#*: }" >&2
     fi
-  done <<< "$expected"
+  done < <(printf '%s\n' "$expected" | skills_block)
 
+  # And the same scoping here, where the symptom was visible: every registered
+  # tool was named as a skill that no longer exists, on every failing run.
   while IFS= read -r line; do
     [[ $line == '    "'* ]] || continue
     name=${line#*\"}; name=${name%%\"*}
     [[ -d "$SKILLS_DIR/$name" ]] || printf 'stale entry       %s (no such skill)\n' "$name" >&2
-  done < "$REGISTRY"
+  done < <(skills_block < "$REGISTRY")
 
   cat >&2 <<EOF
 
