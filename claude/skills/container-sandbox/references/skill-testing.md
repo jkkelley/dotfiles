@@ -431,3 +431,49 @@ Write it so an empty result fails.
 
 A worked example is `workflows/credential-rotation/testing/`: `run-tests.sh` stubs `aws` and `kubectl` with the network off, which is what lets it assert that no code path ever spends a billable KMS request, and `live-check.sh` runs the read-only subcommands against the real account and cluster to prove the `go-template` behind that assertion actually renders.
 Neither suite is sufficient alone, and the header of each says which half it owns.
+
+---
+
+## Driving a repository-level gate against the real tree
+
+Some scripts take the repository itself as their input.
+A version gate, a registry generator, a lint that walks every skill directory: the fixture in `run-tests.sh` is three skills, and the thing that ships runs against forty-three of them with years of real git history behind it.
+
+A fixture proves the logic. It cannot prove the logic was pointed at the right shape.
+A three-skill fixture has no deeply nested directory, no skill whose name is a prefix of another, and no commit older than the test that just created it - so a gate can be green on the fixture and wrong on the tree it was written for.
+
+That gap does not license running the check on the host.
+The pattern is the same two-container split as the live-infrastructure section above, with a clone standing in for the credentials:
+
+```bash
+SCRATCH=$(mktemp -d)
+podman run --rm --userns=keep-id --network=none \
+  -v "$PWD:/repo:ro,Z" -v "$SCRATCH:/work:Z" -w /work --entrypoint="" \
+  docker.io/bitnami/git@sha256:1baa6ddbde79fa7ba2fdf441cea47c4f04fae067504d9265e416358db0879ab2 \
+  bash -uc '
+    git config --global --add safe.directory "*"
+    git clone -q /repo /work/repo
+    cd /work/repo
+    # mutate freely - this is a clone, and /repo is read-only
+    bash <the gate> --base origin/main; echo "rc=$?"
+  '
+```
+
+**Clone, never mutate the mount.**
+`-v "$PWD:/repo:ro,Z"` is what makes "I could not have altered the repository I was measuring" a fact rather than a claim.
+The clone inside `/work` is the writable copy, and every case that has to add, edit, rename or delete a file happens there.
+
+**Clone rather than copy, when the check reads history.**
+A gate that diffs against a base ref needs real refs.
+`git clone` carries them, so `origin/main` resolves inside the container to the same commit it names outside, and the base is the real merge base rather than a synthesised one.
+
+**The image is `bitnami/git`, pinned by digest.**
+A checkout with no `git` in it cannot answer a question about a diff, and `bash:5` ships none.
+Pin per root `CLAUDE.md` Rule 15 and reuse the digest the repository already runs its suites on rather than introducing a second one.
+
+**Report the tree you actually measured.**
+Print the commit, the branch and the count the gate walked - `43 skills`, not `the skills` - so a run against a stale or shallow clone is visible in its own output.
+
+The assertion this earns is the one the fixture could never make: that the gate reaches the same verdict on the real repository, at the real base, that it reaches on three invented skills.
+Both halves are required.
+The fixture is where every refusal is enumerated cheaply; this is where the enumeration is proved to have been about the right thing.
