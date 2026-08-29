@@ -4,16 +4,16 @@
   "slug": "skills-package-manager-prove-the-path-on-one-ski",
   "title": "Skills package manager: prove the path on one skill",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-08-24",
-  "updated": "2026-08-28",
+  "updated": "2026-08-29",
   "created_at": "2026-08-24T13:19:05-05:00",
   "parent": null,
-  "branch": null,
-  "pr": null,
+  "branch": "feat/skills-package-manager-prove-the-path-on-one-ski",
+  "pr": 79,
   "merge_sha": null,
-  "closed": null,
+  "closed": "2026-08-29",
   "approval": {
     "via": "override",
     "reason": "Reviewed and approved on PR #55 on GitHub, which is where the whole cut was read as one diff. Lavish was offered and declined in favour of the PR.",
@@ -53,9 +53,12 @@ Skill versions are allocated by hand at author time, which is a claim about orde
 ## Acceptance criteria
 
 
-- [ ] `AC-H1` *(human)* hydration-prompt carries a version on main that no human typed
-- [ ] `AC-H2` *(human)* a scratch project receives hydration-prompt on session start, with the notice rendered in
-- [ ] `AC-H3` *(human)* skill-version.sh verify is green on main after the pilot merges
+- [x] `AC-H1` *(human)* hydration-prompt carries a version on main that no human typed
+  - observed `2026-08-29` Discharged by the child WO-20260824-316d - Pilot: take hydration-prompt through the whole pipeline end to end, its AC-H1, observed 2026-08-25 on the real main. PR #73 squashed as fe62080; publisher run 32861246926 produced commit 16541f6 'chore(skills): allocate versions on main', authored and committed by github-actions[bot] with the body '- hydration-prompt -> 2.0.4 (patch, from the trailer)' and carrying Skill-Publish: true so its own push cannot re-trigger allocation. The branch touched neither the version line nor the registry, which the gate asserted before the merge. Re-observed on the current main 2026-08-29 at e292575, in Podman on the digest-pinned bitnami/git base with the repository mounted read-only: claude/skills/hydration-prompt/SKILL.md line 4 reads 'version: 2.0.4' and the registry row reads "hydration-prompt": { "version": "2.0.4", "sha256": "ce66fada2bf857b11c917e9f9ea6405847a450039e2577fd9d388e25479cf68b", ... }. Two further allocations have run since that pilot and neither was typed either - ffa5fd1 for PR #76 and e292575 for PR #78, the latter reading '- container-sandbox -> 1.4.0 (minor, from the trailer)' and '- skill-versioning -> 2.0.1 (patch, from the trailer)'. The mechanism is not a one-off that happened to work on the pilot.
+- [x] `AC-H2` *(human)* a scratch project receives hydration-prompt on session start, with the notice rendered in
+  - observed `2026-08-29` Discharged by the child WO-20260824-9712 - End-to-end proof in a scratch project, including the lost-receipt case, its AC-H1, observed 2026-08-28. A real session start in /tmp/skill-sync-proof, source startup, running the hook "$HOME/.local/bin/skill-sync" --boot from ~/.claude/settings.json - fired, not simulated. Hook stdout read out of the session transcript 7984b616 rather than out of an agent reply: 'owned hydration-prompt' then 'skill-sync: 1 skills in place (1 installed, 0 removed). Source jkkelley/dotfiles@main.' .claude/skills/hydration-prompt/SKILL.md was present carrying version 2.0.4 with the notice rendered in - '> **This copy is read-only.**' immediately after the '# Hydration prompt' heading - and the receipt sha ce66fada matched the published registry entry for 2.0.4, so the copy is provably the published one rather than something that merely looks right. That ticket's other three criteria go further than this one asks: a hand-authored skill beside the managed one was untouched, unread and unreported across all six session starts, removal from the manifest removed the directory, and a deleted receipt correctly deleted nothing.
+- [x] `AC-H3` *(human)* skill-version.sh verify is green on main after the pilot merges
+  - observed `2026-08-29` Observed fresh on the current main 2026-08-29, not inherited. At e292575 - 'chore(skills): allocate versions on main', the publisher run that followed PR #78 - in Podman on the digest-pinned bitnami/git base, /repo mounted read-only and the check run against a clone so it could not have made itself true: 'skill-version.sh verify' printed 'ok - 43 skills versioned, registry in sync' at rc 0 over 43 skills on disk. Plain verify and not --structure, which is the form this criterion names: it computes expected=$(render_registry) over the tree and compares it byte-for-byte with the committed registry.json, so rc 0 means the registry the publisher committed is exactly what the tree renders. The child WO-20260824-316d - Pilot: take hydration-prompt through the whole pipeline end to end recorded the same green at 16541f6 on 2026-08-25, immediately after the pilot merged, which is the moment the criterion literally asks about. Both are recorded because the pilot's observation is the one the wording names and this one proves the state survived three further merges and two further allocations.
 
 ## Test plan
 
