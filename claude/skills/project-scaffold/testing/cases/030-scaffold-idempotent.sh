@@ -4,8 +4,12 @@ CASE_NAME=030-scaffold-idempotent
 source "${SKILL:-/skill}/testing/assert.sh"
 
 p=$(scaffolded_project)
-# scaffold.json carries a build timestamp by design, so it is excluded.
-snap() { find "$1" -type f ! -name scaffold.json | sort | xargs sha256sum; }
+# Every file, with no exclusion. There used to be one: scaffold.json carried a
+# build timestamp by design, so a second apply legitimately changed it and the
+# idempotence claim had a hole in it that had to be documented rather than
+# asserted. scaffold.sh no longer writes a timestamp anywhere, so the claim is
+# now total, and the missing `! -name` is the proof of it.
+snap() { find "$1" -type f | sort | xargs sha256sum; }
 snap "$p" >"$WORK/snap1"
 run 0 "second apply exits 0" scaffold --project "$p" --apply --yes
 snap "$p" >"$WORK/snap2"

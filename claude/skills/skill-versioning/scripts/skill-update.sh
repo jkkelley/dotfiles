@@ -1,5 +1,26 @@
 #!/usr/bin/env bash
-# skill-update.sh — refresh one skill in a project from the published source.
+# skill-update.sh — refresh one HAND-AUTHORED skill in a project from the
+# published source.
+#
+# SHOULD YOU BE RUNNING THIS? Look at the project's .claude/skills.toml.
+#
+#   The skill is named in it  ->  NO. skill-sync owns it. Running this produces a
+#                                 copy that the next session start replaces, so
+#                                 the work is undone before anyone sees it.
+#                                 Nothing warns you; the copy is simply gone.
+#   The skill is not named    ->  YES. This is the path for it.
+#   There is no skills.toml   ->  YES. The project is not on the sync at all.
+#
+# That is the whole split, and root CLAUDE.md Rule 16 states it as policy: a
+# skill a manifest declares is installed from the published source at every
+# session start by claude/tools/skill-sync.sh, which removes what its own receipt
+# claims and the manifest no longer asks for. A skill nobody declared is the
+# other case, and it is this one - it belongs to the project, it is committed
+# there, and something has to be able to pull a newer version of it on demand.
+#
+# Putting a declared skill on the sync is skill-onboard.sh's job, not this
+# script's. Adding one to a project already on the sync is a line in
+# .claude/skills.toml and a new session, not a run of anything.
 #
 # The skill is fetched from GitHub by default, so nothing here depends on the
 # machine having a dotfiles checkout. That dependency was the whole problem: the
@@ -50,6 +71,10 @@ step() { STEP=$1; printf '\n[ %s ]\n' "$1"; }
 
 usage() {
   cat <<EOF
+Refreshes one HAND-AUTHORED skill in a project. A skill named in that project's
+.claude/skills.toml belongs to skill-sync and is reinstalled at every session
+start, so pointing this at one only produces a copy that gets replaced.
+
 USAGE
   $SELF --skill <name> --mode inline|standalone [--project <path>]
         [--from remote|local] [--repo OWNER/NAME] [--ref REF] [--dotfiles <path>]

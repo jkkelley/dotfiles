@@ -530,6 +530,36 @@ run_sync --plan
 check "only [skills] feeds the owned set, with [agents] present" \
   "$([[ "$(grep -c '^owned ' "$OUT")" -eq 1 ]]; echo $?)"
 
+# ── 5b. the manifest project-scaffold actually ships ───────────────────────────
+# Every case above builds its manifest with mkproject, which writes the shape
+# this parser was written against. That proves the parser reads what the suite
+# believes the format is. It cannot prove a scaffolded project ships that shape.
+#
+# So this one feeds the real template - the bytes a new project gets on disk -
+# straight into the parser. The two files live in different skills and are edited
+# by different tickets, and the failure when they drift is silent: a manifest
+# whose sections are named differently parses to an empty list rather than an
+# error, because an empty manifest is a legal manifest. The project then syncs
+# nothing, for the rest of its life, and nothing anywhere says so.
+hd "the manifest project-scaffold ships"
+SCAFFOLD_MANIFEST=/repo/claude/skills/project-scaffold/references/templates/skills.toml.tmpl
+rm -rf "$PROJ"; mkdir -p "$PROJ/.claude/cache"
+cp "$SCAFFOLD_MANIFEST" "$PROJ/.claude/skills.toml"
+run_sync --plan
+rc=$?
+check "it parses and exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+# Decision 20's four, named one at a time. A count alone stays green if one name
+# were swapped for another, and they are not interchangeable: CLAUDE.md.tmpl
+# references work-order in six places.
+for s in work-order living-docs container-sandbox context-compaction; do
+  check "the template declares $s, and the parser read it" \
+    "$(grep -qE "^(owned|unknown)  +$s\$" "$OUT"; echo $?)"
+done
+check "the parser read four names and not zero" \
+  "$([[ "$(grep -cE '^(owned|unknown) ' "$OUT")" -eq 4 ]]; echo $?)"
+check "its empty [agents] block contributes nothing" \
+  "$(neg grep -qE '^(owned|unknown)  +agents' "$OUT")"
+
 # ── 6. cycles ──────────────────────────────────────────────────────────────────
 # A cycle in requires must terminate. Inside a SessionStart hook the failure
 # mode is not a hang, it is a 30-second timeout that looks like a slow network.

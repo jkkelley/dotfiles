@@ -40,10 +40,20 @@ Not this skill: cloning an existing repo and renaming it. That is `repo-scaffold
 ├── .dockerignore        the same set, trimmed for a build context
 └── .claude/
     ├── settings.json
-    ├── scaffold.json    which skill version the copies below came from
+    ├── skills.toml      which skills this project uses      (skill-sync installs them)
     ├── scripts/         a versioned copy of the four tools
-    └── cache/           derived JSON slices                (cache.sh)
+    ├── skills/          the installed copies - gitignored, owned by skill-sync
+    └── cache/           derived JSON slices                 (cache.sh)
 ```
+
+`.claude/skills.toml` is written once and then belongs to the project: a re-run skips it rather
+than refreshing it, the same rule `settings.local.json` gets. It names skills and never versions,
+because the copies under `.claude/skills/` are pulled fresh from upstream at every session start
+and a hand-maintained version table would be wrong within a week.
+
+`.claude/skills/` is **not** written here. This skill writes the manifest and the gitignore line
+that keeps the copies out of git; `skill-sync` installs the directories at session start and owns
+them. Nothing in this skill ever writes a skill directory or removes one.
 
 `CONTEXT_STATE.md` is **not** written here. This skill writes the pointer to it in `CLAUDE.md`; the
 `context-compaction` skill owns the file itself.
@@ -150,9 +160,15 @@ stale slice.
 ## Versioning
 
 The skill directory is authoritative. Scaffolding copies the tools into `.claude/scripts/` so the
-project keeps working for someone without these dotfiles, and records the version in
-`.claude/scaffold.json`. A later `scaffold.sh` run reports any copy that differs as `refresh`, and
-`--apply` re-syncs it. Skew is visible rather than silent.
+project keeps working for someone without these dotfiles. A later `scaffold.sh` run compares each
+copy against the skill and reports any that differs as `refresh`; `--apply` re-syncs it. Skew is
+visible rather than silent.
+
+The comparison is the copy itself, byte for byte, and there is no recorded version beside it. There
+used to be, in `.claude/scaffold.json`, and it never answered a question the comparison had not
+already answered - a stamp saying the copies came from tool version 1 tells you nothing when the
+copy in front of you has been edited. Skills record what landed in `.claude/cache/skills-receipt.json`,
+which `skill-sync` writes and owns; this skill's own copies are checked, not remembered.
 
 ## Testing
 

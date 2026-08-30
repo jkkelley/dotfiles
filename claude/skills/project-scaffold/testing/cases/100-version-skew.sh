@@ -7,7 +7,6 @@ source "${SKILL:-/skill}/testing/assert.sh"
 p=$(scaffolded_project)
 
 assert_same "$SKILL/scripts/log-issue.sh" "$p/.claude/scripts/log-issue.sh" "vendored copy matches the skill"
-assert_contains "$p/.claude/scaffold.json" '"tool_version"' "scaffold.json records the tool version"
 
 # An out-of-date vendored copy must be reported as refresh, not skip.
 printf '# tampered\n' >>"$p/.claude/scripts/log-issue.sh"

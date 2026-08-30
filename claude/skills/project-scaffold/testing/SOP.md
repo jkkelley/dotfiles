@@ -3,7 +3,7 @@
 What each case runs, what it asserts, and **why that failure would matter**.
 
 A case whose "why" cannot be written is a case not worth keeping.
-Three of the fourteen case files are mostly negative tests, because a validator that never rejects anything is not a validator.
+Three of the sixteen case files are mostly negative tests, because a validator that never rejects anything is not a validator.
 
 Run everything with:
 
@@ -29,10 +29,28 @@ There is no threshold below which host execution is acceptable.
 The scratch directory is removed by a trap on every exit path, including failure and Ctrl-C.
 Nothing the suite creates outlives it.
 
-The image is `python:3.12-slim` and the cases run under **bash**, not `sh`.
-It is Debian-based with the same bash 5.2 and coreutils as `debian:stable-slim`, plus a `python3` used only to assert that generated JSON actually parses - a settings file that does not parse is silently ignored by the harness, which is the worst kind of broken.
-The image's `/bin/sh` is dash, which has no arrays, no `[[ ]]`, no `mapfile` and no `PIPESTATUS`.
+The cases run under **bash**, not `sh`.
+Every image's `/bin/sh` here is dash, which has no arrays, no `[[ ]]`, no `mapfile` and no `PIPESTATUS`.
 A suite that ran under dash would fail for reasons that have nothing to do with the code being tested.
+
+### Two images, and why
+
+`run-tests.sh` runs `testing/cases/` and `testing/cases-git/` in turn, under different images, and sums the totals.
+
+| Directory    | Image                    | Needs                                                                        |
+| ------------ | ------------------------ | ---------------------------------------------------------------------------- |
+| `cases/`     | `python:3.12-slim`       | `python3`, to assert the generated settings JSON actually parses             |
+| `cases-git/` | `bitnami/git`, by digest | a real `git`, to assert the gitignore blanket by asking git rather than grep |
+
+No stock image carries both, and installing one into the other means a network fetch inside a suite that runs `--network=none` on purpose.
+So there are two runs.
+
+The split is not filing: a case belongs in `cases-git/` when the thing it asserts is git's behaviour and not the template's text.
+Grepping `gitignore.tmpl` for a line proves the line is there; it does not prove git honours it, and a `**/` pattern that behaved differently from the one beside it would leave the grep green and the property false.
+
+The git image ships **no `cmp`**, so `assert_same` hashes when `cmp` is absent.
+`cmp` missing exits 127, which is indistinguishable from "the files differ" and is the more misleading of the two.
+Anything else added to `cases-git/` should check for a utility before depending on it, per root `CLAUDE.md` Rule 17.
 
 `SCAFFOLD_NOW` exists solely for this suite.
 Without an injectable clock, "same input produces the same output" cannot be asserted - only eyeballed, which proves nothing.
@@ -43,7 +61,9 @@ Without an injectable clock, "same input produces the same output" cannot be ass
 
 **Runs:** a dry run then an apply against an empty directory.
 
-**Asserts:** the dry run writes nothing; apply creates all five markdown files, `.claude/settings.json`, the vendored scripts, and `.claude/scaffold.json`; `ISSUES.md` carries its sentinel; `CLAUDE.md` carries the `CONTEXT_STATE.md` pointer.
+**Asserts:** the dry run writes nothing; apply creates all five markdown files, `.claude/settings.json`, `.claude/skills.toml` and the vendored scripts, and creates **no** `.claude/scaffold.json`; `ISSUES.md` carries its sentinel; `CLAUDE.md` carries the `CONTEXT_STATE.md` pointer.
+
+The negative assertion is the one that earns its keep. `scaffold.json` was removed rather than emptied, and a file nobody writes is not something a test notices - it just stops appearing, and reappears the moment someone restores the block that wrote it.
 
 **Why it matters:** dry-run-by-default is the safety property that makes this tool safe to point at an existing project.
 A dry run that wrote anything would make every later "it is non-destructive" claim false.
@@ -77,7 +97,7 @@ The partial case catches double-appending, which would quietly duplicate section
 
 **Why it matters:** idempotency is the claim that makes it safe to re-run after adding a section to a template.
 Untested, it is a slogan.
-`scaffold.json` is excluded because it records a build timestamp by design - excluding it is a deliberate, documented exception rather than a convenient one.
+There is no longer an exclusion. `scaffold.json` used to be one - it recorded a build timestamp by design, so a second apply legitimately changed it - and the claim had a documented hole in it. `scaffold.sh` writes no timestamp anywhere now, so the hash covers every file and the missing `! -name` is the proof.
 
 ---
 
@@ -173,7 +193,9 @@ The delete-and-rebuild case enforces "derived, never authoritative" - if anythin
 
 **Runs:** compares the vendored copies against the skill, tampers with one, re-runs the plan, re-syncs, then executes the vendored copy in place.
 
-**Asserts:** the copy matches on install; `scaffold.json` records the tool version; a tampered copy is reported as `refresh` and not `skip`; apply re-syncs it; the vendored script actually runs from inside the project.
+**Asserts:** the copy matches on install; a tampered copy is reported as `refresh` and not `skip`; apply re-syncs it; the vendored script actually runs from inside the project.
+
+The `scaffold.json` assertion is gone with the file. It was never the mechanism anyway - `refresh` is decided by comparing the copy against the skill, and a stamp saying which tool version wrote it answers nothing about a copy that has since been edited.
 
 **Why it matters:** vendoring only works if drift is visible.
 A silently stale copy would keep writing yesterday's format into today's file, and the whole "change the script, change the format everywhere" property would quietly stop being true.
@@ -267,9 +289,49 @@ The last two assertions are deliberately separate rather than one combined check
 
 ---
 
+## 160-skills-manifest
+
+**Runs:** a scaffold, then inspects `.claude/skills.toml`, then re-applies over a hand-edited one, then reads the plan for both an existing and an absent manifest.
+
+**Asserts:** the file is created and is byte-identical to the template; all four of decision 20's skills are named individually; the `[skills]` and `[agents]` headers and the `use = [` form are present; no version appears anywhere; a hand-edited manifest survives a re-apply untouched; the plan says `skip` for an existing manifest and `create` for an absent one, and the dry run still writes nothing.
+
+**Why it matters:** the manifest is the project's declared intent and `skill-sync` acts on it without asking.
+A re-apply that clobbered it would delete a skill someone added, and the next session start would then delete that skill's directory - so the damage arrives one step removed from the thing that caused it, on a different day, and looks like the sync malfunctioning.
+
+The four names are asserted one at a time rather than counted. "Four skills are declared" stays green if one is swapped for another, and the four are not interchangeable: `CLAUDE.md.tmpl` references `work-order` in six places, so a manifest without it ships a template pointing at a script that was never installed.
+
+The version assertion is the negative half of that.
+`skill-sync` pulls fresh copies at every session start, so a version written here has no effect on what gets installed and is simply a claim - wrong within a week, and believed by the next agent that reads it.
+
+The section-header assertions guard a silent failure specific to this format.
+`skill-sync`'s parser reads exactly one shape, and a manifest whose sections are named differently parses to an empty list rather than an error, because an empty manifest is a legal manifest.
+
+---
+
+## cases-git/010-skills-gitignored
+
+**Runs:** a scaffold, `git init`, a managed skill and a hand-authored one written under `.claude/skills/`, then `git check-ignore` on each path and a `git add -A` to see what actually reaches the index.
+
+**Asserts:** every path under `.claude/skills/` is ignored, hand-authored included; `.claude/skills.toml`, `.claude/settings.json`, `.claude/scripts/log-issue.sh` and `CLAUDE.md` are **not** ignored; after `git add -A` nothing under `.claude/skills/` is staged and the manifest is.
+
+**Why it matters:** this is the acceptance criterion of the change, asserted in the sentence it was written in.
+A committed skill copy is worse than no copy: it never updates again, `registry.json` moves on without it, and the divergence is invisible because a project's copy is _expected_ to differ from upstream, so the content hash cannot catch it either.
+
+The positive and the negative are on the same tree in the same run on purpose.
+A blanket that swallowed `.claude/skills.toml` along with the copies would take the project's declared intent out of git, and nothing would surface it until someone cloned the repository and got a project that syncs nothing.
+
+Note what the positive assertion also proves: a hand-authored skill under `.claude/skills/` cannot be committed either.
+That is the price of a blanket and it is deliberate - the alternative is a per-name exception list that has to be maintained in two places and is wrong the moment it is not.
+
+The `git add -A` check is not redundant with `check-ignore`.
+`check-ignore` answers per path; the index answers "what would actually be committed", which is what the criterion claims.
+
+---
+
 ## Adding a case
 
 1. Add `testing/cases/NNN-name.sh`, sourcing `testing/assert.sh`.
+   If what it asserts is git's behaviour rather than a file's contents, it goes in `testing/cases-git/` instead - and must not depend on `cmp`, which that image does not ship.
 2. Use `new_project` or `scaffolded_project` - never share state between cases.
 3. Assert on exit codes and file contents, never on whether some text appeared somewhere.
 4. Add a section here with all three parts, including the why.

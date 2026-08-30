@@ -15,7 +15,8 @@ done
 assert_file "$p/.claude/settings.json" "created settings.json"
 assert_file "$p/.claude/scripts/log-issue.sh" "vendored log-issue.sh"
 assert_file "$p/.claude/scripts/lib/common.sh" "vendored lib/common.sh"
-assert_file "$p/.claude/scaffold.json" "recorded scaffold.json"
+assert_file "$p/.claude/skills.toml" "created skills.toml"
+assert_no_file "$p/.claude/scaffold.json" "no scaffold.json - the receipt supersedes it"
 assert_contains "$p/ISSUES.md" "ISSUES:BEGIN" "ISSUES.md carries its sentinel"
 assert_contains "$p/CLAUDE.md" "CONTEXT_STATE.md" "CLAUDE.md carries the session-state pointer"
 
