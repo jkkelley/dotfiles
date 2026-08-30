@@ -4,13 +4,13 @@
   "slug": "project-scaffold-plumbing-skills-toml-the-gitign",
   "title": "project-scaffold plumbing: skills.toml, the gitignore blanket, scaffold.json removed, skill-update.sh narrowed",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p2",
   "created": "2026-08-24",
-  "updated": "2026-08-24",
+  "updated": "2026-08-30",
   "created_at": "2026-08-24T13:19:11-05:00",
   "parent": "WO-20260824-00d5",
-  "branch": null,
+  "branch": "feat/project-scaffold-plumbing-skills-toml-the-gitign",
   "pr": null,
   "merge_sha": null,
   "closed": null,
@@ -25,7 +25,8 @@
     "WO-20260824-9712"
   ],
   "blocks": [
-    "WO-20260824-238b"
+    "WO-20260824-238b",
+    "WO-20260824-b21b"
   ]
 }
 ---
