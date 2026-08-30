@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p2",
   "created": "2026-08-24",
-  "updated": "2026-08-24",
+  "updated": "2026-08-30",
   "created_at": "2026-08-24T13:19:05-05:00",
   "parent": null,
   "branch": null,
@@ -72,6 +72,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-08-30` Execution order approved by the user 2026-08-29, after the epic's shape was reviewed against the children's Problem sections. (1) WO-20260824-a6cb - The hydration-prompt close-out acquires and releases a treehouse slot: zero dependencies, smallest, and it de-risks the hardest ticket. (2) WO-20260824-81a6 - project-scaffold plumbing: skills.toml, the gitignore blanket, scaffold.json removed, skill-update.sh narrowed, with WO-20260824-b21b - CLAUDE.md.tmpl: replace the session-start prose, add the skills markers, the treehouse policy and the documentation-lifetime rule beside it; these set the written shape of skills.toml and the gitignore stanza on the greenfield path, which c6b0 then retrofits. (3) WO-20260824-c6b0 - skill-onboard.sh brings an existing project onto the sync. (4) WO-20260824-6a33 - Checklist for the four repositories carrying the stale session-start block, which already depends on c6b0. (5) WO-20260824-d058 - Remove the inline read-only notice from the other 42 SKILL.md files then WO-20260824-79b6 - Invert the notice assertion: verify --structure now fails on a notice that is present, independent of the rest and runnable at any point, though not concurrently with c6b0 since both churn heavily. (6) WO-20260824-238b - Rename skill-versioning to skill-registry, the closing commit, last by construction. A first draft of this order put d058 first on the theory that onboarding before it would install a doubled notice. That is false: render_notice in claude/tools/skill-sync.sh strips an existing inline notice before inserting the rendered one, and its comment says it was written for exactly this transition window. d058 is the largest mechanical change in the epic, which is not the same as the first.
 - `2026-08-24` Poker 2026-08-24: 32 points. Sum of 8 children, after bundling four project-scaffold tickets into one.
 
 ## Outcome

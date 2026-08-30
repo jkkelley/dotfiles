@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p2",
   "created": "2026-08-24",
-  "updated": "2026-08-24",
+  "updated": "2026-08-30",
   "created_at": "2026-08-24T13:19:10-05:00",
   "parent": "WO-20260824-00d5",
   "branch": null,
@@ -22,7 +22,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20260824-9712"
+    "WO-20260824-9712",
+    "WO-20260824-a6cb"
   ],
   "blocks": [
     "WO-20260824-6a33",
@@ -76,6 +77,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-08-30` Now depends on WO-20260824-a6cb - The hydration-prompt close-out acquires and releases a treehouse slot, an edge added 2026-08-29 and not present when this ticket was cut. The reason is in both tickets' own Problem sections and nowhere else: this one says the script 'has to work without ever touching the user's working tree, which means a treehouse slot, and the gate finding proved it must assert the slot went free rather than trusting an exit code', and a6cb says 'the gate finding makes the release the load-bearing half: a dirty tree makes treehouse return prompt, take the no-TTY default, abort, leave the slot leased and exit 0'. Same finding, same failure mode, and a6cb is where it gets handled first. git grep over work-orders/ finds that language on these two tickets and on no others. Without the edge, next offered this ticket - the largest in the epic and the only one that touches other people's projects - before the acquire-and-release it depends on had been proved, and the leaked-slot-at-exit-0 case would have been rediscovered inside it.
 - `2026-08-24` Poker 2026-08-24: 5 points. Sized below medium-plus: the risky half, asserting the slot actually went free, is already solved knowledge from the gate probe.
 
 ## Outcome
