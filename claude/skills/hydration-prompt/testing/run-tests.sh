@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Drives hydration.sh through the cases that matter. Run in a container:
+# Drives hydration.sh and slot.sh through the cases that matter, offline. Run
+# in a container:
 #
 #   podman run --rm --user 0 -v "$PWD:/work:ro,Z" -w /tmp \
 #     docker.io/library/bash:5 bash /work/testing/run-tests.sh
@@ -10,6 +11,7 @@ set -uo pipefail
 
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 HP="$HERE/../scripts/hydration.sh"
+SLOT="$HERE/../scripts/slot.sh"
 PASS=0; FAIL=0
 
 ok()  { printf '  PASS  %s\n' "$1"; PASS=$((PASS+1)); }
@@ -272,6 +274,226 @@ hd "Round-trip through a real shell"
 bash "$HERE/wrap-roundtrip.sh" >/dev/null 2>&1 \
   && ok "folded and unfolded forms deliver identical argv at every width" \
   || { bad "wrap-roundtrip failed - run testing/wrap-roundtrip.sh to see it"; }
+
+# ===========================================================================
+# slot.sh - the treehouse workbench the close-out holds
+#
+# treehouse is the input under test here, not a dependency to install, so it is
+# stubbed on PATH. Every JSON blob below is recorded verbatim from a real
+# `treehouse status --json` v2.3.0 during the 2026-08-30 probe, so the parser
+# is exercised against the renderer that actually ships rather than a shape
+# invented to suit it. The stub swaps one recorded blob for another instead of
+# simulating a pool: a fixture that cannot drift is worth more here than a
+# model that can.
+#
+# testing/live-check.sh is the other half. It runs the real binary and proves
+# treehouse still behaves the way these fixtures say it does.
+
+S="$WORK/slot"; mkdir -p "$S/bin" "$S/repo"
+export TH_STATE="$S/state.json" TH_LOG="$S/calls.log"
+cat > "$S/bin/treehouse" <<'STUB'
+#!/usr/bin/env bash
+# Stub treehouse. It prints $TH_STATE for `status --json`, and for `get` and
+# `return` it copies $TH_AFTER over $TH_STATE - so a case says what the pool
+# looks like afterwards rather than trusting the stub to work it out. TH_RC is
+# the exit code to hand back, which is exactly the thing slot.sh must ignore.
+printf '%s\n' "$*" >> "$TH_LOG"
+case $1 in
+  # status always succeeds. TH_RC belongs to get and return - it is the thing
+  # under test - and letting it leak into status would make every case that
+  # scripts a non-zero return fail as an unreadable pool instead.
+  status) cat "$TH_STATE"; exit 0 ;;
+  get)    [ -n "${TH_AFTER:-}" ] && cp "$TH_AFTER" "$TH_STATE"
+          printf '%s\n' "${TH_PATH:-}" ;;
+  return) [ -n "${TH_AFTER:-}" ] && cp "$TH_AFTER" "$TH_STATE"
+          printf 'stub: return spoke\n' ;;
+esac
+exit "${TH_RC:-0}"
+STUB
+chmod +x "$S/bin/treehouse"
+PATH="$S/bin:$PATH"; export PATH
+
+# --- the recorded fixtures ------------------------------------------------
+cat > "$S/empty.json" <<'EOF'
+[]
+EOF
+cat > "$S/held.json" <<'EOF'
+[{"name":"1","path":"/pool/1/repo","status":"leased","flavor":"git","lease_id":"57ad1e6601fbd4dfc6fd8a3a431c06e3","lease_holder":"WO-TEST-a6cb","leased_at":"2026-08-30T14:20:11.403429345Z","processes":[]}]
+EOF
+cat > "$S/free.json" <<'EOF'
+[{"name":"1","path":"/pool/1/repo","status":"available","flavor":"git","lease_id":"","lease_holder":"","leased_at":null,"processes":[]}]
+EOF
+# Two slots, and the second carries live processes - which is where a naive
+# split on '},{' cuts a record in half and loses the holder behind it.
+cat > "$S/two.json" <<'EOF'
+[{"name":"1","path":"/pool/1/repo","status":"available","flavor":"git","lease_id":"","lease_holder":"","leased_at":null,"processes":[]},{"name":"2","path":"/pool/2/repo","status":"leased","flavor":"git","lease_id":"16b8675308056cb5128ff3bbcb430aaf","lease_holder":"WO-TEST-other","leased_at":"2026-08-30T14:20:11.462811811Z","processes":[{"pid":244,"name":"bash"},{"pid":245,"name":"treehouse"}]}]
+EOF
+# A returned slot inspected from INSIDE itself. treehouse calls that status
+# "you're here", not "available", so a check reading the status field would
+# call a freed slot occupied for the whole of any close-out standing in it.
+cat > "$S/here.json" <<'EOF'
+[{"name":"2","path":"/pool/2/repo","status":"you're here","flavor":"git","lease_id":"","lease_holder":"","leased_at":null,"processes":[{"pid":298,"name":"bash"},{"pid":299,"name":"treehouse"}]}]
+EOF
+
+use() { cp "$1" "$TH_STATE"; : > "$TH_LOG"; }
+R="$S/repo"
+
+hd "slot.sh - the dispatcher"
+bash "$SLOT" --help >/dev/null 2>&1 \
+  && ok "--help exits 0" || bad "--help did not exit 0"
+HELPTEXT=$(bash "$SLOT" --help 2>&1)
+grep -q 'acquire' <<<"$HELPTEXT" && grep -q 'release' <<<"$HELPTEXT" \
+  && ok "--help names both verbs" || bad "--help does not name the verbs"
+bash "$SLOT" >/dev/null 2>&1
+[ $? -eq 2 ] && ok "no command exits 2 (usage)" || bad "wrong exit code for no command"
+bash "$SLOT" fly --holder X >/dev/null 2>&1
+[ $? -eq 2 ] && ok "an unknown command exits 2" || bad "an unknown command was accepted"
+bash "$SLOT" status --wat >/dev/null 2>&1
+[ $? -eq 2 ] && ok "an unknown option exits 2" || bad "an unknown option was accepted"
+bash "$SLOT" status --repo "$WORK/nowhere" >/dev/null 2>&1
+[ $? -eq 4 ] && ok "a missing --repo exits 4 (io)" || bad "wrong exit code for a missing --repo"
+
+# treehouse absent is an io failure with a message that says where it lives,
+# not a stack of "command not found" from three different call sites.
+# Drop the stub directory rather than emptying PATH: an empty PATH loses bash
+# too, and the 127 that comes back is the shell failing to start the script,
+# not the script reporting anything.
+OUT=$(PATH="${PATH#"$S/bin:"}" bash "$SLOT" status --repo "$R" 2>&1); RC=$?
+[ $RC -eq 4 ] && ok "treehouse missing from PATH exits 4" || bad "treehouse missing exited $RC"
+grep -q 'treehouse update' <<<"$OUT" \
+  && ok "and the message says how to install it" || bad "the message does not say how to install it"
+
+hd "slot.sh - the holder label"
+# A quote in the label is re-encoded by treehouse, so the holder comparison
+# would miss it silently - and on the release path a silent miss reads as a
+# clean hand-back that never happened. Refused rather than escaped.
+use "$S/empty.json"
+bash "$SLOT" acquire --holder 'ho"ler' --repo "$R" >/dev/null 2>&1
+[ $? -eq 3 ] && ok "a quote in --holder exits 3 (validation)" || bad "a quoted holder was accepted"
+[ ! -s "$TH_LOG" ] && ok "and treehouse was never called" || bad "treehouse was called with a bad holder"
+bash "$SLOT" acquire --holder '-leading-dash' --repo "$R" >/dev/null 2>&1
+[ $? -eq 3 ] && ok "a leading dash in --holder exits 3" || bad "a dash-leading holder was accepted"
+bash "$SLOT" acquire --repo "$R" >/dev/null 2>&1
+[ $? -eq 2 ] && ok "a missing --holder exits 2 (usage)" || bad "a missing --holder was accepted"
+use "$S/held.json"
+bash "$SLOT" holder --holder 'WO-TEST-a6cb' --repo "$R" >/dev/null 2>&1 \
+  && ok "a ticket ID is a legal holder" || bad "a ticket ID was refused"
+
+hd "slot.sh - acquire"
+use "$S/empty.json"
+GOT=$(TH_PATH=/pool/1/repo TH_AFTER="$S/held.json" bash "$SLOT" acquire --holder WO-TEST-a6cb --repo "$R" 2>/dev/null)
+[ "$GOT" = "/pool/1/repo" ] \
+  && ok "acquire prints the path and nothing else" || bad "acquire printed '$GOT'"
+LOG=$(cat "$TH_LOG")
+grep -q -- '--lease-holder WO-TEST-a6cb' <<<"$LOG" \
+  && ok "the ticket ID is recorded as the lease holder" || bad "the lease holder was not passed"
+grep -q -- '--no-fetch' <<<"$LOG" \
+  && ok "the origin fetch is skipped by default" || bad "acquire fetched without being asked"
+use "$S/empty.json"
+TH_PATH=/pool/1/repo TH_AFTER="$S/held.json" bash "$SLOT" acquire --holder WO-TEST-a6cb --repo "$R" --fetch >/dev/null 2>&1
+LOG=$(cat "$TH_LOG")
+grep -q -- '--no-fetch' <<<"$LOG" \
+  && bad "--fetch did not re-enable the fetch" || ok "--fetch re-enables the origin fetch"
+
+# THE CONTENTION CASE. treehouse hands a second slot to a holder that already
+# has one and records the same holder against both - observed in the probe. One
+# ticket is one session is one workbench, so this refuses.
+use "$S/held.json"
+OUT=$(TH_PATH=/pool/2/repo bash "$SLOT" acquire --holder WO-TEST-a6cb --repo "$R" 2>&1); RC=$?
+[ $RC -eq 3 ] && ok "acquiring twice for one holder exits 3" || bad "a second acquire exited $RC"
+grep -q '/pool/1/repo' <<<"$OUT" \
+  && ok "and the refusal names the slot already held" || bad "the refusal does not name the held slot"
+LOG=$(cat "$TH_LOG")
+grep -q '^get' <<<"$LOG" \
+  && bad "treehouse get ran anyway - the slot was double-leased" \
+  || ok "treehouse get never ran, so nothing was double-leased"
+
+# A holder must match a lease exactly. A substring test over the raw JSON would
+# report WO-TEST-a6 as holding the slot that WO-TEST-a6cb actually holds, and
+# the close-out for the shorter ticket would then release the longer one's
+# workbench.
+use "$S/held.json"
+bash "$SLOT" holder --holder WO-TEST-a6 --repo "$R" >/dev/null 2>&1
+[ $? -eq 3 ] && ok "a holder that is a prefix of another matches nothing" \
+  || bad "prefix matching claimed an unrelated holder's slot"
+
+# get exits 0 having recorded nothing. Reading rc would hand back a path into a
+# slot this holder does not own.
+use "$S/empty.json"
+OUT=$(TH_PATH=/pool/1/repo bash "$SLOT" acquire --holder WO-TEST-a6cb --repo "$R" 2>&1); RC=$?
+[ $RC -eq 5 ] && ok "get exiting 0 with no lease recorded exits 5" || bad "a phantom acquire exited $RC"
+grep -q 'nothing was acquired' <<<"$OUT" \
+  && ok "and says nothing was acquired" || bad "the phantom-acquire message is unclear"
+
+hd "slot.sh - release, the load-bearing half"
+# THE CASE THIS SCRIPT EXISTS FOR. A dirty tree makes treehouse prompt, the
+# prompt takes its no-TTY default, the return is abandoned, the slot stays
+# leased - and it exits 0. TH_AFTER is unset, so the pool does not move.
+use "$S/held.json"
+OUT=$(TH_RC=0 bash "$SLOT" release --holder WO-TEST-a6cb --repo "$R" 2>&1); RC=$?
+[ $RC -eq 5 ] && ok "return exiting 0 with the slot still leased exits 5" \
+  || bad "a leaked slot exited $RC - the close-out would report success"
+grep -q 'still leased' <<<"$OUT" \
+  && ok "and the failure says the slot is still leased" || bad "the leak message does not say what leaked"
+grep -q -i 'uncommitted' <<<"$OUT" \
+  && ok "and names the usual cause" || bad "the leak message does not name the cause"
+grep -q 'treehouse return /pool/1/repo' <<<"$OUT" \
+  && ok "and hands back the command that frees it" || bad "the leak message has no recovery command"
+
+# The mirror, and the one that proves the claim rather than restating it: a
+# NON-ZERO return that did free the slot is a success, because the pool is the
+# authority and the exit code is not consulted in either direction.
+use "$S/held.json"
+TH_RC=1 TH_AFTER="$S/free.json" bash "$SLOT" release --holder WO-TEST-a6cb --repo "$R" >/dev/null 2>&1
+[ $? -eq 0 ] && ok "return exiting 1 having freed the slot is a success" \
+  || bad "release read the exit code instead of the pool"
+
+use "$S/held.json"
+TH_RC=0 TH_AFTER="$S/free.json" bash "$SLOT" release --holder WO-TEST-a6cb --repo "$R" >/dev/null 2>&1
+[ $? -eq 0 ] && ok "a clean release exits 0" || bad "a clean release did not exit 0"
+LOG=$(cat "$TH_LOG")
+grep -q -- 'return /pool/1/repo --if-lease-holder WO-TEST-a6cb' <<<"$LOG" \
+  && ok "release guards with --if-lease-holder" \
+  || bad "release did not pass --if-lease-holder - it could return another agent's slot"
+
+# Releasing what you do not hold is the state release exists to reach, so it is
+# success. Otherwise re-running a finished close-out reports a problem it does
+# not have.
+use "$S/free.json"
+bash "$SLOT" release --holder WO-TEST-a6cb --repo "$R" >/dev/null 2>&1
+[ $? -eq 0 ] && ok "releasing a slot you do not hold is success" || bad "an idempotent release failed"
+LOG=$(cat "$TH_LOG")
+grep -q '^return' <<<"$LOG" \
+  && bad "it called return on a slot it does not hold" \
+  || ok "and it does not call return on a slot it does not hold"
+
+# The freed slot the close-out is standing in. Keying on the status field would
+# read "you're here" as occupied and report a leak on every clean close-out.
+use "$S/here.json"
+bash "$SLOT" release --holder WO-TEST-a6cb --repo "$R" >/dev/null 2>&1
+[ $? -eq 0 ] && ok "a slot reporting \"you're here\" is not read as still held" \
+  || bad "the 'you're here' status was mistaken for a lease"
+
+hd "slot.sh - holder and status"
+use "$S/two.json"
+[ "$(bash "$SLOT" holder --holder WO-TEST-other --repo "$R" 2>/dev/null)" = "/pool/2/repo" ] \
+  && ok "holder finds a record sitting behind nested processes" \
+  || bad "the record was cut in half by its processes array"
+bash "$SLOT" holder --holder WO-TEST-nobody --repo "$R" >/dev/null 2>&1
+[ $? -eq 3 ] && ok "holder exits 3 when the label holds nothing" || bad "holder did not exit 3"
+
+MAP=$(bash "$SLOT" status --repo "$R" 2>/dev/null)
+[ "$(printf '%s\n' "$MAP" | wc -l)" = "2" ] \
+  && ok "status prints one row per slot" || bad "status printed the wrong number of rows"
+ROW=$(printf 'WO-TEST-other\t2\t/pool/2/repo')
+grep -qxF -- "$ROW" <<<"$MAP" \
+  && ok "status is keyed by holder, then name, then path" || bad "the status row shape is wrong"
+ROW=$(printf -- '-\t1\t/pool/1/repo')
+grep -qxF -- "$ROW" <<<"$MAP" \
+  && ok "an unleased slot shows '-' for its holder" || bad "an unleased slot was not marked"
+use "$S/empty.json"
+[ -z "$(bash "$SLOT" status --repo "$R" 2>/dev/null)" ] \
+  && ok "an empty pool prints nothing" || bad "an empty pool printed something"
 
 hd "Result"
 printf '  %s passed, %s failed\n' "$PASS" "$FAIL"
