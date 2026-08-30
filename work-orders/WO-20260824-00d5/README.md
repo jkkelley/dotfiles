@@ -14,3 +14,4 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20260824-d058` | ready | p2 | - | [Remove the inline read-only notice from the other 42 SKILL.md files](WO-20260824-d058-remove-the-inline-read-only-notice-from-the-othe.md) |
 | `WO-20260824-238b` | ready | p2 | WO-20260824-c6b0 WO-20260824-b21b WO-20260824-d058 WO-20260824-79b6 WO-20260824-6a33 | [Rename skill-versioning to skill-registry, the closing commit](WO-20260824-238b-rename-skill-versioning-to-skill-registry-the-cl.md) |
 | `WO-20260824-c6b0` | ready | p2 | - | [skill-onboard.sh brings an existing project onto the sync](WO-20260824-c6b0-skill-onboard-sh-brings-an-existing-project-onto.md) |
+| `WO-20260830-eb89` | ready | p2 | WO-20260824-238b | [skill-sync fills the CLAUDE.md skills table between the markers](WO-20260830-eb89-skill-sync-fills-the-claude-md-skills-table-betw.md) |

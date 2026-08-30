@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p2",
   "created": "2026-08-24",
-  "updated": "2026-08-25",
+  "updated": "2026-08-30",
   "created_at": "2026-08-24T13:19:15-05:00",
   "parent": "WO-20260824-00d5",
   "branch": null,
@@ -31,7 +31,9 @@
     "WO-20260824-6a33",
     "WO-20260825-dac4"
   ],
-  "blocks": []
+  "blocks": [
+    "WO-20260830-eb89"
+  ]
 }
 ---
 

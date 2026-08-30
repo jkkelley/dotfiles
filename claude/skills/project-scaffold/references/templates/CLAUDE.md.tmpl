@@ -89,26 +89,27 @@ All sample data must be synthetic and obviously fake.
 
 If a request would introduce PII, substitute a placeholder and say so.
 
-## Hard rule: every runbook and playbook lives in one repository
+## Hard rule: documentation goes where its lifetime says it goes
 
-**https://github.com/jkkelley/local-k8s-docs**
+One question decides it: **would this still be true after this repo is deleted?**
 
-That is where the operational knowledge for this setup lives, all of it, in one place.
-Runbooks and playbooks both. If you need access to it, ask - do not work around not having it.
+| Answer                                               | Where it goes                              |
+| ---------------------------------------------------- | ------------------------------------------ |
+| Yes - the cluster, the pipeline, Vault, the platform | https://github.com/jkkelley/local-k8s-docs |
+| No - it only makes sense inside this codebase        | this repo's `docs/`, via `living-docs`     |
 
-Three cases, and they cover everything:
+That question has one answer per document, so every document has exactly one destination.
+Runbooks and playbooks both, and everything else - nothing is written into both places, and nothing
+is left to whichever of the two an agent happened to read last.
 
-| Situation                                  | What you do                                                              |
-| ------------------------------------------ | ------------------------------------------------------------------------ |
-| You need to know how something is done     | It is in there. Go and read it, then follow it as written                |
-| You are following one                      | Follow **its** format and its steps, not your own improved version       |
-| The one you need does not exist yet        | Write it, in that repository, in the same format as the ones beside it   |
+Both halves are mandatory, and the second is the one that gets skipped.
+If you worked out a process in order to finish a task, that process is a document that does not exist yet.
+Write it, in whichever of the two the question above picks - `docs.sh sop` for this repo's half, and in the same format as the ones beside it for the other.
 
-The third case is the one that gets skipped, and skipping it is what put the knowledge in somebody's head instead of in the repository.
-If you worked out a process in order to finish a task, that process is now a runbook that does not exist yet. Go and make it.
-
+When you are following one, follow **its** format, not your own improved version.
 Do not invent a local procedure when a documented one exists, and do not leave one undocumented once you have worked it out.
-A process that lives only in a chat log, a commit message, or this file is a process the next person re-derives from scratch.
+
+If you need access to it, ask - do not work around not having it.
 
 ## Layout and running
 
@@ -204,10 +205,13 @@ close-out
 │  └─ 4. push once               code + ticket + state + prompt, one review
 │
 └─ AFTER THE MERGE
-   ├─ 5. archive                 work-order.sh close, straight to main
-   ├─ 6. cleanup                 ff main, delete the branch both sides
-   └─ 7. hand back               the prompt AND its launch command, then hold
+   ├─ 5. cleanup                 work-order.sh cleanup, ff main, branch gone both sides
+   └─ 6. hand back               the prompt AND its launch command, then hold
 ```
+
+**Nothing is archived after the merge.** `work-order.sh done` moved the ticket into
+`work-orders/archive/<year>/` on the branch, so the archive rides the same pull request as the work
+it records. There is no `work-order.sh close`; the lifecycle ends at `done`.
 
 **There is exactly one pull request per ticket.**
 A second PR carrying only state files doubles the review surface for one piece of work and leaves `main` briefly describing a world that no longer exists.
@@ -245,13 +249,11 @@ A second PR carrying only state files doubles the review surface for one piece o
 4. Push once and open **one** pull request.
    It carries the code, the finished ticket, the state file and the hydration prompt together, so one review sees the change and the whole record of the change.
 
-5. After the merge, run `bash .claude/skills/work-order/scripts/work-order.sh close --id WO-...`.
-   It backfills the merge SHA, archives the ticket and regenerates `INDEX.md` **straight to `main`** - no second PR.
-   It falls back to a PR only if that push is rejected.
+5. After the merge, run `bash .claude/skills/work-order/scripts/work-order.sh cleanup --id WO-...`.
+   It fetches, fast-forwards `main`, and deletes the feature branch locally and on the remote.
+   It writes nothing - the archive already landed with the pull request - and it refuses unless `gh` reports the pull request `MERGED`, so it is safe to re-run and safe days later on another machine.
 
-6. Post-merge cleanup: fast-forward `main`, delete the feature branch locally and on the remote.
-
-7. Hand back **both** the hydration prompt and the command that starts the next session, then hold.
+6. Hand back **both** the hydration prompt and the command that starts the next session, then hold.
    Do not start it.
 
    ```sh
@@ -266,74 +268,34 @@ on a branch nothing points at. This has happened twice. Recovery is cheap - fast
 branch fresh, cherry-pick, delete the merged branch on both sides - but noticing late is avoidable,
 and it is the usual reason a step gets skipped and the one-PR rule gets broken.
 
-## Session start - skill version check
+## Skills
 
-Skills are installed into a project as **copies**.
-A copy has no way of knowing the original moved on, so this check is the only thing standing between a project and a silently stale skill.
-Run it once, before the first task of the session.
+Synced automatically by a `SessionStart` hook before any work starts.
+You do not run anything.
+If you see sync output, that is what changed; otherwise ignore it.
+Never edit a managed skill in place - it is gitignored and the next sync replaces it silently.
+Fix it in dotfiles, bump it, done.
 
-Skip the whole thing if `.claude/skills/` does not exist.
+`.claude/skills.toml` is the manifest and is the only file you edit to add or drop a skill.
+The list below is generated from what the sync actually installed, so it is the record of this
+project's skills and there is no second list to keep in step with it.
 
-**1. Read both sides.**
+<!-- skills:begin - generated by skill-sync, do not hand-edit -->
 
-```bash
-curl -fsS --max-time 5 https://raw.githubusercontent.com/jkkelley/dotfiles/main/claude/skills/registry.json
-grep -H '^version:' .claude/skills/*/SKILL.md
-```
+<!-- skills:end -->
 
-That URL is literal and correct.
-It is **not** a placeholder to be substituted with your own handle.
-Substituting it points the check at a repository that does not exist and breaks it silently.
+## Where your workspace comes from
 
-**2. Compare.**
+**One source: the treehouse pool at `~/.treehouse/<repo>-<hash>/`.**
+Borrow a slot, work in it, hand it back.
+Never hand-roll a `git worktree add`, and never create a second pool inside the repository - the
+pool carries build cache, and cache inside the working tree is bound into every container, taken as
+build context by `podman build .`, and staged by `git add -A`.
 
-- A skill with no `version:` line predates versioning. Treat it as behind.
-- A skill installed in the project but absent from the registry is project-local. Ignore it silently.
-- If the fetch fails, say one line - `skill version check skipped, registry unreachable` - and start the work. Never block a session on this.
-
-**3. If everything matches, say nothing.**
-Start the work.
-No output, no confirmation, no "all skills current" line.
-
-**4. If anything is behind, print the gap, then ask.**
-One table, then exactly three options, then wait for an answer.
-
-| skill            | installed | latest | bump  |
-| ---------------- | --------- | ------ | ----- |
-| hydration-prompt | 1.1.0     | 1.4.0  | minor |
-
-1. **Update now.** Standalone, before the work starts.
-
-   ```bash
-   curl -fsSL https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/skill-versioning/scripts/skill-update.sh -o /tmp/skill-update.sh
-   bash /tmp/skill-update.sh --skill <name> --mode standalone --project .
-   ```
-
-   Branches off `origin/main` inside a throwaway worktree, copies, commits, pushes, opens a PR, squash-merges it without review, deletes the branch, fast-forwards local `main`, and prints the PR URL.
-   The working tree is never touched, so work in progress is safe.
-   Merged without review on purpose: the content is a byte copy of a file already reviewed in dotfiles, so there is nothing left for a human to decide.
-
-2. **Fold it into this work.** The update rides the commit that is about to happen anyway.
-
-   ```bash
-   curl -fsSL https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/skill-versioning/scripts/skill-update.sh -o /tmp/skill-update.sh
-   bash /tmp/skill-update.sh --skill <name> --mode inline --project .
-   ```
-
-   Copies the skill in and leaves it uncommitted.
-   No branch, no PR, no round trip.
-   Then get straight on with the actual task.
-
-3. **Note it and move on.**
-   The table above was the whole deliverable.
-   Write nothing, start the work.
-
-Report the outcome plainly: the new version and the full path on success, or the failing step and the log path on failure.
-The script captures both.
-
-All three options work on any machine with `curl` and `git`.
-The script is fetched from GitHub and it fetches the skill from GitHub, so nothing here needs a dotfiles checkout.
-If this project already vendors `skill-versioning`, run `.claude/skills/skill-versioning/scripts/skill-update.sh` instead and skip the download.
+`treehouse status` is the live map of which agent holds which slot, keyed by the ticket ID that
+leased it. Read it rather than guessing, and read `treehouse --help` rather than this file for the
+flags - the tool moves faster than the template does, and a copy of its interface written here would
+be wrong within a release.
 
 ## Starting a session
 

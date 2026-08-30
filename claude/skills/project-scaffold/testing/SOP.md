@@ -3,7 +3,7 @@
 What each case runs, what it asserts, and **why that failure would matter**.
 
 A case whose "why" cannot be written is a case not worth keeping.
-Three of the sixteen case files are mostly negative tests, because a validator that never rejects anything is not a validator.
+Three of the seventeen case files are mostly negative tests, because a validator that never rejects anything is not a validator.
 
 Run everything with:
 
@@ -248,43 +248,48 @@ The retention assertion guards the other direction. `Done` keeps 20 but is read 
 
 ---
 
-## 140-skill-version-check
+## 140-skills-block
 
-**Runs:** a scaffold, then inspects `CLAUDE.md` for the session-start skill version check.
+**Runs:** a scaffold, then inspects `CLAUDE.md` for the skills section and the marker pair the sync writes between.
 
-**Asserts:** the section is present; the registry URL is carried literally, owner and all; it has not been rewritten into an angle-bracket placeholder; the check reads the installed `version:` lines as well as the registry; both apply modes are offered; the happy path is silent; an unreachable registry does not block the session; and the whole check is skipped where `.claude/skills/` does not exist.
+**Asserts:** the section is present; the agent is told it runs nothing; editing a managed skill in place is refused; `.claude/skills.toml` is named as the file to edit instead; both markers are present byte for byte; the block between them is empty; no hand-maintained version table survives; and the agent is not asked to fetch `registry.json` itself.
 
-**Why it matters:** skills are installed into a project as copies, and a copy cannot know the original moved on.
-This section is the only thing that ever raises the question.
-Drop it from the template and every project scaffolded from then on runs on whatever skill version it was born with, indefinitely - and nothing fails, because old skills still work.
-That is exactly how two existing projects ended up without the check and stayed that way until somebody asked.
+**Why it matters:** this replaced a 68-line session-start check that asked the agent to fetch the registry, diff it against the installed copies by hand, and offer three apply modes.
+That check existed because nothing else knew a copy had gone stale.
+The `SessionStart` hook knows, so the replacement is not a smaller version of the check - an agent that still runs one is repeating work the hook did before it was asked anything, and the two can disagree.
 
-The URL assertion is the sharp one, and it guards against this repository's own house style.
-Root `CLAUDE.md` requires environment-specific values to become `<angle-bracket>` placeholders, and this URL is its single documented exception.
-Substituting the owner points the check at a repository that does not exist, so the fetch fails, the check reports `registry unreachable`, and the session starts anyway.
-It breaks silently and stays broken, which is why a literal-string assertion sits in front of it.
+The marker assertions are the load-bearing ones, and they are string-exact on purpose.
+`skill-sync` matches on those comments, so a reworded opening marker is not a cosmetic edit - it is the sync losing its anchor.
+The failure is silent in the worst way: the skills install correctly, and the project's `CLAUDE.md` simply never says what it holds.
 
-The silence assertion guards the opposite failure. A check that announces itself every session becomes noise, and noise gets skipped.
+The empty-block assertion is the other half of the ownership rule.
+`scaffold.sh` writes the markers and nothing between them, because a table shipped in the template is a second source of truth that is wrong the moment the manifest changes - and wrong in the direction agents believe.
+
+As of `WO-20260824-b21b` nothing fills the block yet; `WO-20260830-eb89` is the ticket that teaches `skill-sync` to.
+Until it lands, "the block is empty" is the whole contract, which is why it is asserted rather than assumed.
 
 ---
 
-## 150-runbooks-source-of-truth
+## 150-documentation-lifetime
 
-**Runs:** a scaffold, then inspects `CLAUDE.md` for the rule naming the one repository that holds every runbook and playbook.
+**Runs:** a scaffold, then inspects `CLAUDE.md` for the rule that decides where a document goes.
 
-**Asserts:** the section is present; the `local-k8s-docs` URL is carried literally, owner and all; it has not been rewritten into an angle-bracket placeholder; runbooks and playbooks are both named; a missing grant is something to ask for rather than route around; a new document follows the format of the ones beside it; working a process out obliges you to write it down; and a documented process beats a locally invented one.
+**Asserts:** the section is present; the lifetime question is what decides; every document has exactly one destination; the `local-k8s-docs` URL is carried literally, owner and all; it has not been rewritten into an angle-bracket placeholder; `docs.sh sop` is named for the in-repo half; runbooks and playbooks are covered by the same rule; a missing grant is something to ask for rather than route around; a new document follows the format of the ones beside it; working a process out obliges you to write it down; a documented process beats a locally invented one; and the unarbitrated one-repository heading is gone.
 
-**Why it matters:** an agent that has never been told the documentation exists does the reasonable thing and invents a procedure.
-Inventing it never feels like authoring a runbook - it feels like finishing the task - so it is never written down.
-The knowledge then lives in a session transcript nobody opens again, and the next agent invents a different procedure for the same job.
-Nothing fails at any point. The setup just quietly accumulates N procedures where it should have one, and each is discovered only when it contradicts another.
+**Why it matters:** two rules used to answer this question and neither deferred to the other.
+The template said every runbook and playbook lives in `local-k8s-docs`; `living-docs` says procedures go to `<project>/docs/sops/` via `docs.sh sop`.
+Both were stated as the way it is done, so a document landed wherever the agent had read last, and the same procedure could exist in both places without either copy knowing.
+Lifetime is the discriminator, and the question has exactly one answer per document.
 
-The URL assertion is sharp for the same reason case 140's is, and guards against this repository's own house style.
-Root `CLAUDE.md` requires environment-specific values to become `<angle-bracket>` placeholders, and this URL is a second documented exception to that.
-Substituting the owner turns the single pointer to the documentation into a link to a repository that does not exist.
+The arbitration is what the middle assertions defend, and the last one defends it from the other direction.
+A template that describes both destinations and stops there is the state this replaced, so the old heading coming back is a regression even if every other assertion still passes.
+
+The URL assertion guards against this repository's own house style.
+Root `CLAUDE.md` requires environment-specific values to become `<angle-bracket>` placeholders, and this URL is a documented exception to that.
+Substituting the owner turns the single pointer to the platform documentation into a link to a repository that does not exist.
 Nothing catches that: an agent that cannot find the repository concludes there is nothing in it and goes back to inventing.
 
-The last two assertions are deliberately separate rather than one combined check.
+The last two content assertions are deliberately separate rather than one combined check.
 "Write the missing one" and "do not invent a parallel one" are opposite failures - the first leaves a gap, the second fills it twice - and a template could easily keep one sentence while losing the other.
 
 ---
@@ -305,6 +310,27 @@ The version assertion is the negative half of that.
 
 The section-header assertions guard a silent failure specific to this format.
 `skill-sync`'s parser reads exactly one shape, and a manifest whose sections are named differently parses to an empty list rather than an error, because an empty manifest is a legal manifest.
+
+---
+
+## 170-treehouse-policy
+
+**Runs:** a scaffold, then inspects `CLAUDE.md` for the section naming where a workspace comes from.
+
+**Asserts:** the section is present; the pool is named as the single source; the path is the user-level `~/.treehouse/<repo>-<hash>/` from decision 19; a hand-rolled `git worktree add` is refused; a second in-project pool is refused; `treehouse status` is named as the live map; and no treehouse flag is reproduced in the template.
+
+**Why it matters:** decision 19 kept the pool user-level and rejected an in-project one, and it recorded the cost rather than dismissing it - the pool name is a hash directory, `ff4128` cannot be reconstructed by hand, and the name does not say where its repository lives.
+The decision states that cost is paid with one paragraph in this template and with `treehouse status`.
+This case is what keeps the payment in the template. Without it an agent lands in a fresh repo, needs an isolated workspace, and invents `git worktree add` inside the repository - which is the thing the decision rejected.
+
+The in-project assertion is the one that earns its keep.
+`--root .` puts a pool of build cache inside the working tree - one measured slot carries 171M for a repository whose tracked content is under a megabyte.
+That tree is what every container mounts under Rule 14, what `podman build .` takes as build context, and what `git add -A` stages.
+None of it fails loudly; it just makes every container run slower and every commit riskier, and the cause is several steps removed from the symptom.
+
+The negative assertion is the reason this section is a pointer rather than a manual.
+treehouse went v1.8.0 to v2.3.0 in a morning, so an interface copied into a template is wrong within a release and nothing catches it - an agent following a stale flag gets an error that reads like a broken pool.
+`destroy --force` is the needle because it is a real flag that was removed in v2.0.0, so it is the exact shape of the failure being guarded against.
 
 ---
 
