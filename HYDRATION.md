@@ -10,6 +10,194 @@ file holds exactly 10 once it has filled up. Entries are never renumbered and
 never edited in place - a correction is a new entry.
 
 Written by `hydration.sh add`. Do not hand-edit.
+<!-- hydration-entry: WO-20260824-c6b0 -->
+## WO-20260824-c6b0 - skill-onboard.sh brings an existing project onto the sync
+_Generated 2026-08-30 by hydration.sh. Newest entry._
+
+### Ticket
+
+`WO-20260824-c6b0` - `skill-onboard.sh brings an existing project onto the sync`.
+It is a `feature`, `p2`, a child of `WO-20260824-00d5` - `Skills package manager: roll it out across the repository`.
+
+The order for the whole epic was reviewed and approved on 2026-08-29 and is recorded as a note on `WO-20260824-00d5` itself, not only here. This ticket is **step 3 of 6**, and step 2 is now closed on both halves. Do not re-derive the order; if you think it is wrong, say so and ask.
+
+It is 5 points, sized below medium-plus on the grounds that the risky half - asserting the slot actually went free - is already solved knowledge. That is still true, and `slot.sh` is the solution sitting unused waiting for you.
+
+**It is the largest ticket in the epic and the only one that touches other people's projects.**
+
+### What just landed
+
+**PR #85, `WO-20260824-b21b` - `CLAUDE.md.tmpl: replace the session-start prose, add the skills markers, the treehouse policy and the documentation-lifetime rule`.** Step 2 is complete. Four edits to one template, plus the suite that holds them.
+
+The 68-line session-start skill version check is gone, replaced by a `## Skills` section that tells the agent it runs nothing. The `skills:begin` / `skills:end` marker pair is in, with `skill-sync` named in the marker text as the writer.
+
+**`## Where your workspace comes from` is new and it is the paragraph decision 19 said it would be paid with.** One source: `~/.treehouse/<repo>-<hash>/`. A hand-rolled `git worktree add` and a second in-project pool are both refused by name. It points at `treehouse status` and reproduces no flags.
+
+`## Hard rule: every runbook and playbook lives in one repository` is replaced by `## Hard rule: documentation goes where its lifetime says it goes`. One question - would this still be true after this repo is deleted - and one answer per document. Three rules the old section carried and the design doc's short block had dropped were kept deliberately: runbooks and playbooks named together, ask rather than route around, and do not invent a local procedure when a documented one exists.
+
+The two dead `work-order.sh close` references at `:207` and `:248` are fixed. Step 5 is now `cleanup`, and the diagram renumbers.
+
+**`project-scaffold`'s suite went 176 + 9 -> 187 + 9.** `140-skill-version-check` became `140-skills-block` (9), `150-runbooks-source-of-truth` became `150-documentation-lifetime` (12), and `170-treehouse-policy` is new (7). Three `testing/SOP.md` sections were rewritten with them.
+
+Before that: PR #84 shipped `81a6`, PR #83 shipped `slot.sh` and step 1. Epic 1 closed at PR #79.
+
+### What is NOT done
+
+**Nothing in `claude/tools/skill-onboard.sh` exists. This ticket has not started.**
+
+**`b21b` shipped the markers inert, and `WO-20260830-eb89` - `skill-sync fills the CLAUDE.md skills table between the markers` is the new ticket that fills them.** It was cut on `b21b`'s branch after the user was asked, is parented to the epic, and depends on `WO-20260824-238b` - `Rename skill-versioning to skill-registry, the closing commit`, so it runs first once the original six steps are done. The epic carries a note explaining why it exists and why it is last. **It is not yours and `next` will not offer it.** What matters to you: the CLAUDE.md block you write into an existing project will carry an empty marker pair, and that is correct and expected, not something to fill by hand.
+
+**`slot.sh` still has no caller, and you are it.** `claude/skills/hydration-prompt/scripts/slot.sh` - `acquire --holder`, `release --holder`, `holder --holder`, `status` - is built, tested and documented, and nothing invokes it. Its header names `skill-onboard.sh` explicitly. `b21b` did not use it either: that session worked directly in the repository, as every session in this epic has.
+
+**11 of 13 skills with a `scripts/` directory still have no `justfile`**, which root `CLAUDE.md` Rule 17 requires. Only `context-compaction` and `living-docs` have one. Repo-wide, on no ticket, named here for the tenth cycle.
+
+Branch protection is still absent and is still on no ticket.
+
+**`work-order.sh approve` and `link` both strand themselves, and it is on no ticket.** Each writes the ticket file and `INDEX.md`; `start` refuses a dirty tree; `start` is what creates the branch. `b21b` cut and approved `eb89` on its own branch, which worked because the branch already existed. A `start --on-current-branch` would remove it.
+
+Root `CLAUDE.md`'s `## Consuming These Files` section still contradicts Rule 16 steps 7 and 8, and **it is still on no ticket** after nine cycles of being named here.
+
+### Stale or false in the docs
+
+**The dead `work-order.sh close` reference is now fixed in three of four places, and the survivor is on no ticket.** `claude/skills/work-order/settings.local.json.tmpl:6` still names it. There is no `close` verb; the lifecycle ends at `done`, on the branch, inside the pull request.
+
+**The close-out diagram in `CLAUDE.md.tmpl` puts the pull request at step 4, after `done` at step 2.** The real order is `gh pr create`, then `submit --pr N`, then `done`, all inside the PR window. `b21b` fixed the `close` references and deliberately did not rewrite the ordering, which is a different edit. Surfaced on PR #85, on no ticket.
+
+**The design doc's example manifest is stale and decision 20 wins.** `docs/superpowers/specs/2026-08-23-skills-package-manager-design.md:195` lists `project-scaffold` where decision 20 lists `context-compaction`.
+
+**Both design documents still say the runner only has Docker.** `ubuntu-24.04` ships Podman 5.8.4.
+
+**`project-scaffold/testing/run-tests.sh` pins `python:3.12-slim` by tag, not by digest**, a root `CLAUDE.md` Rule 15 violation. It predates `81a6` and was left alone deliberately twice. On no ticket.
+
+**`scaffold.sh:214` depends on `cmp`**, which Rule 17 says to check for. Present in Git Bash so not a live break, but the same class of assumption the rule names. On no ticket.
+
+### Your scope
+
+The ticket's Scope block defines it and this section does not restate it. Five things are worth knowing before you read it.
+
+**Take a slot, and take it with `slot.sh`, not with raw `treehouse`.** The Scope says `--lease-holder skill-onboard`; `slot.sh acquire --holder skill-onboard` is that call plus the guard that stops one holder taking two slots. You are the first caller of a file built for you, so if its interface is wrong for a real caller, that is a finding worth writing down rather than working around.
+
+**The release is the load-bearing half and it must not read `$?`.** A dirty worktree makes `treehouse return` prompt, take its no-TTY default, abandon the return, leave the slot leased and exit 0. `slot.sh release` already throws that exit code away and asks the pool. Your AC-H2 - a dirty working tree reports a failure rather than exiting 0 having done nothing - is the same finding one level up, and it is about `skill-onboard.sh` itself, not about `slot.sh`.
+
+**The written shape you are retrofitting is now finished and it is in three files.** `references/templates/skills.toml.tmpl` is the manifest, `gitignore.tmpl`'s project-scaffold block at the bottom carries `**/.claude/skills/`, and `CLAUDE.md.tmpl` carries the `## Skills` section with its marker pair. Read all three before writing the retrofit, and copy their content rather than re-authoring it - a second version of the manifest that drifts from the template is exactly the failure the ordering was designed to prevent.
+
+**`git rm -r --cached .claude/skills/` runs only where they were committed.** A project that never committed them has nothing to un-track, and an unconditional `git rm` there fails in a way that reads like a broken script.
+
+**Non-goals, from the ticket.** Do not install the hook - that is machine level and `setup.sh` owns it. Do not run this against any real repository; that is a separate deliberate act, and `WO-20260824-6a33` - `Checklist for the four repositories carrying the stale session-start block` is the ticket that writes down which ones.
+
+### Before you start
+
+Nothing is reserved for you to decide.
+
+Two things are settled and recorded rather than open. The approved order is a note on `WO-20260824-00d5` dated 2026-08-30; read it rather than re-deriving it. The reason this ticket depends on `WO-20260824-a6cb` - `The hydration-prompt close-out acquires and releases a treehouse slot` is a note on this ticket dated 2026-08-30, and it is the leaked-slot-at-exit-0 finding, not a scheduling preference.
+
+`work-order.sh start` needs a clean tree and creates the branch for you. It leaves the ticket file and `INDEX.md` uncommitted, so commit them before anything else.
+
+**Grep the suite for any heading you are about to delete from a template.** `b21b` paid for not doing this: cases 140 and 150 asserted the exact section headings that ticket removed, and the failure surfaced on the first suite run rather than in the plan. It is ten seconds and it turns a discovery into a task.
+
+### Read in this order
+
+1. The ticket, and every note on it.
+2. This entry, the top entry of `HYDRATION.md`. Read only this one.
+3. The note on `WO-20260824-00d5` - `Skills package manager: roll it out across the repository` dated 2026-08-30 that is the approved order, and the one dated 2026-08-30 that records the seventh step.
+4. `claude/skills/hydration-prompt/scripts/slot.sh` in full, and the `## The workbench` section of `claude/skills/hydration-prompt/SKILL.md` beside it. You are its first caller.
+5. `docs/superpowers/plans/2026-08-24-skills-package-manager-implementation.md` section E2.1, and E2.10 below it for what this script is eventually pointed at.
+6. The three template files named under `Your scope`, together, before writing anything that retrofits their shape.
+7. `claude/tools/skill-sync.sh` - `manifest_list` and `resolve_project` - so what you write is what the sync reads.
+
+### Reuse, it is proven
+
+**`slot.sh` is the acquire-and-release shape and was built for you.** `claude/skills/hydration-prompt/scripts/slot.sh`, verbs `acquire --holder`, `release --holder`, `holder --holder`, `status`. Its two guards are the two findings from the gate probe, and both are asserted in `hydration-prompt`'s suite with a stubbed `treehouse`.
+
+**`testing/live-check.sh` is the pattern for proving a host CLI still behaves as documented.** `claude/skills/hydration-prompt/testing/live-check.sh`, 19 checks, real binary bind-mounted read-only with `TREEHOUSE_ROOT` redirected into container scratch so the live pool is untouched. It is not run by the gate. If this ticket needs to know what real `treehouse` does in a case a stub cannot fake, that file is the shape.
+
+**Feeding a real template to the parser that reads it is the shape that catches silent drift.** `claude/tools/testing/run-tests.sh`, section "the manifest `project-scaffold` ships", copies `skills.toml.tmpl` itself into a fixture project and runs `skill-sync --plan` over it. A retrofit that writes a manifest belongs in the same shape: assert against the template, not against a hand-built copy of it.
+
+**The two-image suite split is built and documented.** `claude/skills/project-scaffold/testing/run-tests.sh` runs `cases/` and `cases-git/` under different images from one shared `INNER` body, and `container-sandbox/references/skill-testing.md` carries the pattern and its four traps. This ticket is git-heavy - `git rm --cached`, a real commit, a real push - so `cases-git/` and its pinned `bitnami/git` digest is where most of it belongs.
+
+### The verification ladder
+
+Rung 1: `bash .github/scripts/bump-gate.sh run-suite claude/tools`. Never `bash <suite>` directly. It is at **258**.
+
+Rung 2: `bash .github/scripts/bump-gate.sh run-suite claude/skills/hydration-prompt` if you change `slot.sh`. It is at **86** across two images, and `testing/live-check.sh` at **19** is separate and not run by the gate.
+
+Rung 3: `bash .github/scripts/bump-gate.sh run-suite claude/skills/project-scaffold` if you touch a template. **187 + 9**, prints `all cases passed, both images`.
+
+Rung 4: `skill-version.sh verify --structure --base origin/main`. Green.
+
+Rung 5: the gate on the pull request. `skill-onboard.sh` is a tool, not a skill, so a change confined to `claude/tools/` needs **no** `Bump:` trailer and no level - the publisher's fallback covers tools. If you also change `hydration-prompt` or `project-scaffold`, that skill needs one.
+
+### Traps, already paid for
+
+**`treehouse return` exits 0 having freed nothing.** A dirty worktree makes it prompt, take the no-TTY default, abandon the return and leave the slot leased. Assert the post-state; never read `$?`. This is the single most expensive finding in the epic and it is what this ticket's AC-H2 exists for.
+
+**`treehouse get` hands out a second slot for a holder that already has one.** Two `get`s with one `--lease-holder` record the same holder against both. `slot.sh acquire` guards it; raw `treehouse` does not.
+
+**A freed slot inspected from inside its own directory reports `you're here`, not `available`.** Key the check on `lease_holder`, which is cleared to `""` on a successful return. Checking the status field reports a leak on every clean close-out.
+
+**A markdown formatter rewrites `*emphasis*` into `_emphasis_` on lines you never touched.** It is a `PostToolUse` hook in the machine's global `~/.claude/settings.json`. It also re-pads tables and rewrites a PR body file after `Write`. `git diff -U0 | grep '^-'` before committing and account for every deleted line. It did not fire on `b21b`, which is not evidence it is gone.
+
+**`rc=$?` on the line after a `podman run` never executes under `set -e`.** The failing run ends the script before the capture. `|| rc=$?` on the run itself.
+
+**`--entrypoint=""` is required for `bitnami/git`.** Its entrypoint is `git`, so a `bash -c` without it is handed to `git` as arguments.
+
+**`bitnami/git` ships no `cmp`**, and a missing `cmp` exits 127, which is indistinguishable from "the files differ".
+
+**An assertion that greps a file for a word its own comments explain will fail on the explanation.** Strip comments first, then assert on the data.
+
+**A digest you did not copy from a real registry does not exist.** `podman pull <tag>` then `podman image inspect --format '{{index .RepoDigests 0}}'`.
+
+**A container check against "the branch" silently runs `main`'s code if you have not committed.** `git clone` carries commits, not a working tree.
+
+**A suite with no self re-exec, run as `bash <suite>`, runs on the host and fails with `mkdir: cannot create directory '/work'`.** Use `bump-gate.sh run-suite`.
+
+**`grep -qxF "$ROW"` where `$ROW` starts with a dash is parsed as an option.** `grep -qxF -- "$ROW"`.
+
+**A `grep -q` in a pipeline reports "no match" when it matched.** SIGPIPE plus `pipefail`. Capture to a variable and use a herestring.
+
+**`.claude/worktrees/smoke-tests` is a locked git worktree sitting untracked inside this repository.** It is not yours. `git add -A` at close-out is unsafe here - add explicit paths, which is what PR #76 through #85 all did. `gh pr create` warns `1 uncommitted change` because of it. Expected.
+
+### Workflow
+
+```bash
+WO=claude/skills/work-order/scripts/work-order.sh
+HP=claude/skills/hydration-prompt/scripts/hydration.sh
+SL=claude/skills/hydration-prompt/scripts/slot.sh
+
+bash $WO show    --project . --id WO-20260824-c6b0
+bash $WO start   --project . --id WO-20260824-c6b0   # run it alone, never in an && chain
+git add work-orders && git commit -m "chore(work-orders): start WO-20260824-c6b0"
+
+# ... the work ...
+
+bash .github/scripts/bump-gate.sh run-suite claude/tools
+bash .github/scripts/bump-gate.sh run-suite claude/skills/hydration-prompt   # if slot.sh changed
+
+bash $WO evidence --project . --id WO-20260824-c6b0 --index N --observed '...'
+git add <explicit paths>            # NOT -A, see .claude/worktrees/smoke-tests above
+git commit && git push -u origin <branch>
+gh pr create --base main --title "feat(tools): ..." --body-file <file>
+bash $WO submit  --project . --id WO-20260824-c6b0 --pr <N>
+bash $WO done    --project . --id WO-20260824-c6b0   # on the branch, before the merge
+bash $HP check   --project . --body-file /tmp/entry.md
+bash $HP add     --project . --id <next> --title "<next title>" --body-file /tmp/entry.md
+git add <explicit paths> && git commit && git push   # rides the SAME pull request
+
+# after the merge
+bash $WO cleanup --project . --id WO-20260824-c6b0
+bash $SL release --holder <holder>                   # if you took a slot
+```
+
+**A change confined to `claude/tools/` needs no `Bump:` trailer**, because tools are not skills and the publisher's fallback covers them. A change that also touches `claude/skills/<name>/` does. **Never run `skill-version.sh bump`.** The publisher allocates on `main`.
+
+Step 4 of the approved order is `WO-20260824-6a33` - `Checklist for the four repositories carrying the stale session-start block`, which already depends on this ticket.
+
+### Conventions
+
+Every reference to a work-order in a chat reply carries the ticket ID and its full title joined by a dash. A bare ID is a defect, and so is "the next ticket" or "the blocked one".
+
+Feature branches only. `skill-publish.yml` is the one named exception, and root `CLAUDE.md` says so.
+
 <!-- hydration-entry: WO-20260824-b21b -->
 ## WO-20260824-b21b - CLAUDE.md.tmpl: replace the session-start prose, add the skills markers, the treehouse policy and the documentation-lifetime rule
 _Generated 2026-08-30 by hydration.sh. Newest entry._
@@ -1460,104 +1648,4 @@ Every reference to a work-order in a chat reply carries the ticket ID and its fu
 Feature branches only. The publish workflow is the one named exception, and narrowing that sentence is part of this ticket.
 
 PR bodies carry no agent attribution, Rule 13.
-
-<!-- hydration-entry: WO-20260826-9037 -->
-## WO-20260826-9037 - Credential rotation workflow - KMS free tier fix
-_Generated 2026-08-26 by hydration.sh. Newest entry._
-
-### Ticket
-
-`WO-20260826-9037` - `Credential rotation workflow - KMS free tier fix` is `done` and archived, on the branch, inside PR #75.
-
-It has no parent and no dependencies. It is the fourth and last repository in the KMS free-tier work, and the only one of the four that ships a tool rather than a configuration change.
-
-### What just landed
-
-`workflows/credential-rotation.md` at 1.0.0, a 14-credential manifest, a driver with `list`, `due`, `verify` and `rotate --dry-run`, and two test suites.
-
-**Nothing in the driver reads a credential value.** `due` and `verify` compare the parameter's `LastModifiedDate` against the `ExternalSecret`'s `status.refreshTime` - if the cluster last refreshed before the parameter last changed, the cluster is stale. That answers the question completely, works for the templated secrets where no plain key holds the raw value, and spends zero KMS requests. The obvious alternative would cost one billable `Decrypt` per credential per run and undo the whole point of the 168h change. The offline suite asserts the absence of that call, not the absence of an error.
-
-**The manifest lists no consumers on purpose.** The fan-out is discovered from the cluster at run time, so it cannot go stale, and the file stays free of cluster object names in a public repository.
-
-Two suites, because neither is sufficient alone. `run-tests.sh` stubs `aws` and `kubectl` with `--network=none`, which is what makes the no-KMS assertion possible; the cost is that the `go-template` behind `verify` is never rendered by a real `kubectl`. `live-check.sh` closes that gap against the real account and cluster, read-only subcommands only.
-
-Green in Podman: credential-rotation **75**, live-check **10**, tools **38**, skill-versioning **103**.
-
-Also fixed a latent bug in `tools/testing/run-tests.sh`. Piping `list` into `grep -q` was safe while `workflows/` held one document; the second one made `list` die on SIGPIPE mid-write and `pipefail` promoted that to the pipeline's status, failing a check whose subject was correct.
-
-### What is NOT done
-
-PR #75 is open and **must not merge until the other three do**. Until they land it describes a cluster that does not exist yet: it tells the reader a rotated credential will not propagate on its own, which only becomes true when `refreshInterval` is actually `168h`.
-
-homelab-gitops #88, yieldpoint-gitops #10, local-k8s-docs #31. All three open and mergeable.
-
-Nothing has been rotated. The driver has never run `rotate` against the real account - only `list`, `due` and `verify`.
-
-Phase 5, confirmation, cannot start until those merge: re-measure CloudTrail 48 hours after the last one and expect roughly 292 KMS calls a day, cross-check Cost Explorer, arm a KMS budget alarm.
-
-Phase 6 is seven follow-up tickets, none of them filed yet, and they are to be filed separately rather than folded into anything: the `eso-secret-workflow` skill mandating the deprecated `vault-seed.sh`; the Jenkins rebuild runbook missing the IRSA annotation on `jenkins-eso-sa`; that same runbook lacking the SecretStore and ExternalSecret steps; `homelab-gitops-index.md` listing a `ghcr-pull-secret/` directory that does not exist; the job-hunter migration to Vault; the GitHub PAT duplication across four namespaces; and `argocd-eso-role` being shared by three namespaces.
-
-### Stale or false in the docs
-
-**Root `CLAUDE.md` Rule 16 describes a flow the repository no longer uses.** It says a PR that touches a skill must bump the version and ship the regenerated `registry.json` in that same PR. `.github/scripts/bump-gate.sh` says the opposite in its own header: "Version allocation happens at merge, on main, in the publisher. A pull request therefore carries the intent and never the number." The publisher is the newer and the tested one. `WO-20260824-8cd1` - `Rewrite root CLAUDE.md for merge-time allocation and the named main exception` is the ticket that already covers this.
-
-`workflows/credential-rotation.md` states as present tense that the interval is `168h`. That is true of the merged end state and not of the cluster today.
-
-### Your scope
-
-Merging, in order: the three gitops PRs first, then #75. Then Phase 5.
-
-Do not start Phase 6 by folding tickets into existing work - each of the seven is its own ticket.
-
-### Before you start
-
-Check whether the three gitops PRs have merged. `gh pr view 88 --repo jkkelley/homelab-gitops --json state` and the same for yieldpoint-gitops #10 and local-k8s-docs #31. Everything downstream depends on that answer and nothing else does.
-
-### Read in this order
-
-1. `workflows/credential-rotation.md` - the procedure, and the reasoning behind the timestamp comparison
-2. `workflows/credential-rotation/credentials.tsv` - the header comment explains what is deliberately not a column
-3. `local-k8s-docs`, `runbooks/kms-cost-and-eso-refresh/` - the cost model, the free-tier arithmetic, the `OnChange` trap
-4. `claude/skills/container-sandbox/references/skill-testing.md`, "Verifying against live infrastructure" - why there are two suites
-
-### Reuse, it is proven
-
-`workflows/credential-rotation/testing/live-check.sh` is the pattern for any tool that has to talk to AWS or the cluster: the image is built from `tools/testing/Containerfile.live` with `aws` and `kubectl` pinned to exact versions, credentials mount read-only, and only read-only subcommands run. It answered the go-template question that a stub could not.
-
-The stub-plus-call-log shape in `run-tests.sh` is how you assert that a call was never made rather than that no error appeared. That is the assertion that protects the KMS saving.
-
-`tools/testing/Containerfile` is bash and coreutils on a pinned debian, and it is now shared by two suites. Reuse it rather than pinning a second digest.
-
-### The verification ladder
-
-1. `bash workflows/credential-rotation/testing/run-tests.sh` - offline, 75 checks
-2. `bash tools/testing/run-tests.sh` - 38 checks, includes the real `workflows/` tree
-3. `AWS_PROFILE=minecraft-admin bash workflows/credential-rotation/testing/live-check.sh` - 10 checks against the real account and cluster
-4. `bash tools/workflow-version.sh verify` - every procedure document carries a version
-
-### Traps, already paid for
-
-**A `local` referenced from an `EXIT` trap is out of scope when the trap fires.** Under `set -u` that turns a clean exit into an unbound-variable failure with all the work already done - `rotate` did every write correctly and returned 1. The scratch file variable and the trap both live at file scope now.
-
-**`done < <(parser)` runs the parser in a subshell, so a `die()` in it kills only the subshell.** The refusal prints and the exit code is 0. A refusal that does not fail is not a refusal. Read into a variable with `$( )` instead, where a failed substitution fails the assignment and `set -e` takes it from there.
-
-**`cmd | grep -q` under `pipefail`.** `grep -q` exits at the first match; if the producer still has output to write it dies on SIGPIPE and `pipefail` makes 141 the pipeline's status. Capture first, match second.
-
-**The global prettier hook in `~/.claude/settings.json` reformats markdown tables and language-tagged code fences on every `Write`/`Edit`.** In this repository that matches the convention and is fine. It will also convert `*italic*` to `_italic_` on lines you did not touch, which is a Rule 3 violation - check `git diff` and revert the churn.
-
-### Workflow
-
-The close-out ran as `workflows/close-out-procedure.md` describes: `gh pr create`, `submit --pr 75`, `done` on the branch, this entry, one commit riding the same PR.
-
-After the merge, `work-order.sh cleanup --id WO-20260826-9037` without being asked. It refuses unless `gh` reports the PR `MERGED` and it writes nothing.
-
-`work-order.sh start` needs a clean tree, and the ticket `new` just wrote makes the tree dirty. `INDEX.md` is the only tracked file in the way - restore it and `start` regenerates it on the branch. Do not stash, because stashing takes the untracked ticket with it and `start` then cannot find the ticket it was asked about.
-
-### Conventions
-
-The branch is `feat/credential-rotation-workflow-kms-free-tier-fix`, cut by `work-order.sh start` from the ticket slug. The other three repositories use `feat/kms-free-tier-fix`; they diverge because `start` owns the branch name here and `cleanup` depends on the ticket's record of it.
-
-PR bodies carry no agent attribution, Rule 13. Skill versions are not hand-edited - the PR body carries `Bump: <skill>=<level>` and the publisher allocates on `main`.
-
-Rule 14 has no host escape hatch. If a verification pattern is undocumented, write the section rather than falling back to the host.
 
