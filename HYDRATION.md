@@ -10,6 +10,177 @@ file holds exactly 10 once it has filled up. Entries are never renumbered and
 never edited in place - a correction is a new entry.
 
 Written by `hydration.sh add`. Do not hand-edit.
+<!-- hydration-entry: WO-20260824-b21b -->
+## WO-20260824-b21b - CLAUDE.md.tmpl: replace the session-start prose, add the skills markers, the treehouse policy and the documentation-lifetime rule
+_Generated 2026-08-30 by hydration.sh. Newest entry._
+
+### Ticket
+
+`WO-20260824-b21b` - `CLAUDE.md.tmpl: replace the session-start prose, add the skills markers, the treehouse policy and the documentation-lifetime rule`.
+It is a `feature`, `p2`, a child of `WO-20260824-00d5` - `Skills package manager: roll it out across the repository`.
+
+The order for the whole epic was reviewed and approved on 2026-08-29 and is recorded as a note on `WO-20260824-00d5` itself, not only here. This ticket is the **second half of step 2 of 6**. Do not re-derive the order; if you think it is wrong, say so and ask.
+
+It is 5 points, sized above the plan's "small" and deliberately kept out of the four-part bundle beside it, because it is prose, it is four distinct edits, and one of them arbitrates a real conflict.
+
+### What just landed
+
+**PR #84, `WO-20260824-81a6` - `project-scaffold plumbing: skills.toml, the gitignore blanket, scaffold.json removed, skill-update.sh narrowed`.** The first half of step 2. Three skills changed, so the trailer carried three `Bump:` lines rather than one.
+
+`claude/skills/project-scaffold/references/templates/skills.toml.tmpl` is new and carries decision 20's four - `work-order`, `living-docs`, `container-sandbox`, `context-compaction` - plus an empty `[agents]` block. `scaffold.sh` writes it into `.claude/skills.toml` and then never touches it again: a re-run plans it `skip`, the same rule `settings.local.json` gets.
+
+`gitignore.tmpl` gained `**/.claude/skills/`. **It is in the project-scaffold block at the bottom, not beside `**/.claude/agents/` where the ticket's Scope said "beside the existing agents line".** Everything above that block is re-pulled verbatim from upstream, so a line added there is dropped by the next re-pull with no conflict and no warning - and that one line is the only thing stopping a skill copy from being committed. The comment on the line names the agents line it mirrors and says why it is not next to it.
+
+`.claude/scaffold.json` is gone. `scaffold.sh` no longer writes it, and case 030's idempotence claim is now total - the build timestamp in that file was the one documented hole in it, and the `! -name` exclusion is deleted rather than left as dead code.
+
+`skill-update.sh` opens with `SHOULD YOU BE RUNNING THIS?` and a three-row table keyed on the project's `.claude/skills.toml`. Header only; `--mode inline` and `--mode standalone` are untouched.
+
+**`project-scaffold`'s suite now runs two images and sums the totals.** `testing/cases/` on `python:3.12-slim`, `testing/cases-git/` on the pinned `bitnami/git` digest. **176 + 9.** `claude/tools` went **251 -> 258**, and the seven added checks feed `project-scaffold`'s real template to `skill-sync`'s parser - every other case there builds its manifest with `mkproject`, which writes the shape the parser was written against, so nothing proved a scaffolded project ships that shape. `skill-versioning` unchanged at **148**.
+
+`container-sandbox/references/skill-testing.md` gained "The other answer: two stock images, one suite", per Rule 14.
+
+Before that: PR #83 shipped `slot.sh` and step 1 of 6. Epic 1 closed at PR #79; PRs #80, #81 and #82 followed.
+
+### What is NOT done
+
+**Nothing in `CLAUDE.md.tmpl` has been touched.** `81a6` did not edit that file at all, which is exactly why the two were split - the rebase surface for this ticket is empty.
+
+**`WO-20260824-c6b0` - `skill-onboard.sh brings an existing project onto the sync` is startable and is step 3, not step 2.** It is the largest ticket in the epic and the only one that touches other people's projects. Take `b21b` first: `81a6` and `b21b` together set the written shape - manifest, gitignore stanza, template block - that `c6b0` retrofits onto repositories that already exist, and retrofitting a shape nobody has finished writing is the failure mode the order exists to prevent.
+
+**`slot.sh` still has no caller.** `claude/skills/hydration-prompt/scripts/slot.sh` is built, tested and documented; nothing invokes it. `c6b0` is the first real caller, and its header names `skill-onboard.sh` explicitly.
+
+**11 of 13 skills with a `scripts/` directory still have no `justfile`**, which root `CLAUDE.md` Rule 17 requires. Only `context-compaction` and `living-docs` have one. Repo-wide, on no ticket, named here for the ninth cycle.
+
+Branch protection is still absent and is still on no ticket.
+
+**`work-order.sh approve` and `link` both strand themselves, and it is on no ticket.** Each writes the ticket file and `INDEX.md`; `start` refuses a dirty tree; `start` is what creates the branch. This session worked around it by running `start` first and then `link`, so the graph edit rode the branch that already existed. A `start --on-current-branch` would remove it.
+
+Root `CLAUDE.md`'s `## Consuming These Files` section still contradicts Rule 16 steps 7 and 8, and **it is still on no ticket** after eight cycles of being named here.
+
+### Stale or false in the docs
+
+**The dead `work-order.sh close` reference is fixed in two of four places and two of the remaining survivors are yours.** `claude/skills/project-scaffold/references/templates/CLAUDE.md.tmpl:207` and `:248` both still say `archive - work-order.sh close, straight to main`. There is no `close` verb; the lifecycle ends at `done`, on the branch, inside the pull request. The fourth is `claude/skills/work-order/settings.local.json.tmpl:6`, which is on no ticket.
+
+**The design doc's example manifest is stale and decision 20 wins.** `docs/superpowers/specs/2026-08-23-skills-package-manager-design.md:195` lists `project-scaffold` where decision 20 lists `context-compaction`. `81a6` shipped decision 20's four. The example was not edited; it is noted here and in PR #84.
+
+**Both design documents still say the runner only has Docker.** `ubuntu-24.04` ships Podman 5.8.4.
+
+**`project-scaffold/testing/run-tests.sh` pins `python:3.12-slim` by tag, not by digest**, which is a root `CLAUDE.md` Rule 15 violation. It predates `81a6` and was left alone deliberately: repinning the image a suite runs on, in the same change that adds cases to that suite, mixes two failures that must stay distinguishable. On no ticket.
+
+**`scaffold.sh:214` depends on `cmp`**, which Rule 17 says to check for. It is present in Git Bash so it is not a live break, but it is the same class of assumption the rule names, and `assert_same` was fixed for exactly this in `81a6` while the script beside it was not. On no ticket.
+
+### Your scope
+
+Four edits to one file, `claude/skills/project-scaffold/references/templates/CLAUDE.md.tmpl`, which the ticket's Scope block defines and this section does not restate.
+
+Three things are worth knowing before you read it.
+
+**The sync writes the skills table, not `scaffold.sh`.** The plan says so at E2.4 and says why: the design doc's body specifies the sync as the writer and its "Open" list carries a stale contradiction, and the body wins because the sync is the only actor that knows what actually landed. So your job is the `skills:begin` / `skills:end` markers and nothing between them. **Names only, never versions** - a hand-maintained version table is wrong within a week, and a stale one is worse than none because agents believe it.
+
+**The two `work-order.sh close` references at `:207` and `:248` are in the file you are editing.** Fix them while you are there. They name a verb that does not exist.
+
+**The documentation-lifetime rule is the one that arbitrates, and arbitration is the deliverable.** `local-k8s-docs` and `living-docs` both write into `<project>/docs/sops/`. The done-when is that the template names _one_ destination for a document and _one_ source for a workspace - not that it describes both and leaves the reader to choose.
+
+**Non-goals.** Do not start `c6b0` in this branch. Do not touch `claude/skills/skill-versioning/` beyond what you must - the rename is `WO-20260824-238b` - `Rename skill-versioning to skill-registry, the closing commit` and it is last for a reason. Do not edit the four downstream repositories; that is `WO-20260824-6a33` - `Checklist for the four repositories carrying the stale session-start block`, and even that one only writes a checklist.
+
+### Before you start
+
+Nothing is reserved for you to decide. The branch question that opened the last session is settled and recorded: the note on `WO-20260824-00d5` dated 2026-08-30 explains why step 2 became two branches and why the graph now carries a `b21b` depends-on `81a6` edge. Read it rather than re-deriving it.
+
+`work-order.sh start` needs a clean tree and creates the branch for you. It leaves the ticket file and `INDEX.md` uncommitted, so commit them before anything else.
+
+### Read in this order
+
+1. The ticket, and every note on it.
+2. This entry, the top entry of `HYDRATION.md`. Read only this one.
+3. The note on `WO-20260824-00d5` - `Skills package manager: roll it out across the repository` dated 2026-08-30 about the two-branch split, and the one dated 2026-08-30 that is the approved order.
+4. `docs/superpowers/plans/2026-08-24-skills-package-manager-implementation.md` section E2.4, which is the four edits, and decision 19 above it for the treehouse pool.
+5. `claude/skills/project-scaffold/references/templates/CLAUDE.md.tmpl` lines 269 to 336, the prose being replaced, before reading the replacement.
+6. `claude/tools/skill-sync.sh`, `render_notice` and whatever writes between markers, before writing markers for it to fill.
+
+### Reuse, it is proven
+
+**The two-image suite split is built and documented.** `claude/skills/project-scaffold/testing/run-tests.sh` runs `cases/` and `cases-git/` under different images from one shared `INNER` body. `container-sandbox/references/skill-testing.md`, "The other answer: two stock images, one suite", carries the pattern and the four traps. If this ticket needs a git assertion, the directory already exists.
+
+**Feeding a real template to the parser that reads it is the shape that caught the gap `81a6` could not see.** `claude/tools/testing/run-tests.sh`, section "the manifest project-scaffold ships", copies `skills.toml.tmpl` itself into a fixture project and runs `skill-sync --plan` over it. If you add markers to `CLAUDE.md.tmpl` that the sync is expected to fill, the assertion belongs there too, not in `project-scaffold`'s suite - the two files live in different skills and drift between them is silent.
+
+**`slot.sh` is the acquire-and-release shape and is built for a second caller.** `claude/skills/hydration-prompt/scripts/slot.sh`, verbs `acquire --holder`, `release --holder`, `holder --holder`, `status`. Reach for it at `c6b0`, not here.
+
+### The verification ladder
+
+Rung 1: `bash .github/scripts/bump-gate.sh run-suite claude/skills/project-scaffold`. Never `bash <suite>` directly. It is at **176 + 9** across two images and prints both totals plus `all cases passed, both images`.
+
+Rung 2: whichever suite owns the thing you changed the format of. A marker the sync fills is `claude/tools`, at **258**. A template a case reads is `project-scaffold`. If both, both.
+
+Rung 3: `skill-version.sh verify --structure --base origin/main`. Green.
+
+Rung 4: the gate on the pull request, with `Bump: project-scaffold=minor` or a `feat(` title.
+
+Rung 5 is not needed. Do not run the nine suites for a change confined to one template.
+
+### Traps, already paid for
+
+**A markdown formatter rewrites `*emphasis*` into `_emphasis_` on lines you never touched.** It is a `PostToolUse` hook in the machine's global `~/.claude/settings.json`. Paid on `81a6`: three untouched lines in `skill-testing.md` were rewritten and had to be reverted with `perl -i -pe` after the last edit to that file, because a further edit would only re-trigger it. It also re-pads tables and rewrites a PR body file after `Write`. `git diff -U0 | grep '^-'` before committing and account for every deleted line, and check the `Bump:` trailer is still last with nothing after it.
+
+**`rc=$?` on the line after a `podman run` never executes under `set -e`.** Paid on `81a6` while adding a second image: the failing run ends the script before the capture, so the second image never runs and the post-run guard is skipped. `|| rc=$?` on the run itself.
+
+**`--entrypoint=""` is required for `bitnami/git`.** Its entrypoint is `git`, so a `bash -c` without it is handed to `git` as arguments and fails in a way that looks nothing like a test failure.
+
+**`bitnami/git` ships no `cmp`**, and a missing `cmp` exits 127, which is indistinguishable from "the files differ". `assert_same` now hashes when `cmp` is absent.
+
+**An assertion that greps a file for a word its own comments explain will fail on the explanation.** Paid on `81a6`: `assert_not_contains skills.toml "version"` failed on the header sentence saying why nothing pins a version. Strip comments first, then assert on the data.
+
+**A digest you did not copy from a real registry does not exist.** `podman pull <tag>` then `podman image inspect --format '{{index .RepoDigests 0}}'`.
+
+**A container check against "the branch" silently runs `main`'s code if you have not committed.** `git clone` carries commits, not a working tree.
+
+**A suite with no self re-exec, run as `bash <suite>`, runs on the host and fails with `mkdir: cannot create directory '/work'`.** Use `bump-gate.sh run-suite`, which dispatches `self` or `wrapped` correctly.
+
+**`grep -qxF "$ROW"` where `$ROW` starts with a dash is parsed as an option.** `grep -qxF -- "$ROW"`.
+
+**A `grep -q` in a pipeline reports "no match" when it matched.** SIGPIPE plus `pipefail`. Capture to a variable and grep the variable with a herestring.
+
+**`.claude/worktrees/smoke-tests` is a locked git worktree sitting untracked inside this repository.** It is not yours. `git add -A` at close-out is unsafe here - add explicit paths, which is what PR #76 through #84 all did. `gh pr create` warns `1 uncommitted change` because of it. Expected.
+
+### Workflow
+
+```bash
+WO=claude/skills/work-order/scripts/work-order.sh
+HP=claude/skills/hydration-prompt/scripts/hydration.sh
+
+bash $WO show    --project . --id WO-20260824-b21b
+bash $WO start   --project . --id WO-20260824-b21b   # run it alone, never in an && chain
+git add work-orders && git commit -m "chore(work-orders): start WO-20260824-b21b"
+
+# ... the work ...
+
+bash .github/scripts/bump-gate.sh run-suite claude/skills/project-scaffold
+bash .github/scripts/bump-gate.sh run-suite claude/tools     # if a marker the sync fills changed
+
+bash $WO evidence --project . --id WO-20260824-b21b --index N --observed '...'
+git add <explicit paths>            # NOT -A, see .claude/worktrees/smoke-tests above
+git commit && git push -u origin <branch>
+gh pr create --base main --title "feat(project-scaffold): ..." --body-file <file>
+bash $WO submit  --project . --id WO-20260824-b21b --pr <N>
+bash $WO done    --project . --id WO-20260824-b21b   # on the branch, before the merge
+bash $HP check   --project . --body-file /tmp/entry.md
+bash $HP add     --project . --id <next> --title "<next title>" --body-file /tmp/entry.md
+git add <explicit paths> && git commit && git push   # rides the SAME pull request
+
+# after the merge
+bash $WO cleanup --project . --id WO-20260824-b21b
+```
+
+**This ticket changes `claude/skills/project-scaffold/`, so it needs a level.** A `feat(` title resolves it for a single-skill pull request, or state `Bump: project-scaffold=minor` as the last paragraph of the body with nothing after it. **Never run `skill-version.sh bump`.** The publisher allocates on `main`.
+
+Step 3 of the approved order is `WO-20260824-c6b0` - `skill-onboard.sh brings an existing project onto the sync`, which is the largest ticket in the epic and the only one that touches other people's projects.
+
+### Conventions
+
+Every reference to a work-order in a chat reply carries the ticket ID and its full title joined by a dash. A bare ID is a defect, and so is "the next ticket" or "the blocked one".
+
+Feature branches only. `skill-publish.yml` is the one named exception, and root `CLAUDE.md` says so.
+
 <!-- hydration-entry: WO-20260824-81a6 -->
 ## WO-20260824-81a6 - project-scaffold plumbing: skills.toml, the gitignore blanket, scaffold.json removed, skill-update.sh narrowed
 _Generated 2026-08-30 by hydration.sh. Newest entry._
@@ -1389,187 +1560,4 @@ The branch is `feat/credential-rotation-workflow-kms-free-tier-fix`, cut by `wor
 PR bodies carry no agent attribution, Rule 13. Skill versions are not hand-edited - the PR body carries `Bump: <skill>=<level>` and the publisher allocates on `main`.
 
 Rule 14 has no host escape hatch. If a verification pattern is undocumented, write the section rather than falling back to the host.
-
-<!-- hydration-entry: WO-20260824-9712 -->
-## WO-20260824-9712 - End-to-end proof in a scratch project, including the lost-receipt case
-_Generated 2026-08-25 by hydration.sh. Newest entry._
-
-### Ticket
-
-`WO-20260824-9712` - `End-to-end proof in a scratch project, including the lost-receipt case`.
-Its one dependency, `WO-20260824-316d` - `Pilot: take hydration-prompt through the whole pipeline end to end`, is `done`.
-`work-order next` returns it first.
-
-It is the last technical ticket in epic `WO-20260824-f1a5` - `Skills package manager: prove the path on one skill`.
-Only `WO-20260824-8cd1` - `Rewrite root CLAUDE.md for merge-time allocation and the named main exception` stands between it and the epic closing.
-
-**This one is manual and that is deliberate.** The ticket's own non-goal says so: "automating any of this - rung 5 is manual and that is the point". The hook only proves itself by firing, in a real session, in a real project.
-
-### What just landed
-
-The pilot went through the whole pipeline and the pipeline held.
-
-`claude/skills/hydration-prompt/SKILL.md` lost its inline read-only notice, seven lines, and **nothing else in the repository outside `work-orders/`**. That merged as PR #73, squash `fe62080`.
-
-**The publisher then allocated the number and nobody typed it.** Run `32861246926` produced `16541f6` - `chore(skills): allocate versions on main`, authored by `github-actions[bot]`, body `- hydration-prompt -> 2.0.4 (patch, from the trailer)`, carrying `Skill-Publish: true` so its own push cannot re-trigger allocation. `main` now reads `version: 2.0.4` in the SKILL.md and `"hydration-prompt": { "version": "2.0.4", "sha256": "ce66fada..." }` in the registry.
-
-The whole chain is observed rather than inferred. The PR body's last paragraph carried `Bump: hydration-prompt=patch`; the gate resolved `hydration-prompt 2.0.3 -> 2.0.4 patch trailer` and printed that table in both runs; `git interpret-trailers --parse` on `fe62080` **on main** still reads it, so `squash_merge_commit_message=PR_BODY` does deliver the trailer to the publisher. `detect` emitted `skills=["hydration-prompt"]`, `tools=false`, `gate=false`, so **exactly one matrix leg ran**, and the other two jobs are `skipped` in the run's job list.
-
-`verify` on `main` afterwards: `ok - 43 skills versioned, registry in sync`.
-
-All eight suites are green on `main` right now, at: tools **251**, work-order **299**, project-scaffold **161**, gate **145**, skill-versioning **103**, cartography **85**, hydration-prompt **47**, context-compaction **41**, living-docs **39**.
-
-### What is NOT done
-
-**Nothing has yet installed a skill into a real project.** That is this ticket, in full. `skill-sync` has been proved against fixtures in the tools suite's 251 checks and the hook is live in `~/.claude/settings.json`, but no `.claude/skills.toml` exists anywhere on this machine, so the hook has fired many times and correctly done nothing every single time. A green tools suite is not a fired hook.
-
-`AC-H1` of `WO-20260824-360d` - `Publish workflow: allocate versions on merge to main and regenerate the registry` wanted **two** real back-to-back merges. The pilot supplied the first. The second is still outstanding and is not on any ticket.
-
-Branch protection is still absent and is still on no ticket.
-
-`verify --structure` still cannot pass for a brand new skill. That one has a ticket: `WO-20260825-dac4` - `verify --structure refuses a brand new skill, whichever way it is written`.
-
-The other 42 notices are still inline, under `WO-20260824-d058` - `Remove the inline read-only notice from the other 42 SKILL.md files`.
-
-### Stale or false in the docs
-
-**`claude/skills/hydration-prompt/SKILL.md` describes a close-out this repository no longer runs.** Its diagram puts `archive - work-order.sh close, straight to main` under `AFTER THE MERGE`. There is no `close` command - the lifecycle ends at `done`, and `--help` lists no such verb. Root `CLAUDE.md` is the current one: `done` on the branch, inside the PR. The skill also carries an `## Outcome - Written by work-order close` heading in its ticket template, same dead reference. Not your ticket, but do not follow the diagram.
-
-**The pilot closed out in two pull requests, against the standard procedure, on purpose.** The reason is a note on the archived ticket and a second note on the open epic `WO-20260824-f1a5`. Short version: all three of its criteria were observations about `main` _after_ the squash, and the lifecycle has no post-merge slot to record them. **That exception was scoped to one ticket and is already spent.** Yours closes out in one pull request, the normal way.
-
-**Both design documents still say the runner only has Docker.** `ubuntu-24.04` ships Podman 5.8.4.
-
-Root `CLAUDE.md` Rule 16 still tells you to hand-run `skill-version.sh bump`. It is now wrong, and rewriting it is `WO-20260824-8cd1` - `Rewrite root CLAUDE.md for merge-time allocation and the named main exception`. Do not hand-run it in the meantime.
-
-The hydration entry before this one said the suites sat at "251, 103, 299, 145 and 36". The first four are right. **There is no suite at 36** - the real counts are listed above.
-
-### Your scope
-
-The plan's `E1.11` is the checklist, and the ticket's four criteria are the same five properties.
-
-- A scratch repository with a `.claude/skills.toml` naming `hydration-prompt`
-- Start a session. Confirm the skill is installed **with the notice rendered into it**
-- Confirm a hand-authored skill sitting beside it is untouched, unread and unreported
-- Remove `hydration-prompt` from the manifest, re-sync, confirm the directory is removed
-- **Delete the receipt, re-sync, confirm nothing is deleted**
-
-The last one is the ticket. A lost receipt must **orphan** a managed directory, never delete a local one. Everything else here is setup for that check.
-
-`AC-H4` is separate and easy to skip: the receipt must record `owned` correctly at **each** of the four steps, not just at the end. Read `.claude/cache/skills-receipt.json` after every step, not once.
-
-**Done when:** all five hold, and the receipt records `owned` correctly at each step.
-
-### Before you start
-
-**Decide where the scratch project lives and confirm it is disposable before the hook can fire in it.** This is the first ticket whose test subject is a directory that a live machine-level hook will write into. `~/.claude/settings.json` runs `skill-sync --boot` on `startup|resume|clear` in _every_ project on this machine.
-
-**You need a real session start, not a manual `--boot` invocation, for at least the first property.** `AC-H1` is about what happens when a session starts. Running the binary by hand proves the binary; it does not prove the hook. Do both and say which is which.
-
-The manifest format is a hand-rolled parse, not TOML:
-
-```toml
-[skills]
-use = [
-  "hydration-prompt",
-]
-```
-
-### Read in this order
-
-1. Root `CLAUDE.md`. Rule 14 has no size threshold, and Rule 17 is why `skill-sync` avoids `flock`, `cmp` and `diff`.
-2. This entry, the top entry of `HYDRATION.md`. Read only this one.
-3. The ticket: `work-orders/WO-20260824-f1a5/WO-20260824-9712-end-to-end-proof-in-a-scratch-project-including-.md`.
-4. `docs/superpowers/plans/2026-08-24-skills-package-manager-implementation.md`, section `E1.11`.
-5. `claude/tools/skill-sync.sh`, its header comment first. The ownership rule is stated there in full and it is the thing under test: ownership is per-directory, never per-parent, and there is no `rm -rf` of the parent anywhere in the file.
-6. `claude/tools/skill-sync.sh`, `usage`. The four plan tags - `owned`, `previous`, `dropped`, `unknown` - are the vocabulary your observations should use.
-7. The archived pilot, `work-orders/archive/2026/WO-20260824-316d-pilot-take-hydration-prompt-through-the-whole-pi.md`, for the shape of evidence that was accepted.
-
-### Reuse, it is proven
-
-`claude/tools/testing/run-tests.sh` is at 251 checks and covers the sync against fixtures, including the drop path and the receipt. **If a manual observation surprises you, check whether it is already a case in there** - a disagreement between the suite and a real run is a much more interesting finding than either one alone.
-
-`.github/scripts/testing/run-tests.sh` at 145 checks covers both halves of the pipeline against a fixture repository.
-
-The pilot's own ladder is reusable verbatim for anything touching a skill: `verify --structure` locally, `bump-gate.sh resolve` against your real title and body in a container, then the gate, then the merge, then `git show origin/main:claude/skills/registry.json`.
-
-### The verification ladder
-
-Rung 1, free: `skill-sync --plan` in the scratch project. It ignores the stamp, takes no lock and **writes nothing**, so it is the safe way to see the resolution before anything is applied.
-
-Rung 2: a real session start in the scratch project. `.claude/skills/hydration-prompt/SKILL.md` exists and **carries the rendered notice** after the `# ` heading.
-
-Rung 3: the hand-authored neighbour. Byte-identical before and after - hash it, do not eyeball it - and absent from the plan output and the receipt.
-
-Rung 4: manifest removal, re-sync, directory gone, and the receipt no longer claims it.
-
-Rung 5: **delete the receipt, re-sync, and confirm the managed directory is still there.** Orphaned, not deleted.
-
-Rung 6: `.claude/cache/skills-receipt.json` read after each of the four steps, `owned` correct at each.
-
-Rung 7: the eight suites still at 251, 299, 161, 145, 103, 85, 47, 41 and 39.
-
-### Traps, already paid for
-
-**A green suite is not a fired hook.** The tools suite has passed 251 checks for days while the hook did nothing in every project on this machine, because none has a manifest. Do not let the suite stand in for the observation.
-
-**`--boot` is silent and exits 0 when the last sync was under 15 minutes ago.** `STAMP_MAX_AGE` is 900 seconds. Four session starts in quick succession will look like three no-ops and one sync, and that is the churn guard working, not a bug. `--plan` ignores the stamp; `--boot` does not.
-
-**`--boot` exits 0 on failure, by design**, because a SessionStart hook that fails must not take the session with it. It reports on **stdout** - `!! SKILL SYNC FAILED` - because a hook's stdout reaches the agent's context and its stderr does not. `$?` will tell you nothing. Read the output, and assert the post-state.
-
-`~/.local/bin` may not be on `PATH` in a non-interactive shell, which is what a hook runs in. The hook uses `"$HOME/.local/bin/skill-sync"` in full for exactly this reason.
-
-`.claude/skills/` is blanket gitignored in a scaffolded project, so `git status` in the scratch repo will show you **nothing** about what the sync did. Look at the filesystem.
-
-A markdown formatter re-pads tables in a file you only meant to add one line to. It is a `PostToolUse` hook in the machine's global `~/.claude/settings.json`. `git diff --stat` before committing.
-
-A `grep -q` in a pipeline reports "no match" when it matched: it closes the pipe on the first hit, the upstream dies of SIGPIPE, and `pipefail` turns that into a non-zero pipeline. Capture to a variable and grep the variable.
-
-**A suite with no self re-exec, run as `bash <suite>`, runs on the host and fails with `mkdir: cannot create directory '/work'`.** Use `bash .github/scripts/bump-gate.sh run-suite <dir>`, which reads the suite and dispatches `self` or `wrapped` correctly.
-
-`work-order.sh start` refuses with "working tree is dirty", and it leaves the ticket file, `INDEX.md` and the epic README uncommitted. Commit them first.
-
-### Workflow
-
-```bash
-WO=claude/skills/work-order/scripts/work-order.sh
-HP=claude/skills/hydration-prompt/scripts/hydration.sh
-
-bash $WO show    --project . --id WO-20260824-9712
-bash $WO start   --project . --id WO-20260824-9712   # creates the branch, leaves files uncommitted
-
-# the scratch project, somewhere disposable
-mkdir -p /tmp/skill-sync-proof/.claude && cd /tmp/skill-sync-proof && git init
-printf '[skills]\nuse = [\n  "hydration-prompt",\n]\n' > .claude/skills.toml
-"$HOME/.local/bin/skill-sync" --plan                 # writes nothing
-# ... then a real session start here, and the four steps ...
-
-# back in the dotfiles checkout, close out in ONE pull request
-bash $WO evidence --project . --id WO-20260824-9712 --index N --observed '...'
-git push -u origin <branch>
-gh pr create --base main --title "..." --body-file <file>
-bash $WO submit  --project . --id WO-20260824-9712 --pr <N>
-bash $WO done    --project . --id WO-20260824-9712   # on the branch, before the merge
-bash $HP check   --project . --body-file /tmp/entry.md
-bash $HP add     --project . --id <next> --title "<next title>" --body-file /tmp/entry.md
-git add -A && git commit && git push                 # rides the SAME pull request
-
-# after the merge
-bash $WO cleanup --project . --id WO-20260824-9712
-```
-
-This ticket changes no skill, so the gate will resolve nothing and the publisher will allocate nothing. That is the quiet half working, not a failure.
-
-`approve` is already done for every ticket in both epics and must not be run again.
-
-### Conventions
-
-Every reference to a work-order in a chat reply carries the ticket ID and its full title joined by a dash. A bare ID is a defect, and so is "the next ticket" or "the blocked one".
-
-Feature branches only. The publisher is the one named exception.
-
-Rule 14 has no size threshold. **This ticket is the honest hard case**: a real session start cannot be containerised, because the thing under test is the machine's own hook. Say which rungs ran on the host and why, rather than letting them look containerised.
-
-`registry.json` and every `version:` line belong to CI. Never hand-edit either.
-
-When the ticket contradicts itself, or contradicts the runner, say so and pick one in the open.
 
