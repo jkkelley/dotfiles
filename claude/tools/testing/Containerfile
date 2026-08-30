@@ -15,9 +15,24 @@
 # and that assertion is what keeps this line honest. setup.sh's own "jq is
 # missing" branch runs against a hand-built PATH rather than against the image.
 #
-# git is absent for the same reason it is absent from the skill suites: nothing
-# here touches it, and an image carrying a binary the code must not depend on is
-# an image that hides a dependency until somebody else's machine finds it.
+# git is here for skill-onboard.sh, whose whole job is a branch, a commit, a
+# push and a squash-merge. It used to be absent, and the reason it was absent was
+# that nothing here touched it - an image carrying a binary the code must not
+# depend on is an image that hides a dependency until somebody else's machine
+# finds it. That reason is spent now that something does touch it, and the
+# hazard it was guarding against moves to an assertion, exactly as it did for jq:
+# the suite asserts skill-sync.sh names no git at all.
+#
+# The alternative was a second image, the way project-scaffold runs cases/ under
+# python and cases-git/ under bitnami/git. That split exists because no stock
+# image has both python3 and git and the suite may not fetch. This tree builds
+# its own image, so `apt-get install git` costs one line and keeps one answer to
+# "what do the tests run on".
+#
+# gh and treehouse are NOT here, and must not be. What they report is the input
+# under test - a merge that fails, a pool that disagrees with its own exit code -
+# so both are stubbed on PATH by the cases, and an absent binary is what proves
+# the stub is the only one.
 #
 # Built with the network on, then run with --network=none. The build is the only
 # step allowed to fetch; the cases must prove they reach nothing.
@@ -32,5 +47,5 @@
 FROM docker.io/library/debian@sha256:328d16499860ae6cb9b345e2e4cebca08c2a36e4f7278482c7bd1f39d71e5bfd
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends bash jq \
+  && apt-get install -y --no-install-recommends bash jq git \
   && rm -rf /var/lib/apt/lists/*
