@@ -34,7 +34,7 @@
     "plan-scaffold": { "version": "1.0.2", "sha256": "9b5c840114a9ac8013e6ebc5625b156a65d5783179bfeb4b056159f01f0d1903", "type": "skill", "requires": [] },
     "project-kickoff": { "version": "1.0.2", "sha256": "4501741ef793ab38e9fe1b2fadf0fb8b0a6eafb61ba1c5d1cbcee88e74ec6abe", "type": "skill", "requires": [] },
     "project-manager": { "version": "1.0.2", "sha256": "8c3ac90912e05a086c49477ef1355f05011a97ebb73947f7352e4f341d70d9a9", "type": "skill", "requires": [] },
-    "project-scaffold": { "version": "1.4.0", "sha256": "3a85d088cfd882b8d40151b7a1b5bad05c22b8e7aebb3699f444e2a1e1ea698f", "type": "skill", "requires": [] },
+    "project-scaffold": { "version": "1.5.0", "sha256": "ff2356807edca8d389374dba6736fd798e4f40af2516c6208dabf313e4b9516b", "type": "skill", "requires": [] },
     "repo-scaffold": { "version": "1.0.2", "sha256": "9ec2d87e3232ef0fdab645782e67431bc3a3123bdcd90ce624f02530d8e0807d", "type": "skill", "requires": [] },
     "repo-sync": { "version": "1.0.2", "sha256": "861c9dd81401b6b96fdeb48a46768aa785bf9879d909df421936db6038579b02", "type": "skill", "requires": [] },
     "screenshot-syncer": { "version": "1.0.2", "sha256": "d8f5bde0fa7aabf24a329969f33696d422a60037cee9967c916f74b6adf27f22", "type": "skill", "requires": [] },
