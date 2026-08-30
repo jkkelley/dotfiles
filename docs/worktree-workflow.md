@@ -2,7 +2,7 @@
 
 Worked out 2026-08-23. Companion to [skill-distribution-workflow.md](skill-distribution-workflow.md), which covers the same discipline applied to skills.
 
-Status: **the model is settled, the integration is not built.** See "After the compaction" at the bottom for what is actually left to do.
+Status: **the model is settled. The `hydration-prompt` half of the integration is built; the `project-scaffold` half is not.** See "How this gets implemented" and then "After the compaction" at the bottom for what is actually left to do.
 
 ## The problem it removes
 
@@ -127,16 +127,19 @@ session start
 │
 └─ AFTER THE MERGE
    │
-   ├─ 5. archive ─────────── work-order.sh close, straight to main
+   ├─ 5. cleanup ─────────── work-order.sh cleanup, ff main, branch gone both sides
    │
    ├─ 6. RELEASE ─────────── treehouse owns this again
-   │     ├─ treehouse return "$WT" --if-lease-holder "WO-20260821-35a4"
+   │     ├─ slot.sh release --holder "WO-20260821-35a4"
    │     ├─ reaps lingering processes first
    │     ├─ resets the slot back to detached HEAD
-   │     └─ slot re-enters the pool, deps and build cache intact
+   │     ├─ slot re-enters the pool, deps and build cache intact
+   │     └─ and slot.sh asserts it went free, because return exits 0 when it did not
    │
    └─ 7. hand back ───────── the prompt AND its launch command, then hold
 ```
+
+There is no archive step. The ticket reaches `done` on the branch, inside the pull request, which is step 3.
 
 ## The commands that matter
 
@@ -194,9 +197,23 @@ Two integration points, and the split mirrors the tool itself.
 
 ### 1. `hydration-prompt` - the mechanism
 
+**Built, 2026-08-30, as `claude/skills/hydration-prompt/scripts/slot.sh`.**
+
 It already prints the command that starts the next session. Acquiring a slot and labelling the lease with the ticket ID is a natural extension of exactly that, and releasing it belongs in the close-out it already owns.
 
-`treehouse status` then becomes a live map of which agent holds which workbench, keyed by ticket ID.
+`treehouse status` is now a live map of which agent holds which workbench, keyed by ticket ID: `slot.sh status` renders it holder first.
+
+Two assertions are the whole of what the script adds on top of `treehouse`, and both come out of the probe recorded under "Verified" below.
+
+`release` throws `treehouse return`'s exit code away and asks the pool whether the ticket still holds anything, because a dirty worktree makes `return` prompt, take its no-TTY default, abandon the return, leave the slot leased and exit 0.
+A still-leased slot is exit 5 and a message naming the slot and the command that frees it.
+The check keys on `lease_holder` rather than on the slot's status field: a freed slot inspected from inside its own directory reports `you're here` rather than `available`, and a close-out is normally standing in exactly that directory.
+
+`acquire` refuses when the holder already leases a slot, because `treehouse get` does not - asking twice with one `--lease-holder` hands out a second slot and records the same holder against both.
+
+`testing/live-check.sh` runs both against the real binary with `TREEHOUSE_ROOT` redirected into a container, and asserts the exit-0-on-a-dirty-tree behaviour is still real before asserting that `slot.sh` disbelieves it.
+
+The second caller is `skill-onboard.sh`, from `WO-20260824-c6b0`, which has the same two obligations and calls the same verbs with `--holder skill-onboard`.
 
 ### 2. `project-scaffold` CLAUDE.md template - the policy
 
@@ -256,7 +273,7 @@ This list is superseded. It has been reconciled into [the skills package manager
 | 2   | In-project pool vs `~/.treehouse/`               | **closed, 2026-08-24.** User-level, unchanged. See "Open, undecided" above      |
 | 3   | `project-scaffold`: gitignore `.claude/skills/`  | plan ticket E2.2, blocked on the sync being proven end to end                   |
 | 4   | `project-scaffold`: treehouse policy section     | plan ticket E2.4, unblocked by 2                                                |
-| 5   | `hydration-prompt`: acquire and release the slot | plan ticket E2.8, unblocked by 1                                                |
+| 5   | `hydration-prompt`: acquire and release the slot | **done, 2026-08-30.** `WO-20260824-a6cb`, plan ticket E2.8. See section 1 above |
 | 6   | GitHub Actions bumps at merge                    | plan tickets E1.1, E1.7 and E1.8. The largest of the six, and why Epic 1 exists |
 
 Items 3 through 6 are skill edits, so each carries a version bump and a regenerated registry per root `CLAUDE.md` Rule 16 - until E1.12 rewrites that rule and CI takes the obligation over.

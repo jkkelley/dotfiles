@@ -1,6 +1,6 @@
 ---
 name: hydration-prompt
-description: Writes the prompt that starts the next session, and hands back the exact command to launch it. Maintains HYDRATION.md as a 10-entry sliding window, newest on top. Use at close-out, after CONTEXT_STATE.md is written and before the pull request is opened, or whenever the user asks for a hydration prompt, a handoff, or how to start the next ticket.
+description: Writes the prompt that starts the next session, and hands back the exact command to launch it. Maintains HYDRATION.md as a 10-entry sliding window, newest on top. Also acquires and releases the treehouse workbench a ticket holds, checking the slot went free rather than trusting an exit code. Use at close-out, after CONTEXT_STATE.md is written and before the pull request is opened, whenever the user asks for a hydration prompt, a handoff, or how to start the next ticket, or when a session needs a worktree slot leased to its ticket ID.
 version: 2.0.4
 ---
 
@@ -15,10 +15,13 @@ should never have to assemble a command by hand.
 
 ## The one flow
 
-`CONTEXT_STATE.md` -> hydration prompt -> **one** pull request -> merge -> cleanup -> the command.
+`CONTEXT_STATE.md` -> hydration prompt -> **one** pull request -> merge -> cleanup -> release the slot -> the command.
 
 ```text
 close-out
+│
+├─ THE WORKBENCH ──────── held since the session started
+│  └─ 0. slot.sh acquire --holder <ticket>   one ticket, one slot
 │
 ├─ ON THE WORK BRANCH ─── everything the ticket owns, nothing deferred
 │  │
@@ -35,10 +38,13 @@ close-out
 │  └─ 4. push once               code + ticket + state + prompt, one review
 │
 └─ AFTER THE MERGE
-   ├─ 5. archive                 work-order.sh close, straight to main
-   ├─ 6. cleanup                 ff main, delete the branch both sides
+   ├─ 5. cleanup                 work-order.sh cleanup: ff main, branch gone both sides
+   ├─ 6. RELEASE THE SLOT        slot.sh release --holder <ticket>, which checks it went free
    └─ 7. hand back               the prompt AND its launch command, then hold
 ```
+
+There is no archive step and no `work-order.sh close`.
+The lifecycle ends at `done`, on the branch, inside the pull request, which is why step 2 sits where it does.
 
 **Everything the ticket owns happens on the work branch, and the ticket reaches
 `done` there.** We always roll forward: nothing is left as paperwork that follows
@@ -68,6 +74,64 @@ bash $HP latest  --project .                                # what the next agen
 
 `add` refuses a body that fails `check`, so a malformed entry never reaches the
 file.
+
+## The workbench
+
+A session works in a treehouse slot: a long-lived worktree borrowed from a pool and handed back, rather than one created and destroyed per ticket.
+`treehouse` is a standalone binary with its own `--help` and its own updater; `docs/worktree-workflow.md` in the dotfiles repository is the model behind it, and neither is vendored here on purpose.
+The lease is labelled with the **ticket ID**, so `treehouse status` answers "which agent is holding which workbench" instead of listing directories nobody can attribute.
+
+`scripts/slot.sh` is the acquire and the release.
+
+```sh
+SL=.claude/skills/hydration-prompt/scripts/slot.sh
+
+WT=$(bash $SL acquire --holder WO-20260824-a6cb)   # prints only the path
+cd "$WT" && git switch -c feat/<short-kebab>
+# ... the ticket, the pull request, the merge, work-order.sh cleanup ...
+bash $SL release --holder WO-20260824-a6cb         # and it checks
+
+bash $SL status                                    # the live map, holder first
+```
+
+`treehouse` owns the directory and git owns the branch.
+`slot.sh` adds nothing to either; it adds the two assertions that make the pair safe to script.
+
+### The release cannot read the exit code, and that is the whole point
+
+`treehouse return` prompts when the worktree has uncommitted changes.
+With no TTY the prompt takes its default, the return is abandoned, the slot stays leased - **and the process exits 0**.
+
+```text
+| Worktree has uncommitted changes. Clean and return? [Y/n] Aborted.
+  return rc                          0
+  final pool state                   1  leased  (held by gate-case-3)
+```
+
+A close-out that reads `$?` there reports success, hands back a launch command, and leaves a workbench held by a ticket that finished hours ago.
+Nothing ever notices, because every visible signal said the run was clean.
+
+So `release` calls `treehouse return`, throws the exit code away, asks the pool whether the ticket still holds anything, and reports **that**.
+A slot still leased is exit 5 and a message naming the slot and the command that frees it.
+The exit code is printed as evidence and used for nothing.
+
+Two consequences worth stating, because both look like bugs until you know why:
+
+**A holder that already holds nothing is a success.** `release` asserts a post-state, and that post-state is already true, so re-running a close-out that finished does not invent a problem.
+
+**The check is keyed on the lease holder, never on the slot's status field.** A freed slot inspected from inside its own directory reports its status as `you're here`, not `available`, and the close-out is normally standing in exactly that directory. `lease_holder` is cleared on a successful return, so it answers the question actually being asked.
+
+### `acquire` refuses a second slot for one ticket
+
+Asking `treehouse` twice with the same `--lease-holder` hands out a second slot and records the same holder against both.
+One ticket is one session is one workbench, so `acquire` checks the pool first and refuses with exit 3, naming the slot already held.
+`live-check.sh` asserts the raw double-lease is still real, so the day treehouse grows that guard itself, this one can be reconsidered on evidence rather than removed on a hunch.
+
+### Non-goals
+
+`release` never passes `--force`.
+`--force` does free the slot, by discarding the uncommitted changes - which at close-out are the ticket's own unsaved work.
+Refusing is the feature. The failure message hands back the `--force` command for a human who has looked at the changes and decided.
 
 ## Which file governs
 
@@ -269,11 +333,28 @@ scaffold points at it, the owning skill writes it.
 
 ## Testing
 
+Two suites, because they answer different questions.
+
 ```sh
-bash testing/run-tests.sh
+bash .github/scripts/bump-gate.sh run-suite claude/skills/hydration-prompt
+bash claude/skills/hydration-prompt/testing/live-check.sh
 ```
 
-Runs in a container per the `container-sandbox` skill. Covers rotation at the
-window boundary, refusal of a duplicated section, refusal of an empty
-`Before you start`, and that the emitted command matches the template byte for
-byte.
+**`testing/run-tests.sh`** runs offline in a container per the `container-sandbox`
+skill, with `treehouse` stubbed on `PATH`. It covers rotation at the window
+boundary, refusal of a duplicated section, refusal of an empty
+`Before you start`, that the emitted command matches the template byte for byte,
+and every `slot.sh` refusal - including the two cases a stub is the only way to
+produce: a `return` that exits 0 without freeing the slot, and a `return` that
+exits 1 having freed it. Both must come out the same way round, or the release
+is reading the exit code after all. Never run it with `bash <suite>`; it expects
+to be started inside a container already.
+
+**`testing/live-check.sh`** runs the real `treehouse` binary, bind-mounted
+read-only with `TREEHOUSE_ROOT` redirected into container scratch, so the live
+pool is untouched. It exists because a stub proves how `slot.sh` reacts to an
+answer and cannot prove treehouse still gives that answer. It asserts the
+dirty-tree exit 0 is still real before asserting `slot.sh` disbelieves it, so a
+treehouse release that fixed the prompt would turn this red rather than leave
+the offline suite quietly green over a fixture describing a world that no longer
+exists. Not run by the pull request gate: no runner has the binary.
