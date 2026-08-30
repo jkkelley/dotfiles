@@ -1,7 +1,7 @@
 ---
 name: hydration-prompt
 description: Writes the prompt that starts the next session, and hands back the exact command to launch it. Maintains HYDRATION.md as a 10-entry sliding window, newest on top. Also acquires and releases the treehouse workbench a ticket holds, checking the slot went free rather than trusting an exit code. Use at close-out, after CONTEXT_STATE.md is written and before the pull request is opened, whenever the user asks for a hydration prompt, a handoff, or how to start the next ticket, or when a session needs a worktree slot leased to its ticket ID.
-version: 2.0.4
+version: 2.1.0
 ---
 
 # Hydration prompt
