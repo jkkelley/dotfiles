@@ -76,6 +76,16 @@
 # --- project-scaffold ------------------------------------------------------
 # Not upstream's concern: the files this skill's tools create.
 
+# installed skills - copies, owned by skill-sync, replaced on every session start
+#
+# The blanket mirrors `**/.claude/agents/` in the upstream block above, and lives
+# down here rather than beside it on purpose: everything above this line is
+# re-pulled verbatim, so a line added there is dropped by the next re-pull with
+# no conflict and no warning. This is the only thing stopping a skill copy from
+# being committed, and a project that commits one gets a copy that never updates
+# again while `registry.json` moves on without it.
+**/.claude/skills/
+
 # agent cache - derived, rebuildable, never authoritative
 .claude/cache/
 

@@ -337,6 +337,44 @@ podman run --rm --userns=keep-id --network=none ... "$IMAGE" bash -c '...'
 
 If the skill's scripts make commits, give the image a fixed git identity too, or every case inherits whoever is running it and the suite stops being reproducible.
 
+### The other answer: two stock images, one suite
+
+A purpose-built image is right when _most_ cases need the extra tool.
+It is the wrong shape when a suite that needs nothing grows two or three cases that need one thing - it adds a `Containerfile`, a tag that has to be bumped whenever that file changes, and a network build step to a suite that previously had none.
+
+The alternative is to split the cases by what they need and run the suite once per image, summing the totals.
+`project-scaffold` does this: `testing/cases/` runs on `python:3.12-slim` for the `python3` that asserts generated JSON parses, and `testing/cases-git/` runs on the pinned `bitnami/git` image for the cases that ask a real `git` whether the gitignore blanket holds.
+Neither stock image has both, and neither run touches the network.
+
+```bash
+# One body, two runs. CASES and RESULTS come in as environment, so the two
+# runs share one copy of the loop rather than two that drift apart.
+INNER='... for case_file in /skill/testing/"$CASES"/*.sh; do ... done ...'
+
+rc=0
+podman run --rm --userns=keep-id --network=none \
+  -v "$SKILL_DIR:/skill:ro,Z" -v "$SCRATCH:/work:Z" -w /work \
+  -e SKILL=/skill -e WORK=/work -e CASES=cases -e RESULTS=/work/.results \
+  "$IMAGE" bash -c "$INNER" || rc=$?
+
+podman run --rm --userns=keep-id --network=none --entrypoint="" \
+  -v "$SKILL_DIR:/skill:ro,Z" -v "$SCRATCH:/work:Z" -w /work \
+  -e SKILL=/skill -e WORK=/work -e CASES=cases-git -e RESULTS=/work/.results-git \
+  -e HOME=/work \
+  "$GIT_IMAGE" bash -c "$INNER" || rc=$?
+```
+
+Four things that are not obvious and each cost a run to find:
+
+- **`|| rc=$?`, not `rc=$?` on the next line.** Under `set -e` a failing `podman run` ends the script before the line that captures its status, so the second image never runs and any post-run guard is skipped. Written this way, the first failure is remembered and both images still run.
+- **`--entrypoint=""` for `bitnami/git`.** Its entrypoint is `git`, so without this the `bash -c` is handed to `git` as arguments and the run fails in a way that looks nothing like a test failure.
+- **`HOME` must be writable** wherever a case runs `git init` or `git config`, or git reports a configuration error rather than the thing under test.
+- **Check for a utility before depending on it.** `bitnami/git` ships no `cmp`, and a missing `cmp` exits 127, which is indistinguishable from "the files differ" - the more misleading of the two. `assert_same` hashes when `cmp` is absent, which is the Rule 17 rule applied inside a container rather than across an OS.
+
+Keep the split meaningful rather than administrative.
+A case belongs in the second directory when the thing it asserts _is_ that tool's behaviour.
+Grepping a template for a gitignore line proves the line is there; it does not prove git honours it, and a pattern that behaved differently from the one beside it would leave the grep green and the property false.
+
 ## Stubbing an external CLI
 
 When a script's behaviour depends on what an external tool *reports* - `gh` saying whether a PR merged, `kubectl` saying whether a pod is ready - the tool is not a dependency to install.

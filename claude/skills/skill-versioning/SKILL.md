@@ -260,6 +260,14 @@ The session-start check in a project compares versions, because a project's copy
 
 ## Applying an update to a project
 
+**This is the hand-authored path, and nothing else.**
+A skill named in a project's `.claude/skills.toml` belongs to `claude/tools/skill-sync.sh`, which reinstalls it from the published source at every session start.
+Pointing `skill-update.sh` at one of those produces a copy the next session start replaces - no conflict, no warning, and no sign that the work was undone.
+Root `CLAUDE.md` Rule 16 states the split as policy; the script's own header states it as the first thing you read.
+
+The test is the manifest, not the skill: a name in it means `skill-sync`, a name absent from it or a project with no manifest at all means this script.
+Bringing a project onto the sync is `skill-onboard.sh`, and adding a skill to a project already on it is a line in `.claude/skills.toml` followed by a new session.
+
 `scripts/skill-update.sh` implements the two apply modes the session-start check offers.
 
 ```bash

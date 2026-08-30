@@ -81,9 +81,19 @@ assert_no_file() {
   if [[ -e $file ]]; then _fail "$label" "file exists but should not: $file"; else _pass "$label"; fi
 }
 
+# cmp is absent from minimal images - the git image these cases also run on does
+# not ship it - so fall back to hashing rather than reporting every comparison as
+# a difference. `cmp` missing exits 127, which is indistinguishable from "the
+# files differ" and is the more misleading of the two.
 assert_same() {
   local a="$1" b="$2" label="$3"
-  if cmp -s "$a" "$b"; then _pass "$label"; else _fail "$label" "$a and $b differ"; fi
+  local same
+  if command -v cmp >/dev/null 2>&1; then
+    cmp -s "$a" "$b" && same=0 || same=1
+  else
+    [[ $(sha256sum <"$a") == $(sha256sum <"$b") ]] && same=0 || same=1
+  fi
+  if ((same == 0)); then _pass "$label"; else _fail "$label" "$a and $b differ"; fi
 }
 
 assert_count() {

@@ -58,8 +58,8 @@ What it installs:
   CLAUDE.md COMPASS.md BACKLOG.md ISSUES.md NAMING.md
   .gitignore and .dockerignore
   .claude/settings.json and .claude/settings.local.json
+  .claude/skills.toml    (which skills this project uses - skill-sync installs them)
   .claude/scripts/   (log-issue.sh, backlog.sh, cache.sh, lib/common.sh)
-  .claude/scaffold.json  (records the version these copies came from)
 
 Existing files are APPENDED to, never deleted or overwritten.
 
@@ -197,8 +197,12 @@ build_plan() {
   local f
   for f in "${CONTEXT_FILES[@]}"; do plan_context_file "$f"; done
 
+  # All three are copied verbatim from a template and never touched again. A
+  # file that exists is skipped rather than refreshed: settings.local.json is
+  # machine-specific and skills.toml is the project's own declared intent, so
+  # re-applying a template over either would overwrite a deliberate hand edit.
   local sf
-  for sf in settings.json settings.local.json; do
+  for sf in settings.json settings.local.json skills.toml; do
     if [[ ! -e $project/.claude/$sf ]]; then
       plan_add ".claude/$sf" create "absent"
     else
@@ -274,7 +278,7 @@ Always installed (the context layer):
   NAMING.md     naming conventions, inherited and project-specific
   .gitignore    the shared ignore set, plus the files the scaffold tools create
   .dockerignore the same set, trimmed for a build context
-  .claude/      settings plus a versioned copy of the tools
+  .claude/      settings, the skills manifest, and a versioned copy of the tools
 
 Optional extras:
   README.md     e.g. a title, one-paragraph description, and setup steps
@@ -336,15 +340,18 @@ apply_plan() {
     case $f in
       CLAUDE.md | COMPASS.md | BACKLOG.md | ISSUES.md | NAMING.md)
         apply_context_file "$f" "$a" ;;
-      .claude/settings.json | .claude/settings.local.json)
+      .claude/settings.json | .claude/settings.local.json | .claude/skills.toml)
         if [[ $a == create ]]; then
           local base="${f#.claude/}"
           local tmpl="$TEMPLATE_DIR/${base}.tmpl"
           [[ -r $tmpl ]] || ps_die "$PS_IO" "template_missing" "template not found: $tmpl"
           local s; s=$(ps_tempfile)
-          # Copied verbatim. The permission list is deliberately project-scoped -
-          # no home paths, no machine-specific entries - so the same file is
-          # correct on every machine and safe in a public repository.
+          # Copied verbatim, all three. The settings permission list is
+          # deliberately project-scoped - no home paths, no machine-specific
+          # entries - so the same file is correct on every machine and safe in a
+          # public repository. skills.toml names skills and never versions, for
+          # the same reason: it has to still be true on a machine that has not
+          # synced in a month.
           cat -- "$tmpl" >"$s"
           ps_atomic_install "$s" "$project/.claude/$base"
         fi ;;
@@ -380,13 +387,6 @@ apply_plan() {
         fi ;;
     esac
   done
-
-  # Record which skill version these vendored copies came from, so drift is
-  # visible rather than guessed at.
-  local meta; meta=$(ps_tempfile)
-  printf '{\n  "schema": %d,\n  "tool_version": %d,\n  "scaffolded": %s\n}\n' \
-    "$PS_SCHEMA_VERSION" "$PS_TOOL_VERSION" "$(ps_json_string "$(ps_now)")" >"$meta"
-  ps_atomic_install "$meta" "$project/.claude/scaffold.json"
 }
 
 # ---------------------------------------------------------------------------
