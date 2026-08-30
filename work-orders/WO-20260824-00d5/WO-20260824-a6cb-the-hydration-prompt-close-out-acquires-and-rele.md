@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p2",
   "created": "2026-08-24",
-  "updated": "2026-08-24",
+  "updated": "2026-08-30",
   "created_at": "2026-08-24T13:19:13-05:00",
   "parent": "WO-20260824-00d5",
   "branch": null,
@@ -23,7 +23,8 @@
   "surfaces": [],
   "depends_on": [],
   "blocks": [
-    "WO-20260824-238b"
+    "WO-20260824-238b",
+    "WO-20260824-c6b0"
   ]
 }
 ---

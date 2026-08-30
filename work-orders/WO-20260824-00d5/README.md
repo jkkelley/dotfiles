@@ -15,4 +15,4 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20260824-238b` | ready | p2 | WO-20260824-c6b0 WO-20260824-81a6 WO-20260824-b21b WO-20260824-d058 WO-20260824-79b6 WO-20260824-a6cb WO-20260824-6a33 | [Rename skill-versioning to skill-registry, the closing commit](WO-20260824-238b-rename-skill-versioning-to-skill-registry-the-cl.md) |
 | `WO-20260824-a6cb` | ready | p2 | - | [The hydration-prompt close-out acquires and releases a treehouse slot](WO-20260824-a6cb-the-hydration-prompt-close-out-acquires-and-rele.md) |
 | `WO-20260824-81a6` | ready | p2 | - | [project-scaffold plumbing: skills.toml, the gitignore blanket, scaffold.json removed, skill-update.sh narrowed](WO-20260824-81a6-project-scaffold-plumbing-skills-toml-the-gitign.md) |
-| `WO-20260824-c6b0` | ready | p2 | - | [skill-onboard.sh brings an existing project onto the sync](WO-20260824-c6b0-skill-onboard-sh-brings-an-existing-project-onto.md) |
+| `WO-20260824-c6b0` | ready | p2 | WO-20260824-a6cb | [skill-onboard.sh brings an existing project onto the sync](WO-20260824-c6b0-skill-onboard-sh-brings-an-existing-project-onto.md) |
