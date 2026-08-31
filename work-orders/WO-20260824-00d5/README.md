@@ -8,8 +8,7 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20260824-6a33` | in-progress | p2 | - | [Checklist for the four repositories carrying the stale session-start block](WO-20260824-6a33-checklist-for-the-four-repositories-carrying-the.md) |
 | `WO-20260824-79b6` | ready | p2 | WO-20260824-d058 | [Invert the notice assertion: verify --structure now fails on a notice that is present](WO-20260824-79b6-invert-the-notice-assertion-verify-structure-now.md) |
 | `WO-20260824-d058` | ready | p2 | - | [Remove the inline read-only notice from the other 42 SKILL.md files](WO-20260824-d058-remove-the-inline-read-only-notice-from-the-othe.md) |
-| `WO-20260824-238b` | ready | p2 | WO-20260824-d058 WO-20260824-79b6 WO-20260824-6a33 | [Rename skill-versioning to skill-registry, the closing commit](WO-20260824-238b-rename-skill-versioning-to-skill-registry-the-cl.md) |
+| `WO-20260824-238b` | ready | p2 | WO-20260824-d058 WO-20260824-79b6 | [Rename skill-versioning to skill-registry, the closing commit](WO-20260824-238b-rename-skill-versioning-to-skill-registry-the-cl.md) |
 | `WO-20260830-eb89` | ready | p2 | WO-20260824-238b | [skill-sync fills the CLAUDE.md skills table between the markers](WO-20260830-eb89-skill-sync-fills-the-claude-md-skills-table-betw.md) |

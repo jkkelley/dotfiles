@@ -4,16 +4,16 @@
   "slug": "checklist-for-the-four-repositories-carrying-the",
   "title": "Checklist for the four repositories carrying the stale session-start block",
   "type": "chore",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-08-24",
   "updated": "2026-08-31",
   "created_at": "2026-08-24T13:19:14-05:00",
   "parent": "WO-20260824-00d5",
   "branch": "feat/checklist-for-the-four-repositories-carrying-the",
-  "pr": null,
+  "pr": 88,
   "merge_sha": null,
-  "closed": null,
+  "closed": "2026-08-31",
   "approval": {
     "via": "override",
     "reason": "Reviewed and approved on PR #55 on GitHub, which is where the whole cut was read as one diff. Lavish was offered and declined in favour of the PR.",
@@ -72,6 +72,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-08-31` Retro. The ticket was sized and written as four rows describing one identical edit, and the discovery step falsified that premise before a word of the page was written: two of the four blocks are byte-identical, one differs by a single invisible character, and one has drifted five prose differences and four extra lines. The page is therefore one shared edit plus four genuinely different preconditions, and the shape survived only because the premise was checked rather than trusted. What produced the two skill-onboard.sh defects was not cleverness, it was reading four real files instead of four assumed ones. Both WO-20260824-c6b0 - skill-onboard.sh brings an existing project onto the sync and this ticket name running against a real repository as an explicit non-goal, and that non-goal held: nothing was run anywhere. Reading is not running, and reading was enough to find that LEGACY_HEADING misses an em-dash heading and that a repository with no .claude/skills/ directory dies at exit 3. A tool proved only against a scratch fixture agrees with the fixture; the first four real inputs disagreed with it twice. The one thing that would have gone wrong unnoticed was line numbers taken from a working tree. aws-lightsail-k8s-router sits on a feature branch where the block starts at 370, while skill-onboard.sh works from origin/BASE where it starts at 363. Both numbers are real, only one is useful, and a row carrying 370 would have resolved perfectly for whoever checked it in their editor and misdirected the run. Every row is now pinned to an origin/main SHA and each was verified by git show <sha>:CLAUDE.md at the recorded start and end lines, which is the difference between a checklist that resolves and one that merely looks like it does. A process note worth keeping: the first attempt at the epic note recorded the em dash as prose, and the write emitted a hyphen, so the sentence quoted a hyphen while calling it an em dash - the exact defect it was documenting. It was caught because nothing had been committed and the text was re-read rather than assumed. The fix was to stop writing glyphs and write codepoints, which is strictly better anyway since the two characters are indistinguishable on screen. Finally, the PII question the hydration entry flagged as the one thing to decide with the user rather than alone was correctly escalated and correctly answered: the owner handle is already published in this repository in at least three places, one of which - CLAUDE.md.tmpl:98, carrying a username and a repository name together - is not among the two exceptions the policy documents. That third case is a real gap in a policy this repository enforces on every commit, it was found by asking rather than assuming, and it is on no ticket.
 - `2026-08-24` Poker 2026-08-24: 3 points. Sized as the checklist only. The four runs happen inside those repositories and are not tickets here.
 
 ## Outcome
