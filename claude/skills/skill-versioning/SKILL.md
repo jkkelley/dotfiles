@@ -51,10 +51,10 @@ Hand-editing the field leaves the registry stale, and `verify` exists to catch e
 
 They exist because two callers ask different questions, and the answer that is right for one is wrong for the other.
 
-| Form          | Caller        | Asserts                                                                                                                     |
-| ------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `verify`      | the publisher | every skill versioned, every `requires:` resolves, the registry is this schema, and it matches what the tree renders        |
-| `--structure` | the PR gate   | every _registered_ skill versioned, every `requires:` resolves, and the branch's diff touches no `version:` and no registry |
+| Form          | Caller        | Asserts                                                                                                                                                                 |
+| ------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `verify`      | the publisher | every skill versioned, every `requires:` resolves, the registry is this schema, and it matches what the tree renders                                                    |
+| `--structure` | the PR gate   | every _registered_ skill versioned, every `requires:` resolves, no `SKILL.md` carries the read-only notice, and the branch's diff touches no `version:` and no registry |
 
 Under merge-time allocation the version is allocated by CI when a PR merges, not by the contributor on the branch.
 A skill PR therefore edits a skill and leaves the registry alone - and that state is exactly what plain `verify` calls `drifted`, correctly, because on `main` it would be.
@@ -67,6 +67,29 @@ The comparison runs against the working tree, so an uncommitted hand-edit is cau
 Hand-editing is caught by both, by different means.
 `--structure` sees the edit in the diff.
 Plain `verify` sees it in the hash: the `version:` line lives inside `SKILL.md`, so moving it moves the content hash too, and the registry comparison fails.
+
+#### The read-only notice
+
+An upstream `SKILL.md` carries no read-only notice of its own.
+`skill-sync.sh` renders one into each installed copy from `claude/tools/partials/read-only-notice.md.tmpl`, which is the single place the text is held, and a bump of that partial re-renders every project at once.
+
+So a notice committed here is not a missing one restored.
+It is a second copy, and every project that syncs the skill shows the notice twice.
+`--structure` refuses it, names the skill, and says what to do about it - because the obvious reaction to seeing that no `SKILL.md` carries a notice is to put one back, and an error that names the fault without naming the fix is how it returns a third time.
+
+The check keys on the notice's opening line and nothing else.
+Two spellings exist: the inline notice removed from 43 files named `skill-update.sh`, and the rendered one names `skill-sync.sh`.
+The opener is the only line they share, so it is the only key that catches a paste of either.
+
+That has one consequence for anyone documenting the notice: **quoting the opening line verbatim inside any `SKILL.md` turns that file red.**
+Describe it, as this section does, or quote a different line of it.
+
+The refusal lives in `--structure` alone.
+Plain `verify` runs on `main` after the merge, where a refusal fires somewhere nobody can act on it; `--structure` fires on the branch, in the pull request, while the paste is still one edit away from being undone.
+
+The scan walks every skill rather than only the ones in the branch's diff.
+The property being held is that _no_ upstream `SKILL.md` carries the notice, which `WO-20260824-d058` made true of all 43 at once.
+A diff-scoped check would let a notice that reached `main` by any other route sit there green forever.
 
 #### A skill the registry has never carried
 
@@ -232,7 +255,7 @@ A skill that documents the key does not thereby acquire a dependency on it.
 
 ### The `tools` block
 
-Shared infrastructure that is not a skill: the sync binary, and the read-only notice template that replaces the copy currently inlined in forty-three `SKILL.md` files.
+Shared infrastructure that is not a skill: the sync binary, and the read-only notice template that replaced the copy once inlined in forty-three `SKILL.md` files and that `verify --structure` now refuses to let back in.
 A version and a hash here are the only thing that lets a change to either one reach an installed project.
 
 | Tool               | File                                             |
@@ -317,5 +340,7 @@ The image is `bitnami/git` rather than `bash:5` because these scripts drive real
 The source mount is read-only, which matters here because `init` and `bump` rewrite SKILL.md files in place.
 The tests copy a fixture tree into `/work` and point `SKILL_VERSION_SKILLS_DIR` at it, so a passing run also proves neither script writes back into its own source.
 `verify --structure` gets a second fixture: a real git repository with its skills under `claude/`, branched and edited, because every assertion that form makes is about a diff.
+The fixture skills carry no read-only notice, because an upstream `SKILL.md` does not - a fixture that carried one would fail the gate, and the suite would then be passing on the gate being broken.
+The notice cases paste one in and assert red before restoring and asserting green, in both spellings and on a new skill as well as a registered one: an assertion of absence exits 0 whether it works or does nothing at all, so it is worth nothing until it has returned non-zero on purpose.
 `--network=none` proves the same about the network.
 Standalone mode is driven against a local bare repo with a stubbed `gh` that performs the merge itself, so the branch, commit, push, merge and delete orchestration is genuinely exercised without ever reaching GitHub.
