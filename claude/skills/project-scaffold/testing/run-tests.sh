@@ -28,7 +28,7 @@ IMAGE="${PS_TEST_IMAGE:-docker.io/library/python:3.12-slim}"
 # So the suite runs twice and sums the totals.
 #
 # Pinned by digest per root CLAUDE.md Rule 15, and it is the same digest
-# living-docs, skill-versioning and hydration-prompt already run on - a second
+# living-docs, skill-registry and hydration-prompt already run on - a second
 # digest for the same purpose is how a repository ends up with two answers to
 # "what do the tests run on". It ships no cmp, which is why assert_same hashes
 # when cmp is absent.

@@ -93,7 +93,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          bash claude/skills/skill-versioning/scripts/skill-version.sh verify \
+          bash claude/skills/skill-registry/scripts/skill-version.sh verify \
             --structure --base "$BASE"
 
   detect:

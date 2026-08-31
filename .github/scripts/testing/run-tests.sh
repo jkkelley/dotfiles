@@ -27,7 +27,7 @@ HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$HERE/../../.." && pwd)
 
 # Pinned by digest per Rule 15. docker.io/bitnami/git:latest as of 2026-08-23,
-# the same digest the living-docs, context-compaction and skill-versioning
+# the same digest the living-docs, context-compaction and skill-registry
 # suites run on. git is a dependency here rather than an accident: the fixture
 # is a real repository and the trailers are parsed by git interpret-trailers.
 IMAGE="${GATE_TEST_IMAGE:-docker.io/bitnami/git@sha256:1baa6ddbde79fa7ba2fdf441cea47c4f04fae067504d9265e416358db0879ab2}"
@@ -328,7 +328,7 @@ for s in cartography project-scaffold work-order; do
   OUT=$(bash "$GATE" run-suite "/repo/claude/skills/$s" --print 2>&1)
   want_eq "dispatch: $s runs its own container" 'self' "$OUT"
 done
-for s in context-compaction hydration-prompt living-docs skill-versioning; do
+for s in context-compaction hydration-prompt living-docs skill-registry; do
   OUT=$(bash "$GATE" run-suite "/repo/claude/skills/$s" --print 2>&1)
   want_eq "dispatch: $s is wrapped" 'wrapped' "$OUT"
 done
@@ -368,7 +368,7 @@ bash "$GATE" run-suite /repo/docs --print >/dev/null 2>&1; want_rc 'run-suite on
 # block is scoped. Rendering that registry would delete the collision.
 
 PUB=/repo/.github/scripts/publish.sh
-SVREL=claude/skills/skill-versioning/scripts/skill-version.sh
+SVREL=claude/skills/skill-registry/scripts/skill-version.sh
 
 mkpub() {
   local p="$WORK/$1"
@@ -376,10 +376,10 @@ mkpub() {
   (
     cd "$p" || exit 1
     git init -q -b main .
-    mkdir -p "claude/skills/skill-versioning/scripts" claude/tools docs \
+    mkdir -p "claude/skills/skill-registry/scripts" claude/tools docs \
              claude/skills/alpha claude/skills/beta claude/skills/gamma
-    printf -- '---\nname: skill-versioning\nversion: 1.0.0\n---\n\nOwns the registry.\n' \
-      > claude/skills/skill-versioning/SKILL.md
+    printf -- '---\nname: skill-registry\nversion: 1.0.0\n---\n\nOwns the registry.\n' \
+      > claude/skills/skill-registry/SKILL.md
     cp "/repo/$SVREL" "$SVREL"
     printf -- '---\nname: alpha\nversion: 1.2.3\n---\n\nalpha.\n' > claude/skills/alpha/SKILL.md
     printf -- '---\nname: beta\nversion: 2.0.0\n---\n\nbeta.\n'  > claude/skills/beta/SKILL.md

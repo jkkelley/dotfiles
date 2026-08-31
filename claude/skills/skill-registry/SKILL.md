@@ -1,10 +1,10 @@
 ---
-name: skill-versioning
+name: skill-registry
 description: Semver for the skills in this dotfiles repo, and the machinery that keeps a project's installed copies honest. Use when bumping a skill's version, regenerating claude/skills/registry.json, checking whether a project's .claude/skills are behind the published registry, or applying an update to a project. Triggered by "bump this skill", "is my skill out of date", "update the skill in this project", "regenerate the registry", or by the session-start skill version check in CLAUDE.md.
 version: 2.1.0
 ---
 
-# Skill versioning
+# Skill registry
 
 Skills are installed into projects as copies.
 A copy has no idea the original moved on, so the moment a skill is edited here, every project holding a copy is silently behind.

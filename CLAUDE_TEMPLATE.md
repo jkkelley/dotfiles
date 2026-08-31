@@ -77,7 +77,7 @@ options, then wait for an answer:
 1. **Update now.** Standalone, before the work starts.
 
    ```bash
-   ~/dotfiles/claude/skills/skill-versioning/scripts/skill-update.sh \
+   ~/dotfiles/claude/skills/skill-registry/scripts/skill-update.sh \
      --skill <name> --mode standalone --project .
    ```
 
@@ -90,7 +90,7 @@ options, then wait for an answer:
 2. **Fold it into this work.** The update rides the commit that is about to happen anyway.
 
    ```bash
-   ~/dotfiles/claude/skills/skill-versioning/scripts/skill-update.sh \
+   ~/dotfiles/claude/skills/skill-registry/scripts/skill-update.sh \
      --skill <name> --mode inline --project .
    ```
 

@@ -47,7 +47,7 @@ set -euo pipefail
 
 SELF=$(basename "$0")
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-# scripts -> skill-versioning -> skills -> claude -> <dotfiles>. Only meaningful
+# scripts -> skill-registry -> skills -> claude -> <dotfiles>. Only meaningful
 # when this script is running from inside a real checkout, which --from local
 # requires and the default does not.
 DOTFILES=$(cd "$HERE/../../../.." && pwd)

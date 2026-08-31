@@ -30,7 +30,7 @@ SELF=$(basename "${BASH_SOURCE[0]}")
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
 # Pinned by digest per Rule 15. docker.io/bitnami/git:latest as of 2026-08-23.
-# The same digest the living-docs, context-compaction and skill-versioning
+# The same digest the living-docs, context-compaction and skill-registry
 # justfiles already run their suites on - a second digest for the same purpose
 # is how a repository ends up with two answers to "what do the tests run on".
 WRAP_IMAGE="docker.io/bitnami/git@sha256:1baa6ddbde79fa7ba2fdf441cea47c4f04fae067504d9265e416358db0879ab2"
