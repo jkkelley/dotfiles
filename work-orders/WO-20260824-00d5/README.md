@@ -8,4 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20260830-eb89` | ready | p2 | - | [skill-sync fills the CLAUDE.md skills table between the markers](WO-20260830-eb89-skill-sync-fills-the-claude-md-skills-table-betw.md) |
+| `WO-20260830-eb89` | in-progress | p2 | - | [skill-sync fills the CLAUDE.md skills table between the markers](WO-20260830-eb89-skill-sync-fills-the-claude-md-skills-table-betw.md) |
