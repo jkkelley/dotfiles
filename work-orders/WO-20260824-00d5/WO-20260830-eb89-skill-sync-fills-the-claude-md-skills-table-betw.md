@@ -52,10 +52,14 @@ WO-20260824-b21b put skills:begin and skills:end markers into project-scaffold's
 ## Acceptance criteria
 
 
-- [ ] `AC-H1` *(human)* a project scaffolded from the template and synced against a manifest of N skills carries exactly those N names between the markers, and nothing else
-- [ ] `AC-H2` *(human)* a second sync with an unchanged manifest leaves CLAUDE.md byte-identical, so the write is idempotent and never churns a diff
-- [ ] `AC-H3` *(human)* a CLAUDE.md with no marker pair is byte-identical after a sync that installed skills, and the sync reports success
-- [ ] `AC-H4` *(human)* no version string appears anywhere between the markers, asserted on the data with comments stripped first
+- [x] `AC-H1` *(human)* a project scaffolded from the template and synced against a manifest of N skills carries exactly those N names between the markers, and nothing else
+  - observed `2026-08-31` MET. Section 18 of claude/tools/testing/run-tests.sh copies project-scaffold's real CLAUDE.md.tmpl verbatim into the project, syncs a manifest of two skills, and asserts the block holds exactly '- container-sandbox' and '- work-order' with no other non-blank line, that both markers survive, and that every byte outside the block is the template's. A second case syncs a manifest naming only cartography and gets '- cartography' and '- work-order', so the list is what was installed rather than what was declared. 406 assertions green via bump-gate.sh run-suite claude/tools.
+- [x] `AC-H2` *(human)* a second sync with an unchanged manifest leaves CLAUDE.md byte-identical, so the write is idempotent and never churns a diff
+  - observed `2026-08-31` MET. A second sync against an unchanged manifest leaves CLAUDE.md byte-identical by sha256, and does not rewrite it at all - the mtime is aged an hour first, since two syncs a second apart carry the same mtime either way. The comparison was then made to fail on purpose: dropping a skill from the manifest changes the hash and removes the name. Removing the unchanged-file guard from fill_skills_block turns both assertions red, which is how they were proved to bite.
+- [x] `AC-H3` *(human)* a CLAUDE.md with no marker pair is byte-identical after a sync that installed skills, and the sync reports success
+  - observed `2026-08-31` MET. Four shapes - no markers, a begin with no end, a reworded pair, an end before a begin - each byte-identical after a sync that installed the skills, each printing '1 skills in place' rather than a failure, each saying nothing about a file it did not write. A project with no CLAUDE.md syncs normally and has none created. Loosening the marker match to a substring turns the reworded case red, so the byte-for-byte match is what is being asserted.
+- [x] `AC-H4` *(human)* no version string appears anywhere between the markers, asserted on the data with comments stripped first
+  - observed `2026-08-31` MET. Asserted on the block with HTML comments stripped, again on the raw block including them, and on the absence of the word 'version' - while the registry fixture is asserted to have a version for what was installed, so the absence means something. The same assertion returns non-zero on a block with '- work-order 1.2.3' planted in it, and emitting '- name 1.2.3' from the writer turns six assertions red.
 
 ## Test plan
 
