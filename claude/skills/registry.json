@@ -11,7 +11,7 @@
     "cloud-arch-patterns": { "version": "1.0.2", "sha256": "105397f1b716f0bb77128d5570a1502c0b708ceec1a809fc757f25f8bf5dca68", "type": "skill", "requires": [] },
     "code-review-checklist": { "version": "1.0.2", "sha256": "a7dab41359260d8ff55b35173372651c0a9f1d3066b32ac9f4a1b6487c60bc1b", "type": "skill", "requires": [] },
     "container-design": { "version": "1.0.2", "sha256": "60dfff2db9aaf607d999ec8f2e661277dfc1576aa78c4920e354048ba428a544", "type": "skill", "requires": [] },
-    "container-sandbox": { "version": "1.4.1", "sha256": "5bac14926c92e629d77028ae2665668f0533927e86337e1eaa23d4ecc87933fb", "type": "skill", "requires": [] },
+    "container-sandbox": { "version": "1.4.2", "sha256": "f500495e61e4884a63101d9d385191e01ce728dc7118a0e2784eba90dd5a5e28", "type": "skill", "requires": [] },
     "context-compaction": { "version": "2.0.0", "sha256": "9b63712594c24da956752b99682589b727c4478091ccba62ebebd01f822efdc3", "type": "skill", "requires": [] },
     "cover-letter": { "version": "2.0.1", "sha256": "45c465dbc9c019f635876e993936668ca88c5a58cb2d09767ea664da3947f323", "type": "skill", "requires": [] },
     "cypress-patterns": { "version": "1.0.2", "sha256": "befb8c87211e6a26aeb9fe6b19c4ac74319290adeeb0e99dd6fb48a3b6824b33", "type": "skill", "requires": [] },
