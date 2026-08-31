@@ -50,8 +50,10 @@ Between the notice check being deleted and this ticket, nothing stops someone pa
 ## Acceptance criteria
 
 
-- [ ] `AC-H1` *(human)* pasting the notice into any SKILL.md fails the PR gate
-- [ ] `AC-H2` *(human)* the failure message explains that the notice is rendered at install and must not be committed
+- [x] `AC-H1` *(human)* pasting the notice into any SKILL.md fails the PR gate
+  - observed `2026-08-31` Proved on a clone of the real 43-skill tree at commit 9c95dc4, in podman (bitnami/git pinned by digest, /repo mounted ro, --network=none): verify --structure --base origin/main exits 0 on the tree as it stands, exits 1 with the rendered notice pasted into claude/skills/container-sandbox/SKILL.md and prints 'read-only notice container-sandbox', and exits 0 again once it is reverted. Enumerated in the suite too - both spellings of the notice, a registered skill and a brand new one, each made to fail before being restored. 165 PASS / 0 FAIL via bump-gate.sh run-suite.
+- [x] `AC-H2` *(human)* the failure message explains that the notice is rendered at install and must not be committed
+  - observed `2026-08-31` The refusal prints: 'The read-only notice is rendered at install and must not be committed. skill-sync.sh inserts it into each installed copy from claude/tools/partials/read-only-notice.md.tmpl, which is the one place it is held. An upstream SKILL.md carries none of its own, so a committed notice is not a missing one restored - it is a second copy, and every project that syncs the skill shows the notice twice.' It closes with 'delete the notice block from the SKILL.md named above'. Each of those four halves is a separate assertion in the suite rather than the exit code standing in for the message.
 
 ## Test plan
 
