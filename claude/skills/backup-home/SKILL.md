@@ -6,13 +6,6 @@ version: 1.0.2
 
 # backup-home - Archive and Upload $HOME to S3
 
-> **This copy is read-only.**
-> Skills are vendored into a project as copies, and this may be one.
-> Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
-> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/backup-home/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
-> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
-> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
-
 Backs up the user's home directory by creating a compressed archive and uploading it to S3.
 The script lives at `scripts/backup-home.sh` relative to this skill's base directory.
 

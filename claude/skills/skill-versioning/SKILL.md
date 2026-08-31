@@ -6,13 +6,6 @@ version: 2.0.4
 
 # Skill versioning
 
-> **This copy is read-only.**
-> Skills are vendored into a project as copies, and this may be one.
-> Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
-> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/skill-versioning/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
-> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
-> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
-
 Skills are installed into projects as copies.
 A copy has no idea the original moved on, so the moment a skill is edited here, every project holding a copy is silently behind.
 That is not hypothetical: it is the default state of every project in this setup.
