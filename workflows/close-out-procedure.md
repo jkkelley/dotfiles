@@ -1,6 +1,6 @@
 # Close-out procedure
 
-<!-- workflow-version: 1.0.0 -->
+<!-- workflow-version: 1.0.1 -->
 
 How a ticket in this repository goes from started to shipped.
 
@@ -17,8 +17,8 @@ ON THE FEATURE BRANCH
 │
 ├─ do the work, suite green in Podman     Rule 14, no size threshold
 │
-├─ skill-version.sh bump <skill> --patch  Rule 16, only if a skill was touched
-│  skill-version.sh verify                must be rc 0
+├─ skill-version.sh verify --structure    Rule 16, only if a skill was touched
+│  Bump: <skill>=major|minor|patch        last paragraph of the PR body; main allocates
 │
 ├─ work-order.sh evidence --index N --observed "..."     one per acceptance criterion
 │

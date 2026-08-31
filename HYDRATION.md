@@ -99,10 +99,13 @@ It comes back up only if the user raises it.
 
 ### Stale or false in the docs
 
-**`workflows/close-out-procedure.md` still puts `skill-version.sh bump <skill> --patch` on the feature branch.**
-Rule 16 forbids exactly that: a branch never allocates a version, and `verify --structure` refuses a pull request whose diff touches a `version:` line.
-The diagram is otherwise correct and is the file to follow for the ordering.
-Found on PR #92, on no ticket.
+**`workflows/close-out-procedure.md` was stale on exactly this point and is now fixed, on PR #92.**
+Lines 20 and 21 told a contributor to run `skill-version.sh bump <skill> --patch` on the feature branch and then to expect plain `verify` at rc 0.
+Both describe the pre-Rule-16 world, and plain `verify` is _expected_ to be red on any branch that touched a skill.
+They now read `skill-version.sh verify --structure` and the `Bump: <skill>=major|minor|patch` trailer, at `workflow-version 1.0.1`.
+The rest of that document is current and it is the file to follow for the ordering.
+Note that nothing in CI covers it: `bump-gate.sh detect` watches `claude/skills/`, `claude/tools/` and the gate itself, so a change under `workflows/` runs no suite.
+`tools/testing/run-tests.sh` is the one that covers `workflow-version.sh`, it is run by hand, and it was green at 38 assertions.
 
 **The design document's installed-list example no longer matches what ships.**
 `docs/superpowers/specs/2026-08-23-skills-package-manager-design.md:747` draws a two-column `Skill | Agent` table; `skill-sync` writes a one-per-line list of skill names, for the reason recorded above and in PR #92's body.
@@ -178,7 +181,7 @@ Its vendored copy of `CLAUDE.md.tmpl` still names `skill-versioning` - that is a
 
 1. The epic, `work-orders/WO-20260824-00d5/WO-20260824-00d5-skills-package-manager-roll-it-out-across-the-re.md`, in full, notes included.
 2. This entry, the top entry of `HYDRATION.md`. Read only this one.
-3. `workflows/close-out-procedure.md`, for the ordering, ignoring its `skill-version.sh bump` line per the correction above.
+3. `workflows/close-out-procedure.md`, for the ordering. It is current as of `1.0.1`, which PR #92 corrected.
 4. `claude/tools/skill-sync.sh`, `fill_skills_block` and `cmd_boot`, for what a first session now writes.
 5. `claude/skills/project-scaffold/references/templates/CLAUDE.md.tmpl` and `skills.toml.tmpl`, which are what `AC-H3` scaffolds from.
 6. PR #92's body, for how a criterion is evidenced when the proof is a mutation rather than a green run.
