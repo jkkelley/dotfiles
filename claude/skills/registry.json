@@ -39,7 +39,7 @@
     "repo-sync": { "version": "1.0.3", "sha256": "aa605d0843348c1318adaf44583170270c06c551b9ec6b9590317606466be519", "type": "skill", "requires": [] },
     "screenshot-syncer": { "version": "1.0.3", "sha256": "1f3e29ef8775adac6ee5dad6d7cf6cd213155ed973e4652837b13e8845ec7d65", "type": "skill", "requires": [] },
     "session-workflow": { "version": "1.0.3", "sha256": "894e48c5aa460ebfbf94ed6b1e8ba4c98cf974824999984cf91c45d3e69435fe", "type": "skill", "requires": [] },
-    "skill-versioning": { "version": "2.0.5", "sha256": "14981b47e4469055f5915752e0e219bb2ca32557dc10da7425f670041c5049c1", "type": "skill", "requires": [] },
+    "skill-versioning": { "version": "2.1.0", "sha256": "e0141ddd8d757c44d3552daf37a153d5835f95eae4d1da134e36c5884896ebf3", "type": "skill", "requires": [] },
     "task-router": { "version": "1.0.3", "sha256": "2117213b55b7c70b51c09ed470928c36affe93451290e8ca400feaf9a19a4c37", "type": "skill", "requires": [] },
     "terraform-patterns": { "version": "1.0.3", "sha256": "affdc3a0e86107d999600fd916c6d1a1ca02c6b8c268bfc43f8f97aa24d138f7", "type": "skill", "requires": [] },
     "test-writer": { "version": "1.0.3", "sha256": "9853f48e6adbac1e74bb23898c7a8f1d3dc8d00c742c74df6e73d8ab67b374cb", "type": "skill", "requires": [] },
