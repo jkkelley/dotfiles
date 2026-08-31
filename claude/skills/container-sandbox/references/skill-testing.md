@@ -402,6 +402,47 @@ export PATH="$(gh_stub "$WORK/stub" OPEN):$PATH"
 `:-` substitutes the default when the argument is the empty string, so a case written to test "merged, but with no merge commit" silently tests a valid SHA instead and passes for the wrong reason.
 That exact bug shipped in the first draft of the work-order suite and was only caught because the assertion expected a refusal and got a success.
 
+### When the real tool lies, the stub has to lie the same way
+
+A stub written from a tool's documented behaviour tests the tool you wish you had.
+
+`treehouse return` prompts when its worktree has uncommitted changes.
+With no TTY the prompt takes its default, the return is abandoned, the slot stays leased - and the process **exits 0**.
+Probed against the real v2.3.0 binary; written up in `docs/worktree-workflow.md`.
+
+```text
+| Worktree has uncommitted changes. Clean and return? [Y/n] Aborted.
+  return rc                          0
+  final pool state                   1  leased  (held by gate-case-3)
+```
+
+A stub that returns 0 and frees the slot is a stub that agrees with every caller, including the broken ones.
+So reproduce the defect:
+
+```bash
+case $1 in
+  return)
+    if [ -n "$(git -C "$2" status --porcelain 2>/dev/null)" ]; then
+      printf '| Worktree has uncommitted changes. Clean and return? [Y/n] Aborted.\n'
+      exit 0                      # the lie, verbatim
+    fi
+    : > "$HOLDER_FILE"; ;;
+esac
+```
+
+Two rules follow, and they generalise past this one binary.
+
+**Assert the post-state, never the exit code.**
+The assertion is "ask the pool who holds the slot now", not "did the command succeed".
+Any check that reads `$?` passes against both the fixed script and the broken one, which makes it worth nothing.
+
+**Keep the stub permissive where the real tool is permissive.**
+`treehouse get` hands a second slot to a holder that already has one; the guard against that lives in `slot.sh`, one level up.
+A stub that refuses the double-lease itself would make the guard untestable and green.
+Stub the tool as it is. Test the wrapper that makes it safe.
+
+The general shape: **every recorded misbehaviour of an external tool is a fixture, and the case that matters is the one where the tool reports success and nothing happened.**
+
 ## Testing a destructive path
 
 A script that runs `git branch -D`, `git push --delete`, or `rm -rf` needs its destructive path exercised, not reasoned about.

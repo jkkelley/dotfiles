@@ -32,8 +32,8 @@ REPO_ROOT=$(cd "$TOOLS_DIR/../.." && pwd)
 # below only builds when the tag is absent, so an edited Containerfile under an
 # unchanged tag means every machine that already ran this suite keeps the old
 # image and the new checks fail for a reason that has nothing to do with them.
-# :2 added jq.
-IMAGE="${CLAUDE_TOOLS_TEST_IMAGE:-localhost/dotfiles-claude-tools-test:2}"
+# :2 added jq. :3 added git, for skill-onboard.sh.
+IMAGE="${CLAUDE_TOOLS_TEST_IMAGE:-localhost/dotfiles-claude-tools-test:3}"
 
 # Re-exec inside the container unless we are already in it.
 if [[ ${IN_CLAUDE_TOOLS_CONTAINER:-0} != 1 ]]; then
@@ -83,7 +83,9 @@ expect_rc() { # desc want cmd...
 # write to.
 mkdir -p "$WORK/bin"
 cp /repo/claude/tools/skill-sync.sh "$WORK/bin/"
+cp /repo/claude/tools/skill-onboard.sh "$WORK/bin/"
 SS="$WORK/bin/skill-sync.sh"
+SO="$WORK/bin/skill-onboard.sh"
 
 PROJ="$WORK/proj"
 REGFIX="$WORK/registry.json"
@@ -1397,6 +1399,510 @@ check "it creates nothing there either" \
 # a dependency.
 check "no runnable line of skill-sync.sh names jq" \
   "$([[ "$(grep -vE '^[[:space:]]*#' /repo/claude/tools/skill-sync.sh | grep -cE '\bjq\b')" -eq 0 ]]; echo $?)"
+
+# ===========================================================================
+# skill-onboard.sh - bringing a project that already exists onto the sync
+#
+# The two things that make this script worth testing at all are the two things a
+# green happy path cannot show:
+#
+#   the user's working tree is never touched, and
+#   the workbench is asserted free rather than assumed free.
+#
+# So every case below snapshots the project directory across the run, and the
+# dirty-workbench case exists to prove the run fails loudly instead of exiting 0
+# having leaked a slot. That failure mode is not hypothetical: `treehouse return`
+# prompts on a dirty worktree, takes its no-TTY default, abandons the return,
+# leaves the lease in place and exits 0. The stub below reproduces exactly that.
+#
+# gh and treehouse are stubbed rather than installed, per skill-testing.md: what
+# they report is the input under test. The image ships neither, so the stubs are
+# provably the only ones on PATH.
+#
+# The templates are NOT stubbed. Every run reads the real ones out of /repo, so a
+# heading renamed in CLAUDE.md.tmpl or a pattern dropped from gitignore.tmpl
+# fails here rather than in somebody's project. That is the same shape as the
+# "the manifest project-scaffold ships" section above: feed the real file to the
+# thing that reads it.
+
+ON="$WORK/onboard"
+GHLOG="$ON/gh.log"
+THLOG="$ON/treehouse.log"
+GHMODE="$ON/gh-mode"
+HOLDER_FILE="$ON/pool/holder"
+CURLLOG="$ON/curl.log"
+
+export GIT_AUTHOR_NAME=tools-suite GIT_AUTHOR_EMAIL=tools@example.com
+export GIT_COMMITTER_NAME=tools-suite GIT_COMMITTER_EMAIL=tools@example.com
+
+mkdir -p "$ON/bin"
+
+# The stub pool. One slot, and a plain file for the holder rather than a JSON
+# document to edit - the JSON is rendered from it in the shape slot.sh parses.
+# hydration-prompt's own suite is where that shape is pinned against blobs
+# recorded from the real v2.3.0 binary; this stub only has to be faithful to it.
+#
+# Two recorded behaviours matter here and both are deliberate:
+#   `get` hands a slot to a holder that already has one. treehouse really does,
+#         and slot.sh is the thing that refuses - so the stub must not.
+#   `return` on a dirty worktree prints the prompt, frees nothing and EXITS 0.
+cat > "$ON/bin/treehouse" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "$THLOG"
+render() {
+  local h status="available" lease=""
+  h=\$(cat "$HOLDER_FILE" 2>/dev/null)
+  if [ -n "\$h" ]; then status="leased"; lease="57ad1e6601fbd4dfc6fd8a3a431c06e3"; fi
+  printf '[{"name":"1","path":"%s","status":"%s","flavor":"git","lease_id":"%s","lease_holder":"%s","leased_at":null,"processes":[]}]\n' \\
+    "$ON/pool/1" "\$status" "\$lease" "\$h"
+}
+case \$1 in
+  status) render ;;
+  get)
+    h=""; prev=""
+    for a in "\$@"; do [ "\$prev" = --lease-holder ] && h=\$a; prev=\$a; done
+    printf '%s' "\$h" > "$HOLDER_FILE"
+    printf '%s\n' "$ON/pool/1"
+    ;;
+  return)
+    if [ -n "\$(git -C "\$2" status --porcelain 2>/dev/null)" ]; then
+      printf '| Worktree has uncommitted changes. Clean and return? [Y/n] Aborted.\n'
+      exit 0
+    fi
+    : > "$HOLDER_FILE"
+    printf 'returned %s\n' "\$2"
+    ;;
+esac
+exit 0
+STUB
+chmod +x "$ON/bin/treehouse"
+
+# The gh stub really merges. A stub that only recorded the call would leave
+# "it lands a merged PR" asserted against its own log rather than against the
+# repository, and the branch that failed to merge would look identical to the one
+# that did.
+cat > "$ON/bin/gh" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "$GHLOG"
+mode=\$(cat "$GHMODE" 2>/dev/null)
+case "\$1 \$2" in
+  "pr create")
+    [ "\$mode" = create-fails ] && { printf 'gh: could not create pull request\n' >&2; exit 1; }
+    head=""; prev=""
+    for a in "\$@"; do [ "\$prev" = --head ] && head=\$a; prev=\$a; done
+    printf '%s' "\$head" > "$ON/pr-head"
+    printf 'https://github.com/example/proj/pull/7\n'
+    ;;
+  "pr merge")
+    [ "\$mode" = merge-fails ] && { printf 'gh: merge refused\n' >&2; exit 1; }
+    head=\$(cat "$ON/pr-head")
+    git -C "$ON/merge" fetch -q origin
+    git -C "$ON/merge" checkout -q main
+    git -C "$ON/merge" reset -q --hard origin/main
+    git -C "$ON/merge" merge -q --squash "origin/\$head"
+    git -C "$ON/merge" commit -q -m "squash merge of \$head"
+    git -C "$ON/merge" push -q origin main
+    git -C "$ON/merge" push -q origin --delete "\$head"
+    printf 'merged\n'
+    ;;
+esac
+exit 0
+STUB
+chmod +x "$ON/bin/gh"
+
+# Serves the tarball for the --from remote path. The image has no curl, so this
+# is the only one - and it lives in a directory of its own so that one case can
+# drop it from PATH while keeping gh and treehouse, and meet the genuine
+# "curl is not installed" world rather than a simulated one. Left in $ON/bin it
+# could only be removed along with the other two, and the run would then die on
+# the missing gh instead and pass the assertion for the wrong reason.
+mkdir -p "$ON/curlbin"
+cat > "$ON/curlbin/curl" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "$CURLLOG"
+dest=""; prev=""; url=""
+for a in "\$@"; do
+  [ "\$prev" = -o ] && dest=\$a
+  case \$a in http*) url=\$a ;; esac
+  prev=\$a
+done
+case "\$url" in
+  *codeload*) cat "$ON/src.tar.gz" > "\$dest" ;;
+  *) exit 7 ;;
+esac
+exit 0
+STUB
+chmod +x "$ON/curlbin/curl"
+
+# The tarball the remote path unpacks: the real templates, the real registry and
+# the real slot.sh, under the <repo>-<ref> root codeload produces.
+mkdir -p "$ON/up/dotfiles-main/claude/skills/hydration-prompt/scripts"
+cp -a /repo/claude/skills/project-scaffold "$ON/up/dotfiles-main/claude/skills/"
+cp /repo/claude/skills/registry.json "$ON/up/dotfiles-main/claude/skills/"
+cp /repo/claude/skills/hydration-prompt/scripts/slot.sh \
+   "$ON/up/dotfiles-main/claude/skills/hydration-prompt/scripts/"
+tar -czf "$ON/src.tar.gz" -C "$ON/up" dotfiles-main
+
+PROJ_DIR="$ON/proj"
+POOL1="$ON/pool/1"
+
+# A project as it is found in the wild: skills committed, a CLAUDE.md carrying
+# the prose session-start check, a .gitignore with rules of its own, and one
+# hand-authored skill that no registry has ever heard of.
+mkproject() { # $1... = skill directories to commit
+  local name
+  rm -rf "$ON/origin.git" "$PROJ_DIR" "$ON/pool" "$ON/merge" "$ON/pr-head"
+  mkdir -p "$ON/pool"
+  : > "$HOLDER_FILE"
+  : > "$GHLOG"; : > "$THLOG"; : > "$CURLLOG"; : > "$GHMODE"
+  git init -q --bare -b main "$ON/origin.git"
+  git init -q -b main "$PROJ_DIR"
+  for name in "$@"; do
+    mkdir -p "$PROJ_DIR/.claude/skills/$name"
+    printf -- '---\nname: %s\nversion: 0.0.1\n---\n\n# %s\n\nstale copy\n' \
+      "$name" "$name" > "$PROJ_DIR/.claude/skills/$name/SKILL.md"
+  done
+  cat > "$PROJ_DIR/CLAUDE.md" <<'MD'
+# Example Project
+
+## House rules
+
+Be careful.
+
+## Session start - skill version check
+
+Skills are installed into a project as **copies**.
+Run it once, before the first task of the session.
+
+```bash
+curl -fsS https://example.invalid/registry.json
+```
+
+## Deployment
+
+Ask first.
+MD
+  cat > "$PROJ_DIR/.gitignore" <<'IG'
+node_modules/
+*.log
+IG
+  printf 'example\n' > "$PROJ_DIR/README.md"
+  git -C "$PROJ_DIR" add -A
+  git -C "$PROJ_DIR" commit -q -m "the project as it was found"
+  git -C "$PROJ_DIR" remote add origin "$ON/origin.git"
+  git -C "$PROJ_DIR" push -q -u origin main
+  # The workbench: a worktree of the same repository, detached so `main` is not
+  # checked out twice.
+  git -C "$PROJ_DIR" worktree add -q --detach "$POOL1" main
+  git clone -q "$ON/origin.git" "$ON/merge"
+}
+
+# The working tree only. .git is excluded on purpose: the workbench shares this
+# repository's object store, so a push from the slot legitimately writes there.
+# The claim being made is about the user's FILES.
+snapshot_wt() { ( cd "$1" && find . -type f -not -path './.git/*' -exec sha256sum {} + 2>/dev/null | sort ); }
+
+ONPATH="$ON/bin:$ON/curlbin"
+
+run_onboard() { # $1... = arguments
+  ( cd "$ON" && PATH="$ONPATH:$PATH" \
+      bash "$SO" --project "$PROJ_DIR" --from local --dotfiles /repo "$@" ) > "$OUT" 2> "$ERR"
+}
+
+# origin's copy of a file, which is the only copy that proves anything landed.
+on_main() { # $1 = path in the repository
+  git -C "$PROJ_DIR" fetch -q origin 2>/dev/null
+  git -C "$PROJ_DIR" show "origin/main:$1" 2>/dev/null
+}
+
+holder_is() { # $1 = expected holder, "" for none
+  [[ "$(cat "$HOLDER_FILE" 2>/dev/null)" == "$1" ]]
+}
+
+# A markdown section: the heading and everything under it up to the next `## `.
+# Written here as well as in the script, on purpose - an assertion that called
+# the script's own function would agree with it however wrong it was.
+md_section() { # $1 = file, $2 = heading
+  awk -v h="$2" '$0 == h { f = 1 } f && /^## / && $0 != h { exit } f { print }' "$1"
+}
+
+TMPLS=/repo/claude/skills/project-scaffold/references/templates
+
+# ── the source templates, before anything is written into a project ────────────
+hd "skill-onboard.sh: the templates it splices"
+check "gitignore.tmpl still carries the **/.claude/skills/ blanket" \
+  "$(grep -qxF -- '**/.claude/skills/' "$TMPLS/gitignore.tmpl"; echo $?)"
+check "gitignore.tmpl still carries the .claude/cache/ line" \
+  "$(grep -qxF -- '.claude/cache/' "$TMPLS/gitignore.tmpl"; echo $?)"
+check "CLAUDE.md.tmpl still carries a '## Skills' section" \
+  "$([[ -n $(md_section "$TMPLS/CLAUDE.md.tmpl" '## Skills') ]]; echo $?)"
+check "and that section carries the marker pair skill-sync writes between" \
+  "$(md_section "$TMPLS/CLAUDE.md.tmpl" '## Skills' | grep -q 'skills:begin'; echo $?)"
+check "skills.toml.tmpl still has a [skills] use list to replace" \
+  "$(awk '/^\[skills\]/ { s = 1; next } s && /^[[:space:]]*use[[:space:]]*=/ { found = 1 }
+          END { exit !found }' "$TMPLS/skills.toml.tmpl"; echo $?)"
+
+# ── the dispatcher ─────────────────────────────────────────────────────────────
+hd "skill-onboard.sh: entry points"
+expect_rc "--help exits 0" 0 bash "$SO" --help
+expect_rc "an unknown argument is rejected" 2 bash "$SO" --frobnicate
+HELPTEXT=$(bash "$SO" --help 2>&1)
+check "--help names all three files it writes" \
+  "$(grep -q 'skills.toml' <<<"$HELPTEXT" && grep -q '.gitignore' <<<"$HELPTEXT" \
+     && grep -q 'CLAUDE.md' <<<"$HELPTEXT"; echo $?)"
+check "--help says exit 5 is a stranded workbench" \
+  "$(grep -q 'STILL LEASED' <<<"$HELPTEXT"; echo $?)"
+
+# Rule 17. The same utilities the sync is checked against, for the same reason:
+# absent from Git Bash or from a minimal image, and each one fails as something
+# that reads like a different problem.
+#
+# `diff` is checked differently here because this script legitimately runs
+# `git diff --cached`, which is a git subcommand and not the utility. A bare
+# `grep -w diff` would fail on it, and the honest fix is to assert that every
+# occurrence is a git one rather than to drop the check.
+hd "skill-onboard.sh: portable to Git Bash"
+ONCODE=$(awk '{ sub(/^[[:space:]]*#.*/, ""); sub(/[[:space:]]#.*/, "") } NF' "$SO")
+check "the stripped source is not empty, so these checks mean something" \
+  "$([[ $(printf '%s\n' "$ONCODE" | wc -l) -gt 100 ]]; echo $?)"
+check "the source calls no flock" "$(neg grep -qw flock <<<"$ONCODE")"
+check "the source calls no cmp"   "$(neg grep -qw cmp <<<"$ONCODE")"
+check "every diff it runs is a git diff, not the utility" \
+  "$(neg grep -E '(^|[^-])\bdiff\b' <<<"$(grep -v 'git .*diff' <<<"$ONCODE")")"
+
+# ── refusals that happen before a slot is taken ────────────────────────────────
+# Each one costs nothing and each one must cost nothing: a validation failure
+# that had already leased a workbench would leave one stranded for a typo.
+hd "skill-onboard.sh: it refuses before it leases"
+mkproject container-sandbox work-order house-style
+
+run_onboard --skills no-such-skill-anywhere; rc=$?
+check "a skill in no registry exits 3" "$([[ $rc -eq 3 ]]; echo $?)"
+check "and names it" "$(grep -q 'no-such-skill-anywhere' "$ERR"; echo $?)"
+check "and no workbench was leased" "$([[ ! -s $THLOG ]]; echo $?)"
+
+NOSKILLS="$ON/noskills"
+rm -rf "$NOSKILLS"; mkdir -p "$NOSKILLS"
+git init -q -b main "$NOSKILLS"; git -C "$NOSKILLS" remote add origin "$ON/origin.git"
+( cd "$ON" && PATH="$ONPATH:$PATH" bash "$SO" --project "$NOSKILLS" \
+    --from local --dotfiles /repo ) > "$OUT" 2> "$ERR"
+rc=$?
+check "a project with nothing to declare exits 3" "$([[ $rc -eq 3 ]]; echo $?)"
+check "and the message points at --skills" "$(grep -q -- '--skills' "$ERR"; echo $?)"
+
+NOTGIT="$ON/notgit"; rm -rf "$NOTGIT"; mkdir -p "$NOTGIT"
+( cd "$ON" && PATH="$ONPATH:$PATH" bash "$SO" --project "$NOTGIT" \
+    --from local --dotfiles /repo ) > "$OUT" 2> "$ERR"
+rc=$?
+check "a directory that is not a git repository exits 3" "$([[ $rc -eq 3 ]]; echo $?)"
+
+NOREMOTE="$ON/noremote"; rm -rf "$NOREMOTE"; mkdir -p "$NOREMOTE"
+git init -q -b main "$NOREMOTE"
+( cd "$ON" && PATH="$ONPATH:$PATH" bash "$SO" --project "$NOREMOTE" \
+    --from local --dotfiles /repo ) > "$OUT" 2> "$ERR"
+rc=$?
+check "a repository with no origin exits 3" "$([[ $rc -eq 3 ]]; echo $?)"
+check "and says so rather than failing inside gh later" \
+  "$(grep -q 'no origin remote' "$ERR"; echo $?)"
+
+# ── --dry-run ──────────────────────────────────────────────────────────────────
+hd "skill-onboard.sh: --dry-run"
+mkproject container-sandbox work-order house-style
+BEFORE=$(snapshot_wt "$PROJ_DIR")
+ORIGIN_BEFORE=$(git -C "$PROJ_DIR" rev-parse origin/main)
+run_onboard --dry-run; rc=$?
+check "--dry-run exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+check "it leases no workbench at all" "$([[ ! -s $THLOG ]]; echo $?)"
+check "it calls gh not once" "$([[ ! -s $GHLOG ]]; echo $?)"
+check "it writes nothing in the project" "$([[ $BEFORE == "$(snapshot_wt "$PROJ_DIR")" ]]; echo $?)"
+check "origin is where it was" \
+  "$([[ $ORIGIN_BEFORE == "$(git -C "$PROJ_DIR" rev-parse origin/main)" ]]; echo $?)"
+check "it names the skills it would declare" \
+  "$(grep -q 'container-sandbox' "$OUT" && grep -q 'work-order' "$OUT"; echo $?)"
+check "and names the hand-authored one as one it would leave alone" \
+  "$(grep -q 'leave be:.*house-style' "$OUT"; echo $?)"
+
+# ── AC-H1 ──────────────────────────────────────────────────────────────────────
+hd "AC-H1: a scratch repository with committed skills lands a merged PR"
+mkproject container-sandbox work-order house-style
+BEFORE=$(snapshot_wt "$PROJ_DIR")
+run_onboard; rc=$?
+check "the run exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+[[ $rc -eq 0 ]] || { printf '%s\n' "--- stdout"; cat "$OUT"; printf -- '--- stderr\n'; cat "$ERR"; }
+check "THE USER'S WORKING TREE IS BYTE FOR BYTE WHAT IT WAS" \
+  "$([[ $BEFORE == "$(snapshot_wt "$PROJ_DIR")" ]]; echo $?)"
+check "AND NO WORKBENCH IS LEFT LEASED" "$(holder_is ""; echo $?)"
+check "a pull request was opened" "$(grep -q 'pr create' "$GHLOG"; echo $?)"
+check "and squash-merged" "$(grep -q 'pr merge.*--squash' "$GHLOG"; echo $?)"
+check "the remote branch is gone" \
+  "$([[ -z "$(git -C "$PROJ_DIR" ls-remote --heads origin chore/skills-onboard)" ]]; echo $?)"
+check "and so is the local one" \
+  "$(neg git -C "$PROJ_DIR" rev-parse --verify refs/heads/chore/skills-onboard)"
+
+hd "AC-H1: what landed on origin/main"
+MAN=$(on_main .claude/skills.toml)
+check "the manifest is on main" "$([[ -n $MAN ]]; echo $?)"
+check "it declares container-sandbox" "$(grep -q '"container-sandbox"' <<<"$MAN"; echo $?)"
+check "it declares work-order" "$(grep -q '"work-order"' <<<"$MAN"; echo $?)"
+check "it does NOT declare the hand-authored skill" \
+  "$(neg grep -q '"house-style"' <<<"$MAN")"
+check "it kept the template's prose about there being no version to pin" \
+  "$(grep -q 'no version to hand-maintain' <<<"$MAN"; echo $?)"
+check "and the template's empty [agents] section" \
+  "$(grep -q '^\[agents\]' <<<"$MAN"; echo $?)"
+
+TREE=$(git -C "$PROJ_DIR" ls-tree -r --name-only origin/main)
+check "git no longer tracks the declared skills" \
+  "$(neg grep -q '^\.claude/skills/container-sandbox/' <<<"$TREE")"
+check "nor work-order" "$(neg grep -q '^\.claude/skills/work-order/' <<<"$TREE")"
+check "THE HAND-AUTHORED SKILL IS STILL TRACKED - it was never the sync's to take" \
+  "$(grep -q '^\.claude/skills/house-style/SKILL.md$' <<<"$TREE"; echo $?)"
+check "the files are still on disk in the working tree" \
+  "$([[ -f "$PROJ_DIR/.claude/skills/container-sandbox/SKILL.md" ]]; echo $?)"
+
+IGN=$(on_main .gitignore)
+check ".gitignore now blankets the installed copies" \
+  "$(grep -qxF -- '**/.claude/skills/' <<<"$IGN"; echo $?)"
+check "and the sync cache" "$(grep -qxF -- '.claude/cache/' <<<"$IGN"; echo $?)"
+check "the project's own rules survived" "$(grep -qxF -- 'node_modules/' <<<"$IGN"; echo $?)"
+# The comment above the blanket is the reason the line is there. A pattern pasted
+# in without it is a line the next reader deletes.
+check "the blanket arrived with the template's explanation attached" \
+  "$(grep -q 'replaced on every session start' <<<"$IGN"; echo $?)"
+
+CMD=$(on_main CLAUDE.md)
+check "CLAUDE.md now carries the ## Skills section" \
+  "$(grep -qxF -- '## Skills' <<<"$CMD"; echo $?)"
+check "THE PROSE SESSION-START CHECK IS GONE" \
+  "$(neg grep -qxF -- '## Session start - skill version check' <<<"$CMD")"
+check "and the curl command it told the agent to run went with it" \
+  "$(neg grep -q 'example.invalid' <<<"$CMD")"
+check "the project's other sections are untouched" \
+  "$(grep -qxF -- '## House rules' <<<"$CMD" && grep -qxF -- '## Deployment' <<<"$CMD"; echo $?)"
+check "the section landed where the old one was, not at the end" \
+  "$(awk '/^## Skills$/ { s = NR } /^## Deployment$/ { d = NR } END { exit !(s && d && s < d) }' \
+     <<<"$CMD"; echo $?)"
+# Byte for byte against the template, which is the only assertion that catches a
+# section that was re-authored here instead of copied.
+printf '%s\n' "$CMD" > "$WORK/onboarded-claude.md"
+check "THE SECTION IS THE TEMPLATE'S, BYTE FOR BYTE" \
+  "$([[ "$(md_section "$WORK/onboarded-claude.md" '## Skills')" \
+        == "$(md_section "$TMPLS/CLAUDE.md.tmpl" '## Skills')" ]]; echo $?)"
+check "so the marker pair skill-sync fills came with it" \
+  "$(grep -q 'skills:end' <<<"$CMD"; echo $?)"
+
+# The manifest read by the thing that reads manifests. An onboarding that writes
+# a file skill-sync cannot parse is an onboarding that reports success and
+# installs nothing, forever, silently.
+hd "AC-H1: the manifest it wrote, through skill-sync's own parser"
+printf '%s\n' "$MAN" > "$PROJ/.claude/skills.toml"
+mkstub real
+run_sync --plan
+rc=$?
+check "skill-sync parses it and exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+check "container-sandbox comes back owned" "$(plan_has owned container-sandbox; echo $?)"
+check "work-order comes back owned" "$(plan_has owned work-order; echo $?)"
+check "and nothing comes back unknown" "$(neg grep -q '^unknown' "$OUT")"
+
+# ── AC-H2 ──────────────────────────────────────────────────────────────────────
+# The one this script exists for. A workbench handed over with changes already in
+# it cannot be given back: treehouse prompts, takes the no-TTY default, abandons
+# the return and exits 0. A run that trusted that exit code would print a
+# successful onboarding and strand the slot.
+hd "AC-H2: a dirty workbench fails loudly instead of exiting 0"
+mkproject container-sandbox work-order house-style
+printf 'left behind by an earlier run\n' > "$POOL1/debris.txt"
+BEFORE=$(snapshot_wt "$PROJ_DIR")
+ORIGIN_BEFORE=$(git -C "$PROJ_DIR" rev-parse origin/main)
+run_onboard; rc=$?
+check "IT DOES NOT EXIT 0" "$([[ $rc -ne 0 ]]; echo $?)"
+check "it exits 5 - the workbench is stranded, which is not the same as failing" \
+  "$([[ $rc -eq 5 ]]; echo $?)"
+check "it says the workbench is still leased" "$(grep -q 'STILL LEASED' "$ERR"; echo $?)"
+check "the pool agrees that it is" "$(holder_is skill-onboard; echo $?)"
+check "and slot.sh handed back the command that frees it" \
+  "$(grep -q 'if-lease-holder' "$ERR"; echo $?)"
+check "no pull request was opened" "$(neg grep -q 'pr create' "$GHLOG")"
+check "origin/main is exactly where it was" \
+  "$([[ $ORIGIN_BEFORE == "$(git -C "$PROJ_DIR" rev-parse origin/main)" ]]; echo $?)"
+check "the user's working tree is untouched" \
+  "$([[ $BEFORE == "$(snapshot_wt "$PROJ_DIR")" ]]; echo $?)"
+check "and the debris is still there for a human to look at, not discarded" \
+  "$([[ -f "$POOL1/debris.txt" ]]; echo $?)"
+
+# ── the release runs on the failure paths too ──────────────────────────────────
+# The other half of the same property: a run that fails with a CLEAN workbench
+# must hand it back and report the failure, not exit 5. Conflating the two would
+# send a person looking for a stranded slot that does not exist.
+hd "skill-onboard.sh: a clean failure still returns the workbench"
+mkproject container-sandbox work-order house-style
+printf 'create-fails' > "$GHMODE"
+run_onboard; rc=$?
+check "a gh failure is not reported as a stranded workbench" "$([[ $rc -ne 5 ]]; echo $?)"
+check "it fails" "$([[ $rc -ne 0 ]]; echo $?)"
+check "THE WORKBENCH WENT BACK ANYWAY" "$(holder_is ""; echo $?)"
+check "and the report names the step it died on" \
+  "$(grep -q 'step: open pull request' "$ERR"; echo $?)"
+check "the branch it pushed is still on the remote for a human to find" \
+  "$([[ -n "$(git -C "$PROJ_DIR" ls-remote --heads origin chore/skills-onboard)" ]]; echo $?)"
+
+# ── --no-merge ─────────────────────────────────────────────────────────────────
+hd "skill-onboard.sh: --no-merge stops at the pull request"
+mkproject container-sandbox work-order
+run_onboard --no-merge; rc=$?
+check "it exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+check "the pull request was opened" "$(grep -q 'pr create' "$GHLOG"; echo $?)"
+check "and NOT merged" "$(neg grep -q 'pr merge' "$GHLOG")"
+check "the branch is on the remote, waiting" \
+  "$([[ -n "$(git -C "$PROJ_DIR" ls-remote --heads origin chore/skills-onboard)" ]]; echo $?)"
+check "origin/main has no manifest yet" "$([[ -z "$(on_main .claude/skills.toml)" ]]; echo $?)"
+check "the workbench went back" "$(holder_is ""; echo $?)"
+
+# ── running it twice ───────────────────────────────────────────────────────────
+hd "skill-onboard.sh: a project already on the sync"
+mkproject container-sandbox work-order house-style
+run_onboard >/dev/null 2>&1
+run_onboard; rc=$?
+check "the second run refuses rather than opening an empty pull request" \
+  "$([[ $rc -eq 3 ]]; echo $?)"
+check "and says why" "$(grep -q 'already on the sync' "$ERR"; echo $?)"
+check "the workbench went back" "$(holder_is ""; echo $?)"
+check "gh was called once, by the first run" \
+  "$([[ "$(grep -c 'pr create' "$GHLOG")" -eq 1 ]]; echo $?)"
+
+# ── the remote source path ─────────────────────────────────────────────────────
+# --from local is what every case above uses, because reading /repo directly is
+# what makes them fail on template drift. This one proves the default path - the
+# one a machine with no dotfiles checkout takes - reaches the same result.
+hd "skill-onboard.sh: --from remote fetches the templates"
+mkproject container-sandbox work-order
+( cd "$ON" && PATH="$ONPATH:$PATH" bash "$SO" --project "$PROJ_DIR" ) > "$OUT" 2> "$ERR"
+rc=$?
+check "it exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+[[ $rc -eq 0 ]] || { printf -- '--- stderr\n'; cat "$ERR"; }
+check "it went to codeload for the tree" "$(grep -q 'codeload' "$CURLLOG"; echo $?)"
+check "and landed the same manifest" \
+  "$(grep -q '"container-sandbox"' <<<"$(on_main .claude/skills.toml)"; echo $?)"
+check "the workbench went back" "$(holder_is ""; echo $?)"
+
+# No curl at all is a different sentence from a curl that failed, and the image
+# ships none, so this is the genuine article rather than a simulation. gh and
+# treehouse stay on PATH: dropping all three would make this pass on gh being
+# missing, which is a different assertion wearing this one's name.
+mkproject container-sandbox work-order
+( cd "$ON" && PATH="$ON/bin:$PATH" bash "$SO" --project "$PROJ_DIR" ) > "$OUT" 2> "$ERR"
+rc=$?
+check "no curl on PATH exits 4" "$([[ $rc -eq 4 ]]; echo $?)"
+check "and blames curl rather than the network" "$(grep -q 'curl is not installed' "$ERR"; echo $?)"
+check "having leased nothing" "$([[ ! -s $THLOG ]]; echo $?)"
+
+# The jq assertion's twin. This image now carries git, which is only safe while
+# skill-sync.sh does not reach for it - a sync that quietly acquired a git
+# dependency would work here and fail in every project that runs it from a
+# directory git does not own.
+hd "the image carries git, and skill-sync still must not"
+check "no runnable line of skill-sync.sh names git" \
+  "$([[ "$(grep -vE '^[[:space:]]*#' /repo/claude/tools/skill-sync.sh | grep -cE '\bgit\b')" -eq 0 ]]; echo $?)"
 
 # ── summary ────────────────────────────────────────────────────────────────────
 printf '\n=========================================\n'

@@ -4,16 +4,16 @@
   "slug": "skill-onboard-sh-brings-an-existing-project-onto",
   "title": "skill-onboard.sh brings an existing project onto the sync",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p2",
   "created": "2026-08-24",
   "updated": "2026-08-30",
   "created_at": "2026-08-24T13:19:10-05:00",
   "parent": "WO-20260824-00d5",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/skill-onboard-sh-brings-an-existing-project-onto",
+  "pr": 86,
   "merge_sha": null,
-  "closed": null,
+  "closed": "2026-08-30",
   "approval": {
     "via": "override",
     "reason": "Reviewed and approved on PR #55 on GitHub, which is where the whole cut was read as one diff. Lavish was offered and declined in favour of the PR.",
@@ -56,8 +56,10 @@ Every project that already exists has committed skills, no manifest, no gitignor
 ## Acceptance criteria
 
 
-- [ ] `AC-H1` *(human)* run against a scratch repository with committed skills it lands a merged PR and leaves no leased slot behind
-- [ ] `AC-H2` *(human)* a dirty working tree makes the run report a failure rather than exit 0 having done nothing
+- [x] `AC-H1` *(human)* run against a scratch repository with committed skills it lands a merged PR and leaves no leased slot behind
+  - observed `2026-08-30` Verified in Podman, claude/tools suite, section "AC-H1: a scratch repository with committed skills lands a merged PR" and the two sections under it. The fixture is a real git repository with a real bare origin, three skills committed under .claude/skills/, a CLAUDE.md carrying the prose session-start check and a .gitignore of its own; the workbench is a real git worktree of it, handed out by a stubbed treehouse; gh is stubbed and its "pr merge" performs an actual squash-merge into the bare origin and deletes the remote branch, so every assertion below is against the repository rather than against the stub log. Observed: the run exits 0; a pull request was opened and squash-merged; the remote and local branches are gone; origin/main carries .claude/skills.toml declaring container-sandbox and work-order, a .gitignore blanketing **/.claude/skills/ and .claude/cache/ with the template comments attached, and a CLAUDE.md whose "## Skills" section is byte-for-byte the templates one with the skills:begin/skills:end pair, the prose session-start check gone and the projects own sections intact; git no longer tracks the two declared skills and still tracks the hand-authored one; the pool records no lease afterwards; the users working tree is byte-for-byte what it was. The manifest it wrote was then fed to skill-sync --plan against the real registry.json and both skills came back owned with nothing unknown. Mutation-checked: making on_exit trust the release exit code turns the AC-H2 assertions red, and making write_manifest also write into the project turns the working-tree assertion red. Suite total 350 checks, 0 failures, up from 258.
+- [x] `AC-H2` *(human)* a dirty working tree makes the run report a failure rather than exit 0 having done nothing
+  - observed `2026-08-30` Verified in Podman, claude/tools suite, section "AC-H2: a dirty workbench fails loudly instead of exiting 0". The stubbed treehouse reproduces the recorded v2.3.0 defect verbatim: return on a worktree with uncommitted changes prints "| Worktree has uncommitted changes. Clean and return? [Y/n] Aborted.", frees nothing and exits 0. A file is left in the workbench before the run, as an earlier crashed run would leave it. Observed: the run does not exit 0; it exits 5, which is separate from an ordinary failure because a stranded workbench wants a human rather than a retry; stderr says STILL LEASED and carries slot.sh message naming the slot and the --if-lease-holder command that frees it; the pool still records skill-onboard as the holder; no pull request was opened; origin/main is at the same commit; the users working tree is untouched; and the debris is still there rather than discarded, because release never passes --force. The paired case "a clean failure still returns the workbench" proves the other half: a stubbed gh pr create failure exits non-zero, is NOT reported as exit 5, and the workbench goes back.
 
 ## Test plan
 
