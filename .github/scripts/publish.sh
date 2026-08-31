@@ -68,8 +68,10 @@ die() { printf '%s: %s\n' "$SELF" "$1" >&2; exit 2; }
 # happen; this is the belt to its braces, and it costs one line.
 MARKER='Skill-Publish'
 
-# E2.11 renames skill-versioning to skill-registry. This path moves with it.
-SKILL_VERSION_REL='claude/skills/skill-versioning/scripts/skill-version.sh'
+# The directory is skill-registry and the script inside it is still
+# skill-version.sh. E2.11 renamed the skill and deliberately not the script, so
+# the two disagreeing here is the intended state rather than a half-done rename.
+SKILL_VERSION_REL='claude/skills/skill-registry/scripts/skill-version.sh'
 
 # Who the commit is by. Overridable so the fixture suite can commit as itself
 # rather than inheriting a bot identity that means nothing in a scratch repo.

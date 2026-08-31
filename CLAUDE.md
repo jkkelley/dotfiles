@@ -148,7 +148,7 @@ and never again. No step anywhere is a human choosing a version number.
 1. **Edit** a file under `claude/skills/<name>/`, on a feature branch.
 
 2. **Check locally** with
-   `claude/skills/skill-versioning/scripts/skill-version.sh verify --structure`.
+   `claude/skills/skill-registry/scripts/skill-version.sh verify --structure`.
    It asserts that every skill has a `version:`, that every `requires:` names a
    skill that exists, and that neither a `version:` line nor `registry.json`
    appears anywhere in the branch's diff. It allocates nothing and writes
@@ -207,7 +207,7 @@ allocation on `main`, and a sync at the next session start.
 
 ### `skill-update.sh` is the hand-authored path, and nothing else
 
-`claude/skills/skill-versioning/scripts/skill-update.sh` refreshes one skill in a
+`claude/skills/skill-registry/scripts/skill-update.sh` refreshes one skill in a
 project that has **not** declared it in `.claude/skills.toml`, and it fetches
 from GitHub so it works on a machine with no dotfiles checkout. That is its
 entire remit.

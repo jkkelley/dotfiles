@@ -14,7 +14,7 @@ There are two tool trees and the distinction is the whole point of having two:
 
 If what you are writing is useful inside a consuming project, it belongs in
 `claude/tools/` and it belongs in `TOOLS_REGISTERED` in
-`claude/skills/skill-versioning/scripts/skill-version.sh`. If it maintains this
+`claude/skills/skill-registry/scripts/skill-version.sh`. If it maintains this
 repository - its work-orders, its procedure documents, its own bookkeeping - it
 belongs here.
 

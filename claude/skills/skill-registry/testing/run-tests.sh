@@ -420,10 +420,10 @@ check "the refusal says nothing about gamma" \
 git -C "$GITFIX" checkout -q -- .
 
 # ── 5c. a renamed, and a deleted, skill directory ──────────────────────────────
-# Why this is p1 rather than a backlog item: WO-20260824-238b renames
-# skill-versioning to skill-registry. A rename has two halves and git pairs them
-# only when it can - how much else the commit changed decides that - so both are
-# exercised rather than one and an assumption.
+# Why this is p1 rather than a backlog item: WO-20260824-238b renamed this
+# skill's own directory to skill-registry. A rename has two halves and git pairs
+# them only when it can - how much else the commit changed decides that - so both
+# are exercised rather than one and an assumption.
 hd "verify --structure: a renamed skill"
 
 rm -rf "$GSKILLS/gamma"
