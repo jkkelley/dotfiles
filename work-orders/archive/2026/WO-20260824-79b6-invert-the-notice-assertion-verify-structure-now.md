@@ -4,16 +4,16 @@
   "slug": "invert-the-notice-assertion-verify-structure-now",
   "title": "Invert the notice assertion: verify --structure now fails on a notice that is present",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-08-24",
   "updated": "2026-08-31",
   "created_at": "2026-08-24T13:19:13-05:00",
   "parent": "WO-20260824-00d5",
   "branch": "feat/invert-the-notice-assertion-verify-structure-now",
-  "pr": null,
+  "pr": 90,
   "merge_sha": null,
-  "closed": null,
+  "closed": "2026-08-31",
   "approval": {
     "via": "override",
     "reason": "Reviewed and approved on PR #55 on GitHub, which is where the whole cut was read as one diff. Lavish was offered and declined in favour of the PR.",
@@ -73,6 +73,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-08-31` Retro. The two lines the ticket estimated were two lines, and the cost was everywhere else. The fixtures carried the notice, which was correct while a notice was the normal state of an upstream SKILL.md and was wrong the moment the gate existed; left alone the suite would have gone green on the gate being broken. Two design points earned their keep. Keying on the opener alone rather than any fuller line, because two spellings of the notice exist and they share exactly one line - an assertion against the deleted spelling would wave the rendered one through. And scanning the whole tree rather than the branch diff, because the property is that NO upstream SKILL.md carries the notice, and a diff-scoped check lets one that arrived by any other route sit green forever. The trap worth remembering: a gate that greps every SKILL.md for a string cannot quote that string in its own SKILL.md, so the documentation describes the opener instead of reproducing it and says why.
 - `2026-08-24` Poker 2026-08-24: 2 points. One inverted assertion and a message.
 
 ## Outcome

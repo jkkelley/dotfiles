@@ -8,6 +8,5 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20260824-79b6` | in-progress | p2 | - | [Invert the notice assertion: verify --structure now fails on a notice that is present](WO-20260824-79b6-invert-the-notice-assertion-verify-structure-now.md) |
-| `WO-20260824-238b` | ready | p2 | WO-20260824-79b6 | [Rename skill-versioning to skill-registry, the closing commit](WO-20260824-238b-rename-skill-versioning-to-skill-registry-the-cl.md) |
+| `WO-20260824-238b` | ready | p2 | - | [Rename skill-versioning to skill-registry, the closing commit](WO-20260824-238b-rename-skill-versioning-to-skill-registry-the-cl.md) |
 | `WO-20260830-eb89` | ready | p2 | WO-20260824-238b | [skill-sync fills the CLAUDE.md skills table between the markers](WO-20260830-eb89-skill-sync-fills-the-claude-md-skills-table-betw.md) |
