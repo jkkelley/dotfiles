@@ -1150,6 +1150,232 @@ check "a published version older than this one is not a downgrade loop" \
 mkregistry
 restore_self
 
+# ── 18. the skills list between the markers in the project's CLAUDE.md ─────────
+# The one thing skill-sync.sh writes outside .claude/skills/, so every case below
+# asserts on the whole file and not only on the block: "it filled the list" and
+# "it rewrote a file it was trusted with" look identical from inside the block.
+#
+# The marker pair is read out of project-scaffold's real CLAUDE.md.tmpl rather
+# than typed here, and the first check asserts skill-sync.sh spells it the same
+# way. The two files live in different skills, are edited by different tickets,
+# and drift between them is silent in the worst direction: a project whose block
+# never fills, forever, with nothing anywhere saying so. That is the same shape
+# as the "the manifest project-scaffold ships" section, and the same reason.
+CMD_TMPL=/repo/claude/skills/project-scaffold/references/templates/CLAUDE.md.tmpl
+MB=$(grep -F 'skills:begin' "$CMD_TMPL")
+ME=$(grep -F 'skills:end' "$CMD_TMPL")
+DOC="$PROJ/CLAUDE.md"
+
+# The bytes strictly between the markers.
+block_of() { # $1 = file
+  awk -v b="$MB" -v e="$ME" '
+    $0 == e { inb = 0 }
+    inb { print }
+    $0 == b { inb = 1 }' "$1"
+}
+
+# The same, with HTML comments stripped - what AC-H4 is asserted on.
+block_data() { block_of "$1" | awk '{ gsub(/<!--[^>]*-->/, ""); print }'; }
+
+# Every line of the file except the block's contents, markers included. Two
+# files compared through this differ only in what the writer was allowed to
+# touch, so "the rest of CLAUDE.md is untouched" is a byte comparison rather
+# than a spot check.
+outside_block() { # $1 = file
+  awk -v b="$MB" -v e="$ME" '
+    $0 == b { inb = 1; print; next }
+    $0 == e { inb = 0; print; next }
+    !inb { print }' "$1"
+}
+
+hash_of() { sha256sum "$1" | cut -d' ' -f1; }
+
+# A project as project-scaffold leaves one: the real template, verbatim, which is
+# how it ships - scaffold.sh adds no markers of its own to CLAUDE.md.
+scaffolded() { # $1 = the [skills] body
+  mkproject "$1"
+  cp "$CMD_TMPL" "$DOC"
+}
+
+hd "the marker pair, as two different skills spell it"
+check "the template carries a begin marker at all" "$([[ -n $MB ]]; echo $?)"
+check "the template carries an end marker at all"   "$([[ -n $ME ]]; echo $?)"
+check "skill-sync.sh spells the begin marker exactly as the template does" \
+  "$(grep -qxF "MARK_BEGIN='$MB'" "$SS"; echo $?)"
+check "skill-sync.sh spells the end marker exactly as the template does" \
+  "$(grep -qxF "MARK_END='$ME'" "$SS"; echo $?)"
+
+hd "AC-H1: a scaffolded project lists exactly what it holds"
+mkregistry
+mkstub ok
+scaffolded 'use = ["work-order", "container-sandbox"]'
+sync_now
+rc=$?
+check "the sync exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+check "and installed both skills" \
+  "$([[ -f "$PROJ/.claude/skills/work-order/SKILL.md" &&
+        -f "$PROJ/.claude/skills/container-sandbox/SKILL.md" ]]; echo $?)"
+check "the block names the two skills, in byte order" \
+  "$([[ "$(block_of "$DOC" | grep '^- ')" == "$(printf -- '- container-sandbox\n- work-order')" ]]; echo $?)"
+check "and nothing else: no other non-blank line is between the markers" \
+  "$([[ "$(block_of "$DOC" | grep -v '^$' | grep -cv '^- ')" -eq 0 ]]; echo $?)"
+check "both markers survive the write, or the next sync could not find them" \
+  "$([[ "$(grep -cxF "$MB" "$DOC")" -eq 1 && "$(grep -cxF "$ME" "$DOC")" -eq 1 ]]; echo $?)"
+check "every byte outside the block is the template's, untouched" \
+  "$([[ "$(outside_block "$DOC")" == "$(outside_block "$CMD_TMPL")" ]]; echo $?)"
+check "the write is reported, since it changed a file the user owns" \
+  "$(grep -q 'CLAUDE.md now lists the 2 skills' "$OUT"; echo $?)"
+check "no half-written CLAUDE.md is left beside it" \
+  "$([[ "$(ls "$PROJ" | grep -c '^CLAUDE.md')" -eq 1 ]]; echo $?)"
+
+# The list is what was installed, not what was declared. A dependency nobody
+# named is on disk and belongs in the record of what the project holds.
+scaffolded 'use = ["cartography"]'
+sync_now
+check "a dependency the manifest never named is listed, because it was installed" \
+  "$([[ "$(block_of "$DOC" | grep '^- ')" == "$(printf -- '- cartography\n- work-order')" ]]; echo $?)"
+
+hd "AC-H2: a second sync changes nothing"
+scaffolded 'use = ["work-order", "container-sandbox"]'
+sync_now
+before=$(hash_of "$DOC")
+# Aged deliberately. Two syncs a second apart would carry the same mtime whether
+# or not the second one rewrote the file, and "it did not write" is half of what
+# idempotent means here.
+touch -d '1 hour ago' "$DOC"
+mtime=$(stat -c %Y "$DOC")
+sync_now
+check "a second sync against an unchanged manifest leaves CLAUDE.md byte-identical" \
+  "$([[ "$before" == "$(hash_of "$DOC")" ]]; echo $?)"
+check "and does not rewrite the file at all, so no watcher and no mtime moves" \
+  "$([[ "$mtime" == "$(stat -c %Y "$DOC")" ]]; echo $?)"
+check "the second sync says nothing about a file it did not change" \
+  "$(neg grep -q 'now lists the' "$OUT")"
+
+# The comparison above is worth nothing until it has failed on a file that
+# really did change. Dropping a skill is that change, and it is also the case
+# that proves the list is rewritten rather than added to.
+printf '[skills]\nuse = ["work-order"]\n' > "$PROJ/.claude/skills.toml"
+sync_now
+check "a skill dropped from the manifest leaves the list" \
+  "$([[ "$(block_of "$DOC" | grep '^- ')" == '- work-order' ]]; echo $?)"
+check "and the file did change, so the byte comparison above can fail" \
+  "$([[ "$before" != "$(hash_of "$DOC")" ]]; echo $?)"
+
+# A project that predates this write carries whatever a human put between the
+# markers. It is replaced, not appended to.
+scaffolded 'use = ["work-order"]'
+awk -v b="$MB" '{ print }
+  $0 == b { print ""; print "- something-old"; print "- another-stale-name"; print "" }' \
+  "$CMD_TMPL" > "$WORK/doc-stale"
+cp "$WORK/doc-stale" "$DOC"
+sync_now
+check "hand-written content between the markers is replaced, not appended to" \
+  "$([[ "$(block_of "$DOC" | grep '^- ')" == '- work-order' ]]; echo $?)"
+
+hd "AC-H4: no version string between the markers"
+scaffolded 'use = ["work-order", "container-sandbox"]'
+sync_now
+check "the block data carries no version string, comments stripped first" \
+  "$(neg grep -qE '[0-9]+\.[0-9]+\.[0-9]+' <<<"$(block_data "$DOC")")"
+check "nor does the raw block, comments included" \
+  "$(neg grep -qE '[0-9]+\.[0-9]+\.[0-9]+' <<<"$(block_of "$DOC")")"
+check "and the word version appears nowhere in it either" \
+  "$(neg grep -qi 'version' <<<"$(block_of "$DOC")")"
+check "the registry does have a version for what was installed, so this means something" \
+  "$(grep -q '"work-order": { "version": "1.2.3"' "$REGFIX"; echo $?)"
+
+# The assertion has to be able to fail. Same extraction, same grep, on a block
+# with a version planted in it on purpose.
+awk -v b="$MB" '{ print } $0 == b { print "- work-order 1.2.3" }' "$DOC" > "$WORK/doc-planted"
+check "the same assertion returns non-zero on a version planted in the block" \
+  "$(grep -qE '[0-9]+\.[0-9]+\.[0-9]+' <<<"$(block_data "$WORK/doc-planted")"; echo $?)"
+
+hd "AC-H3: a CLAUDE.md with no marker pair is left alone"
+# Four shapes, one rule: the pair is matched byte for byte or not at all, and
+# every miss is the same outcome as having no CLAUDE.md at all - nothing written,
+# and the sync still succeeds.
+for shape in none half reworded reversed; do
+  mkproject 'use = ["work-order"]'
+  case $shape in
+    none)     printf '# A project\n\nNo markers here at all.\n' > "$DOC" ;;
+    half)     printf '# A project\n\n%s\n\nand no end marker.\n' "$MB" > "$DOC" ;;
+    reworded) printf '# A project\n\n<!-- skills:begin -->\n\n<!-- skills:end -->\n' > "$DOC" ;;
+    reversed) printf '# A project\n\n%s\n\n%s\n' "$ME" "$MB" > "$DOC" ;;
+  esac
+  before=$(hash_of "$DOC")
+  sync_now
+  rc=$?
+  check "[$shape] the sync exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+  check "[$shape] CLAUDE.md is byte-identical afterwards" \
+    "$([[ "$before" == "$(hash_of "$DOC")" ]]; echo $?)"
+  check "[$shape] the sync reports success, not a failure" \
+    "$(grep -q '^skill-sync.sh: 1 skills in place' "$OUT"; echo $?)"
+  check "[$shape] and it installed the skills anyway" \
+    "$([[ -f "$PROJ/.claude/skills/work-order/SKILL.md" ]]; echo $?)"
+  check "[$shape] nothing is said about a file it did not write" \
+    "$(neg grep -q 'now lists the' "$OUT")"
+done
+
+mkproject 'use = ["work-order"]'
+sync_now
+rc=$?
+check "a project with no CLAUDE.md at all syncs normally" "$([[ $rc -eq 0 ]]; echo $?)"
+check "and no CLAUDE.md is created for it" "$([[ ! -e $DOC ]]; echo $?)"
+
+# The empty case, against the real template: a project declaring nothing keeps
+# the block exactly as project-scaffold shipped it. This is also the strongest
+# statement the suite makes about the two files agreeing - the whole file, byte
+# for byte, after a sync that ran to completion.
+scaffolded 'use = []'
+sync_now
+check "a project that declares no skills keeps the template's block, byte for byte" \
+  "$([[ "$(hash_of "$DOC")" == "$(hash_of "$CMD_TMPL")" ]]; echo $?)"
+
+hd "the list is written only by a sync that worked"
+scaffolded 'use = ["work-order"]'
+run_sync --plan
+check "--plan does not fill the block" \
+  "$([[ "$(hash_of "$DOC")" == "$(hash_of "$CMD_TMPL")" ]]; echo $?)"
+mkstub fail
+run_sync --plan
+check "a failed --plan does not fill it either" \
+  "$([[ "$(hash_of "$DOC")" == "$(hash_of "$CMD_TMPL")" ]]; echo $?)"
+
+mkstub ok
+sync_now
+before=$(hash_of "$DOC")
+mkstub fail
+sync_now
+check "an unreachable registry leaves the list as the last good sync left it" \
+  "$([[ "$before" == "$(hash_of "$DOC")" ]]; echo $?)"
+mkstub ok
+printf 'fail' > "$TARMODE"
+sync_now
+check "an unreachable archive leaves it alone too" \
+  "$([[ "$before" == "$(hash_of "$DOC")" ]]; echo $?)"
+printf 'ok' > "$TARMODE"
+
+# A CLAUDE.md that cannot be replaced is not a reason to take the session down,
+# and it is not a reason to say nothing either. `mv` needs the *directory*
+# writable rather than the file, so the project root is what gets locked.
+scaffolded 'use = ["work-order"]'
+sync_now
+printf '[skills]\nuse = ["work-order", "container-sandbox"]\n' > "$PROJ/.claude/skills.toml"
+before=$(hash_of "$DOC")
+chmod a-w "$PROJ"
+check "the locked project really is unwritable, or the two checks below prove nothing" \
+  "$(neg touch "$PROJ/.write-probe")"
+sync_now
+rc=$?
+chmod u+w "$PROJ"
+check "a CLAUDE.md that cannot be written still exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+check "it is left as it was" "$([[ "$before" == "$(hash_of "$DOC")" ]]; echo $?)"
+check "and the reason is reported rather than swallowed" \
+  "$(grep -q 'could not write the skills list' "$ERR"; echo $?)"
+check "the skills themselves were still installed" \
+  "$([[ -f "$PROJ/.claude/skills/container-sandbox/SKILL.md" ]]; echo $?)"
+
 # ── setup.sh: the binary, then the hook ────────────────────────────────────────
 # setup.sh writes into $HOME and nowhere else, so every case below runs against
 # a fake one under the scratch mount. It is interactive, so each run is fed the

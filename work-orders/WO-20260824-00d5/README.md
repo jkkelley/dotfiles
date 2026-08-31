@@ -6,6 +6,5 @@ This ticket: [Skills package manager: roll it out across the repository](WO-2026
 
 One level down only. A child of a child is listed in its own directory, not here.
 
-| ID | status | pri | waiting on | title |
-|---|---|---|---|---|
-| `WO-20260830-eb89` | ready | p2 | - | [skill-sync fills the CLAUDE.md skills table between the markers](WO-20260830-eb89-skill-sync-fills-the-claude-md-skills-table-betw.md) |
+_No children yet. This ticket sits at the top level, so it holds the directory
+on its own until work is filed underneath it._
