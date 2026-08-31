@@ -51,6 +51,18 @@ SV="$WORK/bin/skill-version.sh"
 SU="$WORK/bin/skill-update.sh"
 
 # ── fixtures ───────────────────────────────────────────────────────────────────
+# The fixture skills carry no read-only notice, because an upstream SKILL.md does
+# not: skill-sync.sh renders the notice into the installed copy from
+# claude/tools/partials/read-only-notice.md.tmpl, and a committed one would be a
+# second copy. A fixture that carried a notice would fail verify --structure -
+# the assertion this suite exists to exercise - and the pass would then depend on
+# the gate being broken.
+#
+# NOTICE is the opener and nothing else. It is the only line the deleted inline
+# notice and the rendered one share, so it is what the gate keys on, and pasting
+# it in is how the negative cases below are made to fail on purpose.
+NOTICE='> **This copy is read-only.**'
+
 mkfixture() { # $1 = skills dir to build
   local d=$1
   rm -rf "$d"
@@ -62,9 +74,6 @@ description: Fixture skill carrying no version yet.
 ---
 
 # Alpha
-
-> **This copy is read-only.**
-> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/alpha/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
 EOF
   printf 'echo alpha\n' > "$d/alpha/scripts/run.sh"
   cat > "$d/beta/SKILL.md" <<'EOF'
@@ -75,9 +84,6 @@ version: 2.3.4
 ---
 
 # Beta
-
-> **This copy is read-only.**
-> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/beta/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
 EOF
   # A directory with no SKILL.md is not a skill and must never reach the registry.
   printf 'not a skill\n' > "$d/not-a-skill/README.md"
@@ -146,17 +152,22 @@ check "verify names the unversioned skill" \
   "$(grep -q '^unversioned .*gamma' "$WORK/verify-unversioned.out"; echo $?)"
 rm -rf "$SKILLS/gamma"
 
-# The read-only notice is no longer verify's business. It is asserted present
-# nowhere and absent nowhere, which is the only state that holds while the
-# repository is mid-rollout and some SKILL.md files carry it and some do not.
-# A skill stripped of its notice is therefore an ordinary edit, and the only
-# thing verify has to say about it is that the registry went stale.
+# The read-only notice is not plain verify's business, and this is the assertion
+# that keeps it that way. Plain verify is the publisher's gate: it runs on main
+# after the merge, where a refusal fires somewhere nobody can act on it. The
+# notice is --structure's business, on the branch, and section 5 covers it.
+#
+# So a notice pasted into a skill is an ordinary edit as far as this form is
+# concerned, and the only thing it has to say about one is that the registry went
+# stale. Written as a paste rather than a strip because the fixture is now clean:
+# the state being described is the one a contributor reaches by putting the
+# notice back, which is the whole reason the gate exists.
 cp "$SKILLS/alpha/SKILL.md" "$WORK/alpha-ro.bak"
-grep -v 'This copy is read-only.' "$WORK/alpha-ro.bak" > "$SKILLS/alpha/SKILL.md"
+printf '%s\n' "$NOTICE" >> "$SKILLS/alpha/SKILL.md"
 bash "$SV" verify > "$WORK/verify-noro.out" 2>&1
-check "verify says nothing about a missing read-only notice" \
+check "plain verify says nothing about the read-only notice" \
   "$(neg grep -qi 'read-only' "$WORK/verify-noro.out")"
-check "a stripped notice is reported as ordinary drift" \
+check "a pasted notice is reported as ordinary drift" \
   "$(grep -q '^drifted .*alpha' "$WORK/verify-noro.out"; echo $?)"
 
 cp "$WORK/alpha-ro.bak" "$SKILLS/alpha/SKILL.md"
@@ -267,6 +278,74 @@ check "--structure names the registered skill it found unversioned" \
 git -C "$GITFIX" checkout -q -- .
 expect_rc "--structure passes again once the version is back" 0 gsv verify --structure
 
+# ── 5a. the read-only notice ───────────────────────────────────────────────────
+# WO-20260824-d058 removed the notice from all 43 SKILL.md files, and this is the
+# only thing standing between that state and someone putting one back - which is
+# the obvious reaction to seeing it missing.
+#
+# An assertion of absence is worth nothing until it has returned non-zero on
+# purpose: on a clean tree it exits 0 whether it works or whether it does nothing
+# at all, and those are indistinguishable. So every case here is made to fail
+# first and only then restored.
+hd "verify --structure: the read-only notice"
+
+expect_rc "--structure passes on a tree with no notice anywhere" 0 gsv verify --structure
+
+cp "$GSKILLS/alpha/SKILL.md" "$WORK/galpha.bak"
+printf '%s\n' "$NOTICE" >> "$GSKILLS/alpha/SKILL.md"
+expect_rc "--structure FAILS on a notice pasted into a SKILL.md" 1 gsv verify --structure
+gsv verify --structure > "$WORK/structure-notice.out" 2>&1
+check "--structure names the skill carrying the notice" \
+  "$(grep -qE '^read-only notice +alpha' "$WORK/structure-notice.out"; echo $?)"
+check "the refusal says nothing about the clean skill beside it" \
+  "$(neg grep -qE '^read-only notice +beta' "$WORK/structure-notice.out")"
+
+# AC-H2 is entirely this. An error naming what is wrong but not what to do
+# instead is how the notice comes back a third time, so each half of the message
+# is asserted rather than the exit code standing in for it.
+check "the refusal says the notice is rendered at install" \
+  "$(grep -q 'rendered at install' "$WORK/structure-notice.out"; echo $?)"
+check "the refusal says it must not be committed" \
+  "$(grep -q 'must not be committed' "$WORK/structure-notice.out"; echo $?)"
+check "the refusal names the partial the notice is held in" \
+  "$(grep -q 'read-only-notice.md.tmpl' "$WORK/structure-notice.out"; echo $?)"
+check "the refusal says what to do about it" \
+  "$(grep -q 'delete the notice block' "$WORK/structure-notice.out"; echo $?)"
+
+cat "$WORK/galpha.bak" > "$GSKILLS/alpha/SKILL.md"
+expect_rc "--structure passes again once the notice is gone" 0 gsv verify --structure
+
+# The rendered notice, whole and byte for byte out of
+# claude/tools/partials/read-only-notice.md.tmpl, rather than its opener alone.
+# The form that was deleted from 43 files named skill-update.sh and this one
+# names skill-sync.sh; an assertion keyed on any line but the opener catches one
+# spelling and waves the other through, so the spelling nobody has pasted yet is
+# the one worth exercising.
+cat >> "$GSKILLS/beta/SKILL.md" <<'EOF'
+
+> **This copy is read-only.**
+> Skills are vendored into a project as copies, and this may be one.
+> Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
+> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/beta/SKILL.md, and `skill-sync.sh` pulls it from there - no dotfiles checkout is needed on this machine.
+> `skill-sync.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
+> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
+EOF
+expect_rc "--structure FAILS on the rendered notice, the spelling that names skill-sync.sh" \
+  1 gsv verify --structure
+gsv verify --structure > "$WORK/structure-rendered.out" 2>&1
+check "--structure names beta for the rendered notice" \
+  "$(grep -qE '^read-only notice +beta' "$WORK/structure-rendered.out"; echo $?)"
+git -C "$GITFIX" checkout -q -- .
+expect_rc "--structure passes once the rendered notice is reverted" 0 gsv verify --structure
+
+# The non-goal, asserted so a later change cannot quietly widen the refusal onto
+# the publisher's gate, where it would fire on main with the merge already done.
+printf '%s\n' "$NOTICE" >> "$GSKILLS/alpha/SKILL.md"
+gsv verify > "$WORK/verify-notice.out" 2>&1
+check "plain verify still says nothing about a notice" \
+  "$(neg grep -qi 'read-only notice' "$WORK/verify-notice.out")"
+git -C "$GITFIX" checkout -q -- .
+
 # Outside a repository there is no diff to take, and a gate with nothing to
 # check must say so rather than exit 0 having checked nothing.
 SKILL_VERSION_SKILLS_DIR="$SKILLS" bash "$SV" verify --structure > "$WORK/structure-nogit.out" 2>&1
@@ -296,6 +375,20 @@ check "--structure names it as new" \
   "$(grep -qE '^new +gamma' "$WORK/structure-new.out"; echo $?)"
 check "--structure does not also call it unversioned" \
   "$(neg grep -qE '^unversioned +gamma' "$WORK/structure-new.out")"
+
+# The exemption a new skill gets is about a number nobody has allocated, and it
+# does not extend to the file's contents. A notice pasted into a skill's first
+# commit is the same defect as one pasted into its fifth, and a new skill is the
+# likeliest place for it - somebody copying an installed skill as their template.
+printf '%s\n' "$NOTICE" >> "$GSKILLS/gamma/SKILL.md"
+expect_rc "--structure FAILS on a notice in a brand new skill" 1 gsv verify --structure
+gsv verify --structure > "$WORK/structure-new-notice.out" 2>&1
+check "--structure names the new skill carrying the notice" \
+  "$(grep -qE '^read-only notice +gamma' "$WORK/structure-new-notice.out"; echo $?)"
+check "it is still not called unversioned" \
+  "$(neg grep -qE '^unversioned +gamma' "$WORK/structure-new-notice.out")"
+git -C "$GITFIX" checkout -q -- .
+expect_rc "--structure passes again once the new skill is clean" 0 gsv verify --structure
 
 # The non-goal, and the one a fix here can silently break. Plain verify runs on
 # main after the publisher, where an unversioned skill means init did not run.
