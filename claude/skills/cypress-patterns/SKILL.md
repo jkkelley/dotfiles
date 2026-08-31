@@ -1,7 +1,7 @@
 ---
 name: cypress-patterns
 description: Cypress command reference, selector patterns, flaky test fixes, and CI configuration. Preloaded into the cypress-tester agent.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # Cypress Patterns

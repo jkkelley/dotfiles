@@ -1,7 +1,7 @@
 ---
 name: session-workflow
 description: Enforces work → test → verify → checkpoint → stop for multi-session implementation. Use when starting a session from a plan, or when the user says "session-mode" / "start session N" / "use session workflow" / "begin session workflow".
-version: 1.0.2
+version: 1.0.3
 ---
 
 # Session Workflow

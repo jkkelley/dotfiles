@@ -1,7 +1,7 @@
 ---
 name: frontend-checklist
 description: Frontend development checklist covering performance, accessibility, component patterns, and browser compatibility. Preloaded into the frontend-guru agent.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # Frontend Checklist

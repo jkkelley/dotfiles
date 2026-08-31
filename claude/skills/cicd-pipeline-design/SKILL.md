@@ -1,7 +1,7 @@
 ---
 name: cicd-pipeline-design
 description: Design CI/CD pipelines across Jenkins, GitHub Actions, GitLab CI, and CircleCI. Covers pipeline architecture, stage sequencing, artifact promotion, environment isolation, image tagging strategies to prevent build collisions, secrets management, caching, parallelism, and rollback patterns. Use when designing or debugging pipelines, when concurrent builds are overwriting each other's images or resources, when environments bleed into each other, when asked about pipeline structure, job dependencies, matrix builds, ephemeral environments, or promotion from dev to staging to production.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # CI/CD Pipeline Design

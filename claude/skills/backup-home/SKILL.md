@@ -1,7 +1,7 @@
 ---
 name: backup-home
 description: Archives $HOME to a timestamped tar.gz and uploads it to S3 (win11-wsl-backups bucket, DevEnv_Internal prefix) using the minecraft-admin profile. Shows a pre-flight size estimate, requires confirmation, then runs the backup script with a status summary.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # backup-home - Archive and Upload $HOME to S3

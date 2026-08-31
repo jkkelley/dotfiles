@@ -1,7 +1,7 @@
 ---
 name: terraform-patterns
 description: Terraform module patterns, state operation reference, and IaC conventions. Preloaded into the terraform-master agent.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # Terraform Patterns

@@ -1,7 +1,7 @@
 ---
 name: repo-sync
 description: Syncs a local git repository to its main branch. Accepts a repo name or full path, finds the repo on disk if needed, runs git checkout main && git pull origin main, and gives the user a verification command that works from any working directory without disrupting their current session.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # repo-sync — Sync a Repo to Main

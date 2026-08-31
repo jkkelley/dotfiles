@@ -1,7 +1,7 @@
 ---
 name: figma-wireframe
 description: Produce structurally-correct wireframes, screen flows, and architecture diagrams as native Figma layers via the Figma MCP server. Use this skill whenever the user mentions wireframes, mockups, screen layouts, UI sketches, user flows, "design this page", "what should this screen look like", Figma, FigJam, or wants to turn a repo, API, PRD, or set of k8s/Terraform manifests into a visual artifact — even if they never say the word "wireframe". Always run the intake questionnaire first; never start drawing from an unstructured request.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # Figma Wireframe

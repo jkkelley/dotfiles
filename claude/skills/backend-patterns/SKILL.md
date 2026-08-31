@@ -1,7 +1,7 @@
 ---
 name: backend-patterns
 description: Backend development patterns covering API conventions, error handling, database, caching, and resilience. Preloaded into the backend-dev agent.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # Backend Patterns

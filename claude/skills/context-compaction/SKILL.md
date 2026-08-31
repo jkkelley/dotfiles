@@ -1,7 +1,7 @@
 ---
 name: context-compaction
 description: Distill a session into a checkpoint appended to CONTEXT_STATE.md, a sliding window read 10 deep. Prevents context drift across sessions and across agents. Use when context usage exceeds 30%, before starting a new thread, after a significant milestone, when an agent contradicts an earlier architectural decision, or when architecture details feel stale.
-version: 2.0.0
+version: 2.0.1
 ---
 
 # context-compaction

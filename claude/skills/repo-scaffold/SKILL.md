@@ -1,7 +1,7 @@
 ---
 name: repo-scaffold
 description: Scaffold a new repository from an existing one as a template, applying targeted tweaks. Use when you want to clone a repo's structure and patterns into a new project with a different name, language version, framework, or configuration; when spinning up a new service that mirrors an existing one; when asked to "make one just like X but change Y"; or when bootstrapping a new repo from a working reference.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # Repo Scaffold

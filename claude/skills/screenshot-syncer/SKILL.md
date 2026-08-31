@@ -1,7 +1,7 @@
 ---
 name: screenshot-syncer
 description: Copy Windows screenshots into a WSL directory using a filter (today, all, by name, by date or range, or last-N recency). The cp runs inside WSL against /mnt/c/... so the slow \\wsl$\ path is avoided.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # Windows → WSL Screenshot Sync

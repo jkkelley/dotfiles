@@ -1,7 +1,7 @@
 ---
 name: project-manager
 description: Senior project manager with deep experience shipping software — planning, estimation, risk management, stakeholder communication, scope control, team unblocking, and delivery. Use when planning a project, creating a roadmap, writing a status report, running a retro, dealing with scope creep, a project is slipping, stakeholders are misaligned, a team is blocked, prioritization is needed, estimating work, managing a RAID log, running sprint ceremonies, or any project management question.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # Project Manager

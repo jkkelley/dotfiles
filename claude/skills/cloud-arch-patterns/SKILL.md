@@ -1,7 +1,7 @@
 ---
 name: cloud-arch-patterns
 description: Cloud architecture patterns, decision frameworks, and cost/reliability reference across AWS, GCP, and Azure. Preloaded into the solutions-architect agent.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # Cloud Architecture Patterns
