@@ -28,6 +28,17 @@ TOOLS_DIR=$(dirname "$SKILLS_DIR")/tools
 # registry on disk claims and refuses to go further when they differ.
 SCHEMA=2
 
+# The read-only notice, keyed by its opening line and nothing else.
+#
+# Two spellings of the notice exist. The one deleted from 43 SKILL.md files named
+# skill-update.sh; the one skill-sync.sh renders from
+# claude/tools/partials/read-only-notice.md.tmpl names skill-sync.sh, and that
+# partial's header says the difference is deliberate. This opener is the only
+# line the two share, so it is the only line an assertion can key on and still
+# catch a paste of either. Matched with grep -F: every character after the > is
+# punctuation a regex would read.
+NOTICE_OPENER='> **This copy is read-only.**'
+
 die() { printf '%s: %s\n' "$SELF" "$*" >&2; exit 1; }
 
 usage() {
@@ -59,11 +70,16 @@ SUBCOMMANDS
            registry means a skill changed without a bump.
 
            --structure — the PR gate. Exit non-zero if any skill lacks a
-           version, if a requires: names a skill that does not exist, or if
-           this branch's diff touches a version: line or registry.json. It
-           says nothing about whether the registry matches the tree, because
-           under merge-time allocation a skill PR legitimately edits a skill
-           and leaves the registry alone.
+           version, if a requires: names a skill that does not exist, if any
+           SKILL.md carries the read-only notice, or if this branch's diff
+           touches a version: line or registry.json. It says nothing about
+           whether the registry matches the tree, because under merge-time
+           allocation a skill PR legitimately edits a skill and leaves the
+           registry alone.
+
+           The notice is rendered into each installed copy by skill-sync.sh
+           and is never committed upstream, so a notice in a SKILL.md here is
+           a second copy rather than a missing one restored.
 
            A skill absent from registry.json is new, and none of the three
            version assertions applies to it: nothing was ever published under
@@ -446,7 +462,7 @@ EOF
 
 cmd_verify() {
   local structure=0 base="" rc=0 d name total=0 expected req found
-  local unversioned=0 unresolved=0 is_new=0
+  local unversioned=0 unresolved=0 is_new=0 noticed=0
   local -a new_skills=()
 
   while [[ $# -gt 0 ]]; do
@@ -488,6 +504,25 @@ cmd_verify() {
       unversioned=1
       rc=1
     fi
+    # --structure alone, and it holds a new skill to the rule as well as a
+    # registered one - a notice pasted into a skill's first commit is the same
+    # defect as one pasted into its fifth, and the new-skill exemption above is
+    # about a number nobody has allocated, not about the file's contents.
+    #
+    # Not in plain verify, which is the publisher's gate and runs on main after
+    # the merge. A refusal there fires where nobody can act on it; this one fires
+    # on the branch, in the pull request, while the paste is still one edit away
+    # from being undone.
+    #
+    # Whole-tree rather than diff-scoped, deliberately. The property being held
+    # is "no upstream SKILL.md carries the notice", which WO-20260824-d058 made
+    # true of every file at once; scoping to the diff would let a notice that
+    # reached main by any other route sit there green forever.
+    if [[ $structure -eq 1 ]] && grep -qF "$NOTICE_OPENER" "$d/SKILL.md"; then
+      printf 'read-only notice   %s\n' "$name" >&2
+      noticed=1
+      rc=1
+    fi
     while IFS= read -r req; do
       [[ -f "$SKILLS_DIR/$req/SKILL.md" ]] && continue
       printf 'unresolved requires   %s -> %s (no such skill)\n' "$name" "$req" >&2
@@ -499,6 +534,23 @@ cmd_verify() {
   if [[ $rc -ne 0 ]]; then
     [[ $unversioned -eq 0 ]] || printf "\nrun '%s init' to stamp them\n" "$SELF" >&2
     [[ $unresolved -eq 0 ]] || printf '\nfix the requires: line, or add the skill it names\n' >&2
+    # Says what to do instead, not only what is wrong. The reader arriving here
+    # has almost certainly just noticed that no SKILL.md carries a notice and
+    # concluded one is missing, so a message that only names the offending file
+    # gets the notice pasted straight back into the next skill.
+    [[ $noticed -eq 0 ]] || cat >&2 <<EOF
+
+The read-only notice is rendered at install and must not be committed.
+skill-sync.sh inserts it into each installed copy from
+
+  claude/tools/partials/read-only-notice.md.tmpl
+
+which is the one place it is held. An upstream SKILL.md carries none of its own,
+so a committed notice is not a missing one restored - it is a second copy, and
+every project that syncs the skill shows the notice twice.
+
+  delete the notice block from the SKILL.md named above
+EOF
     return 1
   fi
 
