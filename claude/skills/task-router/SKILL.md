@@ -6,13 +6,6 @@ version: 1.0.2
 
 # Task Router
 
-> **This copy is read-only.**
-> Skills are vendored into a project as copies, and this may be one.
-> Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
-> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/task-router/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
-> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
-> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
-
 Coordinate multi-task projects. One Claude session holds the plan and routes work — either dispatching subagents directly or generating handoff documents for separate Claude sessions to pick up. Every task ends at a PR gate. The router does not merge; the user does.
 
 ## When This Applies

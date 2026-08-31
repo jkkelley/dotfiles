@@ -6,13 +6,6 @@ version: 2.0.1
 
 # /cover-letter - Cover Letter Generator
 
-> **This copy is read-only.**
-> Skills are vendored into a project as copies, and this may be one.
-> Edit this skill upstream, bump its version, then re-pull it - never edit the copy where it landed.
-> Upstream is https://raw.githubusercontent.com/jkkelley/dotfiles/refs/heads/main/claude/skills/cover-letter/SKILL.md, and `skill-update.sh` pulls it from there - no dotfiles checkout is needed on this machine.
-> `skill-update.sh` replaces the skill's directory rather than merging into it, so a local edit is destroyed by the next update with no conflict and no warning.
-> The registry's content hash cannot catch it either, because a project's copy legitimately differs from upstream.
-
 Builds a tailored, one-page `.docx` cover letter from a job description.
 The prose/content package (`content/`) lives in this repo and is
 version-controlled; per-application output (`work_title/applications/`) is
