@@ -690,3 +690,20 @@ When there is no pre-built backend image, create a zero-dependency Node.js mock:
 ```bash
 podman compose -f compose.test.yml down
 ```
+
+## Verifying a page at a phone viewport
+
+**What is tested:** that an HTML page holds at its target device viewport: no sideways scroll, no element past the right edge, the intended scroller is the only one, the web fonts actually loaded.
+**Why:** a page that "goes way right" on a phone is a layout bug no desktop look catches, and headless Chrome does not launch on this WSL host at all. Orion and Safari are WebKit, so Chromium alone is not evidence for them.
+**How:** the Playwright Python image carries WebKit, Chromium and Firefox; mount the page and a probe read-only, install the matching `playwright` package inside the container (the image ships the browsers, not the package), set `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`.
+
+```bash
+podman run --rm --userns=keep-id -v "$DIR:/work:Z" -w /work -e HOME=/tmp \
+  -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+  mcr.microsoft.com/playwright/python:v1.47.0-noble \
+  sh -c "pip install --quiet --user playwright==1.47.0 && python3 probe.py file:///work/page.html /work"
+```
+
+The probe (`architect/design/system-dashboard/phone-probe.py` in local-k8s-docs is the worked example) opens the page at the device viewport (iPhone 16 Pro Max: 440 by 956, device scale 3, `is_mobile`, `has_touch`, the iOS user agent, the dark scheme), waits for `networkidle`, and prints observations, never asserts: `innerWidth`, `scrollWidth`, the first elements whose right edge passes the viewport, whether the intended scroller scrolls, the fonts in `document.fonts` that loaded, then a full-page screenshot per engine.
+The page under test needs a `<meta name="viewport">`; an artifact body without one gets it prepended in the mounted copy.
+**What it saves:** the fix and the proof land in one loop instead of a round trip through the user's phone, and the same probe becomes the lane's regression test.
