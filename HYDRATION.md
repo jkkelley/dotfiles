@@ -10,6 +10,168 @@ file holds exactly 10 once it has filled up. Entries are never renumbered and
 never edited in place - a correction is a new entry.
 
 Written by `hydration.sh add`. Do not hand-edit.
+<!-- hydration-entry: none -->
+## Skills package manager epic closed; nothing is startable
+_Generated 2026-09-13 by hydration.sh. Newest entry._
+
+### Ticket
+
+No work order.
+The epic `WO-20260824-00d5` - `Skills package manager: roll it out across the repository` is done, archived, and closed by PR #97.
+`work-order.sh next` prints `nothing is startable: no ticket is 'ready' with all dependencies done`, so there is no ticket for this session to take.
+What this session does is the user's to say; do not pick one of the items below and start on it.
+
+### What just landed
+
+**PR #97 closed the epic on evidence, with no code.**
+All three criteria were evidenced MET on the tree at `61fe99ea`.
+
+`AC-H1`, no SKILL.md carries the inline read-only notice: `git grep -nF '> **This copy is read-only.**' -- '*SKILL.md'` rc 1 over 43 files, in Podman with `--network=none`.
+Proved able to fail: the notice pasted back made the grep hit and `verify --structure` exit 1.
+
+`AC-H2`, `git grep skill-versioning` returns nothing outside history (`docs/superpowers`, `notes`, `HYDRATION.md`, `work-orders`): rc 1, and the old name reintroduced made it hit.
+
+`AC-H3`, a freshly scaffolded project syncs the four default skills on its first session: run with the network on, against published `main`.
+`setup.sh` was driven through its own prompts to install `skill-sync` and the SessionStart hook, `scaffold.sh --apply` made the project, and the hook was run exactly as `settings.json` records it.
+15 PASS, 0 FAIL, including PR #92's fill between the markers, byte-identity on a second sync, and a reworded marker writing nothing.
+
+**PR #96, a user change, shipped separately.**
+`claude/skills/container-sandbox/SKILL.md` gained "Verifying a page at a phone viewport", written by the user's local-k8s-docs architect into this checkout mid-ticket.
+It was moved byte for byte to `docs/container-sandbox-phone-viewport` with `Bump: container-sandbox=minor`, resolving `1.4.3 -> 1.5.0`, and recorded as a note on the epic.
+
+### What is NOT done
+
+Every item here is on no ticket.
+
+**`publish.sh`, two defects from `238b`.**
+A `FRESH` skill never reaches `record()`, so a `Bump: <renamed>=major` trailer is read, validated and discarded.
+`report()` and `commit_message()` print `1.0.0` for any `FRESH` skill, so a rename of an already-versioned skill misreports.
+
+**`skill-onboard.sh`, two defects.**
+`LEGACY_HEADING` at `skill-onboard.sh:71` is U+002D where one real repository's heading is U+2014, so `section_of` misses and the run appends `## Skills` beside 68 stale lines, exit 0.
+A repository with no `.claude/skills/` dies at line 358 with exit 3.
+
+**`setup.sh`, cosmetic, found on `AC-H3`.**
+`_yellow` and `_bold` print a literal `\n`, because the helpers format their argument with `%s`.
+
+**`CLAUDE.md.tmpl:98` carries a username and repository URL** that is not one of the two exceptions at root `CLAUDE.md`.
+
+**11 of 13 skills with a `scripts/` directory have no `justfile`**, which Rule 17 requires; `bump-gate.sh:33` and `.github/scripts/testing/run-tests.sh:30` claim `skill-registry` has one.
+
+**`work-order.sh approve` and `link` strand themselves**: both write files, `start` refuses a dirty tree, and `start` is what makes the branch.
+
+**Root `CLAUDE.md` `## Consuming These Files` contradicts Rule 16 steps 7 and 8.**
+
+**Branch protection is absent.**
+
+### Stale or false in the docs
+
+**`docs/superpowers/specs/2026-08-23-skills-package-manager-design.md:747`** draws a `Skill | Agent` table; `skill-sync` writes a one-per-line list of names.
+
+**The same spec at line 195** lists `project-scaffold` where decision 20 lists `context-compaction`; decision 20 wins.
+
+**Both design documents say the runner only has Docker**; `ubuntu-24.04` ships Podman.
+
+**Both design documents still name `skill-versioning`, deliberately.** They are history by `238b`'s decision. Do not finish the rename in them.
+
+**`claude/skills/work-order/settings.local.json.tmpl:6` names `work-order.sh close`**, which does not exist.
+
+**The close-out diagram in `CLAUDE.md.tmpl` puts the pull request after `done`.** The real order is `gh pr create`, `submit --pr N`, `done`.
+
+**`project-scaffold/testing/run-tests.sh` pins `python:3.12-slim` by tag**, a Rule 15 violation.
+
+**`scaffold.sh:214` depends on `cmp`**, which Rule 17 says to check for.
+
+### Your scope
+
+Whatever the user asks for.
+If it is one of the items above, it needs a ticket first: `work-order.sh new`, a Lavish review, `approve`, then `start`.
+Nothing above may be fixed inside an unrelated pull request.
+
+### Before you start
+
+**Confirm PR #96 and PR #97 are both merged**: `git log origin/main --oneline -6` should show both.
+If either is open, ask the user before doing anything else.
+
+**Ask the user what this session is for.** There is no startable ticket, and choosing one from `What is NOT done` is a guess.
+
+An untracked `.claude/worktrees/smoke-tests` is a registered worktree on `worktree-smoke-tests` from an earlier session; it is not yours, so leave it or ask.
+
+### Read in this order
+
+1. Root `CLAUDE.md`.
+2. This entry, the top of `HYDRATION.md`, and only this one.
+3. `work-orders/INDEX.md`, to confirm nothing is startable.
+4. `workflows/close-out-procedure.md`, if the session becomes a ticket.
+5. `claude/skills/container-sandbox/references/skill-testing.md`, before any verification.
+
+### Reuse, it is proven
+
+**Break the implementation on purpose and watch the check go red.** It is the only proof that an assertion of absence can fail, and it caught a false green on `00d5`.
+
+**The repository-level container**: clone into `/work`, mount the repository read-only at `/repo`, `bitnami/git@sha256:1baa6ddb`, `--network=none`. Worked unmodified on five tickets.
+
+**`bump-gate.sh` lives at `.github/scripts/bump-gate.sh`**, not under `claude/skills/skill-registry/scripts/`. `detect`, `resolve --title-file --body-file`, and `run-suite <dir> --print`.
+
+**A network-on first session**: `debian@sha256:328d1649` plus `bash jq git curl ca-certificates tar`, `setup.sh` fed `2\n3\n\n\ny\n`, `scaffold.sh --apply --yes --git-init`, then the hook read back out of `settings.json` and `eval`ed in the project.
+
+### The verification ladder
+
+0. `bash -n` on every file touched, in a container.
+1. `bash <script> --help`, in a container.
+2. The changed suite via `bump-gate.sh run-suite`.
+3. Mutate the implementation one defect at a time and re-run; restore from a copy and re-run once more.
+4. `bump-gate.sh detect --base origin/main`.
+5. `bump-gate.sh resolve` with the real title and body, plus `skill-version.sh verify --structure --base origin/main`.
+6. The squash merge simulated and `publish.sh apply` run over it, on a clone.
+
+### Traps, already paid for
+
+**Every later case passes against a session that never ran.** A setup step failed quietly and `eval ""` exited 0; assert the setup as a gate that aborts, not as one check among many.
+
+**`setup.sh` mode 2 exits 1 on an empty config file.** Use mode 3 with both prompts empty for "skill-sync and its hook only".
+
+**Another agent's edit appears in this working tree.** Stage only your own paths, never `git add -A`, and move the change to its own branch rather than folding it in.
+
+**`pipefail` turns `grep -c` with zero matches into a failure.** Capture into a variable with `|| true`, then compare.
+
+**A file the container cannot read makes `cat` print nothing and the pipeline carry on.** Keep title and body files inside the `/work` mount and run under `bash -euc`.
+
+**An mtime comparison inside one second proves nothing.** `touch -d '1 hour ago'` first.
+
+**`work-order.sh evidence` ticks the box unconditionally.** Put MET or NOT MET in the first words.
+
+**`gh pr create` warns `1 uncommitted change`.** That is `.claude/worktrees/`, not your branch.
+
+### Workflow
+
+```sh
+WO=~/.claude/skills/work-order/scripts/work-order.sh
+HP=~/.claude/skills/hydration-prompt/scripts/hydration.sh
+
+git log origin/main --oneline -6
+bash $WO next
+bash $WO new --parent <epic> --type bug --title "..." --problem "..." --out "..." --ac "..."
+bash $WO approve  --id <id>
+bash $WO start    --id <id>
+bash $WO evidence --id <id> --index N --observed "MET. ..."
+gh pr create --base main --title "..." --body-file <file>
+bash $WO submit   --id <id> --pr <N>
+bash $WO done     --id <id>
+bash $HP check    --project . --body-file <file>
+bash $HP add      --project . --id <next> --title "..." --body-file <file>
+git add <your paths> && git commit && git push
+bash $WO cleanup  --id <id>
+```
+
+### Conventions
+
+Every ticket in a chat reply carries its ID and full title.
+One question per reply.
+No em dashes, no agent co-author lines, no Claude footer in PR bodies.
+Failing checks are reported as failing, and a skipped step is named.
+The onboarding runs in `docs/skills-onboarding-checklist.md` are the user's own; do not raise them.
+
 <!-- hydration-entry: WO-20260824-00d5 -->
 ## WO-20260824-00d5 - Skills package manager: roll it out across the repository
 _Generated 2026-08-31 by hydration.sh. Newest entry._
@@ -1992,156 +2154,4 @@ Step 3 of the approved order is `WO-20260824-c6b0` - `skill-onboard.sh brings an
 Every reference to a work-order in a chat reply carries the ticket ID and its full title joined by a dash. A bare ID is a defect, and so is "the next ticket" or "the blocked one".
 
 Feature branches only. `skill-publish.yml` is the one named exception, and root `CLAUDE.md` says so.
-
-<!-- hydration-entry: WO-20260824-a6cb -->
-## WO-20260824-a6cb - The hydration-prompt close-out acquires and releases a treehouse slot
-_Generated 2026-08-30 by hydration.sh. Newest entry._
-
-### Ticket
-
-`WO-20260824-a6cb` - `The hydration-prompt close-out acquires and releases a treehouse slot`.
-It is a `feature`, `p2`, a child of `WO-20260824-00d5` - `Skills package manager: roll it out across the repository`.
-It has **no dependencies at all** - the only ticket in the epic that does not - and it blocks two: `WO-20260824-238b` - `Rename skill-versioning to skill-registry, the closing commit`, and now `WO-20260824-c6b0` - `skill-onboard.sh brings an existing project onto the sync`.
-
-The order for the whole epic was reviewed and approved on 2026-08-29 and is recorded as a note on `WO-20260824-00d5` itself, not only here. This ticket is step 1 of 6. Do not re-derive the order; if you think it is wrong, say so and ask.
-
-### What just landed
-
-**A dependency edge and two notes. No code.**
-
-`WO-20260824-c6b0` - `skill-onboard.sh brings an existing project onto the sync` now depends on this ticket. That edge did not exist when either was cut, and its absence was letting `work-order next` offer `c6b0` - the largest ticket in the epic and the only one that touches other people's projects - before the mechanism it is built on had been proved.
-
-The reason was already written in both tickets and joined up nowhere. `c6b0` says its script "has to work without ever touching the user's working tree, which means a treehouse slot, and the gate finding proved it must assert the slot went free rather than trusting an exit code". This ticket says "the gate finding makes the release the load-bearing half: a dirty tree makes treehouse return prompt, take the no-TTY default, abort, leave the slot leased and exit 0". Same finding, same failure mode, and `git grep` over `work-orders/` puts that language on those two tickets and no others.
-
-`work-order next` went from six startable to five. `WO-20260824-c6b0` reappears when this ticket is `done`.
-
-Before that, in the three sessions this window covers: epic 1 closed (PR #79) after `WO-20260825-dac4` - `verify --structure refuses a brand new skill, whichever way it is written` (PR #78), and the two defects that ticket surfaced were fixed in PR #80 and PR #81. `skill-versioning` is at 2.0.3 and its suite is at **148**.
-
-### What is NOT done
-
-**Nothing in this epic has started.** All eight children are `ready`; five are startable.
-
-An earlier draft of the approved order put `WO-20260824-d058` - `Remove the inline read-only notice from the other 42 SKILL.md files` first, on the theory that onboarding a project before it would install the notice twice. **That is false and the note on the epic says so.** `render_notice` in `claude/tools/skill-sync.sh:574` strips an existing inline notice before inserting the rendered one, and the comment above it says it was written for exactly this transition window. `d058` is the largest mechanical change in the epic, which is not the same as the first.
-
-Branch protection is still absent and is still on no ticket.
-
-**`work-order.sh approve` and `link` both strand themselves, and it is on no ticket.** Each writes the ticket file and `INDEX.md`; `start` refuses a dirty tree; `start` is what creates the branch. So any board edit made outside a branch has nowhere to be committed. Worked around on PR #81 by committing on local `main`, letting `start` branch from it, then `git branch -f main origin/main`. Handled here by giving the edge its own branch. A `start --on-current-branch` would remove it.
-
-Root `CLAUDE.md`'s `## Consuming These Files` section still contradicts Rule 16 steps 7 and 8, and **it is still on no ticket** after six cycles of being named here.
-
-### Stale or false in the docs
-
-**`claude/skills/hydration-prompt/SKILL.md:38` still puts `archive - work-order.sh close, straight to main` under `AFTER THE MERGE`.**
-There is no `close` verb. The lifecycle ends at `done`, on the branch, inside the PR. Do not follow the diagram - and note that this ticket edits that skill, so you will be looking straight at it.
-
-The same dead reference lives at `claude/skills/project-scaffold/references/templates/CLAUDE.md.tmpl:207` and `:248`, which is `WO-20260824-b21b` - `CLAUDE.md.tmpl: replace the session-start prose, add the skills markers, the treehouse policy and the documentation-lifetime rule`, and at `claude/skills/work-order/settings.local.json.tmpl:6`, which is on no ticket.
-
-**Both design documents still say the runner only has Docker.** `ubuntu-24.04` ships Podman 5.8.4.
-
-### Your scope
-
-The `hydration-prompt` close-out acquires a treehouse slot keyed by ticket ID, and releases it.
-
-**The release is the load-bearing half and the ticket says why.** The failure it exists to prevent is not "the slot was never taken" but "the slot was taken and never given back, and the exit code said everything was fine": a dirty tree makes `treehouse` prompt, the prompt takes its no-TTY default, the run aborts, the lease survives and the process exits 0. So the assertion is that the slot went free, observed directly, never inferred from an exit code.
-
-Read the ticket's own Scope block before deciding what "acquire" means here - `treehouse` is referenced in `docs/worktree-workflow.md`, `claude/skills/container-sandbox/SKILL.md` and both design documents, and those are the definition of the mechanism.
-
-**Non-goals.** Do not start a second ticket in this branch. Do not touch `claude/skills/skill-versioning/` - the rename is `WO-20260824-238b` - `Rename skill-versioning to skill-registry, the closing commit` and it is last for a reason. Do not edit the four downstream repositories; that is `WO-20260824-6a33` - `Checklist for the four repositories carrying the stale session-start block`, and even that one only writes a checklist.
-
-### Before you start
-
-`work-order.sh start` needs a clean tree and creates `feat/the-hydration-prompt-close-out-acquires-and-rele` for you. It leaves the ticket file and `INDEX.md` uncommitted, so commit them before anything else. This ticket is already approved; do not run `approve`.
-
-**Run lifecycle verbs one at a time.** `approve && start && git commit` put a commit on local `main` on 2026-08-29: `start` refused the tree `approve` had just dirtied, `&&` skipped it, and the trailing commit ran on whatever branch was current.
-
-**`.claude/worktrees/smoke-tests` is a locked git worktree sitting untracked inside this repository**, left by a session before epic 1. It is not yours. `git add -A` at close-out is unsafe here - add explicit paths, which is what PR #76 through #82 all did.
-
-### Read in this order
-
-1. The ticket, and every note on it.
-2. This entry, the top entry of `HYDRATION.md`. Read only this one.
-3. The note on `WO-20260824-00d5` - `Skills package manager: roll it out across the repository` dated 2026-08-29, which is the approved order and the reasoning behind it.
-4. `docs/worktree-workflow.md` for what a treehouse slot is, then `claude/skills/container-sandbox/SKILL.md` for how a session is expected to hold one.
-5. `claude/skills/hydration-prompt/SKILL.md`, the close-out it changes - remembering `:38` is wrong.
-6. `workflows/close-out-procedure.md`, once.
-
-### Reuse, it is proven
-
-`WO-20260824-c6b0` - `skill-onboard.sh brings an existing project onto the sync` will inherit whatever acquire-and-release shape this ticket lands on. Build it so a second caller can use it, and name that caller in the code, because the edge between the two is now recorded but the interface is not.
-
-`claude/skills/hydration-prompt/testing/run-tests.sh` is at 47 checks and already drives the close-out end to end. Its window-boundary and duplicated-section cases are the model for asserting a state rather than an exit code - which is exactly what the release half needs.
-
-`container-sandbox/references/skill-testing.md` covers three shapes: the bundled-script case, the live-infrastructure split, and `Driving a repository-level gate against the real tree`. A slot that must be observed going free is closest to the second: the offline suite proves the logic, and something has to prove the real `treehouse` was actually asked.
-
-### The verification ladder
-
-Rung 1: `bash .github/scripts/bump-gate.sh run-suite claude/skills/hydration-prompt`. It is at **47** and your cases move it. Never `bash <suite>` directly.
-
-Rung 2: the release, asserted as a state. Acquire a slot, force the dirty-tree abort, then read `treehouse status` and assert the slot is free. An exit code of 0 is the symptom this ticket exists to disbelieve, so a check that reads one has not checked anything.
-
-Rung 3: the acquire under contention - a slot already held is refused rather than double-leased.
-
-Rung 4: `skill-version.sh verify --structure --base origin/main`. Green.
-
-Rung 5: the gate on the pull request, with `Bump: hydration-prompt=minor` or a `feat(` title. It is a new capability on the close-out.
-
-Rung 6 is not needed. Do not run the nine suites for a single-skill change; they were green on PR #81 at 251, 299, 161, 145, **148**, 85, 47, 41 and 39.
-
-### Traps, already paid for
-
-**A container check against "the branch" silently runs `main`'s code if you have not committed.** `git clone` carries commits, not a working tree. Twice on PR #81 a before-and-after comparison showed no difference because both sides were the same committed script. Commit first, then clone, and print the clone's HEAD subject so the run says which code it measured.
-
-**A markdown formatter re-pads tables in a file you only meant to add a line to.** It is a `PostToolUse` hook in the machine's global `~/.claude/settings.json`. `git diff -U0 | grep '^-'` before committing and account for every deleted line.
-
-**A suite with no self re-exec, run as `bash <suite>`, runs on the host and fails with `mkdir: cannot create directory '/work'`.** Use `bump-gate.sh run-suite`, which dispatches `self` or `wrapped` correctly.
-
-**A `grep -q` in a pipeline reports "no match" when it matched.** It closes the pipe on the first hit, the upstream dies of SIGPIPE, and `pipefail` turns that into a non-zero pipeline. Capture to a variable and grep the variable with a herestring.
-
-**Scoping a report can silence it.** PR #80 stopped two false lines and, in the same move, stopped a true one nobody had asked about; PR #81 was the ticket for that. Assert the positive and the negative on the same tree in the same run.
-
-**A digest you did not copy from a real registry does not exist.** `podman pull` fails with `manifest unknown`, which reads like a network problem and is not.
-
-`gh pr create` warns `1 uncommitted change` because of the untracked `.claude/worktrees/`. Expected, not your branch.
-
-### Workflow
-
-```bash
-WO=claude/skills/work-order/scripts/work-order.sh
-HP=claude/skills/hydration-prompt/scripts/hydration.sh
-
-bash $WO show    --project . --id WO-20260824-a6cb
-bash $WO start   --project . --id WO-20260824-a6cb   # run it alone, never in an && chain
-git add work-orders && git commit -m "chore(work-orders): start WO-20260824-a6cb"
-
-# ... the work ...
-
-bash .github/scripts/bump-gate.sh run-suite claude/skills/hydration-prompt
-
-bash $WO evidence --project . --id WO-20260824-a6cb --index N --observed '...'
-git add <explicit paths>            # NOT -A, see .claude/worktrees/smoke-tests above
-git commit && git push -u origin feat/the-hydration-prompt-close-out-acquires-and-rele
-gh pr create --base main --title "feat(hydration-prompt): ..." --body-file <file>
-bash $WO submit  --project . --id WO-20260824-a6cb --pr <N>
-bash $WO done    --project . --id WO-20260824-a6cb   # on the branch, before the merge
-bash $HP check   --project . --body-file /tmp/entry.md
-bash $HP add     --project . --id WO-20260824-81a6 --title "project-scaffold plumbing: skills.toml, the gitignore blanket, scaffold.json removed, skill-update.sh narrowed" --body-file /tmp/entry.md
-git add <explicit paths> && git commit && git push   # rides the SAME pull request
-
-# after the merge
-bash $WO cleanup --project . --id WO-20260824-a6cb
-```
-
-**This ticket changes `claude/skills/hydration-prompt/`, so it needs a level.** A `feat(` title resolves it for a single-skill pull request, or state `Bump: hydration-prompt=minor` as the last paragraph of the body with nothing after it. **Never run `skill-version.sh bump`.** The publisher allocates on `main`.
-
-Step 2 of the approved order is `WO-20260824-81a6` - `project-scaffold plumbing: skills.toml, the gitignore blanket, scaffold.json removed, skill-update.sh narrowed`, with `WO-20260824-b21b` - `CLAUDE.md.tmpl: replace the session-start prose, add the skills markers, the treehouse policy and the documentation-lifetime rule` beside it.
-
-### Conventions
-
-Every reference to a work-order in a chat reply carries the ticket ID and its full title joined by a dash. A bare ID is a defect, and so is "the next ticket" or "the blocked one".
-
-Feature branches only. `skill-publish.yml` is the one named exception, and root `CLAUDE.md` says so.
-
-PR bodies carry no agent attribution, Rule 13.
-
-No em dashes. Plain dashes only, in every file and every reply.
 
