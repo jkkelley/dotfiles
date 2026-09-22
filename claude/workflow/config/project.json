@@ -24,14 +24,14 @@
         "name": "builder",
         "role": "builder",
         "tab_label": "agent-build",
-        "worktree": "~/dotfiles",
+        "worktree": "~/dotfiles-wt/scaffold",
         "branch": "feat/scaffold-multiagent"
       },
       {
         "name": "reviewer",
         "role": "verifier",
         "tab_label": "agent-review",
-        "worktree": "~/dotfiles",
+        "worktree": "~/dotfiles-wt/scaffold",
         "branch": "feat/scaffold-multiagent"
       }
     ],
