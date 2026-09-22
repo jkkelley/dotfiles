@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# watch-ctl.sh on|off|status <compact PANE | workflow ID> - the one switch for every watcher. Herdr-first.
+# watch-ctl.sh on|off|status|pause|unpause <compact PANE | seat PANE | workflow ID [WORKTREE]> - every watcher's switch.
 #
 #   watch-ctl.sh on compact wC1:p1        keep the seat in pane wC1:p1 under its context threshold
-#   watch-ctl.sh on workflow scaffold-build   watch that workflow's gates
+#   watch-ctl.sh on seat wC1:p1           report the seat done, hot swap it along its model chain (bin/seat-watch.sh)
+#   watch-ctl.sh on workflow scaffold-build ~/wt   watch that workflow's gates, run in the seat's worktree
 #   watch-ctl.sh off compact wC1:p1       stop it; the seat is never touched
+#   watch-ctl.sh pause seat wC1:p1        the seat watcher idles until unpause; nothing restarts
 #   watch-ctl.sh status compact wC1:p1    pid, pane and the last three log lines
 #   watch-ctl.sh status                   every watcher this project knows about
 #
@@ -22,12 +24,13 @@ set -uo pipefail
 wf_need jq
 BIN="$(dirname "$(readlink -f "$0")")"
 
-action="${1:-status}"; kind="${2:-}"; target="${3:-}"
-usage() { sed -n '3,8p' "$(readlink -f "$0")" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+action="${1:-status}"; kind="${2:-}"; target="${3:-}"; cwd="${4:-}"
+usage() { sed -n '3,10p' "$(readlink -f "$0")" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 pidfile_for() {
   case "$1" in
     compact)  printf '%s/compact-watch.pid' "$(wf_seat_dir "$2")" ;;
+    seat)     printf '%s/seat-watch.pid' "$(wf_seat_dir "$2")" ;;
     workflow) printf '%s/%s-watch.pid' "$(wf_state_dir)" "$2" ;;
   esac
 }
@@ -35,7 +38,8 @@ logfile_for() { local p; p="$(pidfile_for "$1" "$2")"; printf '%s.log' "${p%.pid
 cmd_for() {
   case "$1" in
     compact)  printf 'bash %q %q' "$BIN/compact-watch.sh" "$2" ;;
-    workflow) printf 'bash %q %q run' "$BIN/workflow-watch.sh" "$2" ;;
+    seat)     printf 'bash %q %q' "$BIN/seat-watch.sh" "$2" ;;
+    workflow) printf 'bash %q %q run' "$BIN/workflow-watch.sh" "$2"; [ -n "$cwd" ] && printf ' --cwd %q' "$cwd" ;;
   esac
 }
 label_for() { printf 'watch-%s-%s' "$1" "${2//[^A-Za-z0-9-]/-}"; }
@@ -57,12 +61,14 @@ case "$action" in
     found=0
     for pf in "$(wf_state_dir)"/seats/*/compact-watch.pid; do [ -f "$pf" ] || continue; found=1
       status_one compact "$(basename "$(dirname "$pf")" | sed 's/_/:/')"; done
+    for pf in "$(wf_state_dir)"/seats/*/seat-watch.pid; do [ -f "$pf" ] || continue; found=1
+      status_one seat "$(basename "$(dirname "$pf")" | sed 's/_/:/')"; done
     for pf in "$(wf_state_dir)"/*-watch.pid; do [ -f "$pf" ] || continue; found=1
       status_one workflow "$(basename "$pf" -watch.pid)"; done
     [ "$found" = 1 ] || echo "no watchers on"
     ;;
   on)
-    case "$kind" in compact|workflow) ;; *) usage ;; esac; [ -n "$target" ] || usage
+    case "$kind" in compact|seat|workflow) ;; *) usage ;; esac; [ -n "$target" ] || usage
     [ "${HERDR_ENV:-}" = 1 ] || wf_die "not inside herdr; watchers run in labeled herdr panes only (dotfiles Rule 18). Not starting."
     pf="$(pidfile_for "$kind" "$target")"
     alive "$pf" && { printf '%s %s already on, pid %s\n' "$kind" "$target" "$(cat "$pf")"; exit 0; }
@@ -88,8 +94,18 @@ case "$action" in
     alive "$pf" || wf_die "watcher did not come up in $pane; read it with: herdr pane read $pane"
     printf '%s %s on, pid %s, pane %s (%s)\n' "$kind" "$target" "$(cat "$pf")" "$pane" "$label"
     ;;
+  # Ported from bearings-v2 bin/watch-toggle.sh: a flag the loop reads every tick, so pausing needs no restart and
+  # the seat keeps working while its watcher stands off. Only the seat watcher acts on a seat, so only it pauses.
+  pause)
+    if [ "$kind" != seat ] || [ -z "$target" ]; then usage; fi
+    wf_now > "$(wf_seat_dir "$target")/PAUSED"; printf 'seat %s watcher paused since %s\n' "$target" "$(cat "$(wf_seat_dir "$target")/PAUSED")"
+    ;;
+  unpause)
+    if [ "$kind" != seat ] || [ -z "$target" ]; then usage; fi
+    rm -f "$(wf_seat_dir "$target")/PAUSED"; printf 'seat %s watcher running\n' "$target"
+    ;;
   off)
-    case "$kind" in compact|workflow) ;; *) usage ;; esac; [ -n "$target" ] || usage
+    case "$kind" in compact|seat|workflow) ;; *) usage ;; esac; [ -n "$target" ] || usage
     # Signals only the watcher's own pid. The seat and the run it watches are never touched.
     pf="$(pidfile_for "$kind" "$target")"
     if alive "$pf"; then kill "$(cat "$pf")"; printf '%s %s off\n' "$kind" "$target"

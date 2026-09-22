@@ -37,14 +37,14 @@
     "allowed_tools": [
       "Bash",
       "Read",
+      "Edit",
+      "Write",
       "Grep",
       "Glob"
     ],
     "denied_tools": [
       "Agent",
-      "Task",
-      "Edit",
-      "Write"
+      "Task"
     ],
     "denied_commands": [
       "gh",
@@ -57,7 +57,9 @@
       "sudo",
       "rm -rf /"
     ],
-    "allowed_paths": []
+    "allowed_paths": [
+      "work-orders/"
+    ]
   },
   "gates": [
     {

@@ -133,6 +133,11 @@
               "description": "true: bin/workflow-spawn.sh arms a compaction watcher on every seat it starts, and refuses to report the seat started if the watcher does not come up. This is the enforcement: a seat without a watcher is a seat that can run out of context unseen."
             }
           }
+        },
+        "principal_pane": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]+$",
+          "description": "Label of the principal's herdr pane (claude-main in the orchestrator layout, dotfiles Rule 18). bin/seat-watch.sh resolves it to a pane id on every send, because herdr ids do not survive a herdr restart and a stored id delivers the next notification into a stranger's pane."
         }
       }
     },

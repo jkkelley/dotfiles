@@ -15,9 +15,14 @@
       "start_timeout_ms": 60000,
       "prompt_timeout_ms": 120000
     },
+    "principal_pane": "claude-main",
     "watchers": {
       "interval_seconds": 60,
-      "idle_seconds": 45
+      "idle_seconds": 45,
+      "auto_arm": true,
+      "stall_seconds": 900,
+      "resume_attempts": 3,
+      "rail_ledger": "~/.local/state/dotfiles/rail/ledger.tsv"
     },
     "seats": [
       {

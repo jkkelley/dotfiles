@@ -43,6 +43,8 @@ has   "kimi-k3 runs its launcher in the pane" "DRY: herdr pane run wT:p1 kimi-cl
 hasnt "kimi-k3 is never started as plain claude by herdr agent start" "agent start" "$out"
 has   "kimi-k3: the detected agent is given the seat's name" "DRY: herdr agent rename wT:p1 architect" "$out"
 has   "the seat-link would record link 0 of 3" "DRY: seat-link wT:p1 link=0 links=3" "$out"
+has   "the spawner arms the seat watcher on the seat's pane" "watch-ctl.sh on seat wT:p1" "$out"
+has   "the spawner arms the gate watcher in the seat's worktree" "watch-ctl.sh on workflow architect $T/wt" "$out"
 
 out="$(spawn architect --link 1)"
 has   "--link 1 is opus through claude" "link 1/3 opus via claude (herdr kind claude)" "$out"
@@ -54,6 +56,19 @@ has   "--link 2 is codex-sol through codex" "link 2/3 codex-sol via codex (herdr
 has   "codex-sol exports RAIL_SURFACE=lavish" 'RAIL_SURFACE=lavish\ RAIL_SEAT=architect' "$out"
 has   "codex-sol is started by herdr in codex's dialect" "agent start architect --kind codex --pane wT:p1 --timeout 60000 -- -m gpt-5.6-sol" "$out"
 hasnt "codex is never handed claude-only tool flags" "--allowed-tools" "$out"
+has   "codex: Agent and Task denied through codex's own sub-agent features" "--disable multi_agent --disable multi_agent_v2 -a never" "$out"
+has   "codex: an architect that may write gets the workspace-write sandbox" "-s workspace-write" "$out"
+
+# A codex link whose declaration denies a tool codex cannot deny must not start: that is the silent gap e3e545c had.
+mkdir -p "$T/wf"; cp "$R"/schemas/workflows/*.json "$T/wf/"
+jq '.agent.denied_tools += ["NotebookEdit"]' "$R/schemas/workflows/architect.workflow.json" > "$T/wf/architect.workflow.json"
+out="$(WF_SCHEMA_DIR="$T/wf" spawn architect --link 2)"; rc=$?
+if [ "$rc" -ne 0 ] && grep -q "cannot enforce denied tool 'NotebookEdit'" <<<"$out"; then ok "codex refuses a denial it cannot enforce"
+else bad "codex refuses a denial it cannot enforce" "rc=$rc" "$out"; fi
+hasnt "the refused codex link starts nothing" "agent start" "$out"
+jq '.agent.denied_tools += ["Edit","Write"]' "$R/schemas/workflows/architect.workflow.json" > "$T/wf/architect.workflow.json"
+out="$(WF_SCHEMA_DIR="$T/wf" spawn architect --link 2)"
+has   "codex: a declaration denying Edit and Write gets the read-only sandbox" "-s read-only" "$out"
 
 out="$(spawn architect --pane wT:p9 --link 1)"
 has   "--pane pins the pane the next link starts in" "agent start architect --kind claude --pane wT:p9" "$out"

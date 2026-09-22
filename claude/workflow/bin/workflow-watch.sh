@@ -32,6 +32,16 @@ set -uo pipefail
 wf_need jq
 
 WORKFLOW="${1:-}"; ACTION="${2:-status}"
+# BREADCRUMB - gates run in the seat's worktree, passed as --cwd by bin/watch-ctl.sh, never in $WF_REPO.
+# What broke: gate_result ran `cd "$WF_REPO"`, which is claude/workflow of whichever checkout holds this script. Every gate
+#   is a repo-root-relative command on the seat's tree (make -C claude/workflow test), so it ran against the wrong tree,
+#   from the wrong directory, and a seat's red tree could read green from main's copy (orchestrator steer, 2026-09-22).
+# Why this fix: the spawner knows the seat's worktree and hands it over. Without --cwd the repository root is used,
+#   which is what a declaration's repo-relative command means. Rejected: cd into the seat dir, which is state, not a tree.
+# Cost: one watcher per workflow id still, so two live seats of one workflow share a gate watcher on the first's tree.
+CWD=""
+[ "${3:-}" = --cwd ] && CWD="${4:?--cwd needs a directory}"
+[ -n "$CWD" ] || CWD="$(git -C "$WF_REPO" rev-parse --show-toplevel 2>/dev/null || printf '%s' "$WF_REPO")"
 [ -n "$WORKFLOW" ] || wf_die "usage: workflow-watch.sh <workflow-id> on|off|status|run"
 file="$(wf_workflow_file "$WORKFLOW")"
 
@@ -46,7 +56,7 @@ export WF_WATCH_LOG WF_WATCH_INTERVAL
 # a watcher that echoes what it watches stops being one line on change.
 gate_result() {
   local cmd="$1" expect="$2" match="${3:-}" out rc
-  out="$(cd "$WF_REPO" && eval "$cmd" 2>&1)"; rc=$?
+  out="$(cd "$CWD" && eval "$cmd" 2>&1)"; rc=$?
   case "$expect" in
     exit-zero)    [ "$rc" -eq 0 ] && printf pass || printf fail ;;
     exit-nonzero) [ "$rc" -ne 0 ] && printf pass || printf fail ;;
@@ -92,7 +102,7 @@ case "$ACTION" in
     threshold="$(jq -r '.agent.context_threshold_percent' "$file")"
     wf_watch_state "$NAME" on "$$" "$(jq -n --arg w "$WORKFLOW" --argjson t "$threshold" \
       '{watches_workflow:$w, context_threshold_percent:$t}')"
-    wf_watch_log "watch: started on workflow $WORKFLOW"
+    wf_watch_log "watch: started on workflow $WORKFLOW in $CWD"
     while :; do
       out="$(tick)"; gates="${out%%|*}"; alert="${out#*|}"
       if [ -n "$alert" ]; then

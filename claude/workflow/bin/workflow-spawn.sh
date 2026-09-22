@@ -155,13 +155,39 @@ kind="$(jq -r .herdr_kind <<<"$link_json")"
 model="$(jq -r '.model // empty' <<<"$link_json")"
 surface="$(jq -r .surface <<<"$link_json")"
 
-# Each kind speaks its own argument dialect. Codex has no tool allow or deny flags, so for a codex link the denials
-# live only in the brief; the brief below restates them for every seat for that reason.
+# Each kind speaks its own argument dialect.
+# BREADCRUMB - a codex link gets its denials mapped to codex's own controls, and a denial with no mapping refuses the start.
+# What broke: e3e545c passed codex only -m, because --allowed-tools and --disallowed-tools are Claude Code flags. The
+#   architect's codex-sol link therefore started with Agent and Task NOT denied, while the declaration said they were
+#   (orchestrator review of e3e545c, 2026-09-22).
+# Why it mattered: the in-process spawn ban is the one rule the declarations carry as data precisely so it is not prose;
+#   a link that silently drops it makes the declaration lie about the seat it started.
+# Why this fix: codex has real controls for each denial we use. Agent/Task -> --disable multi_agent and multi_agent_v2
+#   (codex's own sub-agent features, `codex features list`); Edit/Write -> -s read-only, else -s workspace-write, whose
+#   sandbox also has no network, which covers WebFetch; WebSearch -> never passing --search. -a never keeps an unattended
+#   pane from blocking on an approval prompt nobody is watching; a command the sandbox refuses fails back to the model.
+#   Any other denied tool has no codex equivalent and the start is refused, so the gap is loud at spawn and never silent.
+#   Rejected: refusing every codex link outright, which throws away the owner's third link over denials that do map.
+#   Rejected: restating the denials in the brief only, which is the prose the declarations exist to replace.
+# Cost: allowed_tools has no codex meaning (Claude's list only pre-approves), so a codex seat's allowlist is its sandbox.
+codex_restrict() {
+  local t ro=0
+  for t in $(jq -r '.denied_tools[]' <<<"$spec"); do
+    case "$t" in
+      Agent|Task) ;;
+      Edit|Write) ro=1 ;;
+      WebFetch|WebSearch) ;;
+      *) wf_die "link $LINK ($link_id) is codex, which cannot enforce denied tool '$t'; refusing to start a seat whose restrictions would silently not hold" ;;
+    esac
+  done
+  args+=(--disable multi_agent --disable multi_agent_v2 -a never)
+  if [ "$ro" = 1 ]; then args+=(-s read-only); else args+=(-s workspace-write); fi
+}
 args=()
 case "$kind" in
   claude) [ -n "$model" ] && args+=(--model "$model"); args+=(--allowed-tools "$allow" --disallowed-tools "$deny") ;;
-  codex)  [ -n "$model" ] && args+=(-m "$model") ;;
-  *)      [ -n "$model" ] && args+=(--model "$model") ;;
+  codex)  [ -n "$model" ] && args+=(-m "$model"); codex_restrict ;;
+  *)      wf_die "link $LINK ($link_id) is herdr kind $kind, for which this spawner knows no way to enforce the declared tool restrictions" ;;
 esac
 
 # The pane gets RAIL_SURFACE before the agent starts, and the agent inherits it. report/rail.sh routes on it.
@@ -223,6 +249,20 @@ line="${brief} Write only within: ${paths:-nothing}. Never run: ${denied_cmds}. 
 if [ "$(wf_cfg '.workflow.compaction.auto_arm // false')" = true ]; then
   run "$(dirname "$(readlink -f "$0")")/watch-ctl.sh" on compact "$pane" \
     || wf_die "seat $name started in $pane but its compaction watcher did not come up; fix that before trusting the seat"
+fi
+# BREADCRUMB - the seat watcher and the workflow's gate watcher are armed here too, the same way and for the same reason.
+# What broke: S-02 finished at 2026-09-22T21:32Z and nobody noticed until 21:57Z (rail O-12). bin/workflow-watch.sh had
+#   been ported from the kimi proxy but nothing ever armed it, and no seat watcher existed at all.
+# Why this fix: a watcher that must be remembered is not armed on the day it matters; the compaction arming above proved
+#   the pattern. workflow.watchers.auto_arm is the switch. The gate watcher is handed the seat's worktree, because the
+#   gates are commands on the seat's tree, not on the checkout this script happens to live in.
+# Cost: a seat cannot be started while herdr cannot host its watchers, and the gate watcher runs the declaration's gates
+#   every watchers.interval_seconds until they all pass.
+if [ "$(wf_cfg '.workflow.watchers.auto_arm // false')" = true ]; then
+  run "$(dirname "$(readlink -f "$0")")/watch-ctl.sh" on seat "$pane" \
+    || wf_die "seat $name started in $pane but its seat watcher did not come up; fix that before trusting the seat"
+  run "$(dirname "$(readlink -f "$0")")/watch-ctl.sh" on workflow "$WORKFLOW" "$worktree" \
+    || wf_die "seat $name started in $pane but the $WORKFLOW gate watcher did not come up"
 fi
 # BREADCRUMB - the brief is sent without --wait, and only after the watcher is armed.
 # What broke: `herdr agent prompt --wait` reported agent_prompt_stalled 5 s into a live Opus seat (S-02, 2026-09-22T21:3xZ,
