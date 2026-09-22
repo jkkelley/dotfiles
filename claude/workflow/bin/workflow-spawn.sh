@@ -59,7 +59,6 @@ worktree="$(wf_expand "$(jq -r .worktree <<<"$seat")")"
 kind="$(wf_cfg .workflow.herdr.agent_kind)"
 ws_label="$(wf_cfg .workflow.herdr.workspace_label)"
 start_timeout="$(wf_cfg '.workflow.herdr.start_timeout_ms // 60000')"
-prompt_timeout="$(wf_cfg '.workflow.herdr.prompt_timeout_ms // 120000')"
 
 # The declaration names a model in seat vocabulary so it stays runtime-neutral for Codex and Kimi.
 # Claude Code takes its own ids, and an unknown alias is answered with "issue with the selected
@@ -148,8 +147,6 @@ paths="$(jq -r '.allowed_paths | join(", ")' <<<"$spec")"
 denied_cmds="$(jq -r '.denied_commands | join(", ")' <<<"$spec")"
 line="${brief} Write only within: ${paths:-nothing}. Never run: ${denied_cmds}. Never start an agent with an in-process Agent or Task tool; seats are started through herdr only. At ${threshold} percent context or above, follow ${WF_REPO}/runbooks/RB-compaction.md: finish your step, write your checkpoint, touch your compact-request, end your turn. Never send /compact yourself. When your work is done, report it and exit; do not idle."
 
-run herdr agent prompt "$name" "$line" --wait --timeout "$prompt_timeout"
-
 # BREADCRUMB - every seat this spawner starts gets a compaction watcher, or the start is reported as failed.
 # What broke: the brief told each seat to compact at its threshold, and nothing checked. A seat mid-task does not watch
 #   its own context, and the runbook the brief pointed at did not exist in this repository until 2026-09-22.
@@ -162,4 +159,12 @@ if [ "$(wf_cfg '.workflow.compaction.auto_arm // false')" = true ]; then
   run "$(dirname "$(readlink -f "$0")")/watch-ctl.sh" on compact "$pane" \
     || wf_die "seat $name started in $pane but its compaction watcher did not come up; fix that before trusting the seat"
 fi
+# BREADCRUMB - the brief is sent without --wait, and only after the watcher is armed.
+# What broke: `herdr agent prompt --wait` reported agent_prompt_stalled 5 s into a live Opus seat (S-02, 2026-09-22T21:3xZ,
+#   wC1:p6) while the pane showed it working; under set -e that aborted the spawn before the watcher block below it.
+# Why it mattered: the seat ran unwatched, which is exactly what auto_arm exists to prevent.
+# Why this fix: arm first, so a seat is never live without its watcher, and send the brief fire-and-forget; the seat's
+#   own report and its watcher pane are the proof it started. Rejected: tolerating the stall error, which would also
+#   swallow a real one. Cost: the spawner no longer waits to see the seat pick the brief up.
+run herdr agent prompt "$name" "$line"
 printf 'seat %s started for workflow %s in %s (%s)\n' "$name" "$WORKFLOW" "$pane" "$worktree"
