@@ -42,6 +42,13 @@
     "owner": false
   },
   {
+    "id": "O-12",
+    "t": "Automated compaction and herdr-first watchers, enforced",
+    "who": "orchestrator",
+    "gate": false,
+    "owner": false
+  },
+  {
     "id": "O-06",
     "t": "Owner picks failover mode - hot swap, standby, or halt",
     "who": "owner",
