@@ -36,7 +36,9 @@ case "$1 $2" in
   "agent send-keys") case "$*" in *ctrl+c*) touch "$STUB_DEAD" ;; esac ;;
   "agent start"|"agent rename") rm -f "$STUB_DEAD" ;;
   "workspace list") printf '{"result":{"workspaces":[{"workspace_id":"wP","label":"dotfiles"}]}}\n' ;;
-  "pane list") printf '{"result":{"panes":[{"pane_id":"wP:p1","label":"claude-main","tab_id":"wP:t1"}]}}\n' ;;
+  "pane list") printf '{"result":{"panes":[{"pane_id":"wP:p1","label":"claude-main","tab_id":"wP:t1"},{"pane_id":"wP:p7","label":"watch-workflow-gatetest","tab_id":"wP:t2"},{"pane_id":"wP:p8","label":"watch-compact-wX-p9","tab_id":"wP:t2"},{"pane_id":"wX:p9","tab_id":"wX:t9"}]}}\n' ;;
+  "pane get") printf '{"result":{"pane":{"pane_id":"%s","tab_id":"wX:t9"}}}\n' "$3" ;;
+  "pane run") [ -n "${STUB_EXEC:-}" ] && bash -c "$4" >/dev/null 2>&1 ;;
 esac
 exit 0
 STUB
@@ -83,13 +85,38 @@ setup 0; mkdir -p "$T/state/records"
 printf '{"schema_version":"1.0.0","workflow":"architect","at":"2020-01-01T00:00:00Z","ticket":"O-99","outcome":"planned","note":"an old run"}\n' > "$T/state/records/architect.jsonl"
 watch
 check 0 "$(to_principal)" "a record older than this link is not this seat's done"
-printf '{"schema_version":"1.0.0","workflow":"architect","at":"%s","ticket":"O-99","outcome":"planned","note":"test plan in work-orders"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$T/state/records/architect.jsonl"
+# The seat writes its record the only way a brief tells it to: bin/seat-record.sh, finding itself from HERDR_PANE_ID.
+out="$(HERDR_PANE_ID="$PANE" "$R/bin/seat-record.sh" nonsense --note x 2>&1)"; rc=$?
+if [ "$rc" -ne 0 ] && [ "$(wc -l < "$T/state/records/architect.jsonl")" = 1 ]; then ok "seat-record: an outcome the schema refuses writes nothing"
+else bad "seat-record: an outcome the schema refuses writes nothing" "rc=$rc" "$out"; fi
+out="$(env -u HERDR_PANE_ID "$R/bin/seat-record.sh" planned 2>&1)"; rc=$?
+if [ "$rc" -ne 0 ] && grep -q 'no seat-link' <<<"$out"; then ok "seat-record: no seat and no --workflow refuses"; else bad "seat-record: no seat and no --workflow refuses" "rc=$rc" "$out"; fi
+HERDR_PANE_ID="$PANE" "$R/bin/seat-record.sh" planned --note "test plan in work-orders" >/dev/null 2>&1; rc=$?
+check 0 "$rc" "seat-record: the seat's record is accepted"
+tail -n 1 "$T/state/records/architect.jsonl" > "$T/row.json"
+jq .record.schema "$R/schemas/workflows/architect.workflow.json" > "$T/rs.json"
+holds "seat-record: the row validates against the declaration's record schema" "$R/tools/validate-schema.sh" "$T/rs.json" "$T/row.json"
+check "architect kimi-k3 O-99" "$(jq -r '"\(.role) \(.link) \(.ticket // "O-99")"' "$T/row.json")" "seat-record: role from the declaration, link from the seat-link"
+: > "$STUB_LOG"
 watch
 check 1 "$(to_principal)" "done: the principal is prompted when the seat's record lands"
 holds "done: the line names seat, ticket and the report's first line" grep -q '^agent prompt wP:p1 seat architect done on O-99: planned O-99: test plan in work-orders' "$STUB_LOG"
+holds "done: the seat is retired with /exit, not trusted to exit" grep -q '^agent prompt wX:p9 /exit$' "$STUB_LOG"
+holds "done: the retirement is logged" grep -q 'retired: architect in wX:p9' "$LOGF"
+holds "teardown: the seat's compaction watcher pane is closed through watch-ctl" grep -q '^pane close wP:p8$' "$STUB_LOG"
+holds "teardown: the seat's tab, holding nothing else, is closed" grep -q '^tab close wX:t9$' "$STUB_LOG"
+holds "teardown: one line names what was torn down" grep -q 'teardown: architect retired; watchers off for wX:p9, tab wX:t9 closed' "$LOGF"
+check 0 "$(grep -c '^pane close wP:p1' "$STUB_LOG" || true)" "teardown: the principal's pane is never closed"
 holds "done: the watcher ends itself" grep -q '"state": *"ended"' "$SEAT/seat-watch.state.json"
 watch
 check 1 "$(to_principal)" "done: the same record is never announced twice"
+check 0 "$(starts)" "done: a re-armed watcher never resurrects a retired seat"
+
+# A seat started before seat-link existed records with --workflow and --ticket.
+setup 0; rm -f "$SEAT/seat-link"
+HERDR_PANE_ID="$PANE" "$R/bin/seat-record.sh" passed --workflow orchestration-build --ticket O-09 --commit abc1234 >/dev/null 2>&1; rc=$?
+check 0 "$rc" "seat-record: --workflow and --ticket stand in for a missing seat-link"
+check "builder O-09 abc1234" "$(jq -r '"\(.role) \(.ticket) \(.commit)"' "$T/state/records/orchestration-build.jsonl")" "seat-record: the override row carries role, ticket and commit"
 
 setup 0
 printf 'at_utc\tstep\tstatus\ttext\tby\tref\n%s\tO-99\tcomplete\tplan written\tarchitect\t\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$T/ledger.tsv"
@@ -154,6 +181,13 @@ WF_SCHEMA_DIR="$T/wf" timeout 20 "$R/bin/workflow-watch.sh" gatetest run --cwd "
 check 0 "$rc" "workflow-watch: a gate that passes in the seat's worktree ends the watch"
 WF_SCHEMA_DIR="$T/wf" timeout 3 "$R/bin/workflow-watch.sh" gatetest run --cwd "$T/other" >/dev/null 2>&1
 holds "workflow-watch: the same gate is red in another tree" grep -q 'gate: marker=fail' "$T/state/gatetest-watch.log"
+
+# A gate watcher whose gates already pass ends at once; arming it must read that as up, not as a failed start.
+# Live defect 2026-09-22T22:25:09Z: the seat-smoke spawn aborted here before the seat was ever briefed.
+rm -f "$T/state/gatetest-watch."*
+out="$(STUB_EXEC=1 WF_SCHEMA_DIR="$T/wf" "$R/bin/watch-ctl.sh" on workflow gatetest "$T/wt" 2>&1)"; rc=$?
+if [ "$rc" = 0 ] && grep -q 'ran and ended' <<<"$out"; then ok "watch-ctl: a gate watcher that ended green counts as armed"
+else bad "watch-ctl: a gate watcher that ended green counts as armed" "rc=$rc" "$out"; fi
 
 [ "$fail" = 0 ] && echo "ok  seat-watch: $n checks" || echo "FAIL seat-watch: see above ($n checks)"
 exit "$fail"

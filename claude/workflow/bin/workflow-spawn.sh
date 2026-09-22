@@ -236,7 +236,15 @@ fi
 # finished agent left alive holds a pane, a name and a worktree that the next workflow needs.
 paths="$(jq -r '.allowed_paths | join(", ")' <<<"$spec")"
 denied_cmds="$(jq -r '.denied_commands | join(", ")' <<<"$spec")"
-line="${brief} Write only within: ${paths:-nothing}. Never run: ${denied_cmds}. Never start an agent with an in-process Agent or Task tool; seats are started through herdr only. At ${threshold} percent context or above, follow ${WF_REPO}/runbooks/RB-compaction.md: finish your step, write your checkpoint, touch your compact-request, end your turn. Never send /compact yourself. When your work is done, report it and exit; do not idle."
+# BREADCRUMB - every brief ends by naming the record command, with this declaration's outcomes spelled out.
+# What broke: bin/seat-watch.sh reports a seat done only on its own record, and until 2026-09-22 no brief asked for one,
+#   so a seat that finished was indistinguishable from one that went quiet (orchestrator review of 17616c9).
+# Why this fix: the command is data the seat runs, not a format it has to reproduce; bin/seat-record.sh validates the row.
+#   Rejected: inferring done from idleness, which the orchestrator ruled out when O-09 was scoped.
+# Cost: a longer brief line.
+outcomes="$(wf_interpolate < "$(wf_workflow_file "$WORKFLOW")" | jq -r '.record.schema.properties.outcome.enum // [] | join("|")')"
+record_cmd="$(dirname "$(readlink -f "$0")")/seat-record.sh <${outcomes:-outcome}> --note '<the first line of your report>' (add --commit <sha> if you committed)"
+line="${brief} Write only within: ${paths:-nothing}. Never run: ${denied_cmds}. Never start an agent with an in-process Agent or Task tool; seats are started through herdr only. At ${threshold} percent context or above, follow ${WF_REPO}/runbooks/RB-compaction.md: finish your step, write your checkpoint, touch your compact-request, end your turn. Never send /compact yourself. When your work is done, your last act is ${record_cmd}; then report and exit; do not idle."
 
 # BREADCRUMB - every seat this spawner starts gets a compaction watcher, or the start is reported as failed.
 # What broke: the brief told each seat to compact at its threshold, and nothing checked. A seat mid-task does not watch

@@ -5,6 +5,7 @@
 #   watch-ctl.sh on seat wC1:p1           report the seat done, hot swap it along its model chain (bin/seat-watch.sh)
 #   watch-ctl.sh on workflow scaffold-build ~/wt   watch that workflow's gates, run in the seat's worktree
 #   watch-ctl.sh off compact wC1:p1       stop it; the seat is never touched
+#   watch-ctl.sh off seat wC1:p1 --close  stop it and close its monitor pane (bin/seat-watch.sh's teardown)
 #   watch-ctl.sh pause seat wC1:p1        the seat watcher idles until unpause; nothing restarts
 #   watch-ctl.sh status compact wC1:p1    pid, pane and the last three log lines
 #   watch-ctl.sh status                   every watcher this project knows about
@@ -25,7 +26,7 @@ wf_need jq
 BIN="$(dirname "$(readlink -f "$0")")"
 
 action="${1:-status}"; kind="${2:-}"; target="${3:-}"; cwd="${4:-}"
-usage() { sed -n '3,10p' "$(readlink -f "$0")" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '3,11p' "$(readlink -f "$0")" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 pidfile_for() {
   case "$1" in
@@ -89,8 +90,24 @@ case "$action" in
       [ -n "$pane" ] || wf_die "could not find the new monitor pane"
       herdr pane rename "$pane" "$label" >/dev/null
     fi
-    herdr pane run "$pane" "$(cmd_for "$kind" "$target")" >/dev/null || wf_die "herdr could not run the watcher in $pane"
-    for _ in 1 2 3 4 5 6; do alive "$pf" && break; sleep 1; done
+    # BREADCRUMB - a watcher that already finished its job counts as having come up.
+    # What broke: the seat-smoke gate watcher ran at 2026-09-22T22:25:09Z, found every gate passing and ended in the same
+    #   second, as bin/workflow-watch.sh is designed to. This check only asked whether its pid was alive, so it reported
+    #   "did not come up", and under set -e bin/workflow-spawn.sh aborted before it sent the seat its brief.
+    # Why this fix: the watcher's own state file says `ended` when it stopped because its work was done; one written
+    #   after this arming began is proof it ran. Rejected: letting workflow-watch linger after all gates pass, which is
+    #   the unattended loop its breadcrumb exists to prevent.
+    # Cost: one marker file per arming, removed on the way out.
+    st="${pf%.pid}.state.json"; mark="$pf.arming"; : > "$mark"
+    herdr pane run "$pane" "$(cmd_for "$kind" "$target")" >/dev/null || { rm -f "$mark"; wf_die "herdr could not run the watcher in $pane"; }
+    ended=0
+    for _ in 1 2 3 4 5 6; do
+      alive "$pf" && break
+      if [ "$st" -nt "$mark" ] && [ "$(jq -r .state "$st" 2>/dev/null)" = ended ]; then ended=1; break; fi
+      sleep 1
+    done
+    rm -f "$mark"
+    if [ "$ended" = 1 ]; then printf '%s %s ran and ended: %s\n' "$kind" "$target" "$(tail -n 1 "$(logfile_for "$kind" "$target")" 2>/dev/null)"; exit 0; fi
     alive "$pf" || wf_die "watcher did not come up in $pane; read it with: herdr pane read $pane"
     printf '%s %s on, pid %s, pane %s (%s)\n' "$kind" "$target" "$(cat "$pf")" "$pane" "$label"
     ;;
@@ -110,6 +127,11 @@ case "$action" in
     pf="$(pidfile_for "$kind" "$target")"
     if alive "$pf"; then kill "$(cat "$pf")"; printf '%s %s off\n' "$kind" "$target"
     else printf '%s %s was not running\n' "$kind" "$target"; rm -f "$pf"; fi
+    # --close also closes the labeled monitor pane. Off alone leaves it, so a watcher can be restarted where the owner
+    # was already looking; a retired seat's watchers have nothing left to show, and their panes are debris.
+    if [ "$cwd" = --close ] && mp="$(pane_by_label "$(label_for "$kind" "$target")")" && [ -n "$mp" ]; then
+      herdr pane close "$mp" >/dev/null 2>&1 && printf '%s %s pane %s closed\n' "$kind" "$target" "$mp"
+    fi
     ;;
   *) usage ;;
 esac

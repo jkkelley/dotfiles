@@ -58,7 +58,7 @@
     }
   ],
   "exit": {
-    "condition": "A findings report is written to the state directory naming each finding with file, line, severity and the failure it would cause, or stating plainly that there are none.",
+    "condition": "A findings report is written to the state directory naming each finding with file, line, severity and the failure it would cause, or stating plainly that there are none, and the seat's last act is bin/seat-record.sh clean|findings --set findings=<n> --set report=<path>.",
     "verified_by": "cat ${state_dir}/records/scaffold-review.jsonl | tail -n 1"
   },
   "on_failure": [

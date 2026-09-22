@@ -15,7 +15,8 @@
 # Each tick, in order of precedence:
 #   paused     <seat dir>/PAUSED exists (watch-ctl.sh pause seat <pane>). Nothing is done; nothing restarts.
 #   done       the seat's own record exists: a row of the declaration's record.emitted_to, or a rail ledger `complete`
-#              row by this seat, since this link started. Prompt the principal one line, once per row, and end.
+#              row by this seat, since this link started. Prompt the principal one line, once per row, retire the
+#              seat with /exit (bin/seat-record.sh is the seat's last act), and end.
 #   stopped    <seat dir>/failover-stopped exists: the chain was exhausted or a swap failed. Watch for done only.
 #   hold       changeover-hold exists and is not ours. Never act into another actor's changeover.
 #   exhausted  the transcript's newest assistant row is an API error of the exhaustion class (rate limit, 429, quota,
@@ -86,8 +87,10 @@ done_row() {
   since="$(link .started_at)"; ticket="$(link '.ticket // ""')"; wf="$(link .workflow)"
   rec="$("$BIN/workflow-spec.sh" "$wf" --full 2>/dev/null | jq -r '.record.emitted_to // empty')"
   rows=""
+  # A row with no ticket field matches: some record schemas (architect's) carry none, and the row is then this
+  # workflow's since this link started, which is the seat's. A row naming another ticket never matches.
   if [ -n "$rec" ] && [ -f "$(wf_state_dir)/${rec#state:}" ]; then
-    rows="$(jq -rc --arg s "$since" --arg t "$ticket" 'select(.at >= $s and ($t == "" or .ticket == $t))
+    rows="$(jq -rc --arg s "$since" --arg t "$ticket" 'select(.at >= $s and ($t == "" or (.ticket // $t) == $t))
       | "\(.outcome // "recorded")\(if .ticket then " " + .ticket else "" end)\(if .note then ": " + .note else "" end)"' \
       "$(wf_state_dir)/${rec#state:}" 2>/dev/null)"
   fi
@@ -203,10 +206,27 @@ tick() {
   local tr r why age alive n
   [ -f "$seat/seat-link" ] || { wf_watch_change state "seat: no seat-link for $pane; start it with bin/workflow-spawn.sh"; return; }
   [ -f "$seat/PAUSED" ] && { wf_watch_change state "paused: since $(cat "$seat/PAUSED")"; return; }
+  # BREADCRUMB - a seat retired on its done record stays retired until the spawner writes a new seat-link.
+  # What broke: a watcher re-armed on a pane whose seat had recorded done and been sent /exit read that seat as dead and
+  #   restarted it, then told the principal it had swapped (found by test_seat_watch.sh, 2026-09-22).
+  # Why this fix: seat-done is touched at retirement and only a newer seat-link, which only a real start writes, outranks
+  #   it. Rejected: deleting seat-link on done, which throws away the record of what ran for the next reader.
+  # Cost: none.
+  if [ "$seat/seat-done" -nt "$seat/seat-link" ]; then wf_watch_change state "done: $(link .seat) already retired"; DONE=1; return; fi
   TICKET="$(link '.ticket // ""')"
   if r="$(done_row)"; then
+    touch "$seat/seat-done"
     wf_watch_log "done: $(link .seat) ${TICKET:+$TICKET }$r"
     principal "seat $(link .seat) done${TICKET:+ on $TICKET}: $r"
+    # BREADCRUMB - a seat that has recorded done is retired here, not trusted to exit.
+    # What broke: every brief says "when your work is done, report it and exit", and seats keep ignoring it; a finished
+    #   seat left alive holds its pane, its name and its worktree (orchestrator review of 17616c9, 2026-09-22).
+    # Why this fix: bearings-v2 dispatch-seat.sh retired its seats with /exit once their record landed (2026-09-21), and
+    #   the record is the seat's own statement that nothing is left to do, so the /exit cannot cut work short.
+    #   Rejected: waiting for the seat to exit on its own, which is what already fails.
+    # Cost: a seat cannot keep talking after its record; anything after it belongs in a new seat.
+    if stop_seat; then wf_watch_log "retired: $(link .seat) in $pane exited after its done record"; TEARDOWN=1
+    else wf_watch_log "ALERT $(link .seat) in $pane recorded done but would not exit; read it with herdr pane read $pane"; fi
     DONE=1; return
   fi
   [ -f "$seat/failover-stopped" ] && { wf_watch_change state "stopped: failover off for $pane; waiting for a done record only"; return; }
@@ -239,10 +259,46 @@ tick() {
   fi
 }
 
-DONE=0; TICKET=""
+# BREADCRUMB - a retired seat takes its debris with it: every watcher on its pane, their monitor panes, and its tab.
+# What broke: the live smoke seat retired at 2026-09-22T22:28:02Z and left its compaction watcher running in wC1:pD, this
+#   watcher's pane wC1:pE, the finished gate watcher's pane wC1:pF, and tab agent-smoke holding an empty shell
+#   (orchestrator review, 22:28Z). bearings-v2 bin/down.sh tore all of that down; the port had not.
+# Why this fix: only a seat that recorded done AND exited is torn down, so nothing a live seat needs is closed. Everything
+#   goes through watch-ctl.sh, the one switch, with --close for the monitor pane. The workflow's gate watcher is shared
+#   per workflow id, so it is left alone while any other live seat runs that workflow. The seat's tab is closed only if
+#   its sole pane is the seat's and holds no agent. This watcher is last, by exec, because stopping it ends this script.
+#   Rejected: closing the tab outright, which would take any pane the owner opened beside the seat.
+# Cost: the owner can no longer scroll a retired seat's pane; the transcript and the seat dir keep everything.
+teardown() {
+  local wf others tab n
+  wf="$(link .workflow)"
+  "$BIN/watch-ctl.sh" off compact "$pane" --close >/dev/null 2>&1
+  others=0
+  for l in "$(wf_state_dir)"/seats/*/seat-link; do
+    if [ ! -f "$l" ] || [ "$l" = "$seat/seat-link" ]; then continue; fi
+    [ "$(jq -r .workflow "$l")" = "$wf" ] || continue
+    [ "$(dirname "$l")/seat-done" -nt "$l" ] && continue
+    herdr agent get "$(jq -r .pane "$l")" >/dev/null 2>&1 && others=1
+  done
+  [ "$others" = 1 ] || "$BIN/watch-ctl.sh" off workflow "$wf" --close >/dev/null 2>&1
+  tab="$(herdr pane get "$pane" 2>/dev/null | jq -r '.result.pane.tab_id // empty')"
+  if [ -n "$tab" ]; then
+    n="$(herdr pane list --workspace "${tab%%:*}" 2>/dev/null | jq --arg t "$tab" '[.result.panes[] | select(.tab_id == $t)] | length')"
+    if [ "$n" = 1 ] && ! herdr agent get "$pane" >/dev/null 2>&1; then herdr tab close "$tab" >/dev/null 2>&1 || tab=""
+    else tab=""; fi
+  fi
+  wf_watch_log "teardown: $(link .seat) retired; watchers off for $pane$([ "$others" = 1 ] && printf ' (gate watcher kept, another %s seat is live)' "$wf")${tab:+, tab $tab closed}"
+}
+
+DONE=0; TEARDOWN=0; TICKET=""
 while :; do
   tick
-  if [ "$DONE" = 1 ]; then wf_watch_state seat-watch ended 0 "$(jq -n --arg s "$(wf_now)" '{stopped_at:$s}')"; trap - EXIT; rm -f "$seat/seat-watch.pid"; wf_watch_log "watch: seat done, stopping"; exit 0; fi
+  if [ "$DONE" = 1 ]; then
+    wf_watch_state seat-watch ended 0 "$(jq -n --arg s "$(wf_now)" '{stopped_at:$s}')"; trap - EXIT; rm -f "$seat/seat-watch.pid"
+    wf_watch_log "watch: seat done, stopping"
+    if [ "$TEARDOWN" = 1 ]; then teardown; exec "$BIN/watch-ctl.sh" off seat "$pane" --close >/dev/null 2>&1; fi
+    exit 0
+  fi
   [ "$once" = 1 ] && exit 0
   sleep "$TICK"
 done

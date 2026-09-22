@@ -70,7 +70,7 @@
     }
   ],
   "exit": {
-    "condition": "The plan is on the owner's surface for this link, and the seat has reported its first line to the principal and exited.",
+    "condition": "The plan is on the owner's surface for this link and the test plan is written into the testing ticket; the seat's last act is bin/seat-record.sh planned --note '<first line>' so the seat watcher reports it done and retires it.",
     "verified_by": "bash claude/workflow/bin/watch-ctl.sh status seat <pane>"
   },
   "on_failure": [

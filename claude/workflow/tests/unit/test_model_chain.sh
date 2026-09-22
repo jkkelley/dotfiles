@@ -43,6 +43,7 @@ has   "kimi-k3 runs its launcher in the pane" "DRY: herdr pane run wT:p1 kimi-cl
 hasnt "kimi-k3 is never started as plain claude by herdr agent start" "agent start" "$out"
 has   "kimi-k3: the detected agent is given the seat's name" "DRY: herdr agent rename wT:p1 architect" "$out"
 has   "the seat-link would record link 0 of 3" "DRY: seat-link wT:p1 link=0 links=3" "$out"
+has   "the brief makes seat-record.sh the seat's last act, with the declaration's outcomes" "your\ last\ act\ is\ $R/bin/seat-record.sh\ \<planned\|swapped\|exhausted\|blocked\>" "$out"
 has   "the spawner arms the seat watcher on the seat's pane" "watch-ctl.sh on seat wT:p1" "$out"
 has   "the spawner arms the gate watcher in the seat's worktree" "watch-ctl.sh on workflow architect $T/wt" "$out"
 

@@ -52,7 +52,7 @@
     }
   ],
   "exit": {
-    "condition": "The ticket test plan passes, make test is green in Podman, and the work is committed on the seat branch with a message that names what the tests proved.",
+    "condition": "The ticket test plan passes, make test is green in Podman, the work is committed on the seat branch with a message that names what the tests proved, and the seat's last act is bin/seat-record.sh passed --commit <sha> --note '<first line>'.",
     "verified_by": "make -C claude/workflow test"
   },
   "on_failure": [

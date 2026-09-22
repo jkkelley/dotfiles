@@ -52,6 +52,13 @@
         "tab_label": "agent-architect",
         "worktree": "~/dotfiles-wt/orch",
         "branch": "feat/orchestration-failover"
+      },
+      {
+        "name": "smoke",
+        "role": "operator",
+        "tab_label": "agent-smoke",
+        "worktree": "~/dotfiles-wt/orch",
+        "branch": "feat/orchestration-failover"
       }
     ],
     "compaction": {
