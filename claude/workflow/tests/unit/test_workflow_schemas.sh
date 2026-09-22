@@ -118,6 +118,48 @@ if not e:
 else:
     print(f"ok  rejected: threshold out of range -> {e[0].message}")
 
+# ---- the model chain (O-08). A seat runs one statement of its model, never two that can disagree. ----
+chained = json.loads((W / "architect.workflow.json").read_text())
+if errs(meta, chained):
+    print("FAIL: meta-schema REJECTED the architect model chain")
+    bad = 1
+else:
+    print("ok  accepted: architect chain kimi-k3 -> opus -> codex-sol")
+
+both = json.loads(json.dumps(chained))
+both["agent"].update(runtime="claude", model="opus")
+e = errs(meta, both)
+if not e:
+    print("FAIL: meta-schema ACCEPTED an agent spec carrying both a chain and runtime/model")
+    bad = 1
+else:
+    print(f"ok  rejected: chain plus runtime/model -> {e[0].message[:80]}")
+
+empty = json.loads(json.dumps(chained))
+empty["agent"]["models"] = []
+e = errs(meta, empty)
+if not e:
+    print("FAIL: meta-schema ACCEPTED an empty model chain")
+    bad = 1
+else:
+    print(f"ok  rejected: empty chain -> {e[0].message[:80]}")
+
+neither = json.loads(json.dumps(chained))
+neither["agent"].pop("models")
+if not errs(meta, neither):
+    print("FAIL: meta-schema ACCEPTED an agent spec with no model at all")
+    bad = 1
+else:
+    print("ok  rejected: no chain and no runtime/model")
+
+no_surface = json.loads(json.dumps(chained))
+no_surface["agent"]["models"][0].pop("surface")
+if not errs(meta, no_surface):
+    print("FAIL: meta-schema ACCEPTED a link with no surface; the spawner would have to guess it from herdr_kind")
+    bad = 1
+else:
+    print("ok  rejected: link with no surface")
+
 cfg_bad = json.loads(json.dumps(cfg))
 cfg_bad["workflow"]["seats"][0]["name"] = "Build Seat"          # herdr requires [a-z][a-z0-9_-]{0,31}
 e = errs(cfg_schema, cfg_bad)

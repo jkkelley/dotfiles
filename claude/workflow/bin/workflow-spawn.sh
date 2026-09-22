@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # workflow-spawn.sh - start the seat a workflow declares, through herdr, from the schema.
 #
-#   workflow-spawn.sh <workflow-id> [seat-name] [--brief-file FILE] [--dry-run]
+#   workflow-spawn.sh <workflow-id> [seat-name] [--link N] [--pane ID] [--ticket ID] [--brief-file FILE] [--dry-run]
+#
+# --link N picks link N of a declaration's model chain (agent.models), default 0. --pane pins the pane, which
+# bin/seat-watch.sh uses to start the next link where the last one stopped. --ticket is recorded for the watcher.
 #
 # With no seat name the seat is chosen by matching the workflow's declared role against the seats in
 # the configuration, so the caller names the work and never the worker.
@@ -24,17 +27,21 @@ set -euo pipefail
 . "$(dirname "$(readlink -f "$0")")/workflow-lib.sh"
 wf_need jq
 
-DRY=0; BRIEF=""; WORKFLOW=""; SEAT=""
+DRY=0; BRIEF=""; WORKFLOW=""; SEAT=""; LINK=0; PANE=""; TICKET=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY=1; shift ;;
+    --link) LINK="${2:?--link needs a number}"; shift 2 ;;
+    --pane) PANE="${2:?--pane needs a pane id}"; shift 2 ;;
+    --ticket) TICKET="${2:?--ticket needs an id}"; shift 2 ;;
     --brief-file) BRIEF="${2:?--brief-file needs a path}"; shift 2 ;;
-    -h|--help) sed -n '3,6p' "$(readlink -f "$0")" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '3,9p' "$(readlink -f "$0")" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) wf_die "unknown flag $1" ;;
     *) if [ -z "$WORKFLOW" ]; then WORKFLOW="$1"; else SEAT="$1"; fi; shift ;;
   esac
 done
-[ -n "$WORKFLOW" ] || wf_die "usage: workflow-spawn.sh <workflow-id> [seat-name] [--brief-file FILE] [--dry-run]"
+[ -n "$WORKFLOW" ] || wf_die "usage: workflow-spawn.sh <workflow-id> [seat-name] [--link N] [--pane ID] [--ticket ID] [--brief-file FILE] [--dry-run]"
+case "$LINK" in ''|*[!0-9]*) wf_die "--link takes a link index, got '$LINK'" ;; esac
 
 run() { if [ "$DRY" = 1 ]; then printf 'DRY:'; printf ' %q' "$@"; printf '\n'; else "$@"; fi; }
 
@@ -56,7 +63,6 @@ tab_label="$(jq -r .tab_label <<<"$seat")"
 branch="$(jq -r .branch <<<"$seat")"
 worktree="$(wf_expand "$(jq -r .worktree <<<"$seat")")"
 
-kind="$(wf_cfg .workflow.herdr.agent_kind)"
 ws_label="$(wf_cfg .workflow.herdr.workspace_label)"
 start_timeout="$(wf_cfg '.workflow.herdr.start_timeout_ms // 60000')"
 
@@ -89,6 +95,9 @@ need_herdr() { command -v herdr >/dev/null 2>&1 || wf_die "herdr is not on PATH;
 need_herdr
 [ "${HERDR_ENV:-}" = 1 ] || printf 'warning: HERDR_ENV is not 1; this shell may not be inside a herdr pane\n' >&2
 
+if [ -n "$PANE" ]; then
+  pane="$PANE"
+else
 ws="$(herdr workspace list | jq -r --arg l "$ws_label" 'first(.result.workspaces[] | select(.label == $l) | .workspace_id) // empty')"
 [ -n "$ws" ] || wf_die "no herdr workspace labelled '$ws_label'"
 
@@ -106,6 +115,7 @@ pane="$(herdr pane list --workspace "$ws" | jq -r --arg t "$tab" \
   'first(.result.panes[] | select(.tab_id == $t and (.agent | not)) | .pane_id) // empty')"
 if [ -z "$pane" ] && [ "$DRY" = 1 ]; then pane="<free-pane>"; fi
 [ -n "$pane" ] || wf_die "tab $tab has no pane at an interactive shell prompt; free one and retry"
+fi
 
 # A live agent already holding this name is not replaced silently: herdr answers agent_name_taken,
 # and driving the incumbent would send this workflow's brief into whatever it is already doing.
@@ -114,23 +124,78 @@ if herdr agent get "$name" >/dev/null 2>&1; then
 fi
 
 # ---- start and brief -------------------------------------------------------
-model="$(claude_model "$(jq -r .model <<<"$spec")")"
 allow="$(jq -r '.allowed_tools | join(",")' <<<"$spec")"
 deny="$(jq -r '.denied_tools | join(",")' <<<"$spec")"
 
-# BREADCRUMB - why the pane gets RAIL_SURFACE before the agent starts (dotfiles CLAUDE.md Rule 19).
-# What broke: a Kimi seat asked for an owner-facing page cannot mint a claude.ai artifact URL, so it either
-#   invented one or produced nothing, and an invented URL reads as success in the transcript.
-# Why this fix: the declaration names the runtime, so the surface is derived here as data and exported into the
-#   pane's shell, which the agent inherits. report/rail.sh routes on it. Rejected: telling the seat in its brief
-#   which surface to use, which is prose a model can reinterpret; and --env on agent start, which herdr lacks.
-# Cost: one extra command sent to the pane before the start.
-runtime="$(jq -r '.runtime // "claude"' <<<"$spec")"
-case "$runtime" in claude) surface=artifact ;; *) surface=lavish ;; esac
-run herdr pane run "$pane" "export RAIL_SURFACE=$surface RAIL_SEAT=$name"
+# ---- the link: what runs, and which surface it reports on ----------------
+# A declaration carries either one runtime and model, or a chain (agent.models); the schema refuses both at once.
+# The single form is treated as a chain of one, so everything below and bin/seat-watch.sh reads one shape.
+nlinks="$(jq -r '(.models // []) | length' <<<"$spec")"
+if [ "$nlinks" -gt 0 ]; then
+  [ "$LINK" -lt "$nlinks" ] || wf_die "workflow '$WORKFLOW' declares $nlinks links; there is no link $LINK"
+  link_json="$(jq -c --argjson n "$LINK" '.models[$n]' <<<"$spec")"
+else
+  [ "$LINK" = 0 ] || wf_die "workflow '$WORKFLOW' declares no model chain; only link 0 exists"
+  nlinks=1
+  # BREADCRUMB - why the single form still derives its surface from the runtime.
+  # What broke: a Kimi seat asked for an owner-facing page cannot mint a claude.ai artifact URL, so it either
+  #   invented one or produced nothing, and an invented URL reads as success in the transcript (dotfiles Rule 19).
+  # Why this fix: a single-form declaration names only a runtime, so the runtime is the only fact there is; a chain
+  #   link names its surface outright, because there the runtime is not enough (kimi-claude is herdr kind claude).
+  #   Rejected: telling the seat in its brief which surface to use, which is prose a model can reinterpret.
+  # Cost: none beyond the case below.
+  runtime="$(jq -r '.runtime // "claude"' <<<"$spec")"
+  case "$runtime" in claude) surface=artifact ;; *) surface=lavish ;; esac
+  link_json="$(jq -nc --arg r "$runtime" --arg k "$(wf_cfg .workflow.herdr.agent_kind)" --arg m "$(claude_model "$(jq -r .model <<<"$spec")")" --arg s "$surface" \
+    '{id:$r, launcher:$k, herdr_kind:$k, model:$m, surface:$s}')"
+fi
+link_id="$(jq -r .id <<<"$link_json")"
+launcher="$(jq -r .launcher <<<"$link_json")"
+kind="$(jq -r .herdr_kind <<<"$link_json")"
+model="$(jq -r '.model // empty' <<<"$link_json")"
+surface="$(jq -r .surface <<<"$link_json")"
 
-run herdr agent start "$name" --kind "$kind" --pane "$pane" --timeout "$start_timeout" \
-  -- --model "$model" --allowed-tools "$allow" --disallowed-tools "$deny"
+# Each kind speaks its own argument dialect. Codex has no tool allow or deny flags, so for a codex link the denials
+# live only in the brief; the brief below restates them for every seat for that reason.
+args=()
+case "$kind" in
+  claude) [ -n "$model" ] && args+=(--model "$model"); args+=(--allowed-tools "$allow" --disallowed-tools "$deny") ;;
+  codex)  [ -n "$model" ] && args+=(-m "$model") ;;
+  *)      [ -n "$model" ] && args+=(--model "$model") ;;
+esac
+
+# The pane gets RAIL_SURFACE before the agent starts, and the agent inherits it. report/rail.sh routes on it.
+# Rejected: --env on agent start, which herdr lacks. Cost: one extra command sent to the pane before the start.
+run herdr pane run "$pane" "export RAIL_SURFACE=$surface RAIL_SEAT=$name"
+printf 'seat %s: link %s/%s %s via %s (herdr kind %s), RAIL_SURFACE=%s\n' "$name" "$LINK" "$nlinks" "$link_id" "$launcher" "$kind" "$surface"
+
+# BREADCRUMB - a launcher that is not the kind's own binary is run in the pane, then named.
+# What broke: `herdr agent start --kind claude` always runs `claude`. kimi-k3 is Claude Code launched through
+#   kimi-claude (a per-invocation --settings routing to the kimi proxy), so agent start would have started opus under
+#   the kimi link's name and billed the provider the chain exists to spare.
+# Why this fix: herdr detects any supported agent in any pane, so the launcher is run as a plain command, the pane is
+#   waited on until herdr sees the agent idle, and the detected agent is given the seat's name.
+#   Rejected: a kimi-claude shim named claude earlier on PATH, which reroutes every claude in that shell.
+# Cost: this path has no agent_not_ready gate of its own; the wait's timeout is that gate.
+if [ "$launcher" = "$kind" ]; then
+  run herdr agent start "$name" --kind "$kind" --pane "$pane" --timeout "$start_timeout" -- "${args[@]}"
+else
+  run herdr pane run "$pane" "$(printf '%q ' "$launcher" "${args[@]}")"
+  run herdr agent wait "$pane" --until idle --timeout "$start_timeout"
+  run herdr agent rename "$pane" "$name"
+fi
+
+# The seat-link file tells bin/seat-watch.sh what runs in this pane: which workflow, seat and ticket, which link of
+# how many, and where. Written only after a real start, so a watcher never reads a link that is not running.
+if [ "$DRY" = 1 ]; then
+  printf 'DRY: seat-link %s link=%s links=%s\n' "$pane" "$LINK" "$nlinks"
+else
+  jq -n --arg w "$WORKFLOW" --arg s "$name" --arg t "$TICKET" --argjson l "$LINK" --argjson n "$nlinks" \
+        --argjson link "$link_json" --arg wt "$worktree" --arg p "$pane" --arg at "$(wf_now)" \
+    '{workflow:$w, seat:$s, ticket:$t, link:$l, links:$n, link_id:$link.id, launcher:$link.launcher,
+      herdr_kind:$link.herdr_kind, model:($link.model // null), surface:$link.surface, worktree:$wt, pane:$p, started_at:$at}' \
+    > "$(wf_seat_dir "$pane")/seat-link"
+fi
 
 if [ -n "$BRIEF" ]; then
   [ -f "$BRIEF" ] || wf_die "brief file not found: $BRIEF"

@@ -8,7 +8,7 @@ ROOT  := $(abspath $(CURDIR)/../..)
 RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:Z" -w /work/claude/workflow -e HOME=/tmp $(IMAGE)
 
 .DEFAULT_GOAL := help
-.PHONY: help image test schema lint herdr-first compaction
+.PHONY: help image test schema lint herdr-first compaction chain
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-10s %s\n", $$1, $$2}'
@@ -28,5 +28,8 @@ herdr-first: image ## Fail if anything here backgrounds a process (Rule 18)
 compaction: image ## The compaction ceremony, watcher, switch and hook, against a stub herdr
 	@$(RUN) bash tests/unit/test_compaction.sh
 
-test: schema lint herdr-first compaction ## Everything
-	@echo "ok  workflow: schema, lint, herdr-first, compaction"
+chain: image ## The spawner starts the requested link of a model chain on that link's surface
+	@$(RUN) bash tests/unit/test_model_chain.sh
+
+test: schema lint herdr-first compaction chain ## Everything
+	@echo "ok  workflow: schema, lint, herdr-first, compaction, chain"

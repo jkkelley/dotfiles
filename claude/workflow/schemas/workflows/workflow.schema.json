@@ -75,8 +75,6 @@
       "description": "Everything needed to spawn the right agent. bin/workflow-spec.sh <id> prints exactly this object, and bin/workflow-spawn.sh consumes it. Per the repository's CLAUDE.md a seat is started through herdr and never through an in-process agent tool, and a seat that has finished its work exits.",
       "required": [
         "role",
-        "runtime",
-        "model",
         "effort",
         "context_threshold_percent",
         "allowed_tools",
@@ -108,6 +106,53 @@
             "opus",
             "fable"
           ]
+        },
+        "models": {
+          "type": "array",
+          "minItems": 1,
+          "description": "The model chain, in the order the owner ranks it. bin/workflow-spawn.sh starts link 0 and takes --link N; bin/seat-watch.sh hot swaps to the next link when a seat is rate limited, out of credit or stalled, and alerts once the chain is exhausted. BREADCRUMB: surface is a field of the link and never derived from herdr_kind. kimi-k3 runs through kimi-claude, which herdr detects as kind claude, yet it cannot mint a claude.ai artifact URL; deriving the surface from the kind handed it the artifact surface and a URL it would have to invent (owner law, O-08, 2026-09-22).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "launcher",
+              "herdr_kind",
+              "surface"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{1,31}$",
+                "description": "Stable name of the link, written into the seat-link file and the watcher log."
+              },
+              "launcher": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9._/-]+$",
+                "description": "Executable on PATH that starts the seat. When it is not herdr_kind's own executable the spawner runs it in the pane and names the agent herdr detects, because herdr agent start only runs a kind's canonical binary."
+              },
+              "herdr_kind": {
+                "enum": [
+                  "claude",
+                  "codex",
+                  "kimi"
+                ],
+                "description": "What herdr detects in the pane. Decides the argument dialect the launcher is given, nothing else."
+              },
+              "model": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9._-]+$",
+                "description": "Model id passed to the launcher. Optional: a launcher like kimi-claude pins its own model in its settings, and passing one would override the proxy's routing."
+              },
+              "surface": {
+                "enum": [
+                  "artifact",
+                  "lavish"
+                ],
+                "description": "Exported as RAIL_SURFACE (dotfiles Rule 19). artifact only for a runtime that can mint a claude.ai URL."
+              }
+            }
+          }
         },
         "effort": {
           "enum": [
@@ -159,7 +204,41 @@
           },
           "description": "Repo-relative write boundary, disjoint between seats that run at the same time. An empty array means the seat writes nothing."
         }
-      }
+      },
+      "oneOf": [
+        {
+          "description": "Single form: one runtime and one model, no fallback. Every declaration written before O-08 uses it.",
+          "required": [
+            "runtime",
+            "model"
+          ],
+          "not": {
+            "required": [
+              "models"
+            ]
+          }
+        },
+        {
+          "description": "Chain form: an ordered list of links. Carrying runtime or model beside it is refused, because two statements of what the seat runs are two answers the spawner would have to choose between.",
+          "required": [
+            "models"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "runtime"
+                ]
+              },
+              {
+                "required": [
+                  "model"
+                ]
+              }
+            ]
+          }
+        }
+      ]
     },
     "gates": {
       "type": "array",
