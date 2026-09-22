@@ -61,7 +61,7 @@ Without an injectable clock, "same input produces the same output" cannot be ass
 
 **Runs:** a dry run then an apply against an empty directory.
 
-**Asserts:** the dry run writes nothing; apply creates the three markdown files, the `issues/` and `backlog/{now,next,later,done}/` directory trees with their `.gitkeep` files, `.claude/settings.json`, `.claude/skills.toml` and the vendored scripts; it creates **no** `.claude/scaffold.json` and **no** `ISSUES.md` or `BACKLOG.md` monolith; `CLAUDE.md` carries the `CONTEXT_STATE.md` pointer.
+**Asserts:** the dry run writes nothing; apply creates the four markdown files, the `issues/` and `backlog/{now,next,later,done}/` directory trees with their `.gitkeep` files, `.claude/settings.json`, `.claude/skills.toml` and the vendored scripts; it creates **no** `.claude/scaffold.json` and **no** `ISSUES.md` or `BACKLOG.md` monolith; `AGENTS.md` carries the `CONTEXT_STATE.md` pointer.
 
 The negative assertions are the ones that earn their keep. `scaffold.json` was removed rather than emptied, and a file nobody writes is not something a test notices - it just stops appearing, and reappears the moment someone restores the block that wrote it.
 The monolith assertions are the same shape: the trees replaced the files (dotfiles #95), and a re-added template would silently put every project back on the storage model that conflicts on every merge.
@@ -272,7 +272,7 @@ Every fault here is a state a human edit or a crashed tool can actually produce,
 
 ## 140-skills-block
 
-**Runs:** a scaffold, then inspects `CLAUDE.md` for the skills section and the marker pair the sync writes between.
+**Runs:** a scaffold, then inspects `AGENTS.md` for the skills section and the `CLAUDE.md` stub for the marker pair the sync writes between.
 
 **Asserts:** the section is present; the agent is told it runs nothing; editing a managed skill in place is refused; `.claude/skills.toml` is named as the file to edit instead; both markers are present byte for byte; the block between them is empty; no hand-maintained version table survives; and the agent is not asked to fetch `registry.json` itself.
 
@@ -294,7 +294,7 @@ Until it lands, "the block is empty" is the whole contract, which is why it is a
 
 ## 150-documentation-lifetime
 
-**Runs:** a scaffold, then inspects `CLAUDE.md` for the rule that decides where a document goes.
+**Runs:** a scaffold, then inspects `AGENTS.md` for the rule that decides where a document goes.
 
 **Asserts:** the section is present; the lifetime question is what decides; every document has exactly one destination; the `local-k8s-docs` URL is carried literally, owner and all; it has not been rewritten into an angle-bracket placeholder; `docs.sh sop` is named for the in-repo half; runbooks and playbooks are covered by the same rule; a missing grant is something to ask for rather than route around; a new document follows the format of the ones beside it; working a process out obliges you to write it down; a documented process beats a locally invented one; and the unarbitrated one-repository heading is gone.
 
@@ -337,7 +337,7 @@ The section-header assertions guard a silent failure specific to this format.
 
 ## 170-treehouse-policy
 
-**Runs:** a scaffold, then inspects `CLAUDE.md` for the section naming where a workspace comes from.
+**Runs:** a scaffold, then inspects `AGENTS.md` for the section naming where a workspace comes from.
 
 **Asserts:** the section is present; the pool is named as the single source; the path is the user-level `~/.treehouse/<repo>-<hash>/` from decision 19; a hand-rolled `git worktree add` is refused; a second in-project pool is refused; `treehouse status` is named as the live map; and no treehouse flag is reproduced in the template.
 
@@ -356,11 +356,29 @@ treehouse went v1.8.0 to v2.3.0 in a morning, so an interface copied into a temp
 
 ---
 
+## 200-agents-md
+
+**Runs:** a scaffold, then inspects `AGENTS.md` and `CLAUDE.md`; then a scaffold over an `AGENTS.md` missing one law, and one over a hand-written `CLAUDE.md`.
+
+**Asserts:** both files are rendered; `CLAUDE.md` points at `AGENTS.md`, has no `## ` section, states no rule and is 20 lines or fewer; every law heading is present in `AGENTS.md`, one assertion per law; the surface law states the unset default and the compaction law forbids self-compaction; each cited Drive document is named and no Drive URL appears; no `__PLACEHOLDER__` token survives in any rendered file; an `AGENTS.md` missing a law gains it exactly once and keeps its own content; a hand-written `CLAUDE.md` is left byte-identical.
+
+**Why it matters:** the laws used to live in `CLAUDE.md`, which only a Claude runtime reads.
+A Kimi or Codex seat in the same project read `AGENTS.md`, found nothing, and ran without herdr-first, the surface rule or the compaction rule, and all three fail silently.
+Each law is asserted by its own heading because a count stays green when one law is swapped for another.
+
+The stub assertions are the other half.
+A `CLAUDE.md` that restates a rule is a second copy, and two copies drift until an agent follows the stale one.
+The stub keeps the `skill-sync` marker pair because `claude/tools/skill-sync.sh` fills it in `CLAUDE.md`, which is why the stub is capped by line count rather than asserted empty.
+
+The Drive assertions exist because this repository is public: documents are cited by name and version, never by id or URL.
+
+---
+
 ## cases-git/010-skills-gitignored
 
 **Runs:** a scaffold, `git init`, a managed skill and a hand-authored one written under `.claude/skills/`, then `git check-ignore` on each path and a `git add -A` to see what actually reaches the index.
 
-**Asserts:** every path under `.claude/skills/` is ignored, hand-authored included; `.claude/skills.toml`, `.claude/settings.json`, `.claude/scripts/log-issue.sh` and `CLAUDE.md` are **not** ignored; after `git add -A` nothing under `.claude/skills/` is staged and the manifest is.
+**Asserts:** every path under `.claude/skills/` is ignored, hand-authored included; `.claude/skills.toml`, `.claude/settings.json`, `.claude/scripts/log-issue.sh`, `CLAUDE.md` and `AGENTS.md` are **not** ignored; after `git add -A` nothing under `.claude/skills/` is staged and the manifest is.
 
 **Why it matters:** this is the acceptance criterion of the change, asserted in the sentence it was written in.
 A committed skill copy is worse than no copy: it never updates again, `registry.json` moves on without it, and the divergence is invisible because a project's copy is _expected_ to differ from upstream, so the content hash cannot catch it either.

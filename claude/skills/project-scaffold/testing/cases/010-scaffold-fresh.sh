@@ -10,7 +10,7 @@ assert_no_file "$p/CLAUDE.md" "dry run wrote nothing"
 assert_no_file "$p/issues/.gitkeep" "dry run created no directories"
 
 run 0 "apply exits 0" scaffold --project "$p" --apply --yes
-for f in CLAUDE.md COMPASS.md NAMING.md; do
+for f in AGENTS.md CLAUDE.md COMPASS.md NAMING.md; do
   assert_file "$p/$f" "created $f"
 done
 # The monoliths are gone: issues and backlog items are one file per entry, so
@@ -26,6 +26,7 @@ assert_file "$p/.claude/scripts/log-issue.sh" "vendored log-issue.sh"
 assert_file "$p/.claude/scripts/lib/common.sh" "vendored lib/common.sh"
 assert_file "$p/.claude/skills.toml" "created skills.toml"
 assert_no_file "$p/.claude/scaffold.json" "no scaffold.json - the receipt supersedes it"
-assert_contains "$p/CLAUDE.md" "CONTEXT_STATE.md" "CLAUDE.md carries the session-state pointer"
+# The pointer lives in AGENTS.md now; CLAUDE.md is a stub that points there.
+assert_contains "$p/AGENTS.md" "CONTEXT_STATE.md" "AGENTS.md carries the session-state pointer"
 
 finish

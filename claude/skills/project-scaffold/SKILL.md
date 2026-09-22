@@ -1,6 +1,6 @@
 ---
 name: project-scaffold
-description: Install and maintain the agent context layer in any project - CLAUDE.md, COMPASS.md, issues/ and backlog/ entry trees, NAMING.md, plus the scripts that own their formats. Use when starting a new project or directory, when asked to "scaffold this project", "set up the context files", "add COMPASS/BACKLOG/ISSUES", when an agent needs to log an issue or manage a backlog item, or when a project's markdown has drifted from the standard. Not for cloning an existing repo as a template - that is repo-scaffold.
+description: Install and maintain the agent context layer in any project - AGENTS.md with a CLAUDE.md pointer, COMPASS.md, issues/ and backlog/ entry trees, NAMING.md, plus the scripts that own their formats. Use when starting a new project or directory, when asked to "scaffold this project", "set up the context files", "add COMPASS/BACKLOG/ISSUES", when an agent needs to log an issue or manage a backlog item, or when a project's markdown has drifted from the standard. Not for cloning an existing repo as a template - that is repo-scaffold.
 version: 1.5.2
 ---
 
@@ -24,7 +24,8 @@ Not this skill: cloning an existing repo and renaming it. That is `repo-scaffold
 
 ```
 <project>/
-├── CLAUDE.md            how an agent behaves here - ships verbatim, then hand-edited
+├── AGENTS.md            how an agent behaves here, any runtime - ships verbatim, then hand-edited
+├── CLAUDE.md            a stub pointing at AGENTS.md, plus the skill-sync marker pair
 ├── COMPASS.md           the map: pointers only, capped at 100 lines
 ├── issues/              one entry file per issue              (log-issue.sh)
 │   └── YYYY/MM/<UTC-timestamp>-<suffix>.md
@@ -58,11 +59,11 @@ and a hand-maintained version table would be wrong within a week.
 that keeps the copies out of git; `skill-sync` installs the directories at session start and owns
 them. Nothing in this skill ever writes a skill directory or removes one.
 
-`CONTEXT_STATE.md` is **not** written here. This skill writes the pointer to it in `CLAUDE.md`; the
+`CONTEXT_STATE.md` is **not** written here. This skill writes the pointer to it in `AGENTS.md`; the
 `context-compaction` skill owns the file itself.
 
 `HYDRATION.md` is **not** written here either, for the same reason and by the same arrangement.
-This skill writes the pointer to it in `CLAUDE.md`; `hydration-prompt`'s own `hydration.sh init`
+This skill writes the pointer to it in `AGENTS.md`; `hydration-prompt`'s own `hydration.sh init`
 creates the file, and that script owns its contents, its ordering and its 10-entry window.
 Nothing in this skill ever writes an entry or reconciles a section of it.
 
@@ -161,7 +162,7 @@ Branch on the exit code, never on the message text.
 
 ## Reading a scaffolded project
 
-Stated in the installed `CLAUDE.md`, and worth repeating here:
+Stated in the installed `AGENTS.md`, and worth repeating here:
 
 1. `COMPASS.md` first - it routes, it does not explain.
 2. `issues/` - **the newest 10 entries, then stop.** The window is a directory walk: filenames and

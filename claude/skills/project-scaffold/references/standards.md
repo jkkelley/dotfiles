@@ -17,7 +17,7 @@ Discipline does not survive contact with a hundred sessions; a script does.
 
 Two trees are script-owned outright: `issues/` and `backlog/`.
 `COMPASS.md` and `NAMING.md` are hand-written inside a structure the scaffolder installs.
-`CLAUDE.md` ships verbatim and is then yours.
+`AGENTS.md` ships verbatim and is then yours; `CLAUDE.md` is a stub pointing at it.
 
 ---
 
@@ -231,17 +231,19 @@ A convention stated abstractly gets interpreted; a convention with a counter-exa
 
 ---
 
-## CLAUDE.md
+## AGENTS.md and CLAUDE.md
 
-Ships verbatim.
-It is a starting template, not a generated file - edit it per project after scaffolding.
+`AGENTS.md` is the agent orientation file, and it is written for every runtime, not only Claude.
+It ships verbatim and is then yours to extend.
+Each law it states is a `## Law: ...` section, and a law backed by a Drive document cites that document by name and version only - never an id or a URL, because this repository is public.
 
-Two sections are appended by this skill because the tooling depends on them:
+`CLAUDE.md` is a stub that says "read `AGENTS.md`" and states no rule of its own.
+It keeps the `skill-sync` marker pair, because `claude/tools/skill-sync.sh` fills the installed skills list there.
+A second copy of any rule in `CLAUDE.md` is how the two files drift, so nothing else belongs in it.
 
-- **Session State** - the pointer to `CONTEXT_STATE.md` that the `context-compaction` skill needs in order to be found at all.
-- **Logging an issue** - the instruction never to hand-edit `issues/` or `backlog/` entry files, and the exit-code contract.
-
-`scaffold.sh` treats `CLAUDE.md` as heading-delimited rather than marker-delimited, so no scaffolding comments are injected into text a human wrote.
+`scaffold.sh` treats both as heading-delimited rather than marker-delimited, so no scaffolding comments are injected into text a human wrote.
+An existing `AGENTS.md` gains any law it is missing as an appended section.
+The stub has no sections, so an existing `CLAUDE.md` is never touched.
 
 ---
 

@@ -19,7 +19,19 @@ SKILL_DIR=$(cd -- "$SCRIPT_DIR/.." && pwd)
 source "$SCRIPT_DIR/lib/common.sh"
 
 readonly TEMPLATE_DIR="$SKILL_DIR/references/templates"
-readonly CONTEXT_FILES=(CLAUDE.md COMPASS.md NAMING.md)
+# AGENTS.md is the orientation file and CLAUDE.md is a stub that points at it.
+# What broke: references/templates/CLAUDE.md.tmpl carried every rule, so only a
+# Claude runtime ever read them - a Kimi or Codex seat in the same project read
+# AGENTS.md, found none, and ran without the herdr-first, surface and compaction
+# laws. Why this fix: one file every runtime reads, rendered by the same verbatim
+# heading-delimited path as the other context files, so an existing AGENTS.md
+# gains a missing law as an appended section rather than being overwritten.
+# Rejected: rendering the laws into both files, which is two copies that drift.
+# Cost: CLAUDE.md keeps the skills marker pair, because claude/tools/skill-sync.sh
+# (PROJECT_DOC) fills it there and moving it is outside this skill. The stub has
+# no `## ` headings, so an existing hand-written CLAUDE.md is always skipped,
+# never rewritten. Record: S-02, feat/scaffold-multiagent.
+readonly CONTEXT_FILES=(AGENTS.md CLAUDE.md COMPASS.md NAMING.md)
 # issues/ and backlog/ are directories of one-file-per-entry, not files: two
 # concurrent agents must never need to touch the same path (dotfiles #95).
 # Each leaf gets a .gitkeep so a fresh, empty tree survives git.
@@ -59,7 +71,7 @@ Options:
   --help
 
 What it installs:
-  CLAUDE.md COMPASS.md NAMING.md
+  AGENTS.md CLAUDE.md COMPASS.md NAMING.md
   issues/YYYY/MM/     one entry file per issue        (log-issue.sh)
   backlog/{now,next,later,done}/   one entry file per item (backlog.sh)
   .gitignore and .dockerignore
@@ -95,8 +107,8 @@ project=$(ps_resolve_project "${PS_PROJECT:-.}")
 # Section extraction.
 #
 # A template either carries explicit `<!-- scaffold:section=NAME -->` markers,
-# or it does not - in which case its `## ` headings are the sections. CLAUDE.md
-# is deliberately in the second group: it ships verbatim, with no markers added
+# or it does not - in which case its `## ` headings are the sections. AGENTS.md
+# and CLAUDE.md are deliberately in the second group: they ship verbatim, with no markers added
 # to text the user wrote.
 # ---------------------------------------------------------------------------
 
@@ -295,7 +307,8 @@ project-scaffold - installing the agent context layer into:
   $project
 
 Always installed (the context layer):
-  CLAUDE.md     how an agent should behave here
+  AGENTS.md     how an agent should behave here, whatever its runtime
+  CLAUDE.md     a stub that points at AGENTS.md
   COMPASS.md    the map - pointers to everything else, capped at 100 lines
   issues/       one file per issue, month-sharded, managed by log-issue.sh
   backlog/      one file per item in now/next/later/done, managed by backlog.sh
@@ -362,7 +375,7 @@ apply_plan() {
   for i in "${!PLAN_FILES[@]}"; do
     local f="${PLAN_FILES[i]}" a="${PLAN_ACTIONS[i]}"
     case $f in
-      CLAUDE.md | COMPASS.md | NAMING.md)
+      AGENTS.md | CLAUDE.md | COMPASS.md | NAMING.md)
         apply_context_file "$f" "$a" ;;
       */)
         # Entry directories: mkdir -p plus a .gitkeep, so an empty tree

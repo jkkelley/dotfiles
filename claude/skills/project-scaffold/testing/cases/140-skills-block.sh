@@ -15,26 +15,30 @@
 # the project's CLAUDE.md simply never says what it holds. Asserting both
 # markers, and asserting that scaffold.sh put no table between them, is what
 # keeps that ownership where the design put it.
+#
+# The prose lives in AGENTS.md, which every runtime reads. The marker pair stays
+# in the CLAUDE.md stub, because claude/tools/skill-sync.sh fills it there
+# (PROJECT_DOC) - so the split below is the contract, not an accident.
 CASE_NAME=140-skills-block
 source "${SKILL:-/skill}/testing/assert.sh"
 
 p=$(scaffolded_project)
 
-assert_contains "$p/CLAUDE.md" "## Skills" \
-  "CLAUDE.md carries the skills section"
+assert_contains "$p/AGENTS.md" "## Skills" \
+  "AGENTS.md carries the skills section"
 
 # Nothing to run. The whole point of the replacement is that the agent stops
 # performing a check, so the template has to say so rather than say nothing.
-assert_contains "$p/CLAUDE.md" "You do not run anything" \
+assert_contains "$p/AGENTS.md" "You do not run anything" \
   "the agent is told it runs nothing"
 
 # The one edit that is never safe. A managed skill is gitignored, so a local fix
 # looks like it worked, survives review because it is not in any diff, and is
 # gone at the next session start with no conflict and no warning.
-assert_contains "$p/CLAUDE.md" "Never edit a managed skill in place" \
+assert_contains "$p/AGENTS.md" "Never edit a managed skill in place" \
   "editing a managed copy in place is refused"
 
-assert_contains "$p/CLAUDE.md" ".claude/skills.toml" \
+assert_contains "$p/AGENTS.md" ".claude/skills.toml" \
   "the manifest is named as the file to edit"
 
 # Both markers, byte for byte, because skill-sync matches on them. A reworded
@@ -59,8 +63,10 @@ assert_not_contains "$p/CLAUDE.md" "| skill            | installed | latest | bu
 
 # The check this replaced fetched the registry from the agent's own hands. If
 # that URL is back in the template, the old flow is back with it.
-assert_not_contains "$p/CLAUDE.md" \
-  "https://raw.githubusercontent.com/jkkelley/dotfiles/main/claude/skills/registry.json" \
-  "the agent is not asked to fetch the registry itself"
+for doc in CLAUDE.md AGENTS.md; do
+  assert_not_contains "$p/$doc" \
+    "https://raw.githubusercontent.com/jkkelley/dotfiles/main/claude/skills/registry.json" \
+    "$doc does not ask the agent to fetch the registry itself"
+done
 
 finish
