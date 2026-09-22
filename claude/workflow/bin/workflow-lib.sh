@@ -128,3 +128,52 @@ wf_watch_status() {
   else printf '%s off\n' "$name"; fi
   tail -n 3 "$WF_WATCH_LOG" 2>/dev/null || true
 }
+
+# ---------------------------------------------------------------------------
+# Seat helpers, shared by the compaction set (context-pct, compact-now, compact-watch, after-compact).
+#
+# A seat is addressed by its herdr pane. Its transcript is found from the session id herdr reports for
+# that pane, never from "the newest file in a project directory": two seats working in one repository
+# share that directory, and newest-file picks whichever seat wrote last - the bearings-v2 scripts
+# hardcode one project path for exactly that reason and cannot be reused anywhere else.
+
+# wf_pane_session <pane>: the agent session id herdr holds for the pane, or nothing.
+wf_pane_session() {
+  herdr agent get "$1" 2>/dev/null | jq -r '.result.agent.agent_session.value // empty' 2>/dev/null
+}
+
+# wf_transcript <pane-or-file>: a readable .jsonl path is returned as given (tests and hand runs);
+# otherwise the pane's session id is resolved to its transcript under ~/.claude/projects.
+wf_transcript() {
+  local t="$1" sid f
+  if [ -f "$t" ]; then printf '%s' "$t"; return 0; fi
+  sid="$(wf_pane_session "$t")"; [ -n "$sid" ] || return 1
+  for f in "${WF_PROJECTS_DIR:-$HOME/.claude/projects}"/*/"$sid".jsonl; do
+    [ -f "$f" ] && { printf '%s' "$f"; return 0; }
+  done
+  return 1
+}
+
+# wf_context_pct <transcript>: percent of the window the session occupies right now.
+# Live context is input plus both cache counts of the newest assistant usage object: cached prefix
+# tokens still occupy the window, output tokens do not until the next turn reads them back.
+# Lifted from bearings-v2 bin/context-pct.sh. Rejected there and here: transcript byte counts, which
+# double count dropped tool results.
+wf_context_pct() {
+  local f="$1" win="${CONTEXT_WINDOW:-1000000}" used
+  [ -f "$f" ] || { printf 0; return 0; }
+  used="$(tail -n 400 "$f" | jq -s '[.[] | select(.message.usage?) | .message.usage
+      | (.input_tokens // 0) + (.cache_read_input_tokens // 0) + (.cache_creation_input_tokens // 0)] | last // 0' 2>/dev/null)"
+  printf '%s' $(( ${used:-0} * 100 / win ))
+}
+
+# wf_idle_seconds <transcript>: seconds since the seat last wrote. The idle gate for any send.
+# Rejected: `herdr agent wait --until idle`, which reads idle for every unfocused pane (bearings-v2
+# compact-now.sh breadcrumb, 2026-09-21T04:40Z), so a send lands mid-turn and arrives as prose.
+wf_idle_seconds() { printf '%s' $(( $(date -u +%s) - $(stat -c %Y "$1") )); }
+
+# wf_boundaries <transcript>: how many compactions the session has run. The only proof one happened.
+wf_boundaries() { grep -c '"subtype":"compact_boundary"' "$1" 2>/dev/null || true; }
+
+# wf_seat_dir <pane>: per-seat state. One directory per seat means two seats never share a file.
+wf_seat_dir() { local d; d="$(wf_state_dir)/seats/${1//[^A-Za-z0-9_-]/_}"; mkdir -p "$d"; printf '%s' "$d"; }

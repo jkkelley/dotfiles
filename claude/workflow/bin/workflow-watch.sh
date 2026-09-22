@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# workflow-watch.sh <workflow-id> on|off|status - watch one workflow's gates, non-disruptively.
+# workflow-watch.sh <workflow-id> on|off|status|run - watch one workflow's gates, non-disruptively.
 #
 # House MONITORING-AND-ALERTING v1.0.0, implemented once and generically:
 #   - log only. Nothing is printed to the owner and nothing is sent to any pane.
@@ -32,7 +32,7 @@ set -uo pipefail
 wf_need jq
 
 WORKFLOW="${1:-}"; ACTION="${2:-status}"
-[ -n "$WORKFLOW" ] || wf_die "usage: workflow-watch.sh <workflow-id> on|off|status"
+[ -n "$WORKFLOW" ] || wf_die "usage: workflow-watch.sh <workflow-id> on|off|status|run"
 file="$(wf_workflow_file "$WORKFLOW")"
 
 X="$(wf_state_dir)"; mkdir -p "$X"
@@ -72,64 +72,46 @@ tick() {
   printf '%s|%s' "${state# }" "${alert# }"
 }
 
+# BREADCRUMB - `on` no longer backgrounds anything; `run` is the loop, in the foreground of a herdr pane.
+# What broke: the kimi-proxy original started this loop with `( ... ) >/dev/null 2>&1 & disown`.
+# Why it mattered: dotfiles CLAUDE.md Rule 18 - a backgrounded watcher is invisible to the owner, and a dead one
+#   looks exactly like a quiet one.
+# Why this fix: bin/watch-ctl.sh owns placement for every watcher, so `on` and `off` delegate to it and this script
+#   keeps only the loop. Rejected: keeping a background path behind a flag, which is the fallback Rule 18 forbids.
+# Cost: watchers need herdr. `run` refuses outside it.
 case "$ACTION" in
-  on)
+  on)  exec "$(dirname "$(readlink -f "$0")")/watch-ctl.sh" on workflow "$WORKFLOW" ;;
+  run)
+    [ "${HERDR_ENV:-}" = 1 ] || wf_die "refusing to run outside a herdr pane (dotfiles Rule 18); use bin/watch-ctl.sh on workflow $WORKFLOW"
     if [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF" 2>/dev/null || echo 0)" 2>/dev/null; then
       printf '%s already on, pid %s\n' "$NAME" "$(cat "$PIDF")"; exit 0
     fi
     WF_WATCH_STARTED="$(wf_now)"; export WF_WATCH_STARTED
-    (
-      # BREADCRUMB - $BASHPID, never $$, inside this subshell.
-      # What broke: the first version wrote `echo $$ > "$PIDF"`. In bash, $$ is the pid of the
-      #   ORIGINAL shell and does not change inside a ( ) subshell, so the pid file held the pid of
-      #   the parent, which exits the moment `on` returns.
-      # Why it mattered: `status` did `kill -0 <that pid>` against a dead process and answered
-      #   "off" while the watcher was running happily one second earlier, and `off` then signalled
-      #   a pid that no longer existed and left the real loop running forever. Caught by running
-      #   `on` and then `status`, not by reading the script.
-      # Why this fix: $BASHPID is the pid of the currently executing bash process and is correct in
-      #   a subshell. Rejected: backgrounding a separate script file so $$ would be right, which
-      #   splits one watcher across two files to work around a variable.
-      # Cost: bash only, not POSIX sh. Every script here is already #!/usr/bin/env bash.
-      echo "$BASHPID" > "$PIDF"
-      threshold="$(jq -r '.agent.context_threshold_percent' "$file")"
-      wf_watch_state "$NAME" on "$BASHPID" "$(jq -n --arg w "$WORKFLOW" --argjson t "$threshold" \
-        '{watches_workflow:$w, context_threshold_percent:$t}')"
-      wf_watch_log "watch: started on workflow $WORKFLOW"
-      while :; do
-        out="$(tick)"; gates="${out%%|*}"; alert="${out#*|}"
-        if [ -n "$alert" ]; then
-          wf_watch_change gates "ALERT decision is the owner's: $alert failing ($gates)"
-        else
-          wf_watch_change gates "gate: $gates"
-        fi
-        # The run has ended when nothing is red. A watcher that keeps ticking over a finished run is
-        # a watcher nobody turns off, and an unattended loop is how a stale log starts looking live.
-        case "$gates" in
-          *=fail*) ;;
-          *) wf_watch_log "watch: all gates passing, stopping"
-             wf_watch_state "$NAME" ended 0 "$(jq -n --arg s "$(wf_now)" '{stopped_at:$s}')"
-             rm -f "$PIDF"; exit 0 ;;
-        esac
-        sleep "$WF_WATCH_INTERVAL"
-      done
-    ) >/dev/null 2>&1 &
-    disown
-    sleep 1
-    printf '%s on, pid %s, log %s\n' "$NAME" "$(cat "$PIDF" 2>/dev/null || echo unknown)" "$WF_WATCH_LOG"
+    echo "$$" > "$PIDF"
+    trap 'rm -f "$PIDF"' EXIT
+    threshold="$(jq -r '.agent.context_threshold_percent' "$file")"
+    wf_watch_state "$NAME" on "$$" "$(jq -n --arg w "$WORKFLOW" --argjson t "$threshold" \
+      '{watches_workflow:$w, context_threshold_percent:$t}')"
+    wf_watch_log "watch: started on workflow $WORKFLOW"
+    while :; do
+      out="$(tick)"; gates="${out%%|*}"; alert="${out#*|}"
+      if [ -n "$alert" ]; then
+        wf_watch_change gates "ALERT decision is the owner's: $alert failing ($gates)"
+      else
+        wf_watch_change gates "gate: $gates"
+      fi
+      # The run has ended when nothing is red. A watcher that keeps ticking over a finished run is
+      # a watcher nobody turns off, and an unattended loop is how a stale log starts looking live.
+      case "$gates" in
+        *=fail*) ;;
+        *) wf_watch_log "watch: all gates passing, stopping"
+           wf_watch_state "$NAME" ended 0 "$(jq -n --arg s "$(wf_now)" '{stopped_at:$s}')"
+           exit 0 ;;
+      esac
+      sleep "$WF_WATCH_INTERVAL"
+    done
     ;;
-  off)
-    # Turning the watcher off must never disturb what it was watching: it signals only its own pid.
-    p="$(cat "$PIDF" 2>/dev/null || true)"
-    if [ -n "$p" ] && kill "$p" 2>/dev/null; then
-      wf_watch_log "watch: stopped by request"
-      wf_watch_state "$NAME" off 0 "$(jq -n --arg s "$(wf_now)" '{stopped_at:$s}')"
-      printf '%s off\n' "$NAME"
-    else
-      printf '%s was not running\n' "$NAME"
-    fi
-    rm -f "$PIDF"
-    ;;
+  off) exec "$(dirname "$(readlink -f "$0")")/watch-ctl.sh" off workflow "$WORKFLOW" ;;
   status) wf_watch_status "$NAME" "$PIDF" ;;
-  *) wf_die "usage: workflow-watch.sh <workflow-id> on|off|status" ;;
+  *) wf_die "usage: workflow-watch.sh <workflow-id> on|off|status|run" ;;
 esac

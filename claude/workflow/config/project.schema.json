@@ -49,7 +49,8 @@
         "skills_dir",
         "herdr",
         "watchers",
-        "seats"
+        "seats",
+        "compaction"
       ],
       "properties": {
         "skills_dir": {
@@ -98,6 +99,38 @@
                 "type": "string",
                 "minLength": 1
               }
+            }
+          }
+        },
+        "compaction": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ceiling_percent",
+            "cooldown_seconds",
+            "tick_seconds",
+            "auto_arm"
+          ],
+          "description": "How bin/compact-watch.sh behaves. The threshold itself is not here: it lives in schemas/workflows/compaction.workflow.json agent.context_threshold_percent, the one place every watcher reads it from.",
+          "properties": {
+            "ceiling_percent": {
+              "type": "integer",
+              "minimum": 50,
+              "maximum": 95
+            },
+            "cooldown_seconds": {
+              "type": "integer",
+              "minimum": 60,
+              "maximum": 7200
+            },
+            "tick_seconds": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 600
+            },
+            "auto_arm": {
+              "type": "boolean",
+              "description": "true: bin/workflow-spawn.sh arms a compaction watcher on every seat it starts, and refuses to report the seat started if the watcher does not come up. This is the enforcement: a seat without a watcher is a seat that can run out of context unseen."
             }
           }
         }

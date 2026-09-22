@@ -146,7 +146,20 @@ fi
 # finished agent left alive holds a pane, a name and a worktree that the next workflow needs.
 paths="$(jq -r '.allowed_paths | join(", ")' <<<"$spec")"
 denied_cmds="$(jq -r '.denied_commands | join(", ")' <<<"$spec")"
-line="${brief} Write only within: ${paths:-nothing}. Never run: ${denied_cmds}. Never start an agent with an in-process Agent or Task tool; seats are started through herdr only. At ${threshold} percent context or above, run the compaction ceremony in runbooks/RB-compaction.md before your next step, never mid-step. When your work is done, report it and exit; do not idle."
+line="${brief} Write only within: ${paths:-nothing}. Never run: ${denied_cmds}. Never start an agent with an in-process Agent or Task tool; seats are started through herdr only. At ${threshold} percent context or above, follow ${WF_REPO}/runbooks/RB-compaction.md: finish your step, write your checkpoint, touch your compact-request, end your turn. Never send /compact yourself. When your work is done, report it and exit; do not idle."
 
 run herdr agent prompt "$name" "$line" --wait --timeout "$prompt_timeout"
+
+# BREADCRUMB - every seat this spawner starts gets a compaction watcher, or the start is reported as failed.
+# What broke: the brief told each seat to compact at its threshold, and nothing checked. A seat mid-task does not watch
+#   its own context, and the runbook the brief pointed at did not exist in this repository until 2026-09-22.
+# Why it mattered: a seat that runs out of context mid-step fails in a way that reads like a tooling fault, and the
+#   owner cannot see it coming because nothing was watching.
+# Why this fix: arming is automatic and its failure is loud. workflow.compaction.auto_arm in config/project.json is the
+#   one switch. Rejected: a reminder in the brief, which is what already failed.
+# Cost: a seat cannot be started while herdr cannot host its watcher.
+if [ "$(wf_cfg '.workflow.compaction.auto_arm // false')" = true ]; then
+  run "$(dirname "$(readlink -f "$0")")/watch-ctl.sh" on compact "$pane" \
+    || wf_die "seat $name started in $pane but its compaction watcher did not come up; fix that before trusting the seat"
+fi
 printf 'seat %s started for workflow %s in %s (%s)\n' "$name" "$WORKFLOW" "$pane" "$worktree"

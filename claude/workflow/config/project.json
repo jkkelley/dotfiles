@@ -34,6 +34,12 @@
         "worktree": "~/dotfiles",
         "branch": "feat/scaffold-multiagent"
       }
-    ]
+    ],
+    "compaction": {
+      "ceiling_percent": 85,
+      "cooldown_seconds": 900,
+      "tick_seconds": 30,
+      "auto_arm": true
+    }
   }
 }
