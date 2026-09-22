@@ -33,6 +33,13 @@
         "tab_label": "agent-review",
         "worktree": "~/dotfiles-wt/scaffold",
         "branch": "feat/scaffold-multiagent"
+      },
+      {
+        "name": "orch-builder",
+        "role": "builder",
+        "tab_label": "agent-orch",
+        "worktree": "~/dotfiles-wt/orch",
+        "branch": "feat/orchestration-failover"
       }
     ],
     "compaction": {
