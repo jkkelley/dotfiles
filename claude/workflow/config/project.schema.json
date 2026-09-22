@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project.schema.json",
+  "title": "Project configuration",
+  "description": "Shape of claude/workflow/config/project.json in dotfiles. Cut from the wsl-kimi-k3-proxy schema on 2026-09-22 down to the two sections this repository uses; the proxy, secrets, models, client, test and env sections describe that project's proxy and have no meaning here. Rejected: keeping them optional, which lets a config drift into carrying another project's facts with no validator objecting.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project",
+    "workflow"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "description",
+        "state_dir",
+        "gate_command"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gate_command": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "skills_dir",
+        "herdr",
+        "watchers",
+        "seats"
+      ],
+      "properties": {
+        "skills_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "herdr": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "watchers": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "seats": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "role",
+              "tab_label",
+              "worktree",
+              "branch"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+              },
+              "role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "tab_label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "worktree": {
+                "type": "string",
+                "minLength": 1
+              },
+              "branch": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "$comment": {
+      "type": "string"
+    }
+  }
+}

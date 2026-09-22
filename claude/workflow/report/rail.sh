@@ -29,7 +29,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Rejected: copying rail/ beside this file to match a scaffolded project byte for byte.
 # Cost: this one line differs from rail.sh.tmpl. The template is still the source; re-render and re-apply
 #   this line if the template changes.
-RAIL="$HERE/../../skills/project-scaffold/templates/rail"
+RAIL="$HERE/../../skills/project-scaffold/references/templates/rail"
 
 # ---- this project, and nothing about any other -----------------------------
 PROJECT="dotfiles"

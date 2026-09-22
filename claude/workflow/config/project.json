@@ -1,0 +1,39 @@
+{
+  "$comment": "Single source of non-secret configuration for the workflow machinery in claude/workflow/. Read only by bin/workflow-lib.sh (wf_cfg). Mirrors the wsl-kimi-k3-proxy layout so the ported scripts run byte-identical.",
+  "schema_version": "1.0.0",
+  "project": {
+    "name": "dotfiles",
+    "description": "Agents, skills and workflow machinery shared across projects",
+    "state_dir": "~/.local/state/dotfiles/execution",
+    "gate_command": "bash claude/skills/project-scaffold/testing/run-tests.sh"
+  },
+  "workflow": {
+    "skills_dir": "~/.claude/skills",
+    "herdr": {
+      "workspace_label": "dotfiles",
+      "agent_kind": "claude",
+      "start_timeout_ms": 60000,
+      "prompt_timeout_ms": 120000
+    },
+    "watchers": {
+      "interval_seconds": 60,
+      "idle_seconds": 45
+    },
+    "seats": [
+      {
+        "name": "builder",
+        "role": "builder",
+        "tab_label": "agent-build",
+        "worktree": "~/dotfiles",
+        "branch": "feat/scaffold-multiagent"
+      },
+      {
+        "name": "reviewer",
+        "role": "verifier",
+        "tab_label": "agent-review",
+        "worktree": "~/dotfiles",
+        "branch": "feat/scaffold-multiagent"
+      }
+    ]
+  }
+}
