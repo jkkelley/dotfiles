@@ -20,7 +20,7 @@
 # Usage: ledger.sh <step> <started|complete|blocked|issue|question|checkpoint> "<text, 15 words max>" [ref]
 #        ledger.sh --show [n]     print the last n rows (default 10)
 set -euo pipefail
-L="${RAIL_LEDGER:?RAIL_LEDGER must name this project's ledger file; call through report/rail.sh}"
+L="${RAIL_LEDGER:?RAIL_LEDGER must name the ledger file of this project, set by report/rail.sh}"
 hdr='at_utc	step	status	text	by	ref'
 [ -f "$L" ] || printf '%s\n' "$hdr" > "$L"
 if [ "${1:-}" = "--show" ]; then n="${2:-10}"; { head -1 "$L"; tail -n "$n" "$L" | grep -v '^at_utc'; } | column -t -s $'\t'; exit 0; fi
