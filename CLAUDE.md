@@ -407,6 +407,32 @@ on one OS and failing on the other is not, because the failure surfaces as a
 misleading error at the worst moment - `flock`'s absence is reported as a lock
 timeout that never happened.
 
+## Rule 18 - Herdr-first execution: never background processes
+
+When a session runs inside Herdr (`HERDR_ENV=1`), every long-running thing -
+agents, monitors, polls, watchers, tail views, dev servers - lives in a
+**labeled Herdr pane or tab**, never in a harness background job, `nohup`,
+shell `&`, `disown`, or a detached process.
+
+The owner watches work in Herdr. A background process is invisible, and
+invisible work reads as nothing happening.
+
+How to apply:
+
+- Verify with `test "${HERDR_ENV:-}" = 1`, then load the `herdr` skill before
+  issuing control commands.
+- Orchestrator layout: rename the current tab `orchestrator`, the main pane
+  `claude-main`, and split a labeled `orch-shell` pane beside it for your own
+  shell work.
+- Every delegated agent gets its own **labeled tab** (`agent-N-<what>`) with a
+  real visible agent started via `herdr agent start <name> --kind <kind>` -
+  tools and output on screen. Steer with `herdr agent prompt`, wait with
+  `herdr agent wait`.
+- Polls and monitors (lavish-axi poll, log tails, watchers) each get a labeled
+  pane; read them with `herdr pane read`.
+- If not inside Herdr, say so and stop rather than silently falling back to
+  background jobs - let the owner decide.
+
 ## Adding a New Agent or Skill — Ship the MVP Immediately
 
 Every new agent or skill in this repo must reach `main` through a PR as soon
