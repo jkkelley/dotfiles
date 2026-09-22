@@ -15,7 +15,7 @@ Format lives in a script.
 Changing the format later means changing one script, not auditing every project that ever used the old one.
 Discipline does not survive contact with a hundred sessions; a script does.
 
-Two files are script-owned outright: `ISSUES.md` and `BACKLOG.md`.
+Two trees are script-owned outright: `issues/` and `backlog/`.
 `COMPASS.md` and `NAMING.md` are hand-written inside a structure the scaffolder installs.
 `CLAUDE.md` ships verbatim and is then yours.
 
@@ -23,37 +23,58 @@ Two files are script-owned outright: `ISSUES.md` and `BACKLOG.md`.
 
 ## Every file states its own read protocol
 
-The first lines of each managed file say how much of it to read.
+The first lines of each hand-managed file say how much of it to read.
 An agent should never have to guess, and "read the whole thing" is almost never the right answer.
 
 This is where the token budget is actually won or lost.
 
 ---
 
-## ISSUES.md
+## issues/
 
-Append-only.
-Newest entry on top.
+One file per issue, at `issues/YYYY/MM/<UTC-timestamp>-<suffix>.md`.
 Written only by `log-issue.sh`.
+
+### Why one file per entry, and why no sequential IDs
+
+The old model was one monolithic `ISSUES.md` with sequential IDs (`ISS-0043`).
+Allocating a successor ID required scanning the file AND holding a lock on it, which is exactly where two concurrent agents on a trunk-based workflow collide.
+Worse, git saw every writer touching the same file, so merges conflicted even when the lock held (dotfiles #95).
+
+A random 5-char suffix minted at write time needs no scan and no lock: the name is unique by construction, so creation is an atomic `ln` with a retry.
+One file per entry means two agents never touch the same path, and merges never meet.
+
+The cost: IDs are no longer dense, and the number tells you nothing about recency.
+The UTC timestamp in the filename carries ordering instead, which is all the read window ever used the number for.
+
+### Why month sharding
+
+`issues/YYYY/MM/` keeps any single directory listing short once the log is long, and it puts the window walk in the newest shard first.
+The shard a file sits in must be the shard its filename timestamp implies - `check` enforces it, because a file in the wrong shard is visited in the wrong month.
+
+### Why the window is a directory walk
+
+Filenames and shard directories both sort chronologically, so the newest 10 paths in reverse lexical order ARE the newest 10 entries.
+There is no index file, so there is nothing to go stale.
 
 ### Read protocol
 
-Top 10 entries, then stop.
-Go deeper only when the user asks, or when an entry inside the window references an older ID you need.
+The newest 10 entries, then stop.
+Go deeper only when the user asks, or when an entry inside the window references a suffix you need.
 
 ### Entry shape
 
 ```markdown
-## ISS-0043 - Profile export now preserves the when clause
+# Profile export now preserves the when clause
 
 <!-- issue
-id: ISS-0043
-logged: 2026-08-05T16:10:02-05:00
+id: a3f9c2
+logged: 2026-08-05T21:10:02Z
 severity: high
 area: export
 tags: data-loss, fixed
-refs: BK-0015
-resolves: ISS-0041
+refs: b7e21x0
+resolves: q9w41
 -->
 
 - **Symptom** - Exported bindings lost `when`, so they fired globally after import.
@@ -61,14 +82,18 @@ resolves: ISS-0041
 - **Cause** - The serialiser wrote a fixed field list that omitted `when`.
 - **Resolution** - Serialise from the binding schema instead of a literal list.
 - **Verification** - Round-trip test added; fails if any field is dropped.
-
----
 ```
 
 ### Why an HTML comment holds the metadata
 
 It is invisible in rendered markdown, greppable without a parser, and impossible for prose to corrupt.
-`grep -A7 'severity: high' ISSUES.md` works with no tooling at all.
+`grep -r 'severity: high' issues/` works with no tooling at all.
+
+### Why suffix references
+
+`refs:` and `resolves:` point at 5-char suffixes, forming a DAG with no database.
+A suffix is greppable across the whole tree: `grep -rl "resolves: a3f9c2" issues/ backlog/` finds everything that closes an entry.
+`check` verifies every target exists, so a dangling pointer fails loudly instead of silently.
 
 ### Why the five fields are mandatory
 
@@ -94,72 +119,81 @@ The replacement is expanded quoted, because bash 5.2 treats a bare `&` in a subs
 ### Why a fix is a new entry
 
 Nothing is ever rewritten.
-A resolution carries `resolves: <ID>`, so reading top-down you meet the fix before the problem.
+A resolution carries `resolves: <suffix>`, so reading newest-first you meet the fix before the problem.
 The window stays truthful because nothing shifts underneath it.
 
 The cost: "what is still open" is not answerable from the window alone once the log is long.
-That is what `.claude/cache/open-issues.json` computes - every ID that appears in no later `resolves:`.
+Answering it is a grep: every `id:` that appears in no later entry's `resolves:`.
 
 ---
 
-## BACKLOG.md
+## backlog/
 
-Priority order, top to bottom.
-Managed by `backlog.sh`.
+One file per item.
+Buckets are directories: `backlog/now/`, `backlog/next/`, `backlog/later/`, `backlog/done/`.
+Written only by `backlog.sh`.
 
 ### The four buckets
 
-| Bucket  | Means                                     | Discipline                                       |
-| ------- | ----------------------------------------- | ------------------------------------------------ |
-| `Now`   | in flight                                 | 1-3 items, or the word stops meaning anything    |
-| `Next`  | committed, not started                    | an agent may pull from here when Now is empty    |
-| `Later` | captured so it stops taking up head space | never auto-promoted                              |
-| `Done`  | finished                                  | newest first, trimmed to 20 - git holds the rest |
+| Bucket  | Means                                     | Discipline                                    |
+| ------- | ----------------------------------------- | --------------------------------------------- |
+| `now`   | in flight                                 | 1-3 items, or the word stops meaning anything |
+| `next`  | committed, not started                    | an agent may pull from here when now is empty |
+| `later` | captured so it stops taking up head space | never auto-promoted                           |
+| `done`  | finished                                  | month-sharded, kept - git holds the rest      |
 
 Buckets _are_ the priority.
 No numeric ranks, because nobody ever agrees on what 3 versus 4 means.
 
+### Why buckets are directories
+
+A bucket used to be a marker line inside one monolithic `BACKLOG.md`, and a move used to be a scripted splice of one shared file.
+Now a move is an atomic rename between directories and `done` is a rename into `done/YYYY/MM/` plus a `completed:` line in the metadata.
+Distinct paths per item mean two agents working two items never touch the same file.
+
+The live buckets stay flat because their discipline caps how many items they ever hold.
+`done/` is month-sharded because it is the only bucket that accumulates, and its filename is re-stamped with the completion time - the shard a file sits in must be the shard its own name implies.
+
 ### Read protocol
 
-`Now`, `Next` and `Later` are read in full - that is live work, and it is capped by the disciplines above rather than by a window.
-`Done` is a sliding window: top 10 entries, then stop.
+`now/`, `next/` and `later/` are read in full - that is live work, and it is capped by the disciplines above rather than by a window.
+`done/` is a sliding window: the newest 10, then stop.
+`backlog.sh list` enforces both, so an agent does not have to remember the depth.
 
-The window is smaller than the file on purpose.
-`backlog.sh done` trims `Done` to 20 so a recently closed item is still findable without reaching for git, but 20 is a retention limit, not a reading limit.
-Reading all 20 by default spends tokens on work that is finished and, by definition, no longer a decision.
-
-Go deeper only when the user asks, or when an item inside the window references an older ID you need in order to act.
-Same rule as `ISSUES.md` and `CONTEXT_STATE.md`, and for the same reason - state it when you go deeper, and say why.
+Go deeper only when the user asks, or when an item inside the window references a suffix you need in order to act.
+Same rule as `issues/` and `CONTEXT_STATE.md`, and for the same reason - state it when you go deeper, and say why.
 
 ### Item shape
 
 ```markdown
-- [ ] **BK-0014** - Map the chord namespace for window management
-  <!-- item
-  id: BK-0014
-  added: 2026-08-05T14:32:11-05:00
-  -->
-  - why: chords are being assigned ad hoc and colliding (see ISS-0042)
-  - done-when: every ctrl+k chord is listed in NAMING.md with an owner
+# Map the chord namespace for window management
+
+<!-- item
+id: b7e21x0
+added: 2026-08-05T14:32:11Z
+-->
+
+- why: chords are being assigned ad hoc and colliding (see q9w41)
+- done-when: every ctrl+k chord is listed in NAMING.md with an owner
 ```
 
 ### Why `done-when` is mandatory
 
 It is the load-bearing field.
-An item whose completion someone has to adjudicate is not ready to be worked - it stays in `Later` until it can be phrased as a check.
+An item whose completion someone has to adjudicate is not ready to be worked - it stays in `later/` until it can be phrased as a check.
 
 ### Why completion goes in the metadata
 
-`done` flips the checkbox and adds `completed: <date>` to the comment block.
+`done` adds `completed: <UTC timestamp>` to the comment block.
 Appending the date to the title instead would pollute every parse of the item's name.
 
 ### Why moves are a script
 
 Items move buckets, get reworded, get merged.
 A script that only appended would not survive the first reprioritisation.
-`move` lifts the item's body out byte for byte and splices it under the target marker, so nothing is retyped and nothing is lost.
+`move` renames the file between bucket directories, so nothing is retyped and nothing is lost.
 
-Ambiguity is refused, not guessed: an ID appearing twice stops the run.
+Ambiguity is refused, not guessed: a suffix matching two files stops the run.
 
 ---
 
@@ -205,7 +239,7 @@ It is a starting template, not a generated file - edit it per project after scaf
 Two sections are appended by this skill because the tooling depends on them:
 
 - **Session State** - the pointer to `CONTEXT_STATE.md` that the `context-compaction` skill needs in order to be found at all.
-- **Logging an issue** - the instruction never to hand-edit `ISSUES.md` or `BACKLOG.md`, and the exit-code contract.
+- **Logging an issue** - the instruction never to hand-edit `issues/` or `backlog/` entry files, and the exit-code contract.
 
 `scaffold.sh` treats `CLAUDE.md` as heading-delimited rather than marker-delimited, so no scaffolding comments are injected into text a human wrote.
 
@@ -253,10 +287,14 @@ Both files are create-if-absent: a hand-edited settings file is never overwritte
 
 ## ID format
 
-`<PREFIX>-<4 digits>`, zero-padded, never reused.
-`ISS-` for issues, `BK-` for backlog items.
+5 lowercase alphanumeric characters, minted at random by the script at write time: `a3f9c2`.
+The same format names issues and backlog items; the tree a suffix lives in says which it is.
 
-Allocation scans the existing IDs and takes the successor.
-At 9999 the tools stop with a defined error rather than wrapping, because silent ID reuse is unrecoverable.
+There is no successor to compute, so there is no scan and no lock.
+Creation is an atomic `ln` that retries with a fresh suffix on the rare collision, and `check` fails the tree if a duplicate ever appears anyway.
 
-Allocation happens under `flock`, so parallel agents cannot race for the same number.
+Cross-references (`refs:`, `resolves:`) hold suffixes.
+They resolve across both trees and are validated by `check`, so the DAG stays honest without a database.
+
+The old sequential format (`ISS-0043`, `BK-0014`) is gone entirely.
+`migrate` converts a monolith's entries to suffixes and rewrites internal references through the old-to-new map it builds on the way.

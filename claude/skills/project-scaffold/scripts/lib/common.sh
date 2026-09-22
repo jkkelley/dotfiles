@@ -266,41 +266,328 @@ ps_ends_with_newline() {
 }
 
 # ---------------------------------------------------------------------------
-# ID allocation. Scans existing IDs and returns the successor, zero-padded.
-# Refuses to wrap, because silent ID reuse is unrecoverable.
+# Entry files. Issues and backlog items are one file per entry, named
+# <UTC-timestamp>-<suffix>.md. This replaced the monolithic ISSUES.md /
+# BACKLOG.md plus sequential IDs (ISS-0043) in September 2026 (dotfiles #95):
+# allocating a successor ID required a scan AND a lock over one shared file,
+# which is exactly what two concurrent agents on a trunk-based workflow collide
+# over - and even when the lock held, git still saw one file touched by every
+# writer, so merges conflicted. A random 5-char suffix minted at write time
+# needs no scan and no lock, and one file per entry means merges never meet.
+# The cost: IDs are no longer dense or pronounceable, and "the next number"
+# tells you nothing about recency. The timestamp in the filename carries
+# ordering instead, which is all the read window ever used the number for.
 # ---------------------------------------------------------------------------
 
-# ps_next_id <file> <prefix>   e.g. ps_next_id ISSUES.md ISS  ->  ISS-0043
-ps_next_id() {
-  local file="$1" prefix="$2"
-  local max=0 n
-  if [[ -f $file ]]; then
-    while IFS= read -r n; do
-      # 10# forces base-10 so a value like 0042 is not read as octal.
-      n=$((10#$n))
-      if ((n > max)); then max=$n; fi
-    done < <(grep -oE "^[[:space:]]*id: ${prefix}-[0-9]{4}" "$file" 2>/dev/null | grep -oE '[0-9]{4}$' || true)
+# ps_now_utc_compact -> YYYYMMDDTHHMMSSZ, the filename-grade UTC timestamp.
+# Filename timestamps fix the month shard, so they must be UTC: two agents in
+# different timezones would otherwise mint the same moment into different
+# shards, and the shard check would flag one of them.
+ps_now_utc_compact() {
+  if [[ -n ${SCAFFOLD_NOW-} ]]; then
+    date -u -d "$SCAFFOLD_NOW" +%Y%m%dT%H%M%SZ
+  else
+    date -u +%Y%m%dT%H%M%SZ
   fi
-  local next=$((max + 1))
-  if ((next > 9999)); then
-    ps_die "$PS_VALIDATION" "id_space_exhausted" \
-      "${prefix} IDs are exhausted at 9999 - widen the ID format before logging more"
-  fi
-  printf '%s-%04d' "$prefix" "$next"
 }
 
-# ps_id_exists <file> <id>
-ps_id_exists() {
-  local file="$1" id="$2"
-  [[ -f $file ]] || return 1
-  grep -qE "^[[:space:]]*id: ${id}\$" "$file"
+# ps_now_utc -> YYYY-MM-DDTHH:MM:SSZ, the metadata-grade UTC timestamp.
+ps_now_utc() {
+  if [[ -n ${SCAFFOLD_NOW-} ]]; then
+    date -u -d "$SCAFFOLD_NOW" +%Y-%m-%dT%H:%M:%SZ
+  else
+    date -u +%Y-%m-%dT%H:%M:%SZ
+  fi
 }
 
-# ps_id_count <file> <id> - used to refuse ambiguous files rather than guess
-ps_id_count() {
-  local file="$1" id="$2"
-  [[ -f $file ]] || { printf '0'; return 0; }
-  grep -cE "^[[:space:]]*id: ${id}\$" "$file" || true
+# ps_to_utc_compact <any-date-parseable-timestamp> -> YYYYMMDDTHHMMSSZ
+# Used by migrate, where the filename must come from the entry's own recorded
+# timestamp rather than from now. Prints nothing and returns non-zero when the
+# value cannot be parsed, so the caller decides whether to die or skip.
+ps_to_utc_compact() {
+  date -u -d "$1" +%Y%m%dT%H%M%SZ 2>/dev/null
+}
+
+# ps_mint_suffix -> 5 random lowercase alphanumerics.
+# SCAFFOLD_SUFFIX pins the result for tests, the same role SCAFFOLD_NOW plays
+# for the clock. 36^5 names makes a collision unlikely rather than impossible,
+# which is why creation retries with a fresh suffix instead of trusting this.
+ps_mint_suffix() {
+  if [[ -n ${SCAFFOLD_SUFFIX-} ]]; then
+    printf '%s' "$SCAFFOLD_SUFFIX"
+    return 0
+  fi
+  local s
+  # head closes the pipe after 5 chars and tr dies of SIGPIPE; under pipefail
+  # that 141 would kill the caller, so the `|| true` is load-bearing, not
+  # decoration.
+  s=$(tr -dc 'a-z0-9' </dev/urandom 2>/dev/null | head -c 5 || true)
+  printf '%s' "$s"
+}
+
+# ---------------------------------------------------------------------------
+# Atomic create-if-absent. The entry-file counterpart of ps_atomic_install.
+# ---------------------------------------------------------------------------
+
+# ps_atomic_create <source-temp-file> <destination>
+# Returns 1 when the destination already exists so the caller can mint a fresh
+# name and retry - a collision is expected input here, not an error. ln is the
+# primitive: it is atomic and refuses to overwrite, which mv -n does not
+# guarantee on every filesystem.
+ps_atomic_create() {
+  local src="$1" dst="$2"
+  local dstdir
+  dstdir=$(dirname -- "$dst")
+  [[ -w $dstdir ]] || ps_die "$PS_IO" "dir_not_writable" "directory is not writable: $dstdir"
+
+  local staged
+  staged=$(mktemp "$dstdir/.project-scaffold.XXXXXX") || \
+    ps_die "$PS_IO" "stage_failed" "cannot stage a write in $dstdir"
+  chmod 0644 "$staged" 2>/dev/null || true
+
+  cat -- "$src" >"$staged" || { rm -f -- "$staged"; ps_die "$PS_IO" "write_failed" "cannot write to $dstdir"; }
+  if ln -- "$staged" "$dst" 2>/dev/null; then
+    rm -f -- "$staged"
+    return 0
+  fi
+  rm -f -- "$staged"
+  return 1
+}
+
+# ---------------------------------------------------------------------------
+# Entry lookup and reading.
+# ---------------------------------------------------------------------------
+
+# ps_newest_entries <dir> <count> -> newest-first entry paths, one per line.
+# A count of 0 means "all of them" - the live backlog buckets are read in
+# full, while issues/ and done/ take a real window. Filenames and shard
+# directories both sort chronologically, so a reverse lexical sort of the
+# full path IS the chronological order. The read window is a directory walk:
+# there is no index file, so there is nothing to go stale.
+ps_newest_entries() {
+  local dir="$1" n="$2"
+  [[ -d $dir ]] || return 0
+  if ((n > 0)); then
+    find "$dir" -type f -name '*.md' | sort -r | head -n "$n"
+  else
+    find "$dir" -type f -name '*.md' | sort -r
+  fi
+}
+
+# ps_find_suffix <suffix> <dir...> -> every entry path carrying that suffix.
+# Zero lines means not found; two or more means ambiguous - both are the
+# caller's exit codes, not this function's.
+ps_find_suffix() {
+  local suffix="$1"
+  shift
+  local d
+  for d in "$@"; do
+    [[ -d $d ]] || continue
+    find "$d" -type f -name "*-${suffix}.md"
+  done
+}
+
+# ps_meta <file> <key> -> the value from the entry's HTML-comment metadata
+# block. Parsing the comment rather than the prose is the whole point of
+# writing that block in the first place.
+ps_meta() {
+  awk -v key="$2" '
+    /^<!-- (issue|item)$/ { inblock = 1; next }
+    inblock && /^-->$/ { exit }
+    inblock && index($0, key ": ") == 1 { print substr($0, length(key) + 3); exit }
+  ' "$1"
+}
+
+# ps_body_field <file> <key> -> the value of a `- key: value` body line.
+ps_body_field() {
+  awk -v key="$2" 'index($0, "- " key ": ") == 1 { print substr($0, length(key) + 5); exit }' "$1"
+}
+
+# ps_rewrite_tokens <value> <map-nameref> -> comma-separated tokens with any
+# token present in the map replaced by its value. Unknown tokens pass through
+# unchanged: dropping them would hide information, and `check` names whatever
+# does not resolve.
+ps_rewrite_tokens() {
+  local val="$1"
+  local -n _map="$2"
+  [[ -z $val || $val == - ]] && { printf '%s' "${val:--}"; return 0; }
+  local rest=$val tok out="" first=1
+  local -a toks=()
+  while [[ $rest == *,* ]]; do toks+=("${rest%%,*}"); rest=${rest#*,}; done
+  toks+=("$rest")
+  for tok in "${toks[@]}"; do
+    tok=${tok// /}
+    [[ -z $tok ]] && continue
+    local mapped=${_map[$tok]-$tok}
+    if ((first)); then out=$mapped; first=0; else out="$out, $mapped"; fi
+  done
+  printf '%s' "${out:--}"
+}
+
+# ---------------------------------------------------------------------------
+# Tree validation. The `check` verb on log-issue.sh and backlog.sh funnels
+# here. Findings accumulate in PS_CHECK_PROBLEMS; ps_check_report renders them.
+# ---------------------------------------------------------------------------
+
+PS_CHECK_PROBLEMS=()
+
+ps_check_note() { PS_CHECK_PROBLEMS+=("$1"); }
+
+# ps_check_refs <file> <census-nameref> <rel-path> - every refs:/resolves:
+# token must be a well-formed suffix that exists in the census. A dangling
+# target is a pointer to an entry that is not there, which is worse than no
+# pointer at all.
+ps_check_refs() {
+  local f="$1" rel="$3"
+  local -n _census="$2"
+  local key val rest tok
+  for key in refs resolves; do
+    val=$(ps_meta "$f" "$key")
+    [[ -z $val || $val == - ]] && continue
+    rest=$val
+    local -a toks=()
+    while [[ $rest == *,* ]]; do toks+=("${rest%%,*}"); rest=${rest#*,}; done
+    toks+=("$rest")
+    for tok in "${toks[@]}"; do
+      tok=${tok// /}
+      [[ -z $tok || $tok == - ]] && continue
+      if [[ ! $tok =~ ^[a-z0-9]{5}$ ]]; then
+        ps_check_note "$rel: $key target '$tok' is not a 5-char suffix"
+        continue
+      fi
+      [[ -n ${_census[$tok]-} ]] || \
+        ps_check_note "$rel: $key target '$tok' does not exist anywhere in the tree"
+    done
+  done
+}
+
+# ps_check_tree <project> <issues|backlog>
+# Validates the scope's subtree, plus the two properties that are only
+# meaningful globally: duplicate suffixes and ref resolution, both of which
+# span issues/ and backlog/.
+ps_check_tree() {
+  local project="$1" scope="$2"
+  PS_CHECK_PROBLEMS=()
+
+  # A hand-written monolith beside the directories is two sources of truth,
+  # and two sources of truth is none. migrate exists precisely for this file.
+  if [[ $scope == issues && -f $project/ISSUES.md ]]; then
+    ps_check_note "ISSUES.md: old monolith present alongside issues/ - run: log-issue.sh migrate --project <dir>"
+  fi
+  if [[ $scope == backlog && -f $project/BACKLOG.md ]]; then
+    ps_check_note "BACKLOG.md: old monolith present alongside backlog/ - run: backlog.sh migrate --project <dir>"
+  fi
+
+  # The suffix census covers BOTH trees regardless of scope: refs point across
+  # trees, and a duplicate is ambiguous no matter where the second copy lives.
+  declare -A census=()
+  local f base suffix
+  while IFS= read -r f; do
+    base=$(basename -- "$f")
+    suffix=${base##*-}
+    suffix=${suffix%.md}
+    census[$suffix]="${census[$suffix]-}$f "
+  done < <(find "$project/issues" "$project/backlog" -type f -name '*.md' 2>/dev/null)
+
+  for suffix in "${!census[@]}"; do
+    local -a holders=()
+    # The census value is space-separated, but these scripts run with
+    # IFS=newline+tab, so the split needs its own IFS.
+    local IFS=' '
+    read -ra holders <<<"${census[$suffix]}"
+    if ((${#holders[@]} > 1)); then
+      ps_check_note "suffix '$suffix' is not unique: ${holders[*]}"
+    fi
+  done
+
+  local root
+  if [[ $scope == issues ]]; then root="$project/issues"; else root="$project/backlog"; fi
+
+  if [[ -d $root ]]; then
+    # Anything that is not an entry file or a .gitkeep is a hand edit.
+    while IFS= read -r f; do
+      ps_check_note "${f#"$project"/}: unexpected file - only <UTC-timestamp>-<suffix>.md entries belong here"
+    done < <(find "$root" -type f ! -name '*.md' ! -name '.gitkeep')
+
+    while IFS= read -r f; do
+      local rel=${f#"$project"/}
+      base=$(basename -- "$f")
+      if [[ ! $base =~ ^[0-9]{8}T[0-9]{6}Z-[a-z0-9]{5}\.md$ ]]; then
+        ps_check_note "$rel: filename is not <UTC-timestamp>-<suffix>.md"
+        continue
+      fi
+      local ts=${base%%-*}
+      suffix=${base##*-}
+      suffix=${suffix%.md}
+      local dirrel
+      dirrel=$(dirname -- "$rel")
+      # The shard a file sits in must be the shard its filename timestamp
+      # implies, or the window walk visits it in the wrong month.
+      local want
+      if [[ $scope == issues ]]; then
+        want="issues/${ts:0:4}/${ts:4:2}"
+      else
+        case $dirrel in
+          backlog/now | backlog/next | backlog/later) want="$dirrel" ;;
+          *) want="backlog/done/${ts:0:4}/${ts:4:2}" ;;
+        esac
+      fi
+      if [[ $dirrel != "$want" ]]; then
+        ps_check_note "$rel: sits in $dirrel but its timestamp places it in $want"
+      fi
+
+      local id; id=$(ps_meta "$f" id)
+      if [[ -z $id ]]; then
+        ps_check_note "$rel: metadata block has no id"
+      elif [[ $id != "$suffix" ]]; then
+        ps_check_note "$rel: id '$id' does not match the filename suffix '$suffix'"
+      fi
+
+      if [[ $scope == issues ]]; then
+        [[ -n $(ps_meta "$f" logged) ]] || ps_check_note "$rel: metadata block has no logged"
+        local sev; sev=$(ps_meta "$f" severity)
+        case $sev in
+          low | medium | high) : ;;
+          *) ps_check_note "$rel: severity is missing or not low|medium|high" ;;
+        esac
+        [[ -n $(ps_meta "$f" area) ]] || ps_check_note "$rel: metadata block has no area"
+        local field
+        for field in Symptom Trigger Cause Resolution Verification; do
+          grep -qF -- "- **${field}** - " "$f" || ps_check_note "$rel: missing the ${field} field"
+        done
+      else
+        [[ -n $(ps_meta "$f" added) ]] || ps_check_note "$rel: metadata block has no added"
+        grep -qF -- "- why: " "$f" || ps_check_note "$rel: missing the why field"
+        grep -qF -- "- done-when: " "$f" || ps_check_note "$rel: missing the done-when field"
+      fi
+
+      ps_check_refs "$f" census "$rel"
+    done < <(find "$root" -type f -name '*.md' | sort)
+  fi
+
+  ((${#PS_CHECK_PROBLEMS[@]} == 0))
+}
+
+# ps_check_report - render PS_CHECK_PROBLEMS and exit: 0 clean, 3 with every
+# offending file named on stderr. Branch on the code, never the text.
+ps_check_report() {
+  if ((${#PS_CHECK_PROBLEMS[@]} == 0)); then
+    if ((PS_JSON)); then printf '{"ok":true,"problems":[]}\n'; else ps_info "check: clean"; fi
+    exit "$PS_OK"
+  fi
+  if ((PS_JSON)); then
+    printf '{"ok":false,"problems":['
+    local i
+    for i in "${!PS_CHECK_PROBLEMS[@]}"; do
+      ((i > 0)) && printf ','
+      ps_json_string "${PS_CHECK_PROBLEMS[i]}"
+    done
+    printf ']}\n'
+  else
+    local prob
+    for prob in "${PS_CHECK_PROBLEMS[@]}"; do printf 'check: %s\n' "$prob" >&2; done
+  fi
+  exit "$PS_VALIDATION"
 }
 
 # ---------------------------------------------------------------------------

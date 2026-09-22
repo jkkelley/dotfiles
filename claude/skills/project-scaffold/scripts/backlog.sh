@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 #
-# backlog.sh - manage a project's BACKLOG.md.
+# backlog.sh - manage a project's backlog/ tree: one entry file per item.
 #
-# The one managed file with real mutation: items move between buckets and get
-# marked done. Every operation refuses rather than guesses - an unknown ID, an
-# unknown bucket, or an ID that appears twice all stop the run.
+# Buckets are directories: backlog/now/, backlog/next/, backlog/later/ hold
+# live work, and backlog/done/YYYY/MM/ is month-sharded because Done is the
+# only bucket that accumulates. A move is a rename between bucket directories;
+# done is a rename into the done shard plus a `completed:` line in the
+# metadata. Every item has its own path, so two agents working two items
+# never touch the same file - the property monolithic BACKLOG.md could not
+# provide (dotfiles #95).
+#
+# Ambiguity is still refused, not guessed: a suffix that matches two files
+# stops the run.
 #
 # scaffold-version: 1
 
@@ -12,25 +19,27 @@ set -euo pipefail
 IFS=$'\n\t'
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-SKILL_DIR=$(cd -- "$SCRIPT_DIR/.." && pwd)
 # shellcheck source=lib/common.sh
 source "$SCRIPT_DIR/lib/common.sh"
 
-readonly TEMPLATE="$SKILL_DIR/references/templates/BACKLOG.md.tmpl"
 readonly BUCKETS=(now next later done)
-readonly DONE_KEEP=20
+readonly DONE_WINDOW=10
 
 usage() {
   cat <<'EOF'
-backlog.sh - manage BACKLOG.md (add | move | done | list)
+backlog.sh - manage the backlog/ tree (add | move | done | list | migrate | check)
 
 Usage:
-  backlog.sh add   [--project DIR] --title T --why T --done-when T [--bucket B] [--json]
-  backlog.sh move  [--project DIR] --id BK-0014 --to BUCKET [--json]
-  backlog.sh done  [--project DIR] --id BK-0014 [--json]
-  backlog.sh list  [--project DIR] [--bucket BUCKET] [--json]
+  backlog.sh add     [--project DIR] --title T --why T --done-when T [--bucket B] [--json]
+  backlog.sh move    [--project DIR] --id SUFFIX --to BUCKET [--json]
+  backlog.sh done    [--project DIR] --id SUFFIX [--json]
+  backlog.sh list    [--project DIR] [--bucket BUCKET] [--json]
+  backlog.sh migrate [--project DIR] [--json]
+  backlog.sh check   [--project DIR] [--json]
 
-Buckets: now | next | later | done   (add defaults to later)
+Buckets are directories: now/ next/ later/ hold live work; done/YYYY/MM/ is
+month-sharded because Done is the only bucket that accumulates.
+add defaults to later.
 
 add:
   --title      one line, what the item is
@@ -38,15 +47,31 @@ add:
   --done-when  a check someone can run without asking you
 
 move:
-  --to         destination bucket. Moving to the current bucket is a reported no-op.
+  --to         destination bucket. Moving to the current bucket is a reported
+               no-op. Moving to done stamps completion, same as `done`.
 
 done:
-  Moves the item to Done with today's date and trims Done to the newest 20.
+  Renames the item into the done shard with the completion time as its new
+  filename timestamp (the shard must match the name), and records
+  `completed:` in the metadata rather than the title.
+
+list:
+  now / next / later in full - that is live work. done is a sliding window:
+  the newest 10, then stop.
+
+migrate:
+  Convert an old monolithic BACKLOG.md into entry files, preserving each
+  item's recorded timestamp as its filename. Renames the monolith to
+  BACKLOG.md.migrated. Refuses to run twice.
+
+check:
+  Validate the tree: shapes, shards, metadata, duplicate suffixes, dangling
+  refs, and no monolith beside the directories.
 
 Common:
   --project DIR   project directory (default: .)
   --json          machine-readable output on stdout
-  --lock-timeout SECONDS
+  --lock-timeout SECONDS   accepted for compatibility; renames need no lock
   --help
 
 Exit codes: 0 ok, 2 usage, 3 validation/ambiguous/bad-bucket, 4 io, 5 lock timeout, 6 id not found
@@ -83,163 +108,176 @@ done
   ps_die "$PS_USAGE" "bad_lock_timeout" "--lock-timeout must be a whole number of seconds"
 
 project=$(ps_resolve_project "${PS_PROJECT:-.}")
-backlog="$project/BACKLOG.md"
+tree="$project/backlog"
 
-marker_for() {
-  case $1 in
-    now) printf '<!-- BACKLOG:NOW -->' ;;
-    next) printf '<!-- BACKLOG:NEXT -->' ;;
-    later) printf '<!-- BACKLOG:LATER -->' ;;
-    done) printf '<!-- BACKLOG:DONE -->' ;;
+# A monolith beside the directories is two sources of truth. Refuse at write
+# time, not just at check time, or the agent that caused it never finds out.
+refuse_monolith() {
+  if [[ -f $project/BACKLOG.md ]]; then
+    ps_die "$PS_VALIDATION" "monolith_present" \
+      "$project/BACKLOG.md is the old monolith format - run: backlog.sh migrate --project $project"
+  fi
+}
+
+# find_item <suffix> -> SRC (the one matching path), or dies.
+find_item() {
+  local want="$1"
+  [[ $want =~ ^[a-z0-9]{5}$ ]] || \
+    ps_die "$PS_USAGE" "bad_id_format" "--id takes a 5-char suffix (got: $want)"
+  local -a matches=()
+  mapfile -t matches < <(ps_find_suffix "$want" "$tree")
+  if ((${#matches[@]} == 0)); then
+    ps_die "$PS_NOTFOUND" "id_not_found" "$want is not in $tree"
+  fi
+  if ((${#matches[@]} > 1)); then
+    ps_die "$PS_VALIDATION" "id_ambiguous" \
+      "$want matches ${#matches[@]} files (${matches[*]}) - a human needs to resolve that before I touch it"
+  fi
+  SRC="${matches[0]}"
+}
+
+# bucket_of <path> -> the bucket a path sits in, derived from its directory.
+bucket_of() {
+  local rel=${1#"$tree"/}
+  case $rel in
+    now/*) printf 'now' ;;
+    next/*) printf 'next' ;;
+    later/*) printf 'later' ;;
+    done/*) printf 'done' ;;
+    *) printf '?' ;;
   esac
 }
 
-ensure_file() {
-  if [[ ! -e $backlog ]]; then
-    [[ -r $TEMPLATE ]] || ps_die "$PS_IO" "template_missing" "template not found: $TEMPLATE"
-    local seeded; seeded=$(ps_tempfile)
-    cat -- "$TEMPLATE" >"$seeded"
-    ps_atomic_install "$seeded" "$backlog"
-  fi
-  [[ -r $backlog ]] || ps_die "$PS_IO" "unreadable" "cannot read $backlog"
-}
-
-# Load the file into LINES[], CR-stripped so a Windows-touched file still parses.
-load_lines() {
-  local work; work=$(ps_strip_cr "$backlog")
-  mapfile -t LINES <"$work"
-  local b
-  for b in "${BUCKETS[@]}"; do
-    grep -qF -- "$(marker_for "$b")" "$work" || \
-      ps_die "$PS_VALIDATION" "missing_marker" \
-        "$backlog has no '$(marker_for "$b")' marker - refusing to guess where items belong"
-  done
-}
-
-# Index of the marker line for a bucket.
-marker_index() {
-  local want="$1" i
-  for ((i = 0; i < ${#LINES[@]}; i++)); do
-    if [[ ${LINES[i]} == "$(marker_for "$want")" ]]; then printf '%d' "$i"; return 0; fi
-  done
-  ps_die "$PS_VALIDATION" "missing_marker" "marker for bucket '$want' not found"
-}
-
-# An item runs from its heading line until the next item, bucket marker, or
-# markdown heading. Everything between is preserved byte for byte on a move.
-is_item_start() { [[ ${1-} =~ ^-\ \[[\ x]\]\ \*\*BK-[0-9]{4}\*\* ]]; }
-is_boundary() { [[ ${1-} == '<!-- BACKLOG:'* || ${1-} == '## '* || ${1-} == '<!-- scaffold:section='* ]]; }
-
-# find_item <id> -> sets ITEM_START, ITEM_END (exclusive), ITEM_BUCKET
-find_item() {
-  local want="$1" i cur_bucket="" count=0
-  ITEM_START=-1; ITEM_END=-1; ITEM_BUCKET=""
-  for ((i = 0; i < ${#LINES[@]}; i++)); do
-    local b
-    for b in "${BUCKETS[@]}"; do
-      if [[ ${LINES[i]} == "$(marker_for "$b")" ]]; then cur_bucket="$b"; fi
-    done
-    if is_item_start "${LINES[i]}" && [[ ${LINES[i]} == *"**${want}**"* ]]; then
-      count=$((count + 1))
-      if ((count == 1)); then
-        ITEM_START=$i
-        ITEM_BUCKET=$cur_bucket
-        local j
-        for ((j = i + 1; j < ${#LINES[@]}; j++)); do
-          if is_item_start "${LINES[j]}" || is_boundary "${LINES[j]}"; then break; fi
-        done
-        ITEM_END=$j
-      fi
-    fi
-  done
-  if ((count == 0)); then
-    ps_die "$PS_NOTFOUND" "id_not_found" "$want is not in $backlog"
-  fi
-  if ((count > 1)); then
-    ps_die "$PS_VALIDATION" "id_ambiguous" \
-      "$want appears $count times in $backlog - a human needs to resolve that before I touch it"
-  fi
-  return 0
-}
-
-# Trailing blank lines belong to the gap between items, not to the item.
-trim_item_end() {
-  while ((ITEM_END > ITEM_START + 1)) && [[ -z ${LINES[ITEM_END - 1]} ]]; do
-    ITEM_END=$((ITEM_END - 1))
-  done
-}
-
-write_lines() {
-  local out; out=$(ps_tempfile)
-  local l
-  for l in "${LINES[@]}"; do printf '%s\n' "$l"; done >"$out"
-  ps_atomic_install "$out" "$backlog"
-}
-
-# --- commands ---------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 cmd_add() {
-  ensure_file
+  refuse_monolith
   ps_require_value title "$title"
   ps_require_value why "$why"
   ps_require_value done-when "$done_when"
   bucket=${bucket:-later}
   ps_require_enum bucket "$bucket" "${BUCKETS[@]}"
 
-  load_lines
-  local work; work=$(ps_strip_cr "$backlog")
-  local new_id; new_id=$(ps_next_id "$work" BK)
-  local now; now=$(ps_now)
-
   local s_title s_why s_done
   s_title=$(ps_sanitize_line "$title")
   s_why=$(ps_sanitize_line "$why")
   s_done=$(ps_sanitize_line "$done_when")
 
-  local checkbox="- [ ]"
-  if [[ $bucket == done ]]; then checkbox="- [x]"; fi
+  local ts added
+  ts=$(ps_now_utc_compact)
+  added=$(ps_now_utc)
 
-  local -a item=(
-    "$checkbox **${new_id}** - ${s_title}"
-    "  <!-- item"
-    "  id: ${new_id}"
-    "  added: ${now}"
-    "  -->"
-    "  - why: ${s_why}"
-    "  - done-when: ${s_done}"
-    ""
-  )
+  # done is sharded because it accumulates; the live buckets stay flat
+  # because their discipline caps how many items they ever hold.
+  local dir
+  if [[ $bucket == done ]]; then
+    dir="$tree/done/${ts:0:4}/${ts:4:2}"
+  else
+    dir="$tree/$bucket"
+  fi
+  mkdir -p "$dir" || ps_die "$PS_IO" "mkdir_failed" "cannot create $dir"
 
-  local at; at=$(marker_index "$bucket")
-  local -a out=()
-  local i
-  for ((i = 0; i <= at; i++)); do out+=("${LINES[i]}"); done
-  out+=("")
-  out+=("${item[@]}")
-  for ((i = at + 1; i < ${#LINES[@]}; i++)); do out+=("${LINES[i]}"); done
-  LINES=("${out[@]}")
-  write_lines
+  local suffix dst="" attempt
+  for attempt in 1 2 3 4 5; do
+    suffix=$(ps_mint_suffix)
+    dst="$dir/${ts}-${suffix}.md"
+    local entry; entry=$(ps_tempfile)
+    {
+      printf '# %s\n\n' "$s_title"
+      printf '<!-- item\n'
+      printf 'id: %s\n' "$suffix"
+      printf 'added: %s\n' "$added"
+      printf -- '-->\n\n'
+      printf -- '- why: %s\n' "$s_why"
+      printf -- '- done-when: %s\n' "$s_done"
+    } >"$entry"
+    if ps_atomic_create "$entry" "$dst"; then break; fi
+    dst=""
+  done
+  [[ -n $dst ]] || ps_die "$PS_IO" "name_collision" \
+    "could not mint a unique entry name after 5 attempts"
 
   if ((PS_JSON)); then
     printf '{"ok":true,"id":"%s","bucket":"%s","file":%s,"added":%s}\n' \
-      "$new_id" "$bucket" "$(ps_json_string "$backlog")" "$(ps_json_string "$now")"
+      "$suffix" "$bucket" "$(ps_json_string "$dst")" "$(ps_json_string "$added")"
   else
-    printf '%s\n' "$new_id"
+    printf '%s\n' "$suffix"
+  fi
+}
+
+# land_in_done <src-path> - the shared tail of `move --to done` and `done`.
+# The filename is re-stamped with the completion time: the done shard a file
+# sits in must be the shard its own name implies, and "when it finished" is
+# the only ordering Done has ever meant.
+land_in_done() {
+  local src="$1"
+  local ts completed
+  ts=$(ps_now_utc_compact)
+  completed=$(ps_now_utc)
+  local shard="$tree/done/${ts:0:4}/${ts:4:2}"
+  mkdir -p "$shard" || ps_die "$PS_IO" "mkdir_failed" "cannot create $shard"
+
+  local base; base=$(basename -- "$src")
+  local suffix=${base##*-}; suffix=${suffix%.md}
+
+  # Insert completed: into the metadata block - not the title, where it would
+  # leak into every parse of the item's name.
+  local staged; staged=$(ps_tempfile)
+  awk -v c="completed: $completed" '
+    /^-->$/ && !stamped { print c; stamped = 1 }
+    { print }
+  ' "$src" >"$staged"
+
+  local attempt dst=""
+  for attempt in 1 2 3; do
+    dst="$shard/${ts}-${suffix}.md"
+    if ps_atomic_create "$staged" "$dst"; then break; fi
+    # A same-suffix file already in done means a concurrent `done` beat us
+    # to it - report the no-op rather than mint a duplicate suffix.
+    local -a raced=()
+    mapfile -t raced < <(ps_find_suffix "$suffix" "$tree/done")
+    if ((${#raced[@]} > 0)); then
+      dst="RACED"
+      break
+    fi
+    ts=$(ps_now_utc_compact)
+    shard="$tree/done/${ts:0:4}/${ts:4:2}"
+    mkdir -p "$shard" || ps_die "$PS_IO" "mkdir_failed" "cannot create $shard"
+    dst=""
+  done
+
+  if [[ $dst == RACED ]]; then
+    if ((PS_JSON)); then
+      printf '{"ok":true,"id":"%s","bucket":"done","moved":false,"note":"already done"}\n' "$suffix"
+    else
+      ps_info "$suffix is already done - nothing to do"
+      printf '%s\n' "$suffix"
+    fi
+    return 0
+  fi
+  [[ -n $dst ]] || ps_die "$PS_IO" "name_collision" \
+    "could not land $suffix in the done shard after 3 attempts"
+
+  rm -f -- "$src" || ps_die "$PS_IO" "remove_failed" "landed the done copy but could not remove $src"
+
+  if ((PS_JSON)); then
+    printf '{"ok":true,"id":"%s","bucket":"done","completed":%s}\n' \
+      "$suffix" "$(ps_json_string "$completed")"
+  else
+    printf '%s\n' "$suffix"
   fi
 }
 
 cmd_move() {
-  ensure_file
+  refuse_monolith
   ps_require_value id "$id"
   ps_require_value to "$to"
-  [[ $id =~ ^BK-[0-9]{4}$ ]] || ps_die "$PS_USAGE" "bad_id_format" "--id must look like BK-0014 (got: $id)"
   ps_require_enum to "$to" "${BUCKETS[@]}"
 
-  load_lines
   find_item "$id"
-  trim_item_end
+  local cur; cur=$(bucket_of "$SRC")
 
-  if [[ $ITEM_BUCKET == "$to" ]]; then
+  if [[ $cur == "$to" ]]; then
     if ((PS_JSON)); then
       printf '{"ok":true,"id":"%s","bucket":"%s","moved":false,"note":"already in that bucket"}\n' "$id" "$to"
     else
@@ -249,156 +287,250 @@ cmd_move() {
     return 0
   fi
 
-  # Lift the item out verbatim, then splice it in under the target marker.
-  local -a item=()
-  local i
-  for ((i = ITEM_START; i < ITEM_END; i++)); do item+=("${LINES[i]}"); done
+  if [[ $to == done ]]; then
+    land_in_done "$SRC"
+    return 0
+  fi
 
-  local -a without=()
-  for ((i = 0; i < ${#LINES[@]}; i++)); do
-    if ((i >= ITEM_START && i < ITEM_END)); then continue; fi
-    without+=("${LINES[i]}")
-  done
-  LINES=("${without[@]}")
+  local dir="$tree/$to"
+  mkdir -p "$dir" || ps_die "$PS_IO" "mkdir_failed" "cannot create $dir"
+  local dst="$dir/$(basename -- "$SRC")"
 
-  local at; at=$(marker_index "$to")
-  local -a out=()
-  for ((i = 0; i <= at; i++)); do out+=("${LINES[i]}"); done
-  out+=("")
-  out+=("${item[@]}")
-  for ((i = at + 1; i < ${#LINES[@]}; i++)); do out+=("${LINES[i]}"); done
-  LINES=("${out[@]}")
-  write_lines
+  # link-then-unlink rather than mv: ln refuses to overwrite atomically, so a
+  # same-named file in the target bucket can never be clobbered.
+  if ln -- "$SRC" "$dst" 2>/dev/null; then
+    rm -f -- "$SRC"
+  else
+    if [[ -e $dst ]]; then
+      ps_die "$PS_VALIDATION" "duplicate_name" \
+        "$dst already exists - the tree has a duplicate name; run: backlog.sh check --project $project"
+    fi
+    [[ -e $SRC ]] || ps_die "$PS_NOTFOUND" "id_not_found" \
+      "$id is no longer where it was - another agent may have moved it"
+    ps_die "$PS_IO" "move_failed" "could not move $SRC to $dst"
+  fi
 
   if ((PS_JSON)); then
-    printf '{"ok":true,"id":"%s","from":"%s","to":"%s","moved":true}\n' "$id" "$ITEM_BUCKET" "$to"
+    printf '{"ok":true,"id":"%s","from":"%s","to":"%s","moved":true}\n' "$id" "$cur" "$to"
   else
     printf '%s\n' "$id"
   fi
 }
 
 cmd_done() {
-  ensure_file
+  refuse_monolith
   ps_require_value id "$id"
-  [[ $id =~ ^BK-[0-9]{4}$ ]] || ps_die "$PS_USAGE" "bad_id_format" "--id must look like BK-0014 (got: $id)"
-
-  load_lines
   find_item "$id"
-  trim_item_end
 
-  local today; today=$(ps_today)
-  local -a item=()
-  local i first=1
-  for ((i = ITEM_START; i < ITEM_END; i++)); do
-    local line="${LINES[i]}"
-    if ((first)); then
-      # The pattern must be quoted: unquoted, `[ ]` is a glob character class
-      # matching a single space, so the checkbox would never flip.
-      line=${line/"- [ ]"/"- [x]"}
-      first=0
-    elif [[ $line == '  -->' ]]; then
-      # The completion date belongs in the metadata block, not appended to the
-      # title - otherwise it leaks into every parse of the item's name.
-      item+=("  completed: ${today}")
+  if [[ $(bucket_of "$SRC") == done ]]; then
+    if ((PS_JSON)); then
+      printf '{"ok":true,"id":"%s","bucket":"done","moved":false,"note":"already done"}\n' "$id"
+    else
+      ps_info "$id is already done - nothing to do"
+      printf '%s\n' "$id"
     fi
-    item+=("$line")
-  done
-
-  local -a without=()
-  for ((i = 0; i < ${#LINES[@]}; i++)); do
-    if ((i >= ITEM_START && i < ITEM_END)); then continue; fi
-    without+=("${LINES[i]}")
-  done
-  LINES=("${without[@]}")
-
-  local at; at=$(marker_index done)
-  local -a out=()
-  for ((i = 0; i <= at; i++)); do out+=("${LINES[i]}"); done
-  out+=("")
-  out+=("${item[@]}")
-  for ((i = at + 1; i < ${#LINES[@]}; i++)); do out+=("${LINES[i]}"); done
-  LINES=("${out[@]}")
-
-  trim_done
-  write_lines
-
-  if ((PS_JSON)); then
-    printf '{"ok":true,"id":"%s","bucket":"done","completed":%s}\n' "$id" "$(ps_json_string "$today")"
-  else
-    printf '%s\n' "$id"
+    return 0
   fi
-}
 
-# Keep only the newest DONE_KEEP items in Done. Git holds the rest.
-trim_done() {
-  local at; at=$(marker_index done)
-  local -a kept=() i seen=0
-  local -a head=() tail=()
-  for ((i = 0; i <= at; i++)); do head+=("${LINES[i]}"); done
-
-  local n=${#LINES[@]}
-  for ((i = at + 1; i < n; i++)); do
-    if is_item_start "${LINES[i]}"; then
-      seen=$((seen + 1))
-    fi
-    if ((seen <= DONE_KEEP)); then
-      kept+=("${LINES[i]}")
-    fi
-  done
-  LINES=("${head[@]}" "${kept[@]}")
+  land_in_done "$SRC"
 }
 
 cmd_list() {
-  ensure_file
-  load_lines
   [[ -n $bucket ]] && ps_require_enum bucket "$bucket" "${BUCKETS[@]}"
 
-  local i cur="" first=1
+  local -a files=()
+  local b
+  if [[ -n $bucket ]]; then
+    if [[ $bucket == done ]]; then
+      mapfile -t files < <(ps_newest_entries "$tree/done" "$DONE_WINDOW")
+    else
+      mapfile -t files < <(ps_newest_entries "$tree/$bucket" 0)
+    fi
+  else
+    for b in now next later; do
+      local -a bf=()
+      mapfile -t bf < <(ps_newest_entries "$tree/$b" 0)
+      files+=("${bf[@]}")
+    done
+    local -a df=()
+    mapfile -t df < <(ps_newest_entries "$tree/done" "$DONE_WINDOW")
+    files+=("${df[@]}")
+  fi
+
+  local first=1 f
   if ((PS_JSON)); then printf '['; fi
-  for ((i = 0; i < ${#LINES[@]}; i++)); do
-    local b
-    for b in "${BUCKETS[@]}"; do
-      if [[ ${LINES[i]} == "$(marker_for "$b")" ]]; then cur="$b"; fi
-    done
-    is_item_start "${LINES[i]}" || continue
-    if [[ -n $bucket && $cur != "$bucket" ]]; then continue; fi
-
-    local line="${LINES[i]}"
-    local item_id="${line#*\*\*}"; item_id="${item_id%%\*\**}"
-    local item_title="${line#*\*\* - }"
-
-    local dw="" wy="" j
-    for ((j = i + 1; j < ${#LINES[@]}; j++)); do
-      is_item_start "${LINES[j]}" && break
-      is_boundary "${LINES[j]}" && break
-      if [[ ${LINES[j]} == *'- done-when: '* ]]; then dw="${LINES[j]#*- done-when: }"; fi
-      if [[ ${LINES[j]} == *'- why: '* ]]; then wy="${LINES[j]#*- why: }"; fi
-    done
-
+  for f in ${files[@]+"${files[@]}"}; do
+    local item_id item_title item_why item_done cur base
+    item_id=$(ps_meta "$f" id)
+    [[ -n $item_id ]] || { base=$(basename -- "$f"); item_id=${base##*-}; item_id=${item_id%.md}; }
+    item_title=$(sed -n '1s/^# //p' "$f")
+    item_why=$(ps_body_field "$f" why)
+    item_done=$(ps_body_field "$f" done-when)
+    cur=$(bucket_of "$f")
     if ((PS_JSON)); then
       if ((first == 0)); then printf ','; fi
       first=0
       printf '{"id":"%s","bucket":"%s","title":%s,"why":%s,"done_when":%s}' \
         "$item_id" "$cur" "$(ps_json_string "$item_title")" \
-        "$(ps_json_string "$wy")" "$(ps_json_string "$dw")"
+        "$(ps_json_string "$item_why")" "$(ps_json_string "$item_done")"
     else
-      printf '%-10s %-6s %s\n' "$item_id" "$cur" "$item_title"
+      printf '%-7s %-6s %s\n' "$item_id" "$cur" "$item_title"
     fi
   done
   if ((PS_JSON)); then printf ']\n'; fi
   return 0
 }
 
+# ---------------------------------------------------------------------------
+
+cmd_migrate() {
+  local monolith="$project/BACKLOG.md"
+  [[ -f $monolith ]] || \
+    ps_die "$PS_VALIDATION" "nothing_to_migrate" "no BACKLOG.md in $project - nothing to migrate"
+  if [[ -d $tree ]] && find "$tree" -type f -name '*.md' 2>/dev/null | grep -q .; then
+    ps_die "$PS_VALIDATION" "already_migrated" \
+      "$tree already holds entries - refusing to migrate twice over the same output"
+  fi
+
+  local work; work=$(ps_strip_cr "$monolith")
+  mapfile -t LINES <"$work"
+
+  # Pass 1: split the monolith into items. The current bucket comes from the
+  # marker lines; an item runs from its checkbox heading to the next boundary.
+  local -a M_OLDID=() M_TITLE=() M_ADDED=() M_COMPLETED=() M_WHY=() M_DONE=() M_BUCKET=()
+  local cur=-1 cur_bucket="" in_meta=0 line
+  for line in "${LINES[@]}"; do
+    case $line in
+      '<!-- BACKLOG:NOW -->')   cur_bucket="now"; continue ;;
+      '<!-- BACKLOG:NEXT -->')  cur_bucket="next"; continue ;;
+      '<!-- BACKLOG:LATER -->') cur_bucket="later"; continue ;;
+      '<!-- BACKLOG:DONE -->')  cur_bucket="done"; continue ;;
+    esac
+    if [[ $line =~ ^-\ \[[\ x]\]\ \*\*(BK-[0-9]{4})\*\*\ -\ (.*)$ ]]; then
+      cur=$((cur + 1)); in_meta=0
+      M_OLDID[cur]="${BASH_REMATCH[1]}"; M_TITLE[cur]="${BASH_REMATCH[2]}"
+      M_ADDED[cur]=""; M_COMPLETED[cur]=""; M_WHY[cur]=""; M_DONE[cur]=""
+      M_BUCKET[cur]="${cur_bucket:-later}"
+      continue
+    fi
+    ((cur >= 0)) || continue
+    # Metadata and body lines are indented two spaces in the old format.
+    local trimmed=${line#"  "}
+    if [[ $trimmed == '<!-- item' ]]; then in_meta=1; continue; fi
+    if [[ $trimmed == '-->' ]]; then in_meta=0; continue; fi
+    if ((in_meta)); then
+      case $trimmed in
+        "added:"*)     M_ADDED[cur]="${trimmed#added: }" ;;
+        "completed:"*) M_COMPLETED[cur]="${trimmed#completed: }" ;;
+      esac
+      continue
+    fi
+    case $trimmed in
+      '- why: '*)      M_WHY[cur]="${trimmed#'- why: '}" ;;
+      '- done-when: '*) M_DONE[cur]="${trimmed#'- done-when: '}" ;;
+    esac
+  done
+
+  ((${#M_OLDID[@]} > 0)) || ps_die "$PS_VALIDATION" "nothing_to_migrate" \
+    "$monolith holds no items - nothing to migrate"
+
+  declare -A USED=()
+  local i suffix tries
+  for i in "${!M_OLDID[@]}"; do
+    for tries in $(seq 1 50); do
+      suffix=$(ps_mint_suffix)
+      [[ -z ${USED[$suffix]-} ]] && break
+      suffix=""
+    done
+    [[ -n $suffix ]] || ps_die "$PS_VALIDATION" "suffix_exhausted" \
+      "could not mint a unique suffix after 50 attempts"
+    USED[$suffix]=1
+    M_OLDID[i]=$suffix
+  done
+
+  # Pass 2: write the entry files. Live buckets take the filename timestamp
+  # from `added:`; done items from `completed:` (falling back to `added:`),
+  # because the done shard must be the shard the name implies.
+  local migrated=0
+  for i in "${!M_OLDID[@]}"; do
+    suffix=${M_OLDID[i]}
+    local stamp_source ts
+    if [[ ${M_BUCKET[i]} == done && -n ${M_COMPLETED[i]} ]]; then
+      stamp_source=${M_COMPLETED[i]}
+    else
+      stamp_source=${M_ADDED[i]}
+    fi
+    [[ -n $stamp_source ]] || ps_die "$PS_VALIDATION" "migrate_bad_entry" \
+      "an item titled '${M_TITLE[i]}' has no timestamp - cannot place it"
+    ts=$(ps_to_utc_compact "$stamp_source") || ts=""
+    [[ -n $ts ]] || ps_die "$PS_VALIDATION" "migrate_bad_timestamp" \
+      "the item titled '${M_TITLE[i]}' has an unparseable timestamp: $stamp_source"
+
+    local dir
+    if [[ ${M_BUCKET[i]} == done ]]; then
+      dir="$tree/done/${ts:0:4}/${ts:4:2}"
+    else
+      dir="$tree/${M_BUCKET[i]}"
+    fi
+    mkdir -p "$dir" || ps_die "$PS_IO" "mkdir_failed" "cannot create $dir"
+
+    local added_stamp
+    if [[ -n ${M_ADDED[i]} ]]; then
+      added_stamp=$(date -u -d "${M_ADDED[i]}" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null) || added_stamp=${M_ADDED[i]}
+    else
+      added_stamp="-"
+    fi
+
+    local entry; entry=$(ps_tempfile)
+    {
+      printf '# %s\n\n' "${M_TITLE[i]}"
+      printf '<!-- item\n'
+      printf 'id: %s\n' "$suffix"
+      printf 'added: %s\n' "$added_stamp"
+      if [[ -n ${M_COMPLETED[i]} ]]; then
+        printf 'completed: %s\n' "$(date -u -d "${M_COMPLETED[i]}" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || printf '%s' "${M_COMPLETED[i]}")"
+      fi
+      printf -- '-->\n\n'
+      printf -- '- why: %s\n' "${M_WHY[i]}"
+      printf -- '- done-when: %s\n' "${M_DONE[i]}"
+    } >"$entry"
+    ps_atomic_create "$entry" "$dir/${ts}-${suffix}.md" || \
+      ps_die "$PS_IO" "name_collision" "name collision during migration at $dir"
+    migrated=$((migrated + 1))
+  done
+
+  # Renamed, not deleted: the monolith stays recoverable, but it no longer
+  # collides with the tree check's "no monolith beside the directories" rule.
+  mv -- "$monolith" "$monolith.migrated" || \
+    ps_die "$PS_IO" "rename_failed" "could not rename $monolith to $monolith.migrated"
+
+  ps_info "migrated $migrated items; BACKLOG.md renamed to BACKLOG.md.migrated"
+  if ((PS_JSON)); then
+    printf '{"ok":true,"migrated":%d,"renamed":%s}\n' \
+      "$migrated" "$(ps_json_string "$monolith.migrated")"
+  fi
+}
+
+cmd_check() {
+  ps_check_tree "$project" backlog || true
+  ps_check_report
+}
+
+# ---------------------------------------------------------------------------
+
 ps_scratch_init
 [[ -d $project ]] || ps_die "$PS_IO" "project_missing" "no such directory: $project"
 
 case $command in
   add) [[ -w $project ]] || ps_die "$PS_IO" "dir_not_writable" "directory is not writable: $project"
-       ps_with_lock "$project/.backlog.lock" cmd_add ;;
+       cmd_add ;;
   move) [[ -w $project ]] || ps_die "$PS_IO" "dir_not_writable" "directory is not writable: $project"
-        ps_with_lock "$project/.backlog.lock" cmd_move ;;
+        cmd_move ;;
   done) [[ -w $project ]] || ps_die "$PS_IO" "dir_not_writable" "directory is not writable: $project"
-        ps_with_lock "$project/.backlog.lock" cmd_done ;;
+        cmd_done ;;
   list) cmd_list ;;
-  *) ps_die "$PS_USAGE" "unknown_command" "unknown command: $command (add | move | done | list)" ;;
+  migrate) [[ -w $project ]] || ps_die "$PS_IO" "dir_not_writable" "directory is not writable: $project"
+        cmd_migrate ;;
+  check) cmd_check ;;
+  *) ps_die "$PS_USAGE" "unknown_command" "unknown command: $command (add | move | done | list | migrate | check)" ;;
 esac

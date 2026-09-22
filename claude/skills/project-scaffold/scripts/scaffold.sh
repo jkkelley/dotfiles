@@ -19,7 +19,11 @@ SKILL_DIR=$(cd -- "$SCRIPT_DIR/.." && pwd)
 source "$SCRIPT_DIR/lib/common.sh"
 
 readonly TEMPLATE_DIR="$SKILL_DIR/references/templates"
-readonly CONTEXT_FILES=(CLAUDE.md COMPASS.md BACKLOG.md ISSUES.md NAMING.md)
+readonly CONTEXT_FILES=(CLAUDE.md COMPASS.md NAMING.md)
+# issues/ and backlog/ are directories of one-file-per-entry, not files: two
+# concurrent agents must never need to touch the same path (dotfiles #95).
+# Each leaf gets a .gitkeep so a fresh, empty tree survives git.
+readonly ENTRY_DIRS=(issues backlog/now backlog/next backlog/later backlog/done)
 readonly VENDORED=(lib/common.sh log-issue.sh backlog.sh cache.sh)
 
 APPLY=0
@@ -55,7 +59,9 @@ Options:
   --help
 
 What it installs:
-  CLAUDE.md COMPASS.md BACKLOG.md ISSUES.md NAMING.md
+  CLAUDE.md COMPASS.md NAMING.md
+  issues/YYYY/MM/     one entry file per issue        (log-issue.sh)
+  backlog/{now,next,later,done}/   one entry file per item (backlog.sh)
   .gitignore and .dockerignore
   .claude/settings.json and .claude/settings.local.json
   .claude/skills.toml    (which skills this project uses - skill-sync installs them)
@@ -197,6 +203,24 @@ build_plan() {
   local f
   for f in "${CONTEXT_FILES[@]}"; do plan_context_file "$f"; done
 
+  local d
+  for d in "${ENTRY_DIRS[@]}"; do
+    if [[ ! -d $project/$d ]]; then
+      plan_add "$d/" create "absent"
+    else
+      plan_add "$d/" skip "exists"
+    fi
+  done
+
+  # A monolith is not ours to delete, but it is worth naming: beside the
+  # directories it is a second source of truth, and migrate is the way out.
+  if [[ -f $project/ISSUES.md ]]; then
+    plan_add "ISSUES.md" skip "old monolith - convert with: log-issue.sh migrate"
+  fi
+  if [[ -f $project/BACKLOG.md ]]; then
+    plan_add "BACKLOG.md" skip "old monolith - convert with: backlog.sh migrate"
+  fi
+
   # All three are copied verbatim from a template and never touched again. A
   # file that exists is skipped rather than refreshed: settings.local.json is
   # machine-specific and skills.toml is the project's own declared intent, so
@@ -273,8 +297,8 @@ project-scaffold - installing the agent context layer into:
 Always installed (the context layer):
   CLAUDE.md     how an agent should behave here
   COMPASS.md    the map - pointers to everything else, capped at 100 lines
-  BACKLOG.md    Now / Next / Later / Done, managed by backlog.sh
-  ISSUES.md     append-only issue log, newest first, managed by log-issue.sh
+  issues/       one file per issue, month-sharded, managed by log-issue.sh
+  backlog/      one file per item in now/next/later/done, managed by backlog.sh
   NAMING.md     naming conventions, inherited and project-specific
   .gitignore    the shared ignore set, plus the files the scaffold tools create
   .dockerignore the same set, trimmed for a build context
@@ -338,8 +362,15 @@ apply_plan() {
   for i in "${!PLAN_FILES[@]}"; do
     local f="${PLAN_FILES[i]}" a="${PLAN_ACTIONS[i]}"
     case $f in
-      CLAUDE.md | COMPASS.md | BACKLOG.md | ISSUES.md | NAMING.md)
+      CLAUDE.md | COMPASS.md | NAMING.md)
         apply_context_file "$f" "$a" ;;
+      */)
+        # Entry directories: mkdir -p plus a .gitkeep, so an empty tree
+        # survives git. Existing directories are skipped in the plan.
+        if [[ $a == create ]]; then
+          mkdir -p "$project/$f" || ps_die "$PS_IO" "mkdir_failed" "cannot create $project/$f"
+          [[ -e $project/$f.gitkeep ]] || : >"$project/$f.gitkeep"
+        fi ;;
       .claude/settings.json | .claude/settings.local.json | .claude/skills.toml)
         if [[ $a == create ]]; then
           local base="${f#.claude/}"
