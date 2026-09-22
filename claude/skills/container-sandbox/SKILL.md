@@ -20,6 +20,7 @@ If this file has no section covering the thing being tested, use `references/ski
 - **Testing a skill's or agent's bundled scripts:** see `references/skill-testing.md`.
 - **Finding out what a host CLI actually does:** see "Verifying a host CLI's behaviour" below.
 - **Proving a machine-level hook actually fires:** see "Verifying a hook that only fires on a real session start" below.
+- **Testing a bash automation daemon (a sweep loop, a dispatcher, several cooperating scripts) end-to-end:** see "Testing a bash automation daemon end-to-end" below.
 
 ## Verifying a host CLI's behaviour
 
@@ -199,6 +200,96 @@ Remove the stamp between steps, confirm the guard first so it is observed rather
 ```bash
 rm -f .claude/cache/.sync-stamp   # churn guard only, not the thing under test
 ```
+
+## Testing a bash automation daemon end-to-end
+
+**What this covers:** a system of several cooperating bash scripts - a sweep loop, a dispatcher, a gate - that
+between them drive tickets/jobs through a lifecycle, read and write their own on-disk state, and shell out to other
+CLIs (an agent-control tool, `gh`, a CI runner) to decide what to do next. `references/skill-testing.md` covers a
+single script's happy/negative/determinism cases; this is the shape one level up, where the thing under test is the
+_interaction_ between several scripts, real filesystem state, and stubbed externals over one or more iterations of a
+loop that does not, by itself, ever stop.
+
+**Why it earns its own section:** the individual patterns above (stubbing a CLI, driving a gate against a real
+clone) compose here but do not add up to the whole recipe on their own. Three things are specific to a daemon:
+
+1. The loop never returns. A "run once" flag rarely exists in the real script (adding one just for tests is itself
+   a behaviour change), so the harness runs the real loop under `timeout` and reads the _post-state_ - did it land
+   back in its own sleep, or die - rather than an exit code. `timeout`'s own "I killed it" code (124) is what
+   success looks like.
+2. State lives in more than one directory, and the scripts already take those directories from the environment
+   because that's how the humans running this in production point a maintenance copy at the same real state. If
+   they do, that parameterization is the whole reason this is cheap: point each one at a throwaway path, and no
+   script under test changes for testing, only where it looks.
+3. A crash under `set -euo pipefail` can be _silent to the caller_: the loop's own trap writes a FATAL line to its
+   own log file, not to the stdout/stderr a harness naturally captures, so "no error printed" is not evidence of
+   "it worked" - the log file has to be checked too, every time.
+
+**The pattern:**
+
+```bash
+# one throwaway world per case
+export PACKET="$WORK/packet"; cp -a "$REPO_ROOT/." "$PACKET/"   # a plain copy, not a clone - see the note below
+export STATE="$WORK/state";  mkdir -p "$STATE"
+export REPO="$WORK/repo";    git init -q --bare "$WORK/origin.git"
+                              git init -q "$REPO" && git -C "$REPO" remote add origin "$WORK/origin.git"
+                              git -C "$REPO" commit -q --allow-empty -m seed
+                              git -C "$REPO" push -q -u origin main
+export PATH="$STUBDIR:$PATH"                                     # stub the externals the loop shells out to
+
+rm -f "$STATE/watch.log"
+timeout 10 "$PACKET/bin/watch.sh" >stdout.log 2>&1
+rc=$?
+# success: rc=124 (timeout fired - the loop was alive and sleeping), no FATAL in $STATE/watch.log, and
+# stdout.log shows the sweep actually ran ("sweep 1:" or equivalent), not that it died before doing anything.
+```
+
+**A plain copy for the tree under test, not a clone.** skill-testing.md's "Driving a repository-level gate against
+the real tree" clones, because that pattern's whole point is a check that reads the _mounted repo's own git
+history_. A daemon whose scripts only read history from a _separate_, purpose-built throwaway repo (the one seeded
+above) has no use for the outer tree's history at all - and if that outer tree is itself a git worktree (a
+maintenance checkout of the very packet under test, say), its `.git` is a pointer file into a git directory that
+almost certainly is not part of the mount, and `git clone` on it fails with "not a git repository" for a reason that
+has nothing to do with the daemon. Copy the files; only build a real git repo for the state the scripts actually
+read as git history.
+
+**Stub every external the loop shells out to, including the ones that only matter for a later step.** A dispatcher
+that calls an agent-control CLI, `gh`, and a CI-status tool needs all three stubbed even for a case that is only
+about the first one, because the loop does not stop calling the others just because this case does not care about
+their answers - an unstubbed call either hits the real network (caught by `--network=none`, but as a hang or a
+confusing failure, not a clean skip) or exits non-zero in a way the script may or may not tolerate. Give each stub a
+permissive default (exit 0, a plausible empty JSON shape) and let a case override one answer via an env var, exactly
+as skill-testing.md's "Stubbing an external CLI" describes for a single tool.
+
+**A daemon that re-execs a "helper" script under test needs the helper's OWN option set checked, not just its
+own.** A script that sources a shared library for its `record()`/`session_dir()` helpers inherits that library's
+`set` options too - if the library unconditionally sets `-e` and the caller deliberately did not (because, say, it
+runs several greps where at most one is expected to match, and the other misses are normal, not failures), sourcing
+silently upgrades the caller into a shell that dies on the very first expected non-match, before ever reaching the
+logic the case is trying to exercise. This does not look like a crash from the caller's side: no error, no output,
+just nothing happened. Prove it by checking `$-` (the active option string) immediately after the source, in a
+throwaway repro, not by reading the two files and reasoning about it - inheritance through `.`/`source` is easy to
+get backwards from the code alone. Found exactly this way while building a regression test for one gate script in
+`rime-bootstrap`: a `set -x` trace of the real script always stopped dead right after its first assignment, for
+every input except the one happy-path case, and an isolated two-line repro (`set -uo pipefail; set -euo pipefail;
+grep -m1 NOMATCH | ...`) reproduced the silent death 100% of the time outside the script entirely.
+
+**Assert the post-state, not the exit code, for the daemon's own crash detector too.** The daemon's `set -e` trap is
+itself something to test, the same way skill-testing.md's "`set -e` kills scripts in ways the host hides" tests
+individual scripts: build a fixture shaped exactly like the state that crashed it in production (a session record
+with only heartbeats in it, say, if that is the historical incident), run one sweep, and check the log file for the
+FATAL line and the "did a sweep complete" line together - a case that only checks "did the process exit 0" would
+have missed the historical incident entirely, since a crash mid-sweep under `set -e` and a clean exit before the
+final `sleep` can look identical from the outside.
+
+**What it saves:** every one of these is a production incident that cost real diagnosis time when it happened live -
+a crash three restarts deep into a running loop, a re-dispatch of already-finished work, an agent wedged on a dialog
+nothing answered. Turning each into a fixture that builds the exact triggering shape and asserts the fix holds means
+the next change to any of these scripts fails in a container in seconds instead of in production, and the fixture
+is the executable record of exactly what went wrong and why, which a comment can describe but cannot enforce.
+A worked example: `rime-bootstrap/tests/` - `run.sh` as the only entry point (it re-execs itself into Podman with a
+purpose-built image carrying bash/git/jq/python3), `lib/fixtures.sh` for the throwaway-world builder, `stubs/` for
+the external CLIs, and one file per historical incident under `cases/`, each named after the defect it catches.
 
 ## 2. Dependency Management (The "No-Clutter" Way)
 
