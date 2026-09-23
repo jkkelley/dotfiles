@@ -61,6 +61,18 @@ Only a Claude runtime can mint a claude.ai URL, so every other runtime uses `lav
 The spawner exports `RAIL_SURFACE` when it starts the seat.
 Unset means `lavish-axi`.
 
+The surface is `report/rail.sh`, the Execution Rail, and nothing else writes the page.
+
+```sh
+./report/rail.sh log E-01 started "fifteen words or fewer"   # append a ledger row, rebuild
+./report/rail.sh build                                       # rebuild only
+./report/rail.sh publish                                     # put the page on this seat's surface
+./report/rail.sh surface                                     # print lavish or artifact
+```
+
+The plan is `report/plan.json`.
+The ledger and the built page are state under `~/.local/state/<project>/rail/` and never enter git.
+
 Binding: `GLOBAL-INTERACTION-SURFACE-POLICY` (v1.0.2 in progress).
 
 ## Law: scope small, integrate in CI

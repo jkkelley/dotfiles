@@ -6,7 +6,7 @@
 CASE_NAME=200-rail
 source "${SKILL:-/skill}/testing/assert.sh"
 
-R="$SKILL/templates/rail"
+R="$SKILL/references/templates/rail"
 ledger_sh() { bash "$R/bin/ledger.sh" "$@"; }
 build_sh() { bash "$R/bin/rail-build.sh" "$@"; }
 

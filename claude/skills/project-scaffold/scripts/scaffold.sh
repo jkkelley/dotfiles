@@ -53,6 +53,20 @@ readonly VENDORED=(lib/common.sh log-issue.sh backlog.sh)
 # asked for one. Create-if-absent: a workflow a project has edited is its own.
 readonly CI_TEMPLATE="ci/context-check.yml"
 readonly CI_TARGET=".github/workflows/context-check.yml"
+# The Execution Rail, the owner-facing status page for a numbered plan (O-07).
+# What broke: the rail existed only as a template in this skill, so a project
+# had to copy it by hand, and a hand copy of rail.sh.tmpl kept its
+# __PROJECT_NAME__ placeholder - the wrapper then kept its state under
+# ~/.local/state/__PROJECT_NAME__/, one directory shared by every project that
+# made the same mistake. Why this fix: scaffold renders the wrapper from the one
+# input it always has, the project directory's name, so no placeholder reaches
+# the project. Rejected: new --rail-title style flags, which are four more
+# inputs for values the owner can edit in report/rail.sh on day one. Cost: the
+# title is the directory name until someone edits it. The engine (report/rail/)
+# is refreshed like .claude/scripts; the wrapper and plan.json are the
+# project's own from the moment they exist and are never overwritten.
+readonly RAIL_TEMPLATE="$TEMPLATE_DIR/rail"
+readonly RAIL_ENGINE=(bin/ledger.sh bin/rail-build.sh assets/template.html)
 
 APPLY=0
 WITH_README=0
@@ -97,6 +111,7 @@ What it installs:
   .claude/settings.json and .claude/settings.local.json
   .claude/skills.toml    (which skills this project uses - skill-sync installs them)
   .claude/scripts/   (log-issue.sh, backlog.sh, lib/common.sh)
+  report/rail.sh, report/plan.json, report/rail/   the Execution Rail
   .github/workflows/context-check.yml   only with --ci
 
 Existing files are APPENDED to, never deleted or overwritten.
@@ -279,6 +294,21 @@ build_plan() {
     fi
   done
 
+  local r
+  for r in "${RAIL_ENGINE[@]}"; do
+    local dst="$project/report/rail/$r"
+    if [[ ! -e $dst ]]; then
+      plan_add "report/rail/$r" create "absent"
+    elif cmp -s "$RAIL_TEMPLATE/$r" "$dst"; then
+      plan_add "report/rail/$r" skip "up to date"
+    else
+      plan_add "report/rail/$r" refresh "differs from skill version ${PS_TOOL_VERSION}"
+    fi
+  done
+  for r in report/rail.sh report/plan.json; do
+    if [[ -e $project/$r ]]; then plan_add "$r" skip "exists"; else plan_add "$r" create "absent"; fi
+  done
+
   if ((WITH_README)); then
     if [[ -e $project/README.md ]]; then plan_add "README.md" skip "exists"; else plan_add "README.md" create "absent"; fi
   fi
@@ -340,6 +370,7 @@ Always installed (the context layer):
   .gitignore    the shared ignore set, plus the files the scaffold tools create
   .dockerignore the same set, trimmed for a build context
   .claude/      settings, the skills manifest, and a versioned copy of the tools
+  report/       the Execution Rail - rail.sh, an empty plan.json, and its engine
 
 Optional extras:
   README.md     e.g. a title, one-paragraph description, and setup steps
@@ -392,6 +423,41 @@ apply_context_file() {
   esac
 }
 
+# rail_escape <value> -> the value, safe inside a double-quoted bash string.
+# The wrapper assigns each fact as PROJECT="...", so a directory name carrying a
+# quote, a dollar or a backtick would otherwise become code in report/rail.sh.
+# Single-quoted replacements keep bash 5.2's patsub_replacement from reading an
+# & in the name as "the matched text".
+rail_escape() {
+  local v="$1"
+  v=${v//'\'/'\\'}
+  v=${v//'"'/'\"'}
+  v=${v//'$'/'\$'}
+  v=${v//'`'/'\`'}
+  printf '%s' "$v"
+}
+
+# render_rail_wrapper <out> - rail.sh.tmpl with its four facts filled in.
+render_rail_wrapper() {
+  local out="$1" name; name=$(basename -- "$project")
+  local text; text=$(<"$RAIL_TEMPLATE/rail.sh.tmpl")
+  local project_v title_v eyebrow_v source_v
+  project_v=$(rail_escape "$name")
+  title_v=$(rail_escape "$name")
+  eyebrow_v=$(rail_escape "$name · execution rail")
+  source_v=$(rail_escape "report/plan.json")
+  text=${text//__PROJECT_NAME__/"$project_v"}
+  text=${text//__RAIL_TITLE__/"$title_v"}
+  text=${text//__RAIL_EYEBROW__/"$eyebrow_v"}
+  text=${text//__RAIL_SOURCE__/"$source_v"}
+  # Fail loud rather than install a wrapper that still names a placeholder: a
+  # new token added to the template without a line above would otherwise ship.
+  if grep -qE '__(PROJECT_NAME|RAIL_[A-Z]+)__' <<<"$text"; then
+    ps_die "$PS_IO" "template_unrendered" "rail.sh.tmpl carries a placeholder scaffold does not fill"
+  fi
+  printf '%s\n' "$text" >"$out"
+}
+
 apply_plan() {
   mkdir -p "$project/.claude/scripts/lib"
 
@@ -430,6 +496,32 @@ apply_plan() {
           cat -- "$SCRIPT_DIR/$rel" >"$s"
           ps_atomic_install "$s" "$project/.claude/scripts/$rel"
           chmod +x "$project/.claude/scripts/$rel" 2>/dev/null || true
+        fi ;;
+      report/rail/*)
+        if [[ $a == create || $a == refresh ]]; then
+          local rel="${f#report/rail/}"
+          mkdir -p "$project/report/rail/${rel%/*}" || ps_die "$PS_IO" "mkdir_failed" "cannot create $project/report/rail/${rel%/*}"
+          local s; s=$(ps_tempfile)
+          cat -- "$RAIL_TEMPLATE/$rel" >"$s"
+          ps_atomic_install "$s" "$project/report/rail/$rel"
+          [[ $rel == bin/* ]] && { chmod +x "$project/report/rail/$rel" 2>/dev/null || true; }
+        fi ;;
+      report/rail.sh)
+        if [[ $a == create ]]; then
+          mkdir -p "$project/report" || ps_die "$PS_IO" "mkdir_failed" "cannot create $project/report"
+          local s; s=$(ps_tempfile)
+          render_rail_wrapper "$s"
+          ps_atomic_install "$s" "$project/report/rail.sh"
+          chmod +x "$project/report/rail.sh" 2>/dev/null || true
+        fi ;;
+      report/plan.json)
+        # An empty array, which rail-build.sh accepts: the page renders with no
+        # steps until the plan is written, rather than failing to build.
+        if [[ $a == create ]]; then
+          mkdir -p "$project/report" || ps_die "$PS_IO" "mkdir_failed" "cannot create $project/report"
+          local s; s=$(ps_tempfile)
+          printf '[]\n' >"$s"
+          ps_atomic_install "$s" "$project/report/plan.json"
         fi ;;
       README.md)
         if [[ $a == create ]]; then

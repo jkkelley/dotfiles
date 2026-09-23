@@ -61,7 +61,11 @@ for f in AGENTS.md CLAUDE.md; do
 done
 
 # --- no template token survives rendering, in any file the scaffold wrote
-survivors=$(grep -rlE '__[A-Z][A-Z0-9_]*__' "$p" --exclude-dir=scripts 2>/dev/null || true)
+# report/rail/ is excluded for the same reason scripts/ is: it is vendored code,
+# and its __TITLE__-style tokens are filled by rail-build.sh on every build, not
+# by scaffold. The wrapper scaffold does render, report/rail.sh, is still
+# checked here, and 230-rail-install checks the built page carries none.
+survivors=$(grep -rlE '__[A-Z][A-Z0-9_]*__' "$p" --exclude-dir=scripts --exclude-dir=rail 2>/dev/null || true)
 assert_eq "" "$survivors" "no __PLACEHOLDER__ survives in a rendered file"
 
 # --- an existing AGENTS.md missing one law gains it, and keeps what it had

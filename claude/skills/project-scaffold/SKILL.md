@@ -92,6 +92,13 @@ anyone reviews it. Both come from
 `claudes-markdown-12-rules`; re-pull that upstream rather than hand-editing a project's copy.
 `--no-gitignore` / `--no-dockerignore` opt out.
 
+Every project also gets the Execution Rail, the owner-facing status page, from
+[references/templates/rail/](references/templates/rail/README.md): `report/rail.sh` rendered with the
+project directory's name, an empty `report/plan.json`, and the engine under `report/rail/`. The
+engine is refreshed like `.claude/scripts/`; `rail.sh` and `plan.json` are the project's own once
+they exist and are never overwritten. The ledger and the built page are state under
+`~/.local/state/<project>/rail/`, never in the repository.
+
 **Existing files are appended to, never deleted or overwritten.** A file already present gains only
 the sections it is missing. A non-empty file with none of the expected structure is reported and
 left byte-identical - guessing an insertion point is how hand-written work gets destroyed.
