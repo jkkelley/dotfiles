@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "test-plan.schema.json",
+  "title": "Test plan block of a testing work-order",
+  "description": "The ## Test plan section of a type:test ticket, as parsed by the work-order skill's wo_test_plan_json. The architect writes it from claude/workflow/templates/test-plan.md; the tester runs exactly these cases, in Podman, on the pinned image. Small scope, small tests: full integration is CI's and is named in out_of_scope rather than run here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["scope", "cases", "isolation", "out_of_scope"],
+  "properties": {
+    "scope": {
+      "description": "The one unit the ticket changed, in one line.",
+      "type": "string", "minLength": 1, "pattern": "^[^<]"
+    },
+    "cases": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "intent", "command", "expected"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^TP-[0-9]+$" },
+          "intent": { "description": "Why the case matters: what breaks, and for whom, if it fails.", "type": "string", "minLength": 1, "pattern": "^[^<]" },
+          "command": { "description": "The exact command, run inside the isolation.", "type": "string", "minLength": 1, "pattern": "^[^<]" },
+          "expected": { "description": "The exit code and the observable result.", "type": "string", "minLength": 1, "pattern": "^[^<]" }
+        }
+      }
+    },
+    "isolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "image"],
+      "properties": {
+        "runtime": { "const": "podman" },
+        "image": { "description": "Pinned by digest (dotfiles Rule 15); a floating tag is not the image that was reviewed.", "type": "string", "pattern": "^[a-z0-9][a-z0-9._/:-]*@sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "out_of_scope": {
+      "description": "What full integration CI covers instead, so the plan stays small.",
+      "type": "array", "minItems": 1,
+      "items": { "type": "string", "minLength": 1, "pattern": "^[^<]" }
+    }
+  }
+}

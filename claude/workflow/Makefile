@@ -8,7 +8,7 @@ ROOT  := $(abspath $(CURDIR)/../..)
 RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:Z" -w /work/claude/workflow -e HOME=/tmp $(IMAGE)
 
 .DEFAULT_GOAL := help
-.PHONY: help image test schema lint herdr-first compaction chain failover
+.PHONY: help image test schema lint herdr-first compaction chain failover test-plan
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-10s %s\n", $$1, $$2}'
@@ -34,5 +34,8 @@ chain: image ## The spawner starts the requested link of a model chain on that l
 failover: image ## The seat watcher: done records, hot swap along the chain, exhaustion, against a stub herdr
 	@$(RUN) bash tests/unit/test_seat_watch.sh
 
-test: schema lint herdr-first compaction chain failover ## Everything
-	@echo "ok  workflow: schema, lint, herdr-first, compaction, chain, failover"
+test-plan: image ## The test-plan block: template, work-order's parser and the schema agree (O-10)
+	@$(RUN) bash tests/unit/test_test_plan.sh
+
+test: schema lint herdr-first compaction chain failover test-plan ## Everything
+	@echo "ok  workflow: schema, lint, herdr-first, compaction, chain, failover, test-plan"

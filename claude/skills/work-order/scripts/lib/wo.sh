@@ -14,7 +14,10 @@
 # that was abandoned is a decision, and a decision with no record is how the same
 # idea gets cut again three weeks later.
 readonly WO_STATUSES=(draft ready in-progress in-review done cancelled stale)
-readonly WO_TYPES=(feature bug chore spike)
+# `test` is the testing ticket: the architect writes its `## Test plan` block and
+# the tester runs exactly that. `start` refuses one whose plan cannot be run as
+# written - see wo_require_test_plan (O-10).
+readonly WO_TYPES=(feature bug chore spike test)
 readonly WO_PRIORITIES=(p0 p1 p2 p3)
 
 readonly WO_DIR_NAME="work-orders"
@@ -290,6 +293,102 @@ wo_require_status() {
   for s in "$@"; do allowed+="${allowed:+, }$s"; done
   ps_die "$PS_VALIDATION" "illegal_transition" \
     "status is '$cur'; this command requires one of: $allowed"
+}
+
+# ---------------------------------------------------------------------------
+# The test plan (O-10).
+#
+# The architect writes the plan into the testing ticket and the tester runs
+# exactly that plan. Before this, `## Test plan` held one free-text shell line,
+# so a tester handed a `test` ticket had to invent its cases and the plan it ran
+# was never the plan anyone reviewed. The block now has four fixed labels, the
+# shape claude/workflow/templates/test-plan.md gives the architect to copy, and
+# claude/workflow/schemas/test-plan.schema.json is the contract for what this
+# parser emits.
+#
+# Markdown rather than a fenced JSON blob, because the ticket is read by a human
+# at the approval gate and a JSON blob beside a prose rendering of it is two
+# statements of one plan that can disagree.
+# ---------------------------------------------------------------------------
+
+# wo_test_plan_json <file> - the `## Test plan` section of a ticket as JSON on
+# stdout. Only the labels actually present become keys, so a section still in
+# the old one-line shape, or `_none recorded_`, has no `cases` key at all -
+# which is how "missing" is told apart from "present with no case".
+# A file with no `## Test plan` heading is read as a bare block body, which is
+# what lets the workflow suite parse the template itself.
+wo_test_plan_json() {
+  local file="$1"
+  awk '
+    /^## Test plan[[:space:]]*$/ { insec = 1; seen = 1; next }
+    /^## / { if (insec) exit; next }
+    { lines[++n] = $0; if (insec) sec[++m] = $0 }
+    END {
+      if (seen) { for (i = 1; i <= m; i++) body(sec[i]) } else { for (i = 1; i <= n; i++) body(lines[i]) }
+    }
+    function strip(s) {
+      sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s)
+      if (s ~ /^`.*`$/) s = substr(s, 2, length(s) - 2)
+      return s
+    }
+    function body(l,   k, v) {
+      if (l ~ /^\*\*Scope under test\*\*[[:space:]]*$/)            { mode = "scope"; print "L\tscope"; return }
+      if (l ~ /^\*\*Cases\*\*[[:space:]]*$/)                       { mode = "cases"; print "L\tcases"; return }
+      if (l ~ /^\*\*Isolation\*\*[[:space:]]*$/)                   { mode = "iso";   print "L\tisolation"; return }
+      if (l ~ /^\*\*Out of scope - CI covers\*\*[[:space:]]*$/)    { mode = "out";   print "L\tout_of_scope"; return }
+      if (mode == "scope" && !scoped && l ~ /[^[:space:]]/)        { scoped = 1; print "S\t" strip(l); return }
+      if (mode == "cases" && l ~ /^- `[^`]+`[[:space:]]*$/)        { cased = 1; print "C\t" strip(substr(l, 3)); return }
+      if (mode == "cases" && cased && l ~ /^[[:space:]]+- (intent|command|expected):/) {
+        sub(/^[[:space:]]+- /, "", l); k = l; sub(/:.*/, "", k); v = l; sub(/^[a-z]+:/, "", v)
+        print "F\t" k "\t" strip(v); return
+      }
+      if (mode == "iso" && l ~ /^- (runtime|image):/) {
+        sub(/^- /, "", l); k = l; sub(/:.*/, "", k); v = l; sub(/^[a-z]+:/, "", v)
+        # The image line carries its human tag in parentheses after the digest,
+        # the Rule 15 convention; the tag is for the reader, not the contract.
+        if (k == "image") sub(/[[:space:]]+\(.*\)[[:space:]]*$/, "", v)
+        print "R\t" k "\t" strip(v); return
+      }
+      if (mode == "out" && l ~ /^- /)                              { print "O\t" strip(substr(l, 3)) }
+    }
+  ' "$file" | jq -Rn '
+    reduce (inputs | split("\t")) as $r ({};
+      if   $r[0] == "L" and $r[1] == "scope"        then .scope //= ""
+      elif $r[0] == "L" and $r[1] == "cases"        then .cases //= []
+      elif $r[0] == "L" and $r[1] == "isolation"    then .isolation //= {}
+      elif $r[0] == "L" and $r[1] == "out_of_scope" then .out_of_scope //= []
+      elif $r[0] == "S" then .scope = ($r[1:] | join("\t"))
+      elif $r[0] == "C" then .cases += [{id: $r[1]}]
+      elif $r[0] == "F" then .cases[(.cases | length) - 1][$r[1]] = ($r[2:] | join("\t"))
+      elif $r[0] == "R" then .isolation[$r[1]] = ($r[2:] | join("\t"))
+      elif $r[0] == "O" then .out_of_scope += [$r[1:] | join("\t")]
+      else . end)'
+}
+
+# wo_require_test_plan <file> - refuse a `test` ticket whose plan cannot be run
+# as written. Called by `start`, because in-progress is the moment the tester
+# picks the plan up; a draft may still be missing one while it is argued about.
+#
+# It checks what a tester needs to run the plan without inventing anything: the
+# block, at least one case, every case complete, and a Podman image pinned by
+# digest (Rule 14, Rule 15). The full shape - scope and the CI list included -
+# is the schema's job, proven in claude/workflow's suite; restating all of it
+# here in jq would be a second contract to drift from the first.
+wo_require_test_plan() {
+  local file="$1" plan id
+  id=$(wo_field "$file" '.id')
+  plan=$(wo_test_plan_json "$file")
+  printf '%s' "$plan" | jq -e 'has("cases")' >/dev/null || ps_die "$PS_VALIDATION" "test_plan_missing" \
+    "$id is a test ticket with no test plan block - copy claude/workflow/templates/test-plan.md, fill it, and pass it to amend --test-plan-file while the ticket is a draft"
+  printf '%s' "$plan" | jq -e '.cases | length > 0' >/dev/null || ps_die "$PS_VALIDATION" "test_plan_no_case" \
+    "$id has a test plan with no case - a tester cannot run a plan that names nothing to run"
+  local bad
+  bad=$(printf '%s' "$plan" | jq -r '[.cases[] | select((.intent // "") == "" or (.command // "") == "" or (.expected // "") == "") | .id] | join(", ")')
+  [[ -z $bad ]] || ps_die "$PS_VALIDATION" "test_plan_incomplete_case" \
+    "$id test plan case(s) missing intent, command or expected: $bad"
+  printf '%s' "$plan" | jq -e '(.isolation.runtime // "") == "podman" and ((.isolation.image // "") | test("@sha256:[0-9a-f]{64}$"))' >/dev/null \
+    || ps_die "$PS_VALIDATION" "test_plan_not_isolated" \
+      "$id test plan must run in podman on an image pinned by digest (runtime: podman, image: <name>@sha256:<64 hex>)"
 }
 
 # ---------------------------------------------------------------------------
