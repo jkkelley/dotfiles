@@ -717,6 +717,40 @@ ps_count_heading_like() {
   printf '%s' "${n:-0}"
 }
 
+# ps_is_backlog_template <file> - true when a BACKLOG.md is the untouched
+# template every scaffold before 967972f wrote: each non-blank line is one of
+# that template's own lines or a BACKLOG:/scaffold: marker. The line set is
+# the union of both shipped versions (99c4701 and 4c6b696, the second a
+# superset); the template file itself was deleted by 967972f, so it lives here.
+# See the round 3 R2 breadcrumb in ps_migrate.
+ps_is_backlog_template() {
+  local known line marker='^<!-- (BACKLOG:[A-Z]+|scaffold:section=[a-z-]+) -->$'
+  known=$(cat <<'TMPL'
+# BACKLOG
+Priority order, top to bottom. Written by `backlog.sh` - `add`, `move`, `done`, `list`.
+**Read protocol:** `Now`, `Next` and `Later` in full - that is live work.
+`Done` is a sliding window: take the top 10 entries and stop.
+Go deeper only when asked, or when an item you are reading references an older ID you need.
+`Now` is what is in flight - keep it to 1-3 items or the word stops meaning anything.
+Nothing moves up a bucket on its own; promotion is a decision, not a default.
+`done-when` is the load-bearing field.
+An item whose completion someone has to adjudicate is not ready to be worked - it stays in `Later` until it can be phrased as a check.
+## Now
+## Next
+## Later
+## Done
+Newest first, trimmed to the last 20. Git holds the rest.
+Read the top 10 and stop - the other 10 are kept for the rare lookup, not for routine reading.
+TMPL
+)
+  while IFS= read -r line || [[ -n $line ]]; do
+    [[ -z ${line//[[:space:]]/} ]] && continue
+    [[ $line =~ $marker ]] && continue
+    grep -qxF -- "$line" <<<"$known" || return 1
+  done <"$1"
+  return 0
+}
+
 ps_migrate() {
   local project="$1"
   local iss_mono="$project/ISSUES.md" bk_mono="$project/BACKLOG.md"
@@ -732,7 +766,7 @@ ps_migrate() {
     fi
   done
 
-  local line cur in_meta work
+  local line cur in_meta work work_bk=""
   local -a LINES=()
 
   # --- Pass 1a: split ISSUES.md into entries ----------------------------------
@@ -784,6 +818,7 @@ ps_migrate() {
   local -a B_OLD=() B_TITLE=() B_ADDED=() B_COMPLETED=() B_WHY=() B_DONE=() B_BUCKET=()
   if [[ -f $bk_mono ]]; then
     work=$(ps_strip_cr "$bk_mono")
+    work_bk=$work
     bk_heads=$(ps_count_heading_like "$work" BK)
     mapfile -t LINES <"$work"
     cur=-1 in_meta=0
@@ -839,13 +874,32 @@ ps_migrate() {
   # parser does not know shows up as a gap instead of as silence. Rejected:
   # migrating the parseable monolith and leaving the other in place, which
   # would leave refuse_monolith blocking the migrated tree with no rerun path.
-  # Cost: a template-only monolith with no entries must be removed by hand
-  # before migrate will run; the message says so.
+  # Cost: a monolith with no entries must be removed by hand before migrate
+  # will run; the message says so. The pristine BACKLOG.md template is the one
+  # exception, see R2 below.
+  #
+  # BREADCRUMB - S-05 round 3 R2 (review: ~/.local/state/dotfiles/execution/S-05d-review.md).
+  # What broke: the N1 guard below refused the untouched BACKLOG.md template
+  # that every scaffold before 967972f wrote (markers and prose, no items) as
+  # "parsed 0 entries", so a project that logged issues and never used the
+  # backlog - the common legacy case - got exit 3 from log-issue.sh migrate
+  # until someone deleted BACKLOG.md by hand.
+  # Why this fix: that template holds nothing to lose, so when a BACKLOG.md
+  # yields 0 entries, has 0 heading-like lines, and ps_is_backlog_template
+  # accepts every line, it is empty rather than unread and is renamed aside
+  # with the other monolith. Rejected: treating any zero-heading BACKLOG.md as
+  # empty, which is exactly P1b's free-text list, still refused; and deleting
+  # the template, which the rename-not-delete rule below exists to avoid.
+  # Cost: a template someone edited by even one word is refused as before.
   local -a gaps=()
+  local bk_template=0
+  if [[ -f $bk_mono ]] && ((${#B_OLD[@]} == 0 && bk_heads == 0)) && ps_is_backlog_template "$work_bk"; then
+    bk_template=1
+  fi
   if [[ -f $iss_mono ]] && ((${#I_OLD[@]} == 0 || iss_heads > ${#I_OLD[@]})); then
     gaps+=("$iss_mono: parsed ${#I_OLD[@]} entries, found $iss_heads heading-like ISS- lines")
   fi
-  if [[ -f $bk_mono ]] && ((${#B_OLD[@]} == 0 || bk_heads > ${#B_OLD[@]})); then
+  if [[ -f $bk_mono ]] && ((bk_template == 0)) && ((${#B_OLD[@]} == 0 || bk_heads > ${#B_OLD[@]})); then
     gaps+=("$bk_mono: parsed ${#B_OLD[@]} entries, found $bk_heads heading-like BK- lines")
   fi
   if ((${#gaps[@]})); then

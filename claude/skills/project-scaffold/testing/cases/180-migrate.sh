@@ -302,6 +302,95 @@ before=$(tree_files "$w")
 run 3 "P1b: a BACKLOG.md alone with zero parseable items is refused" backlog migrate --project "$w"
 assert_eq "$before" "$(tree_files "$w")" "P1b: the monolith is untouched"
 
+# --- S-05 round 3 R2: the untouched BACKLOG.md template is empty, not unread -
+# Every scaffold before 967972f wrote BACKLOG.md from its template (markers and
+# prose, no items), and a project that only ever logged issues still has it.
+# N1 refused it as "parsed 0 entries", so log-issue.sh migrate exited 3 until
+# the file was deleted by hand. The template holds nothing to lose: it is
+# renamed aside with ISSUES.md. A single line of free text beside it is not the
+# template any more, and is refused as P1b is.
+legacy_backlog_template() {
+  cat <<'TMPL'
+# BACKLOG
+
+Priority order, top to bottom. Written by `backlog.sh` - `add`, `move`, `done`, `list`.
+
+**Read protocol:** `Now`, `Next` and `Later` in full - that is live work.
+`Done` is a sliding window: take the top 10 entries and stop.
+Go deeper only when asked, or when an item you are reading references an older ID you need.
+
+`Now` is what is in flight - keep it to 1-3 items or the word stops meaning anything.
+Nothing moves up a bucket on its own; promotion is a decision, not a default.
+
+`done-when` is the load-bearing field.
+An item whose completion someone has to adjudicate is not ready to be worked - it stays in `Later` until it can be phrased as a check.
+
+<!-- scaffold:section=now -->
+
+## Now
+
+<!-- BACKLOG:NOW -->
+
+<!-- scaffold:section=next -->
+
+## Next
+
+<!-- BACKLOG:NEXT -->
+
+<!-- scaffold:section=later -->
+
+## Later
+
+<!-- BACKLOG:LATER -->
+
+<!-- scaffold:section=done -->
+
+## Done
+
+Newest first, trimmed to the last 20. Git holds the rest.
+Read the top 10 and stop - the other 10 are kept for the rare lookup, not for routine reading.
+
+<!-- BACKLOG:DONE -->
+TMPL
+}
+s4=$(new_project)
+cat >"$s4/ISSUES.md" <<'EOF'
+## ISS-0001 - Logged before the backlog was ever used
+
+<!-- issue
+logged: 2026-08-05T16:10:02-05:00
+severity: low
+area: export
+tags: -
+refs: -
+resolves: -
+-->
+
+- **Symptom** - s
+- **Trigger** - t
+- **Cause** - c
+- **Resolution** - r
+- **Verification** - v
+EOF
+legacy_backlog_template >"$s4/BACKLOG.md"
+run 0 "P4: a valid ISSUES.md beside the pristine BACKLOG.md template migrates" log_issue migrate --project "$s4"
+assert_file "$s4/BACKLOG.md.migrated" "P4: the template is renamed aside, not deleted"
+assert_count 0 "$(find "$s4/backlog" -type f -name '*.md' 2>/dev/null | wc -l)" "P4: the template yields no backlog item"
+run 0 "P4: check is green after the migrate" log_issue check --project "$s4"
+
+# The first template (99c4701) lacked the read-protocol lines; a CRLF checkout
+# must not turn the template into free text either.
+s5=$(new_project)
+legacy_backlog_template | grep -v -e '^\*\*Read protocol' -e '^`Done` is a sliding' -e '^Go deeper' -e '^Read the top 10' | sed 's/$/\r/' >"$s5/BACKLOG.md"
+run 0 "the older, CRLF template alone migrates with backlog.sh" backlog migrate --project "$s5"
+assert_file "$s5/BACKLOG.md.migrated" "the older template is renamed aside"
+
+s6=$(new_project)
+{ legacy_backlog_template; printf -- '- remember to fix the export\n'; } >"$s6/BACKLOG.md"
+before=$(tree_files "$s6")
+run 3 "the template plus one line of free text is still refused" backlog migrate --project "$s6"
+assert_eq "$before" "$(tree_files "$s6")" "the edited template is untouched"
+
 # The strict form: a partial parse is the same loss on a smaller scale. One
 # entry in the known format and one hand-written heading is 1 parsed of 2.
 u=$(new_project)
