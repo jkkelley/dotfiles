@@ -40,7 +40,8 @@
       "rm -rf /"
     ],
     "allowed_paths": [
-      "claude/workflow/"
+      "claude/workflow/",
+      "claude/skills/work-order/"
     ]
   },
   "gates": [
