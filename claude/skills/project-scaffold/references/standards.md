@@ -37,9 +37,8 @@ Written only by `log-issue.sh`.
 
 ### Why one file per entry, and why no sequential IDs
 
-The old model was one monolithic `ISSUES.md` with sequential IDs (`ISS-0043`).
-Allocating a successor ID required scanning the file AND holding a lock on it, which is exactly where two concurrent agents on a trunk-based workflow collide.
-Worse, git saw every writer touching the same file, so merges conflicted even when the lock held (dotfiles #95).
+A shared file with sequential IDs needs a scan and a lock to allocate the next one, which is exactly where two concurrent agents on a trunk-based workflow collide.
+Even when the lock holds, git sees every writer touching the same file, so merges conflict (dotfiles #95).
 
 A random 5-char suffix minted at write time needs no scan and no lock: the name is unique by construction, so creation is an atomic `ln` with a retry.
 One file per entry means two agents never touch the same path, and merges never meet.
@@ -123,7 +122,7 @@ A resolution carries `resolves: <suffix>`, so reading newest-first you meet the 
 The window stays truthful because nothing shifts underneath it.
 
 The cost: "what is still open" is not answerable from the window alone once the log is long.
-Answering it is a grep: every `id:` that appears in no later entry's `resolves:`.
+Answering it is a grep, and there is no derived index to keep it in: every `id:` that appears in no later entry's `resolves:`.
 
 ---
 
@@ -147,8 +146,7 @@ No numeric ranks, because nobody ever agrees on what 3 versus 4 means.
 
 ### Why buckets are directories
 
-A bucket used to be a marker line inside one monolithic `BACKLOG.md`, and a move used to be a scripted splice of one shared file.
-Now a move is an atomic rename between directories and `done` is a rename into `done/YYYY/MM/` plus a `completed:` line in the metadata.
+A move is an atomic rename between directories and `done` is a rename into `done/YYYY/MM/` plus a `completed:` line in the metadata.
 Distinct paths per item mean two agents working two items never touch the same file.
 
 The live buckets stay flat because their discipline caps how many items they ever hold.
@@ -161,7 +159,7 @@ The live buckets stay flat because their discipline caps how many items they eve
 `backlog.sh list` enforces both, so an agent does not have to remember the depth.
 
 Go deeper only when the user asks, or when an item inside the window references a suffix you need in order to act.
-Same rule as `issues/` and `CONTEXT_STATE.md`, and for the same reason - state it when you go deeper, and say why.
+Same rule as `issues/`, and for the same reason - state it when you go deeper, and say why.
 
 ### Item shape
 
@@ -247,35 +245,6 @@ The stub has no sections, so an existing `CLAUDE.md` is never touched.
 
 ---
 
-## The agent cache
-
-`.claude/cache/` is **derived**.
-Delete it and nothing is lost; `cache.sh build` reconstructs it from the markdown.
-
-### Rules that keep it honest
-
-1. **Derived only.** Nothing is authored here. If a fact exists only in the cache, the cache has become a liability.
-2. **Staleness detected, not assumed.** `index.json` records a sha256 per source file. A mismatch means the agent reads the markdown instead.
-3. **It never answers a question its sources cannot.** No summarising, no inference - only reshaping.
-
-### The one computed slice
-
-`open-issues.json`: every issue whose ID appears in no later `resolves:`.
-That is the exact question an append-only log plus a 10-entry window cannot answer, which is why it earns its place beyond being faster.
-
-### Cache versus CONTEXT_STATE.md
-
-|             | Agent cache             | CONTEXT_STATE.md                       |
-| ----------- | ----------------------- | -------------------------------------- |
-| Content     | derived from repo files | authored judgement about a session     |
-| Rebuildable | yes, mechanically       | no - lose it and the reasoning is gone |
-| Lifetime    | until a source changes  | permanent, append-only                 |
-| Written by  | a script                | an agent, at a checkpoint              |
-
-Keeping them separate is what stops the cache becoming a place people quietly author things that exist nowhere else.
-
----
-
 ## .claude/ settings
 
 `settings.json` carries the attribution block.
@@ -284,6 +253,17 @@ Keeping them separate is what stops the cache becoming a place people quietly au
 Nothing user-level or machine-level belongs in it.
 A home-directory glob would be wrong on any other machine and would put a username into a repository that may be public.
 Both files are create-if-absent: a hand-edited settings file is never overwritten.
+
+---
+
+## .github/workflows/context-check.yml
+
+Installed only by `scaffold.sh --ci`, and create-if-absent like the settings files.
+It runs `log-issue.sh check` and `backlog.sh check` from `.claude/scripts/`, the same vendored code an agent runs, so CI cannot hold a different idea of a valid tree than the agent does.
+It is the backstop, not the gate: an agent runs `check` before it pushes, and CI catches the push that skipped it.
+
+Every action is pinned by commit SHA with its tag in a comment, per dotfiles Rule 15.
+A moving tag means the check that ran is not the check that was reviewed.
 
 ---
 
@@ -298,5 +278,5 @@ Creation is an atomic `ln` that retries with a fresh suffix on the rare collisio
 Cross-references (`refs:`, `resolves:`) hold suffixes.
 They resolve across both trees and are validated by `check`, so the DAG stays honest without a database.
 
-The old sequential format (`ISS-0043`, `BK-0014`) is gone entirely.
-`migrate` converts a monolith's entries to suffixes and rewrites internal references through the old-to-new map it builds on the way.
+A sequential ID (`ISS-0043`, `BK-0014`) is malformed here, and the scripts refuse it.
+A project that predates the trees converts once with `migrate`; the procedure is in `SKILL.md`, not in this spec.

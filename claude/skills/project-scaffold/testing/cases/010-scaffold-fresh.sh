@@ -26,7 +26,13 @@ assert_file "$p/.claude/scripts/log-issue.sh" "vendored log-issue.sh"
 assert_file "$p/.claude/scripts/lib/common.sh" "vendored lib/common.sh"
 assert_file "$p/.claude/skills.toml" "created skills.toml"
 assert_no_file "$p/.claude/scaffold.json" "no scaffold.json - the receipt supersedes it"
-# The pointer lives in AGENTS.md now; CLAUDE.md is a stub that points there.
-assert_contains "$p/AGENTS.md" "CONTEXT_STATE.md" "AGENTS.md carries the session-state pointer"
+# The directory of small files is the cheap window (S-03, decision D4), so the
+# template points at no session-state file. A pointer to CONTEXT_STATE.md or
+# HYDRATION.md in a project that never runs those skills sends every agent to
+# read a file that does not exist, and teaches it that the orientation is wrong.
+for f in AGENTS.md CLAUDE.md COMPASS.md; do
+  assert_not_contains "$p/$f" "CONTEXT_STATE" "$f points at no CONTEXT_STATE.md"
+  assert_not_contains "$p/$f" "HYDRATION" "$f points at no HYDRATION.md"
+done
 
 finish

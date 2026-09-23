@@ -61,7 +61,7 @@ Without an injectable clock, "same input produces the same output" cannot be ass
 
 **Runs:** a dry run then an apply against an empty directory.
 
-**Asserts:** the dry run writes nothing; apply creates the four markdown files, the `issues/` and `backlog/{now,next,later,done}/` directory trees with their `.gitkeep` files, `.claude/settings.json`, `.claude/skills.toml` and the vendored scripts; it creates **no** `.claude/scaffold.json` and **no** `ISSUES.md` or `BACKLOG.md` monolith; `AGENTS.md` carries the `CONTEXT_STATE.md` pointer.
+**Asserts:** the dry run writes nothing; apply creates the four markdown files, the `issues/` and `backlog/{now,next,later,done}/` directory trees with their `.gitkeep` files, `.claude/settings.json`, `.claude/skills.toml` and the vendored scripts; it creates **no** `.claude/scaffold.json` and **no** `ISSUES.md` or `BACKLOG.md` monolith; none of `AGENTS.md`, `CLAUDE.md` or `COMPASS.md` points at `CONTEXT_STATE.md` or `HYDRATION.md`.
 
 The negative assertions are the ones that earn their keep. `scaffold.json` was removed rather than emptied, and a file nobody writes is not something a test notices - it just stops appearing, and reappears the moment someone restores the block that wrote it.
 The monolith assertions are the same shape: the trees replaced the files (dotfiles #95), and a re-added template would silently put every project back on the storage model that conflicts on every merge.
@@ -129,7 +129,7 @@ The monolith case replaced the old missing-sentinel case, and it is the same fai
 Writing beside it would split a project's history across two formats with no tool that can read both.
 
 The `--help` checks are not filler.
-They caught a real bug: `backlog.sh` and `cache.sh` take a subcommand as `$1`, so `--help` was consumed as a command name and reported as unknown.
+They caught a real bug: `backlog.sh` takes a subcommand as `$1`, so `--help` was consumed as a command name and reported as unknown.
 `--help` reaches code paths the happy path never touches, which is exactly where syntax errors hide.
 
 ---
@@ -181,7 +181,7 @@ The trailing-newline case remains because it guards a scaffold append, not an en
 
 ## 090-cache-freshness
 
-Removed. `cache.sh` reads the monoliths this refactor deleted, and the script itself is being removed by the agent that owns it - a case asserting its old behaviour would fail on the new tree for reasons that have nothing to do with a regression.
+Removed. The script it covered read the monoliths the entry-tree refactor deleted, and was itself deleted in S-03 - `220-cache-gone` asserts that it stays gone.
 
 ---
 
@@ -371,6 +371,29 @@ A `CLAUDE.md` that restates a rule is a second copy, and two copies drift until 
 The stub keeps the `skill-sync` marker pair because `claude/tools/skill-sync.sh` fills it in `CLAUDE.md`, which is why the stub is capped by line count rather than asserted empty.
 
 The Drive assertions exist because this repository is public: documents are cited by name and version, never by id or URL.
+
+---
+
+## 210-ci-workflow
+
+**Runs:** a scaffold with no flag; a `--ci` dry run and apply; a re-run over an edited workflow; then the workflow's own `run:` lines against a real tree, green and then broken.
+
+**Asserts:** no flag means no workflow, no `.github/` and no plan row; `--ci` plans the workflow on a dry run without writing it, then copies it byte for byte; an edited workflow is skipped and left byte-identical; every `uses:` is pinned by a 40-hex SHA with a tag comment; both check commands exit 0 on a valid tree and 3 once a monolith sits beside it.
+
+**Why it matters:** a workflow that arrived without `--ci` is a red X on every host that never runs GitHub Actions, and a `--ci` that copied nothing leaves a project believing CI backs its trees when nothing does.
+The run lines are executed rather than diffed because a workflow calling a verb the vendored scripts lack would otherwise first fail on somebody's pull request.
+The pin assertion is Rule 15 made mechanical: a moving tag means the check that ran is not the check that was reviewed.
+
+---
+
+## 220-cache-gone
+
+**Runs:** a search of every file in the skill, then a scaffold and its plan.
+
+**Asserts:** the deleted script is absent from `scripts/`; no file in the skill but the case itself names it; a scaffolded project vendors no copy and the plan names none.
+
+**Why it matters:** the directory of small files is the cheap window (decision D4), so the script went - but a reference left behind is worse than the script was.
+A doc telling an agent to verify a cache sends it to a command that exits 127, and a vendoring list naming the file makes every scaffold run die on a missing source.
 
 ---
 

@@ -36,7 +36,23 @@ readonly CONTEXT_FILES=(AGENTS.md CLAUDE.md COMPASS.md NAMING.md)
 # concurrent agents must never need to touch the same path (dotfiles #95).
 # Each leaf gets a .gitkeep so a fresh, empty tree survives git.
 readonly ENTRY_DIRS=(issues backlog/now backlog/next backlog/later backlog/done)
-readonly VENDORED=(lib/common.sh log-issue.sh backlog.sh cache.sh)
+# The cache builder is gone (S-03, decision D4). What broke: it built derived
+# JSON slices of ISSUES.md / BACKLOG.md so an agent could read the window for
+# fewer tokens, and the monoliths it read were replaced by entry trees in
+# 967972f. Why this fix: a directory of small files IS the cheap window - the
+# newest 10 paths are the newest 10 entries, with no index to go stale and no
+# verify step to forget. Rejected: porting it to the trees, which re-adds a
+# second copy of every entry plus the staleness check that guards it. Cost:
+# open-issues.json, the one computed slice, is now a grep (references/
+# standards.md, "Why a fix is a new entry"). A project vendored before this
+# keeps its old copy; it is not ours to delete, and it no longer refreshes.
+readonly VENDORED=(lib/common.sh log-issue.sh backlog.sh)
+# The CI workflow is opt-in, behind --ci. It runs the vendored check verb, so it
+# only means something in a repository hosted where GitHub Actions runs; putting
+# a workflow into every scaffolded project would be a red X on hosts that never
+# asked for one. Create-if-absent: a workflow a project has edited is its own.
+readonly CI_TEMPLATE="ci/context-check.yml"
+readonly CI_TARGET=".github/workflows/context-check.yml"
 
 APPLY=0
 WITH_README=0
@@ -46,6 +62,7 @@ WITH_README=0
 WITH_GITIGNORE=1
 WITH_DOCKERIGNORE=1
 GIT_INIT=0
+WITH_CI=0
 ASSUME_YES=0
 
 usage() {
@@ -64,6 +81,8 @@ Options:
   --no-gitignore     do not create .gitignore (created by default if absent)
   --no-dockerignore  do not create .dockerignore (created by default if absent)
   --git-init         run git init if the project is not already a repository
+  --ci               also install .github/workflows/context-check.yml, which
+                     runs the vendored check verb on every pull request
   --full             shorthand for --with-readme --git-init
   --yes              skip the interview and take the flags as given
   --project DIR      project directory (default: .)
@@ -77,7 +96,8 @@ What it installs:
   .gitignore and .dockerignore
   .claude/settings.json and .claude/settings.local.json
   .claude/skills.toml    (which skills this project uses - skill-sync installs them)
-  .claude/scripts/   (log-issue.sh, backlog.sh, cache.sh, lib/common.sh)
+  .claude/scripts/   (log-issue.sh, backlog.sh, lib/common.sh)
+  .github/workflows/context-check.yml   only with --ci
 
 Existing files are APPENDED to, never deleted or overwritten.
 
@@ -94,6 +114,7 @@ while (($#)); do
     --no-gitignore) WITH_GITIGNORE=0; shift ;;
     --no-dockerignore) WITH_DOCKERIGNORE=0; shift ;;
     --git-init) GIT_INIT=1; shift ;;
+    --ci) WITH_CI=1; shift ;;
     --full) WITH_README=1; GIT_INIT=1; shift ;;
     --yes | -y) ASSUME_YES=1; shift ;;
     --help | -h) usage; exit "$PS_OK" ;;
@@ -267,6 +288,9 @@ build_plan() {
   if ((WITH_DOCKERIGNORE)); then
     if [[ -e $project/.dockerignore ]]; then plan_add ".dockerignore" skip "exists"; else plan_add ".dockerignore" create "absent"; fi
   fi
+  if ((WITH_CI)); then
+    if [[ -e $project/$CI_TARGET ]]; then plan_add "$CI_TARGET" skip "exists"; else plan_add "$CI_TARGET" create "absent"; fi
+  fi
   if ((GIT_INIT)); then
     if [[ -d $project/.git ]]; then plan_add "git repository" skip "already initialised"; else plan_add "git repository" create "git init"; fi
   fi
@@ -424,6 +448,15 @@ apply_plan() {
           local s; s=$(ps_tempfile)
           cat -- "$tmpl" >"$s"
           ps_atomic_install "$s" "$project/$f"
+        fi ;;
+      "$CI_TARGET")
+        if [[ $a == create ]]; then
+          local tmpl="$TEMPLATE_DIR/$CI_TEMPLATE"
+          [[ -r $tmpl ]] || ps_die "$PS_IO" "template_missing" "template not found: $tmpl"
+          mkdir -p "$project/${CI_TARGET%/*}" || ps_die "$PS_IO" "mkdir_failed" "cannot create $project/${CI_TARGET%/*}"
+          local s; s=$(ps_tempfile)
+          cat -- "$tmpl" >"$s"
+          ps_atomic_install "$s" "$project/$CI_TARGET"
         fi ;;
       "git repository")
         if [[ $a == create ]]; then

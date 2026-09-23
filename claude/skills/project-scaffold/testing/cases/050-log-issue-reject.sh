@@ -48,6 +48,5 @@ chmod u+w "$r"
 run 0 "log-issue --help" log_issue --help
 run 0 "backlog --help" backlog --help
 run 0 "scaffold --help" scaffold --help
-run 0 "cache --help" cache --help
 
 finish

@@ -116,7 +116,6 @@ scaffolded_project() {
 log_issue() { bash "$SKILL/scripts/log-issue.sh" "$@"; }
 backlog() { bash "$SKILL/scripts/backlog.sh" "$@"; }
 scaffold() { bash "$SKILL/scripts/scaffold.sh" "$@"; }
-cache() { bash "$SKILL/scripts/cache.sh" "$@"; }
 
 finish() {
   printf '  %s: %d checks, %d failed\n' "$CASE_NAME" "$TESTS_RUN" "$TESTS_FAILED"

@@ -1,0 +1,37 @@
+# context-check - the CI backstop for the issues/ and backlog/ entry trees.
+#
+# Installed by project-scaffold's `scaffold.sh --ci`, and only then. It runs the
+# same vendored `check` verb an agent runs locally, from .claude/scripts/, so CI
+# and the agent can never disagree about what a valid tree is: there is one
+# implementation and this file only calls it. Deterministic, no model tokens.
+#
+# Exit 0 is green. Exit 3 is red, and the step log names every offending file:
+# a wrong shard, a duplicate suffix, a dangling refs/resolves, a missing field,
+# or an old ISSUES.md / BACKLOG.md sitting beside the trees.
+#
+# Every action is pinned by commit SHA with its tag in a comment (dotfiles
+# Rule 15). A moving tag means the check that ran is not the check you reviewed.
+# Repin deliberately: git ls-remote https://github.com/actions/checkout 'refs/tags/v7*'
+
+name: context-check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: entry trees
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: issues/ tree
+        run: bash .claude/scripts/log-issue.sh check --project .
+
+      - name: backlog/ tree
+        run: bash .claude/scripts/backlog.sh check --project .

@@ -113,12 +113,10 @@ Branch on the code, not on the message text.
 
 ## Hard rule: read the window, not the history
 
-| What               | Read                                                  |
-| ------------------ | ----------------------------------------------------- |
-| `issues/`          | the newest 10 entries                                 |
-| `CONTEXT_STATE.md` | the top 10 checkpoints                                |
-| `backlog/`         | `now/`, `next/`, `later/` in full; `done/` newest 10  |
-| `HYDRATION.md`     | **the top entry only**                                |
+| What       | Read                                                 |
+| ---------- | ---------------------------------------------------- |
+| `issues/`  | the newest 10 entries                                |
+| `backlog/` | `now/`, `next/`, `later/` in full; `done/` newest 10 |
 
 Filenames and shard directories sort chronologically, so the newest 10 paths in reverse order are the newest 10 entries.
 
@@ -155,30 +153,16 @@ Do not invent a local procedure when a documented one exists, and do not leave o
 
 If you need access to it, ask - do not work around not having it.
 
-## Starting a session
-
-Read `HYDRATION.md` first, top entry only, then `CONTEXT_STATE.md` for the background it assumes.
-
-`HYDRATION.md` is the instruction and `CONTEXT_STATE.md` is the state it was written against.
-Both are written in the same commit by the same close-out.
-**When they disagree, the hydration prompt wins**, and you say so: two files from one commit that disagree is a defect worth reporting.
-
-`CONTEXT_STATE.md` is written by the `context-compaction` skill and `HYDRATION.md` by the `hydration-prompt` skill.
-Never hand-edit either.
-
 ## The close-out flow
 
 Everything the ticket owns happens on the work branch, and the ticket reaches `done` there.
 Then one pull request, then the merge, then the handback.
 
-1. `CONTEXT_STATE.md` gets a new checkpoint at the top, on the work branch.
-2. Every acceptance criterion gets evidence with `--observed`, the retro goes in as a note, then `work-order.sh done`.
-3. `hydration.sh check`, then `hydration.sh add`, for the next session's prompt.
-4. Push once and open **one** pull request carrying the code, the finished ticket, the state and the prompt.
-5. After the merge, `work-order.sh cleanup --id <id>` fast-forwards `main` and deletes the branch on both sides.
-6. Hand back the hydration prompt and its launch command from `hydration.sh command`, then hold.
+1. Every acceptance criterion gets evidence with `--observed`, the retro goes in as a note, then `work-order.sh done`.
+2. Push once and open **one** pull request carrying the code and the finished ticket.
+3. After the merge, `work-order.sh cleanup --id <id>` fast-forwards `main` and deletes the branch on both sides.
+4. Report what landed, then hold.
 
-Never open a pull request whose only content is `CONTEXT_STATE.md` or `HYDRATION.md`.
 Check whether your pull request has already merged before every commit once it is open.
 
 ## Skills

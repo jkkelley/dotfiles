@@ -8,7 +8,7 @@ version: 1.5.2
 
 Install the agent context layer into a project, and own the formats of the files that make it up.
 
-Three markdown files, two entry trees, four scripts, one rule: **an agent never hand-edits a managed file.**
+Four markdown files, two entry trees, three scripts, one rule: **an agent never hand-edits a managed file.**
 Format lives in a script, so changing the format later means changing one script - not auditing every project by hand.
 
 ## When this applies
@@ -35,13 +35,17 @@ Not this skill: cloning an existing repo and renaming it. That is `repo-scaffold
 ├── NAMING.md            inherited vs project-specific conventions
 ├── .gitignore           the shared ignore set, plus what the tools above create
 ├── .dockerignore        the same set, trimmed for a build context
+├── .github/workflows/context-check.yml   only with --ci      (runs the check verb)
 └── .claude/
     ├── settings.json
     ├── skills.toml      which skills this project uses      (skill-sync installs them)
-    ├── scripts/         a versioned copy of the four tools
-    ├── skills/          the installed copies - gitignored, owned by skill-sync
-    └── cache/           derived JSON slices                 (cache.sh)
+    ├── scripts/         a versioned copy of the tools: log-issue.sh, backlog.sh, lib/common.sh
+    └── skills/          the installed copies - gitignored, owned by skill-sync
 ```
+
+The verbs are `scaffold`, `log-issue`, `backlog`, `migrate` and `check`, and nothing else.
+There is no cache: the directory of small files **is** the cheap window.
+The newest 10 paths are the newest 10 entries, so a derived copy of them would only add a staleness check to forget.
 
 Issues and backlog items are **one file per entry**, named `<UTC-timestamp>-<suffix>.md`.
 Sequential IDs (ISS-0043, BK-0014) are gone: allocating one needed a scan and a lock over a single
@@ -59,14 +63,6 @@ and a hand-maintained version table would be wrong within a week.
 that keeps the copies out of git; `skill-sync` installs the directories at session start and owns
 them. Nothing in this skill ever writes a skill directory or removes one.
 
-`CONTEXT_STATE.md` is **not** written here. This skill writes the pointer to it in `AGENTS.md`; the
-`context-compaction` skill owns the file itself.
-
-`HYDRATION.md` is **not** written here either, for the same reason and by the same arrangement.
-This skill writes the pointer to it in `AGENTS.md`; `hydration-prompt`'s own `hydration.sh init`
-creates the file, and that script owns its contents, its ordering and its 10-entry window.
-Nothing in this skill ever writes an entry or reconciles a section of it.
-
 ## Workflow
 
 ### 1. Scaffold
@@ -77,13 +73,20 @@ Dry run first - it always is by default:
 scripts/scaffold.sh --project <dir>              # prints the plan, writes nothing
 scripts/scaffold.sh --project <dir> --apply      # interviews, then commits the plan
 scripts/scaffold.sh --project <dir> --apply --yes --full   # non-interactive, everything
+scripts/scaffold.sh --project <dir> --apply --ci # also install the CI workflow
 ```
+
+`--ci` copies [references/templates/ci/context-check.yml](references/templates/ci/context-check.yml)
+to `.github/workflows/context-check.yml`, and only `--ci` does. The workflow runs the vendored
+`check` verb, the same code an agent runs locally, so CI and the agent cannot disagree about what a
+valid tree is. It is opt-in because a workflow in a project not hosted on GitHub is a red X nobody
+asked for. Create-if-absent: a workflow the project has edited is never overwritten.
 
 On a terminal `--apply` interviews the user about the optional extras (`README.md`, `git init`) and
 shows what each produces before writing. `--yes` skips the interview.
 
 `.gitignore` and `.dockerignore` are **not** extras - they install by default, because an agent that
-commits `.claude/cache/` or bakes a `.env` into an image has already done the damage by the time
+commits `skill-sync`'s `.claude/cache/` or bakes a `.env` into an image has already done the damage by the time
 anyone reviews it. Both come from
 [references/templates/](references/templates/), which vendors the shared ignore set from
 `claudes-markdown-12-rules`; re-pull that upstream rather than hand-editing a project's copy.
@@ -133,16 +136,6 @@ and shard, rewrites internal `refs:`/`resolves:` to the new suffixes, and refuse
 `check` validates filename shapes, shard placement, metadata completeness, duplicate suffixes,
 dangling references, and that no hand-written monolith sits beside the directories.
 
-### 5. Refresh the cache
-
-```sh
-scripts/cache.sh build  --project <dir>
-scripts/cache.sh verify --project <dir> --json    # exit 3 when stale
-```
-
-`log-issue.sh` and `backlog.sh` do not rebuild the cache themselves - run `cache.sh build` after a
-batch of writes, or `verify` before trusting a slice.
-
 ## Contracts every tool honours
 
 | Property | Rule                                                                                           |
@@ -151,7 +144,7 @@ batch of writes, or `verify` before trusting a slice.
 | stderr   | every human word, including prompts and progress                                               |
 | exit 0   | success                                                                                        |
 | exit 2   | usage - unknown flag, missing or empty required value                                          |
-| exit 3   | validation - bad enum, missing sentinel, ambiguous ID, stale cache                             |
+| exit 3   | validation - bad enum, ambiguous ID, a `check` that found an invalid tree                      |
 | exit 4   | io - unreadable or unwritable path                                                             |
 | exit 5   | lock timeout - another writer held the lock                                                    |
 | exit 6   | not found - a referenced ID does not exist                                                     |
@@ -168,18 +161,10 @@ Stated in the installed `AGENTS.md`, and worth repeating here:
 2. `issues/` - **the newest 10 entries, then stop.** The window is a directory walk: filenames and
    shard directories sort chronologically, so the newest 10 paths in reverse order ARE the newest
    10 entries. Go deeper only on request, or when an entry in the window references a suffix you need.
-3. `CONTEXT_STATE.md` - top 10 checkpoints, same rule.
-4. `HYDRATION.md` - **the top entry only**, not ten. It is current and complete on its own, and the
-   nine below it are retained for history rather than for reading. This is the one file where the
-   retention depth and the reading depth deliberately differ.
-5. `backlog/` when choosing work - `now/` / `next/` / `later/` in full (live work, capped by
+3. `backlog/` when choosing work - `now/` / `next/` / `later/` in full (live work, capped by
    discipline), `done/` **newest 10 only**. Done is kept indefinitely under month shards so a recent
    item stays findable, but retention is not a reading depth.
-6. `NAMING.md` before naming anything.
-
-If `.claude/cache/` is present and `cache.sh verify` passes, read the slices instead - same
-information, roughly a fifth of the tokens. If verify fails, read the markdown; never trust a
-stale slice.
+4. `NAMING.md` before naming anything.
 
 ## Versioning
 
@@ -213,5 +198,3 @@ See [testing/SOP.md](testing/SOP.md) for what each case covers and why its failu
 - [references/standards.md](references/standards.md) - the format spec for every managed file
 - [references/templates/](references/templates/) - the templates themselves
 - `claude/skills/container-sandbox/references/skill-testing.md` - how shell scripts in this repo are tested
-- `context-compaction` skill - owns `CONTEXT_STATE.md`, which this skill only points at
-- `hydration-prompt` skill - owns `HYDRATION.md` and the session-launch command, same arrangement

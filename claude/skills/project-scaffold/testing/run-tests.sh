@@ -17,7 +17,12 @@
 set -euo pipefail
 
 SKILL_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-IMAGE="${PS_TEST_IMAGE:-docker.io/library/python:3.12-slim}"
+# python:3.12-slim, pinned by digest per root CLAUDE.md Rule 15 (S-03). The
+# floating tag let the base image rebase itself under the suite between runs, so
+# a red run could be the image and not the change. Repin deliberately:
+#   podman pull docker.io/library/python:3.12-slim
+#   podman image inspect docker.io/library/python:3.12-slim --format '{{index .RepoDigests 0}}'
+IMAGE="${PS_TEST_IMAGE:-docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9}"
 
 # The second image, and why there are two.
 #
