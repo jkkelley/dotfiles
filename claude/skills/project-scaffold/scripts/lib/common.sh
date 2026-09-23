@@ -706,6 +706,17 @@ ps_check_report() {
 # the undo log's breadcrumb. Cost: none; the parse was already done in full.
 # ---------------------------------------------------------------------------
 
+# ps_count_heading_like <file> <ISS|BK> - lines that look like an entry heading
+# for that prefix: a markdown heading naming the token anywhere, or a list item
+# (checkbox and bold optional) that opens with it. Body bullets such as
+# "- **Symptom** - see ISS-0001" and metadata lines such as "refs: ISS-0001" do
+# not count. See the N1 breadcrumb in ps_migrate.
+ps_count_heading_like() {
+  local n
+  n=$(grep -cE "^#{1,6}[[:space:]].*$2-[0-9]+|^[-*+][[:space:]]+(\[[ xX]\][[:space:]]+)?(\*\*)?$2-[0-9]+" -- "$1") || true
+  printf '%s' "${n:-0}"
+}
+
 ps_migrate() {
   local project="$1"
   local iss_mono="$project/ISSUES.md" bk_mono="$project/BACKLOG.md"
@@ -727,8 +738,10 @@ ps_migrate() {
   # --- Pass 1a: split ISSUES.md into entries ----------------------------------
   local -a I_OLD=() I_TITLE=() I_RAW=() I_SEV=() I_AREA=() I_TAGS=() I_REFS=() I_RES=()
   local -a I_SYM=() I_TRI=() I_CAU=() I_FIX=() I_VER=()
+  local iss_heads=0 bk_heads=0
   if [[ -f $iss_mono ]]; then
     work=$(ps_strip_cr "$iss_mono")
+    iss_heads=$(ps_count_heading_like "$work" ISS)
     mapfile -t LINES <"$work"
     cur=-1 in_meta=0
     for line in ${LINES[@]+"${LINES[@]}"}; do
@@ -771,6 +784,7 @@ ps_migrate() {
   local -a B_OLD=() B_TITLE=() B_ADDED=() B_COMPLETED=() B_WHY=() B_DONE=() B_BUCKET=()
   if [[ -f $bk_mono ]]; then
     work=$(ps_strip_cr "$bk_mono")
+    bk_heads=$(ps_count_heading_like "$work" BK)
     mapfile -t LINES <"$work"
     cur=-1 in_meta=0
     local cur_bucket="" trimmed
@@ -804,6 +818,40 @@ ps_migrate() {
         '- done-when: '*) B_DONE[cur]="${trimmed#'- done-when: '}" ;;
       esac
     done
+  fi
+
+  # --- Pass 1b': every monolith that exists must parse in full --------------
+  # BREADCRUMB - S-05 round 2 N1 (review: ~/.local/state/dotfiles/execution/S-05b-review.md).
+  # What broke: this function renamed every monolith that existed to .migrated
+  # (the rename loop below), whether or not pass 1a/1b parsed a single entry
+  # from it. The per-script migrates it replaced (a8b7fcd:scripts/backlog.sh,
+  # a8b7fcd:scripts/log-issue.sh) refused an empty parse with exit 3; the merge
+  # dropped that guard.
+  # Why it mattered: the verb covers both trees, so `log-issue.sh migrate` run
+  # for a valid ISSUES.md also took a hand-written BACKLOG.md with it - exit 0,
+  # "0 backlog items", backlog/ empty, check green, and refuse_monolith silenced.
+  # The backlog survived only in BACKLOG.md.migrated, which no tool reads.
+  # Why this fix: refuse, before the first write, any monolith that yields zero
+  # entries, and any whose ISS-/BK- heading-like lines outnumber the entries
+  # parsed from it - a partial parse is the same loss on a smaller scale. The
+  # heading count is deliberately looser than the parser (any markdown heading
+  # naming the token, or a list item that opens with it), so a format the
+  # parser does not know shows up as a gap instead of as silence. Rejected:
+  # migrating the parseable monolith and leaving the other in place, which
+  # would leave refuse_monolith blocking the migrated tree with no rerun path.
+  # Cost: a template-only monolith with no entries must be removed by hand
+  # before migrate will run; the message says so.
+  local -a gaps=()
+  if [[ -f $iss_mono ]] && ((${#I_OLD[@]} == 0 || iss_heads > ${#I_OLD[@]})); then
+    gaps+=("$iss_mono: parsed ${#I_OLD[@]} entries, found $iss_heads heading-like ISS- lines")
+  fi
+  if [[ -f $bk_mono ]] && ((${#B_OLD[@]} == 0 || bk_heads > ${#B_OLD[@]})); then
+    gaps+=("$bk_mono: parsed ${#B_OLD[@]} entries, found $bk_heads heading-like BK- lines")
+  fi
+  if ((${#gaps[@]})); then
+    local IFS=$'\n'
+    ps_die "$PS_VALIDATION" "migrate_unparsed_entries" \
+      "refused before writing anything - migrating would rename away entries it cannot read:"$'\n'"${gaps[*]}"$'\n'"rewrite those entries in the format log-issue.sh and backlog.sh wrote, or, if a monolith holds nothing worth keeping, remove it, then rerun"
   fi
 
   # --- Pass 1c: every timestamp, checked before anything is written ----------

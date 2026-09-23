@@ -64,4 +64,18 @@ mkdir -p "$q/backlog/later"
 cp "$dup" "$q/backlog/later/20260805T193211Z-$(basename "$dup" | sed 's/.*-//')"
 run 3 "duplicate suffix is refused" backlog move --project "$q" --id "$(basename "$dup" .md | sed 's/.*-//')" --to later
 
+
+# --- S-05 round 2 N2: a done that fails after its claim is undone ----------
+# done renames SRC to a private claim name first (claim_item). A failure after
+# that - here a read-only done shard - must put SRC back, or the item vanishes
+# from list and every later done or move on it exits 6.
+r=$(scaffolded_project)
+item=$(backlog add --project "$r" --title "Undo me" --why w --done-when d --bucket now 2>/dev/null)
+mkdir -p "$r/backlog/done/2026/08"; chmod 555 "$r/backlog/done/2026/08"
+before=$(cd "$r" && find . -type f -exec sha256sum {} + | sort)
+run 4 "done fails on a read-only done shard after claiming" backlog done --project "$r" --id "$item"
+chmod 755 "$r/backlog/done/2026/08"
+assert_eq "$before" "$(cd "$r" && find . -type f -exec sha256sum {} + | sort)" "the claim is undone and the tree is exactly as it was"
+run 0 "the same done succeeds once the shard is writable" backlog done --project "$r" --id "$item"
+
 finish

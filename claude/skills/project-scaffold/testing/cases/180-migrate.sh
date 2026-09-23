@@ -277,4 +277,56 @@ sed -i 's/^logged: not a date$/logged: 2026-08-06T10:00:00+00:00/' "$y/ISSUES.md
 run 0 "the corrected monolith migrates on the rerun" backlog migrate --project "$y"
 run 0 "check is green after the rerun" log_issue check --project "$y"
 
+
+# --- S-05 round 2 N1: a monolith migrate cannot read is refused, not renamed -
+# The combined migrate renamed every monolith that existed, parsed or not. A
+# valid ISSUES.md beside a hand-written BACKLOG.md exited 0 with "0 backlog
+# items", and the backlog survived only in BACKLOG.md.migrated, which no tool
+# reads. Refusal must come before the first write, so both monoliths and an
+# empty entry tree are the proof.
+tree_files() { (cd "$1" && find . -type f -exec sha256sum {} + | sort); }
+assert_contains_text() { case $1 in *"$2"*) _pass "$3" ;; *) _fail "$3" "missing: $2 in: $1" ;; esac; }
+
+v=$(new_project)
+cp "$x/ISSUES.md.migrated" "$v/ISSUES.md"
+printf '# Backlog\n\n- [ ] BK-1 fix the thing (added 2026-08-01)\n- [ ] BK-2 another item\n' >"$v/BACKLOG.md"
+before=$(tree_files "$v")
+run 3 "P1: a valid ISSUES.md beside an unparseable BACKLOG.md is refused" log_issue migrate --project "$v"
+out=$(log_issue migrate --project "$v" 2>&1)
+assert_contains_text "$out" "$v/BACKLOG.md: parsed 0 entries, found 2 heading-like BK- lines" "the refusal names the file and both counts"
+assert_eq "$before" "$(tree_files "$v")" "P1: both monoliths untouched and no entry file written"
+
+w=$(new_project)
+printf '# Backlog\n\n- item one\n- item two\n' >"$w/BACKLOG.md"
+before=$(tree_files "$w")
+run 3 "P1b: a BACKLOG.md alone with zero parseable items is refused" backlog migrate --project "$w"
+assert_eq "$before" "$(tree_files "$w")" "P1b: the monolith is untouched"
+
+# The strict form: a partial parse is the same loss on a smaller scale. One
+# entry in the known format and one hand-written heading is 1 parsed of 2.
+u=$(new_project)
+cp "$x/ISSUES.md.migrated" "$u/ISSUES.md"
+printf '\n## ISS-7: written by hand, no metadata block\n\nsomething broke\n' >>"$u/ISSUES.md"
+before=$(tree_files "$u")
+run 3 "a partial parse (1 of 2 ISS- headings) is refused" log_issue migrate --project "$u"
+out=$(log_issue migrate --project "$u" 2>&1)
+assert_contains_text "$out" "$u/ISSUES.md: parsed 1 entries, found 2 heading-like ISS- lines" "the partial refusal names the file and both counts"
+assert_eq "$before" "$(tree_files "$u")" "a partial parse writes nothing"
+
+# --- S-05 round 2 N2: a write failure after the first write is undone -------
+# Every earlier refusal fires in pass 1, before the undo log holds anything.
+# Here the issues are written, then the backlog write fails on a read-only
+# bucket; without the undo log the issue files stay behind, the rerun is
+# refused as already_migrated, and logging is refused by the monolith.
+t=$(new_project)
+cp "$x/ISSUES.md.migrated" "$t/ISSUES.md"
+cp "$x/BACKLOG.md.migrated" "$t/BACKLOG.md"
+mkdir -p "$t/backlog/now"; chmod 555 "$t/backlog/now"
+before=$(tree_files "$t")
+run 4 "migrate fails when a bucket is read-only after issues were written" log_issue migrate --project "$t"
+chmod 755 "$t/backlog/now"
+assert_eq "$before" "$(tree_files "$t")" "the undo log leaves every file exactly as it was"
+run 0 "the rerun migrates once the bucket is writable" log_issue migrate --project "$t"
+run 0 "check is green after the undone-then-rerun migrate" log_issue check --project "$t"
+
 finish
