@@ -3,7 +3,7 @@
 # a specific way a status page lies to its owner - a row in the wrong project's
 # ledger, a page that silently fails to build, a seat publishing to a surface it
 # cannot produce. The assertion names the lie it rules out.
-CASE_NAME=200-rail
+CASE_NAME=205-rail
 source "${SKILL:-/skill}/testing/assert.sh"
 
 R="$SKILL/references/templates/rail"
@@ -54,7 +54,7 @@ proj="$WORK/rail-proj/report"; mkdir -p "$proj"
 cp -r "$R/bin" "$R/assets" "$proj/" 2>/dev/null
 mkdir -p "$proj/rail" && mv "$proj/bin" "$proj/assets" "$proj/rail/"
 sed -e 's/__PROJECT_NAME__/railproj/' -e 's/__RAIL_TITLE__/Rail Proj/' \
-    -e 's/__RAIL_EYEBROW__/railproj eyebrow/' -e 's#__RAIL_SOURCE__#docs/plan.md#' \
+    -e 's/__RAIL_EYEBROW__/railproj eyebrow/' -e 's#__RAIL_SOURCE__#docs/plan.md#' -e 's/__RAIL_KEY__/k0001/' \
     "$R/rail.sh.tmpl" >"$proj/rail.sh"
 cp "$plan" "$proj/plan.json"
 state="$WORK/rail-state"
@@ -75,5 +75,50 @@ assert_contains "$state/ledger.tsv" "wrapper row" "wrapper row is in that ledger
 assert_not_contains "$RAIL_LEDGER" "wrapper row" "wrapper row did not leak into the ledger exported in the shell"
 assert_file "$state/page.html" "wrapper rebuilt the page into the state dir"
 assert_no_file "$proj/page.html" "the render never lands beside the committed inputs"
+
+# --- S-05 L1: a bare call prints the two usage lines, not the code below them.
+# The usage printer is how a seat learns the contract after a mistake; printing
+# `set -euo pipefail` instead teaches it nothing.
+usage_out=$(ledger_sh 2>&1)
+assert_eq 2 "$(grep -c '^# .*ledger\.sh ' <<<"$usage_out")" "bare ledger.sh prints both usage lines"
+if grep -q 'set -euo' <<<"$usage_out"; then _fail "bare ledger.sh prints no code" "$usage_out"; else _pass "bare ledger.sh prints no code"; fi
+
+# --- S-05 L2: every value is data on the page, never markup.
+# A ledger row carrying </script> used to end the JSON block early, so the page
+# rendered nothing past it. A title carrying markup landed raw in <title> and
+# <h1>. A title naming a later placeholder was substituted a second time.
+# The page is parsed the way a browser tokenises it, and each JSON block must
+# round-trip to exactly the text that went in.
+export RAIL_LEDGER="$WORK/rail-hostile.tsv"
+run 0 "a row carrying a script terminator is accepted" ledger_sh E-01 issue "a </script><b>x</b> & more"
+hostile="$WORK/rail-out/hostile.html"
+run 0 "page builds from hostile inputs" build_sh --plan "$plan" --ledger "$RAIL_LEDGER" --out "$hostile" \
+  --title 'T <i>&amp; __SIGNAL__' --eyebrow 'e<b>' --source 's&<'
+verdict=$(python3 - "$hostile" <<'PY'
+import html.parser, json, sys
+class P(html.parser.HTMLParser):
+    def __init__(self):
+        super().__init__(); self.cur = None; self.blocks = {}; self.title = ""; self.intitle = False
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if tag == "script" and a.get("type") == "application/json": self.cur = a.get("id"); self.blocks[self.cur] = ""
+        if tag == "title": self.intitle = True
+    def handle_endtag(self, tag):
+        if tag == "script": self.cur = None
+        if tag == "title": self.intitle = False
+    def handle_data(self, d):
+        if self.cur: self.blocks[self.cur] += d
+        if self.intitle: self.title += d
+p = P(); p.feed(open(sys.argv[1], encoding="utf-8").read())
+rows = json.loads(p.blocks["ledger-data"])
+print("ledger-ok" if rows[-1]["text"] == "a </script><b>x</b> & more" else "ledger-bad:%r" % rows[-1]["text"])
+print("title-ok" if p.title == "T <i>&amp; __SIGNAL__" else "title-bad:%r" % p.title)
+PY
+)
+for want in "ledger-ok|a row with </script> round-trips through the page's JSON block" \
+            "title-ok|a title with markup and a placeholder name reaches <title> as text, substituted once"; do
+  if grep -qx "${want%%|*}" <<<"$verdict"; then _pass "${want#*|}"; else _fail "${want#*|}" "$verdict"; fi
+done
+assert_not_contains "$hostile" "<i>&amp;" "raw title markup is not in the page"
 
 finish

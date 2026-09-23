@@ -196,4 +196,85 @@ run 3 "second backlog migrate is refused" backlog migrate --project "$q"
 newest=$(find "$p/issues" -name '*.md' -type f | sort -r | head -1)
 assert_eq "$third" "$newest" "newest entry sorts first in the window walk"
 
+# --- S-05 H1: a cross-tree ref survives migration --------------------------
+# The old log-issue.sh documented `--refs BK-014` as normal usage. Two separate
+# migrates each held half the map, so the BK token was kept verbatim, `check`
+# rejected it, and immutable entries meant no sanctioned command could ever turn
+# `check` green again. One migrate, one map, both monoliths.
+x=$(new_project)
+cat >"$x/ISSUES.md" <<'EOF'
+## ISS-0001 - Blocks the backlog item
+
+<!-- issue
+id: ISS-0001
+logged: 2026-08-05T16:10:02-05:00
+severity: medium
+area: export
+tags: -
+refs: BK-0001
+resolves: -
+-->
+
+- **Symptom** - s1
+- **Trigger** - t1
+- **Cause** - c1
+- **Resolution** - r1
+- **Verification** - v1
+EOF
+cat >"$x/BACKLOG.md" <<'EOF'
+<!-- BACKLOG:NOW -->
+
+- [ ] **BK-0001** - The item it blocks
+  <!-- item
+  id: BK-0001
+  added: 2026-08-05T14:32:11-05:00
+  -->
+  - why: it matters
+  - done-when: it is checkable
+EOF
+run 0 "one migrate converts both monoliths" log_issue migrate --project "$x"
+assert_no_file "$x/ISSUES.md" "ISSUES.md renamed aside by the combined migrate"
+assert_no_file "$x/BACKLOG.md" "BACKLOG.md renamed aside by the same run"
+iss=$(grep -rl '^# Blocks the backlog item$' "$x/issues")
+item=$(grep -rl '^# The item it blocks$' "$x/backlog")
+bk_suffix=$(basename "$item" .md | sed 's/.*-//')
+assert_contains "$iss" "refs: ${bk_suffix}" "the BK ref is rewritten to the item's new suffix"
+run 0 "issues check is green after a cross-tree migrate" log_issue check --project "$x"
+run 0 "backlog check is green after a cross-tree migrate" backlog check --project "$x"
+
+# --- S-05 H2: a refused migrate writes nothing and can be rerun -----------
+# A bad timestamp on entry N used to be found after entries 1..N-1 were written.
+# The rerun was then refused as already_migrated, and logging was refused
+# because the monolith was still there: stuck, with hand deletion the only exit.
+y=$(new_project)
+cp "$x/ISSUES.md.migrated" "$y/ISSUES.md"
+cp "$x/BACKLOG.md.migrated" "$y/BACKLOG.md"
+cat >>"$y/ISSUES.md" <<'EOF'
+
+## ISS-0002 - Broken timestamp
+
+<!-- issue
+id: ISS-0002
+logged: not a date
+severity: low
+area: ui
+tags: -
+refs: -
+resolves: -
+-->
+
+- **Symptom** - s2
+- **Trigger** - t2
+- **Cause** - c2
+- **Resolution** - r2
+- **Verification** - v2
+EOF
+run 3 "migrate with one bad timestamp is refused" log_issue migrate --project "$y"
+assert_count 0 "$(find "$y" -name '*.md' -path '*/issues/*' -o -name '*.md' -path '*/backlog/*' | wc -l)" "a refused migrate writes no entry file in either tree"
+assert_file "$y/ISSUES.md" "ISSUES.md is untouched after a refused migrate"
+assert_file "$y/BACKLOG.md" "BACKLOG.md is untouched after a refused migrate"
+sed -i 's/^logged: not a date$/logged: 2026-08-06T10:00:00+00:00/' "$y/ISSUES.md"
+run 0 "the corrected monolith migrates on the rerun" backlog migrate --project "$y"
+run 0 "check is green after the rerun" log_issue check --project "$y"
+
 finish

@@ -71,7 +71,7 @@ The surface is `report/rail.sh`, the Execution Rail, and nothing else writes the
 ```
 
 The plan is `report/plan.json`.
-The ledger and the built page are state under `~/.local/state/<project>/rail/` and never enter git.
+The ledger and the built page are state under `~/.local/state/<project>-<key>/rail/` and never enter git.
 
 Binding: `GLOBAL-INTERACTION-SURFACE-POLICY` (v1.0.2 in progress).
 
@@ -120,7 +120,7 @@ Both trees have scripts that own their format:
 ```
 
 A fix for an earlier issue is a new entry carrying `resolves: <suffix>`, never an edit of the old one.
-Both scripts take `--json` and use documented exit codes: 0 ok, 2 usage, 3 validation, 4 io, 5 lock timeout, 6 id not found.
+Both scripts take `--json` and use documented exit codes: 0 ok, 2 usage, 3 validation, 4 io, 6 id not found.
 Branch on the code, not on the message text.
 
 ## Hard rule: read the window, not the history

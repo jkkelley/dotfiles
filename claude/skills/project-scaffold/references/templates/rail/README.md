@@ -21,7 +21,7 @@ report/
 ```
 
 The ledger, the built page and the approval marker are **state, not source**.
-They live under `~/.local/state/<project>/rail/` and never enter git.
+They live under `~/.local/state/<project>-<key>/rail/` and never enter git.
 What is committed is the plan, the side panels and the wrapper - the inputs, never the render.
 
 ## Surface routing - which model is driving decides where the page goes

@@ -46,19 +46,22 @@ Optional:
   --resolves   the suffix of an earlier entry this one closes (must exist)
   --project    project directory (default: .)
   --json       emit one JSON object on stdout instead of the bare suffix
-  --lock-timeout SECONDS   accepted for compatibility; creation needs no lock
   --help       this text
 
-migrate  convert an old monolithic ISSUES.md into entry files, preserving
-         each entry's recorded timestamp as its filename and shard. Renames
-         the monolith to ISSUES.md.migrated. Refuses to run twice.
+migrate  convert the old monoliths - ISSUES.md and BACKLOG.md together, in
+         one run - into entry files, preserving each entry's recorded
+         timestamp as its filename and shard. One map covers both, so refs
+         across the trees (an issue naming BK-0003) are rewritten too. Every
+         timestamp is checked before anything is written, and a failure
+         undoes the whole run. Renames each monolith to <name>.migrated.
+         Same verb as `backlog.sh migrate`. Refuses to run twice.
 check    validate the tree: shapes, shards, metadata, duplicate suffixes,
          dangling refs, and no monolith beside the directories.
 
 With no flags on a terminal, the fields are collected interactively.
 Without a terminal, a missing required field is an error - never a prompt.
 
-Exit codes: 0 ok, 2 usage, 3 validation, 4 io, 5 lock timeout, 6 id not found
+Exit codes: 0 ok, 2 usage, 3 validation, 4 io, 6 id not found
 EOF
 }
 
@@ -77,7 +80,6 @@ while (($#)); do
   case $1 in
     --project) PS_PROJECT="${2-}"; shift 2 ;;
     --json) PS_JSON=1; shift ;;
-    --lock-timeout) PS_LOCK_TIMEOUT="${2-}"; shift 2 ;;
     --title) title="${2-}"; shift 2 ;;
     --severity) severity="${2-}"; shift 2 ;;
     --area) area="${2-}"; shift 2 ;;
@@ -93,9 +95,6 @@ while (($#)); do
     *) PS_JSON=0; ps_die "$PS_USAGE" "unknown_flag" "unknown flag: $1 (try --help)" ;;
   esac
 done
-
-[[ $PS_LOCK_TIMEOUT =~ ^[0-9]+$ ]] || \
-  ps_die "$PS_USAGE" "bad_lock_timeout" "--lock-timeout must be a whole number of seconds"
 
 project=$(ps_resolve_project "${PS_PROJECT:-.}")
 
@@ -187,11 +186,13 @@ cmd_log() {
   local shard="$project/issues/${ts:0:4}/${ts:4:2}"
   mkdir -p "$shard" || ps_die "$PS_IO" "mkdir_failed" "cannot create $shard"
 
-  # Mint-and-retry: the name is unique by construction, so creation takes no
-  # lock. A collision just costs another suffix.
+  # Mint-and-retry: ps_mint_unique hands back a suffix no entry in either
+  # tree holds (S-05 M1), and ln refuses a name that appeared since, so
+  # creation takes no lock. A collision just costs another suffix.
   local suffix dst="" attempt
   for attempt in 1 2 3 4 5; do
-    suffix=$(ps_mint_suffix)
+    ps_mint_unique "$project"
+    suffix=$PS_MINTED
     dst="$shard/${ts}-${suffix}.md"
     local entry; entry=$(ps_tempfile)
     {
@@ -231,128 +232,9 @@ cmd_log() {
 
 # ---------------------------------------------------------------------------
 
+# Both monoliths, one map: see ps_migrate in lib/common.sh (S-05 H1, H2).
 cmd_migrate() {
-  local monolith="$project/ISSUES.md"
-  [[ -f $monolith ]] || \
-    ps_die "$PS_VALIDATION" "nothing_to_migrate" "no ISSUES.md in $project - nothing to migrate"
-  if [[ -d $project/issues ]] && find "$project/issues" -type f -name '*.md' 2>/dev/null | grep -q .; then
-    ps_die "$PS_VALIDATION" "already_migrated" \
-      "$project/issues already holds entries - refusing to migrate twice over the same output"
-  fi
-
-  local work; work=$(ps_strip_cr "$monolith")
-  mapfile -t LINES <"$work"
-
-  # Pass 1: split the monolith into entries.
-  local -a M_OLDID=() M_TITLE=() M_LOGGED=() M_SEV=() M_AREA=() M_TAGS=() M_REFS=() M_RES=()
-  local -a M_SYM=() M_TRI=() M_CAU=() M_FIX=() M_VER=()
-  local cur=-1 in_meta=0 line
-  for line in "${LINES[@]}"; do
-    if [[ $line =~ ^##\ (ISS-[0-9]{4})\ -\ (.*)$ ]]; then
-      cur=$((cur + 1)); in_meta=0
-      M_OLDID[cur]="${BASH_REMATCH[1]}"; M_TITLE[cur]="${BASH_REMATCH[2]}"
-      M_LOGGED[cur]=""; M_SEV[cur]="medium"; M_AREA[cur]="-"
-      M_TAGS[cur]="-"; M_REFS[cur]="-"; M_RES[cur]="-"
-      M_SYM[cur]=""; M_TRI[cur]=""; M_CAU[cur]=""; M_FIX[cur]=""; M_VER[cur]=""
-      continue
-    fi
-    ((cur >= 0)) || continue
-    if [[ $line == '<!-- issue' ]]; then in_meta=1; continue; fi
-    if [[ $line == '-->' ]]; then in_meta=0; continue; fi
-    if ((in_meta)); then
-      case $line in
-        "logged:"*)    M_LOGGED[cur]="${line#logged: }" ;;
-        "severity:"*)  M_SEV[cur]="${line#severity: }" ;;
-        "area:"*)      M_AREA[cur]="${line#area: }" ;;
-        "tags:"*)      M_TAGS[cur]="${line#tags: }" ;;
-        "refs:"*)      M_REFS[cur]="${line#refs: }" ;;
-        "resolves:"*)  M_RES[cur]="${line#resolves: }" ;;
-      esac
-      continue
-    fi
-    case $line in
-      '- **Symptom** - '*)      M_SYM[cur]="${line#'- **Symptom** - '}" ;;
-      '- **Trigger** - '*)      M_TRI[cur]="${line#'- **Trigger** - '}" ;;
-      '- **Cause** - '*)        M_CAU[cur]="${line#'- **Cause** - '}" ;;
-      '- **Resolution** - '*)   M_FIX[cur]="${line#'- **Resolution** - '}" ;;
-      '- **Verification** - '*) M_VER[cur]="${line#'- **Verification** - '}" ;;
-    esac
-  done
-
-  ((${#M_OLDID[@]} > 0)) || ps_die "$PS_VALIDATION" "nothing_to_migrate" \
-    "$monolith holds no entries - nothing to migrate"
-
-  # Mint every new suffix up front so refs and resolves can be rewritten
-  # through the old-ID -> suffix map in one pass.
-  declare -A NEWID=() USED=()
-  local i suffix tries
-  for i in "${!M_OLDID[@]}"; do
-    for tries in $(seq 1 50); do
-      suffix=$(ps_mint_suffix)
-      [[ -z ${USED[$suffix]-} ]] && break
-      suffix=""
-    done
-    [[ -n $suffix ]] || ps_die "$PS_VALIDATION" "suffix_exhausted" \
-      "could not mint a unique suffix after 50 attempts"
-    USED[$suffix]=1
-    NEWID[${M_OLDID[i]}]=$suffix
-  done
-
-  # Pass 2: write the entry files. The filename timestamp comes from the
-  # entry's own `logged:` value - that is what preserves both the shard and
-  # the window order the monolith had.
-  local migrated=0
-  for i in "${!M_OLDID[@]}"; do
-    [[ -n ${M_LOGGED[i]} ]] || ps_die "$PS_VALIDATION" "migrate_bad_entry" \
-      "${M_OLDID[i]} has no logged timestamp - cannot place it in a shard"
-    local ts
-    ts=$(ps_to_utc_compact "${M_LOGGED[i]}") || ts=""
-    [[ -n $ts ]] || ps_die "$PS_VALIDATION" "migrate_bad_timestamp" \
-      "${M_OLDID[i]} has an unparseable logged value: ${M_LOGGED[i]}"
-    suffix=${NEWID[${M_OLDID[i]}]}
-    local shard="$project/issues/${ts:0:4}/${ts:4:2}"
-    mkdir -p "$shard" || ps_die "$PS_IO" "mkdir_failed" "cannot create $shard"
-
-    # Rewrite internal references through the map. Tokens with no mapping
-    # (e.g. refs to old BK- IDs, whose tree this script does not own) are
-    # kept as-is: `check` will name them, which is the honest outcome.
-    local new_refs new_res
-    new_refs=$(ps_rewrite_tokens "${M_REFS[i]}" NEWID)
-    new_res=$(ps_rewrite_tokens "${M_RES[i]}" NEWID)
-
-    local entry; entry=$(ps_tempfile)
-    {
-      printf '# %s\n\n' "${M_TITLE[i]}"
-      printf '<!-- issue\n'
-      printf 'id: %s\n' "$suffix"
-      printf 'logged: %s\n' "$(date -u -d "${M_LOGGED[i]}" +%Y-%m-%dT%H:%M:%SZ)"
-      printf 'severity: %s\n' "${M_SEV[i]}"
-      printf 'area: %s\n' "${M_AREA[i]}"
-      printf 'tags: %s\n' "${M_TAGS[i]}"
-      printf 'refs: %s\n' "$new_refs"
-      printf 'resolves: %s\n' "$new_res"
-      printf -- '-->\n\n'
-      printf -- '- **Symptom** - %s\n' "${M_SYM[i]}"
-      printf -- '- **Trigger** - %s\n' "${M_TRI[i]}"
-      printf -- '- **Cause** - %s\n' "${M_CAU[i]}"
-      printf -- '- **Resolution** - %s\n' "${M_FIX[i]}"
-      printf -- '- **Verification** - %s\n' "${M_VER[i]}"
-    } >"$entry"
-    ps_atomic_create "$entry" "$shard/${ts}-${suffix}.md" || \
-      ps_die "$PS_IO" "name_collision" "name collision during migration at $shard"
-    migrated=$((migrated + 1))
-  done
-
-  # Renamed, not deleted: the monolith stays recoverable, but it no longer
-  # collides with the tree check's "no monolith beside the directories" rule.
-  mv -- "$monolith" "$monolith.migrated" || \
-    ps_die "$PS_IO" "rename_failed" "could not rename $monolith to $monolith.migrated"
-
-  ps_info "migrated $migrated entries; ISSUES.md renamed to ISSUES.md.migrated"
-  if ((PS_JSON)); then
-    printf '{"ok":true,"migrated":%d,"renamed":%s}\n' \
-      "$migrated" "$(ps_json_string "$monolith.migrated")"
-  fi
+  ps_migrate "$project"
 }
 
 cmd_check() {

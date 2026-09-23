@@ -24,7 +24,14 @@ L="${RAIL_LEDGER:?RAIL_LEDGER must name the ledger file of this project, set by 
 hdr='at_utc	step	status	text	by	ref'
 [ -f "$L" ] || printf '%s\n' "$hdr" > "$L"
 if [ "${1:-}" = "--show" ]; then n="${2:-10}"; { head -1 "$L"; tail -n "$n" "$L" | grep -v '^at_utc'; } | column -t -s $'\t'; exit 0; fi
-[ $# -ge 3 ] || { sed -n '21,22p' "$0"; exit 2; }
+# BREADCRUMB - S-05 L1 (review: ~/.local/state/dotfiles/execution/S-05-review.md).
+# What broke: this line was sed -n '21,22p', one off, so a bare call printed the --show line and
+#   `set -euo pipefail` instead of the two usage lines above.
+# Why it mattered: the usage text is what a seat reads after a wrong call; code teaches it nothing.
+# Why this fix: select the usage lines by their shape, so a comment added above them (this one
+#   included) cannot shift the range again. Rejected: correcting the numbers, which is the same trap.
+# Cost: none.
+[ $# -ge 3 ] || { grep -E '^# (Usage: | +)ledger\.sh ' "$0"; exit 2; }
 step="$1"; status="$2"; text="$3"; ref="${4:-}"
 case "$status" in started|complete|blocked|issue|question|checkpoint) ;; *) echo "status must be started|complete|blocked|issue|question|checkpoint" >&2; exit 2;; esac
 [[ "$step" =~ ^[A-Z]-[0-9]{2}[a-z0-9.-]*$ ]] || { echo "step must look like E-01 or F-12" >&2; exit 2; }

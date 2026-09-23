@@ -29,10 +29,19 @@ PROJECT="__PROJECT_NAME__"
 TITLE="__RAIL_TITLE__"
 EYEBROW="__RAIL_EYEBROW__"
 SOURCE="__RAIL_SOURCE__"
+# BREADCRUMB - S-05 L3 (review: ~/.local/state/dotfiles/execution/S-05-review.md).
+# What broke: state was keyed by PROJECT alone, the directory's basename, so ~/work/api and ~/side/api
+#   appended to one ledger and each page showed the other project's rows - the shared-ledger failure the
+#   scaffold.sh breadcrumb on the rail describes, in a narrower form.
+# Why this fix: scaffold mints KEY once, when it renders this file, and the file is committed, so every
+#   clone of one project shares a ledger and no other project can. Rejected: keying by the absolute path,
+#   which strands the ledger the day the project is moved or cloned somewhere else.
+# Cost: the state directory name is <project>-<key> rather than a bare, guessable <project>.
+KEY="__RAIL_KEY__"
 
 # Tracking never enters git: the ledger, the built page and the approval marker are state, not source.
 # What is committed is plan.json, side.html and this wrapper - the inputs, never the render.
-STATE="${RAIL_STATE_DIR:-$HOME/.local/state/$PROJECT/rail}"
+STATE="${RAIL_STATE_DIR:-$HOME/.local/state/$PROJECT-$KEY/rail}"
 mkdir -p "$STATE"
 
 export RAIL_LEDGER="$STATE/ledger.tsv"

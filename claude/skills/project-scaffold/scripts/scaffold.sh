@@ -437,11 +437,15 @@ rail_escape() {
   printf '%s' "$v"
 }
 
-# render_rail_wrapper <out> - rail.sh.tmpl with its four facts filled in.
+# render_rail_wrapper <out> - rail.sh.tmpl with its four facts and its state key filled in.
 render_rail_wrapper() {
   local out="$1" name; name=$(basename -- "$project")
   local text; text=$(<"$RAIL_TEMPLATE/rail.sh.tmpl")
   local project_v title_v eyebrow_v source_v
+  # S-05 L3: the state key that keeps two same-named projects apart; see the
+  # breadcrumb at KEY= in rail.sh.tmpl.
+  ps_mint_unique "$project"
+  local key_v=$PS_MINTED
   project_v=$(rail_escape "$name")
   title_v=$(rail_escape "$name")
   eyebrow_v=$(rail_escape "$name · execution rail")
@@ -450,6 +454,7 @@ render_rail_wrapper() {
   text=${text//__RAIL_TITLE__/"$title_v"}
   text=${text//__RAIL_EYEBROW__/"$eyebrow_v"}
   text=${text//__RAIL_SOURCE__/"$source_v"}
+  text=${text//__RAIL_KEY__/"$key_v"}
   # Fail loud rather than install a wrapper that still names a placeholder: a
   # new token added to the template without a line above would otherwise ship.
   if grep -qE '__(PROJECT_NAME|RAIL_[A-Z]+)__' <<<"$text"; then

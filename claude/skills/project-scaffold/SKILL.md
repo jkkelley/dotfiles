@@ -97,7 +97,7 @@ Every project also gets the Execution Rail, the owner-facing status page, from
 project directory's name, an empty `report/plan.json`, and the engine under `report/rail/`. The
 engine is refreshed like `.claude/scripts/`; `rail.sh` and `plan.json` are the project's own once
 they exist and are never overwritten. The ledger and the built page are state under
-`~/.local/state/<project>/rail/`, never in the repository.
+`~/.local/state/<project>-<key>/rail/`, never in the repository.
 
 **Existing files are appended to, never deleted or overwritten.** A file already present gains only
 the sections it is missing. A non-empty file with none of the expected structure is reported and
@@ -132,14 +132,17 @@ is refused as ambiguous (exit 3) rather than guessed.
 ### 4. Migrate and check
 
 ```sh
-scripts/log-issue.sh migrate --project <dir>   # ISSUES.md   -> issues/, renames the monolith aside
-scripts/backlog.sh  migrate --project <dir>    # BACKLOG.md  -> backlog/, same arrangement
+scripts/log-issue.sh migrate --project <dir>   # ISSUES.md and BACKLOG.md -> issues/ and backlog/, one run
+scripts/backlog.sh  migrate --project <dir>    # the same verb; either script runs it
 scripts/log-issue.sh check   --project <dir>   # validates the tree, exit 3 names every offender
 scripts/backlog.sh  check   --project <dir>
 ```
 
-`migrate` is a one-time conversion: it preserves each entry's recorded timestamp as its filename
-and shard, rewrites internal `refs:`/`resolves:` to the new suffixes, and refuses to run twice.
+`migrate` is a one-time conversion of both monoliths in one run: it preserves each entry's recorded
+timestamp as its filename and shard, and rewrites `refs:`/`resolves:` through one map that holds
+both the `ISS-` and the `BK-` IDs, so a reference across the trees survives.
+Every timestamp is checked before the first write, and a failure undoes the whole run, so a refused
+migrate can be fixed and rerun. It refuses to run twice.
 `check` validates filename shapes, shard placement, metadata completeness, duplicate suffixes,
 dangling references, and that no hand-written monolith sits beside the directories.
 
@@ -153,7 +156,6 @@ dangling references, and that no hand-written monolith sits beside the directori
 | exit 2   | usage - unknown flag, missing or empty required value                                          |
 | exit 3   | validation - bad enum, ambiguous ID, a `check` that found an invalid tree                      |
 | exit 4   | io - unreadable or unwritable path                                                             |
-| exit 5   | lock timeout - another writer held the lock                                                    |
 | exit 6   | not found - a referenced ID does not exist                                                     |
 | writes   | atomic (staged, then renamed); entry creation needs no lock - each name is unique at mint time |
 | input    | written literally; nothing in a field value is ever evaluated                                  |

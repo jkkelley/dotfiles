@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Every scaffolded project gets the Execution Rail (O-07). 200-rail proves the
+# Every scaffolded project gets the Execution Rail (O-07). 205-rail proves the
 # template's engine; this case proves what scaffold.sh puts into a project, run
 # the way a seat runs it: ./report/rail.sh from the project root.
 #
@@ -55,5 +55,18 @@ run 0 "scaffold a project whose name carries quotes, dollar, ampersand, backtick
 run 0 "that wrapper parses as bash" bash -n "$q/report/rail.sh"
 got=$(cd "$q" && bash -c 'source <(sed -n "/^PROJECT=/p" report/rail.sh); printf "%s" "$PROJECT"')
 assert_eq "$(basename "$q")" "$got" "PROJECT holds the name verbatim, not its expansion"
+
+# --- S-05 L3: two projects that share a directory name keep separate ledgers.
+# State used to be keyed by the basename alone, so ~/work/api and ~/side/api
+# appended to one ledger and each page showed the other project's rows.
+h="$WORK/rail-home"; mkdir -p "$h" "$WORK/one/api" "$WORK/two/api"
+for d in "$WORK/one/api" "$WORK/two/api"; do
+  scaffold --project "$d" --apply --yes >/dev/null 2>&1
+  (cd "$d" && env -u RAIL_STATE_DIR HOME="$h" RAIL_SEAT=s ./report/rail.sh log E-01 started "row from $(basename "$(dirname "$d")")" >/dev/null 2>&1)
+done
+assert_count 2 "$(find "$h/.local/state" -name ledger.tsv | wc -l)" "two same-named projects write two ledgers"
+for l in $(find "$h/.local/state" -name ledger.tsv); do
+  assert_count 2 "$(wc -l <"$l")" "each ledger holds only its own project's row ($(basename "$(dirname "$(dirname "$l")")"))"
+done
 
 finish

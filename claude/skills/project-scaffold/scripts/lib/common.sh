@@ -8,7 +8,8 @@
 # The invariants this file exists to guarantee:
 #   - user input is written literally, never evaluated
 #   - writes are atomic: build in a temp file, rename over the target
-#   - concurrent writers serialise on a lock instead of racing for an ID
+#   - concurrent writers never share a file, so none of them needs a lock
+#   - a multi-step write that fails part way is undone, never left half done
 #   - every temp path is removed on exit, whether the run passed or failed
 #   - stdout carries data only; every human word goes to stderr
 
@@ -19,8 +20,11 @@ readonly PS_OK=0
 readonly PS_USAGE=2      # bad flag, missing required flag, empty required value
 readonly PS_VALIDATION=3 # bad enum value, missing sentinel, malformed file
 readonly PS_IO=4         # unreadable / unwritable path
-readonly PS_LOCK=5       # another writer held the lock too long
 readonly PS_NOTFOUND=6   # referenced ID does not exist
+# 5 was "lock timeout". S-05 L6: nothing has taken a lock since entries became
+# one file each, so 5 could never be returned; it stays unassigned rather than
+# being reused, because an agent written against the old table must never read
+# a new meaning into it.
 
 readonly PS_SCHEMA_VERSION=1
 readonly PS_TOOL_VERSION=1
@@ -28,7 +32,6 @@ readonly PS_TOOL_VERSION=1
 # Set by ps_parse_common; consulted by ps_emit_* .
 PS_JSON=0
 PS_PROJECT=""
-PS_LOCK_TIMEOUT=10
 
 # ---------------------------------------------------------------------------
 # Output. Data on stdout, everything else on stderr.
@@ -123,12 +126,57 @@ ps_scratch_init() {
   # INT and TERM re-raise after cleanup so the caller sees a real signal death.
   if [[ ${BASHPID:-$$} == "$$" ]]; then
     trap 'ps_cleanup' EXIT
-    trap 'ps_cleanup; trap - INT; kill -INT $$' INT
-    trap 'ps_cleanup; trap - TERM; kill -TERM $$' TERM
+    trap 'ps_undo; ps_cleanup; trap - INT; kill -INT $$' INT
+    trap 'ps_undo; ps_cleanup; trap - TERM; kill -TERM $$' TERM
   fi
 }
 
+# ---------------------------------------------------------------------------
+# Undo log. A step that must not be left half done records how to reverse
+# itself here, and clears the record once it has finished. A run that exits
+# non-zero, whether by ps_die, set -e or a signal, replays whatever is still
+# recorded.
+#
+# BREADCRUMB - S-05 H2 and M2 (review: ~/.local/state/dotfiles/execution/S-05-review.md).
+# What broke: migrate wrote entries one at a time and ps_die'd at the first bad
+# one (the old log-issue.sh:305-311, backlog.sh:463-467), leaving half a tree
+# that made every rerun refuse as already_migrated. backlog.sh done/move had
+# nothing to put back if a step after the claim failed.
+# Why this fix: one mechanism, in the one place every exit path already passes
+# through, instead of a hand-written rollback at each ps_die site - any of which
+# a later edit could miss. Rejected: a staging directory renamed into place,
+# which cannot be one rename when issues/ and backlog/ already exist (scaffold
+# creates them), so it degrades into this same per-file undo anyway.
+# Cost: a SIGKILL skips every trap, so it can still strand a half write; check
+# names the leftovers, and a claim file is visible as an unexpected file.
+# ---------------------------------------------------------------------------
+
+PS_UNDO_RM=()      # files to remove
+PS_UNDO_MV_FROM=() # renames to reverse, replayed newest first:
+PS_UNDO_MV_TO=()   #   PS_UNDO_MV_FROM[i] goes back to PS_UNDO_MV_TO[i]
+
+ps_undo() {
+  if ((${#PS_UNDO_RM[@]})); then rm -f -- "${PS_UNDO_RM[@]}"; fi
+  local i
+  for ((i = ${#PS_UNDO_MV_FROM[@]} - 1; i >= 0; i--)); do
+    # ln, never mv: putting a file back must not clobber one that appeared at
+    # its old path in the meantime. On a refusal the file stays where it is,
+    # and check reports it.
+    if ln -- "${PS_UNDO_MV_FROM[i]}" "${PS_UNDO_MV_TO[i]}" 2>/dev/null; then
+      rm -f -- "${PS_UNDO_MV_FROM[i]}"
+    else
+      printf 'error: could not put %s back at %s - restore it by hand\n' \
+        "${PS_UNDO_MV_FROM[i]}" "${PS_UNDO_MV_TO[i]}" >&2
+    fi
+  done
+  ps_undo_clear
+}
+
+ps_undo_clear() { PS_UNDO_RM=(); PS_UNDO_MV_FROM=(); PS_UNDO_MV_TO=(); }
+
 ps_cleanup() {
+  local rc=$?
+  if ((rc != 0)); then ps_undo; fi
   if [[ -n $PS_SCRATCH && -d $PS_SCRATCH ]]; then
     rm -rf -- "$PS_SCRATCH"
   fi
@@ -184,29 +232,6 @@ ps_sanitize_body() {
   s=${s//-->/"$PS_GT_ESCAPE"}
   s=${s//<!--/"$PS_LT_ESCAPE"}
   printf '%s' "$s"
-}
-
-# ---------------------------------------------------------------------------
-# Locking. Every mutation of a managed file happens inside this.
-# ---------------------------------------------------------------------------
-
-# ps_with_lock <lockfile> <command...>
-ps_with_lock() {
-  local lockfile="$1"
-  shift
-  local lockdir
-  lockdir=$(dirname -- "$lockfile")
-  [[ -d $lockdir ]] || ps_die "$PS_IO" "lock_dir_missing" "lock directory does not exist: $lockdir"
-
-  exec 9>"$lockfile" || ps_die "$PS_IO" "lock_open_failed" "cannot open lock file: $lockfile"
-  if ! flock -w "$PS_LOCK_TIMEOUT" 9; then
-    ps_die "$PS_LOCK" "lock_timeout" \
-      "another writer held $lockfile for more than ${PS_LOCK_TIMEOUT}s"
-  fi
-  "$@"
-  local rc=$?
-  exec 9>&-
-  return $rc
 }
 
 # ---------------------------------------------------------------------------
@@ -308,13 +333,20 @@ ps_to_utc_compact() {
   date -u -d "$1" +%Y%m%dT%H%M%SZ 2>/dev/null
 }
 
-# ps_mint_suffix -> 5 random lowercase alphanumerics.
+# ps_mint_suffix [attempt] -> 5 random lowercase alphanumerics.
 # SCAFFOLD_SUFFIX pins the result for tests, the same role SCAFFOLD_NOW plays
-# for the clock. 36^5 names makes a collision unlikely rather than impossible,
-# which is why creation retries with a fresh suffix instead of trusting this.
+# for the clock. A comma list pins successive attempts - attempt N takes the
+# Nth value and the last one repeats - so the re-mint path in ps_mint_unique is
+# proven by a test rather than left to 36^5 odds. Callers go through
+# ps_mint_unique, which validates and de-duplicates what this returns.
 ps_mint_suffix() {
+  local attempt=${1:-1}
   if [[ -n ${SCAFFOLD_SUFFIX-} ]]; then
-    printf '%s' "$SCAFFOLD_SUFFIX"
+    local -a pins=()
+    IFS=, read -ra pins <<<"$SCAFFOLD_SUFFIX"
+    local idx=$((attempt - 1))
+    ((idx < ${#pins[@]})) || idx=$((${#pins[@]} - 1))
+    printf '%s' "${pins[idx]}"
     return 0
   fi
   local s
@@ -323,6 +355,53 @@ ps_mint_suffix() {
   # decoration.
   s=$(tr -dc 'a-z0-9' </dev/urandom 2>/dev/null | head -c 5 || true)
   printf '%s' "$s"
+}
+
+# ps_mint_unique <project> [taken-assoc-nameref] -> sets PS_MINTED to a suffix
+# that no entry in issues/ or backlog/ holds, and that is not a key of the
+# optional taken map (migrate passes the suffixes it has minted but not yet
+# written). It sets a variable rather than printing, so its ps_die runs in the
+# caller's shell and not in a command substitution that would swallow it.
+#
+# BREADCRUMB - S-05 M1 (review: ~/.local/state/dotfiles/execution/S-05-review.md).
+# What broke: log-issue.sh and backlog.sh retried only when ln met the exact
+# same file name. The name carries the timestamp, so that retry fired only for
+# the same second AND the same suffix; a suffix already held by an entry from
+# any other second was minted again without a word. find_item then refused
+# that ID for good (backlog.sh, "id_ambiguous") and check went red.
+# Why that mattered: the suffix IS the ID. Its uniqueness across both trees is
+# the one property every lookup depends on.
+# Why this fix: look the suffix up in both trees before it is used, and re-mint
+# on a hit. Rejected: trusting 36^5 - at about 3,000 entries the birthday odds
+# of a collision are roughly 7 percent.
+# Cost: one find over both trees per entry created. Two writers in different
+# seconds that draw the same suffix inside the same instant still both pass
+# the lookup; that needs a 1-in-60-million draw at the same moment, and check
+# is the backstop that names it.
+#
+# BREADCRUMB - S-05 L5. What broke: with no readable /dev/urandom the mint came
+# back short or empty and was written as-is; log exited 0 with a file name
+# check rejects. Why this fix: validate the shape here, the one place every
+# mint passes, and fail loud - a re-mint cannot help when the source is gone.
+PS_MINTED=""
+ps_mint_unique() {
+  local project="$1" attempt s
+  local -a hits=()
+  local -A _no_taken=()
+  local -n _taken=${2:-_no_taken}
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    s=$(ps_mint_suffix "$attempt")
+    [[ $s =~ ^[a-z0-9]{5}$ ]] || ps_die "$PS_IO" "mint_failed" \
+      "minted suffix '$s' is not 5 lowercase alphanumerics - is /dev/urandom readable?"
+    [[ -z ${_taken[$s]-} ]] || continue
+    mapfile -t hits < <(ps_find_suffix "$s" "$project/issues" "$project/backlog")
+    if ((${#hits[@]} == 0)); then
+      PS_MINTED=$s
+      return 0
+    fi
+  done
+  ps_die "$PS_IO" "name_collision" \
+    "could not mint a suffix that no entry holds after 10 attempts"
 }
 
 # ---------------------------------------------------------------------------
@@ -493,8 +572,14 @@ ps_check_tree() {
     local -a holders=()
     # The census value is space-separated, but these scripts run with
     # IFS=newline+tab, so the split needs its own IFS.
-    local IFS=' '
-    read -ra holders <<<"${census[$suffix]}"
+    # BREADCRUMB - S-05 L4. What broke: this was `local IFS=' '` on its own
+    # line, which holds until the function returns - so the rest of
+    # ps_check_tree, and ps_check_refs which it calls, ran with IFS=' ' whenever
+    # the census was non-empty. Harmless only while every expansion there stays
+    # quoted. Why this fix: an assignment prefix scopes IFS to the one read that
+    # needs it. Rejected: restoring IFS after the loop, which a later early
+    # `continue` or return would skip. Cost: none.
+    IFS=' ' read -ra holders <<<"${census[$suffix]}"
     if ((${#holders[@]} > 1)); then
       ps_check_note "suffix '$suffix' is not unique: ${holders[*]}"
     fi
@@ -588,6 +673,280 @@ ps_check_report() {
     for prob in "${PS_CHECK_PROBLEMS[@]}"; do printf 'check: %s\n' "$prob" >&2; done
   fi
   exit "$PS_VALIDATION"
+}
+
+# ---------------------------------------------------------------------------
+# Migration. `log-issue.sh migrate` and `backlog.sh migrate` are one verb: each
+# converts every monolith present - ISSUES.md, BACKLOG.md, or both - in one run.
+#
+# BREADCRUMB - S-05 H1 (review: ~/.local/state/dotfiles/execution/S-05-review.md).
+# What broke: each script migrated its own monolith with its own old-ID map.
+# log-issue.sh rewrote refs through the ISS map only and kept BK- tokens as they
+# were, and backlog.sh overwrote its old IDs with the new suffixes, so the
+# BK -> suffix map was thrown away. The old tool documented `--refs BK-014` as
+# normal usage (main:scripts/log-issue.sh:29).
+# Why that mattered: `check` rejects a BK- token as "not a 5-char suffix", and
+# entries are immutable, so no sanctioned command could ever turn it green - a
+# project with --ci went red and stayed red.
+# Why this fix: one run, one map holding both ISS- and BK- keys, built before
+# anything is written. Rejected: a map file left behind by the first migrate for
+# the second to read, which is a second source of truth that outlives its use
+# and still depends on the two runs happening in the right order.
+# Cost: a project with only one monolith left (its other tree migrated by the
+# old per-file tool) keeps its refs into that tree unmapped; check names them.
+#
+# BREADCRUMB - S-05 H2. What broke: timestamps were parsed during the write
+# pass, one entry at a time, so a bad `logged:` on entry N stopped the run
+# after N-1 files were written and with the monolith still in place. The rerun
+# was refused as already_migrated and logging was refused because the monolith
+# was there: stuck, with hand deletion the only way out.
+# Why this fix: every value is parsed and checked before the first write, and
+# every write and rename is recorded in the undo log, so a failure at any point
+# leaves the project exactly as it was. Rejected: stage-then-rename-once, see
+# the undo log's breadcrumb. Cost: none; the parse was already done in full.
+# ---------------------------------------------------------------------------
+
+ps_migrate() {
+  local project="$1"
+  local iss_mono="$project/ISSUES.md" bk_mono="$project/BACKLOG.md"
+  [[ -f $iss_mono || -f $bk_mono ]] || ps_die "$PS_VALIDATION" "nothing_to_migrate" \
+    "no ISSUES.md or BACKLOG.md in $project - nothing to migrate"
+  local t
+  for t in issues backlog; do
+    local mono=$iss_mono
+    [[ $t == backlog ]] && mono=$bk_mono
+    if [[ -f $mono && -d $project/$t ]] && find "$project/$t" -type f -name '*.md' 2>/dev/null | grep -q .; then
+      ps_die "$PS_VALIDATION" "already_migrated" \
+        "$project/$t already holds entries - refusing to migrate twice over the same output"
+    fi
+  done
+
+  local line cur in_meta work
+  local -a LINES=()
+
+  # --- Pass 1a: split ISSUES.md into entries ----------------------------------
+  local -a I_OLD=() I_TITLE=() I_RAW=() I_SEV=() I_AREA=() I_TAGS=() I_REFS=() I_RES=()
+  local -a I_SYM=() I_TRI=() I_CAU=() I_FIX=() I_VER=()
+  if [[ -f $iss_mono ]]; then
+    work=$(ps_strip_cr "$iss_mono")
+    mapfile -t LINES <"$work"
+    cur=-1 in_meta=0
+    for line in ${LINES[@]+"${LINES[@]}"}; do
+      if [[ $line =~ ^##\ (ISS-[0-9]{4})\ -\ (.*)$ ]]; then
+        cur=$((cur + 1)); in_meta=0
+        I_OLD[cur]="${BASH_REMATCH[1]}"; I_TITLE[cur]="${BASH_REMATCH[2]}"
+        I_RAW[cur]=""; I_SEV[cur]="medium"; I_AREA[cur]="-"
+        I_TAGS[cur]="-"; I_REFS[cur]="-"; I_RES[cur]="-"
+        I_SYM[cur]=""; I_TRI[cur]=""; I_CAU[cur]=""; I_FIX[cur]=""; I_VER[cur]=""
+        continue
+      fi
+      ((cur >= 0)) || continue
+      if [[ $line == '<!-- issue' ]]; then in_meta=1; continue; fi
+      if [[ $line == '-->' ]]; then in_meta=0; continue; fi
+      if ((in_meta)); then
+        case $line in
+          "logged:"*)   I_RAW[cur]="${line#logged: }" ;;
+          "severity:"*) I_SEV[cur]="${line#severity: }" ;;
+          "area:"*)     I_AREA[cur]="${line#area: }" ;;
+          "tags:"*)     I_TAGS[cur]="${line#tags: }" ;;
+          "refs:"*)     I_REFS[cur]="${line#refs: }" ;;
+          "resolves:"*) I_RES[cur]="${line#resolves: }" ;;
+        esac
+        continue
+      fi
+      case $line in
+        '- **Symptom** - '*)      I_SYM[cur]="${line#'- **Symptom** - '}" ;;
+        '- **Trigger** - '*)      I_TRI[cur]="${line#'- **Trigger** - '}" ;;
+        '- **Cause** - '*)        I_CAU[cur]="${line#'- **Cause** - '}" ;;
+        '- **Resolution** - '*)   I_FIX[cur]="${line#'- **Resolution** - '}" ;;
+        '- **Verification** - '*) I_VER[cur]="${line#'- **Verification** - '}" ;;
+      esac
+    done
+  fi
+
+  # --- Pass 1b: split BACKLOG.md into items -----------------------------------
+  # The current bucket comes from the marker lines; an item runs from its
+  # checkbox heading to the next boundary. Metadata and body lines are indented
+  # two spaces in the old format.
+  local -a B_OLD=() B_TITLE=() B_ADDED=() B_COMPLETED=() B_WHY=() B_DONE=() B_BUCKET=()
+  if [[ -f $bk_mono ]]; then
+    work=$(ps_strip_cr "$bk_mono")
+    mapfile -t LINES <"$work"
+    cur=-1 in_meta=0
+    local cur_bucket="" trimmed
+    for line in ${LINES[@]+"${LINES[@]}"}; do
+      case $line in
+        '<!-- BACKLOG:NOW -->')   cur_bucket="now"; continue ;;
+        '<!-- BACKLOG:NEXT -->')  cur_bucket="next"; continue ;;
+        '<!-- BACKLOG:LATER -->') cur_bucket="later"; continue ;;
+        '<!-- BACKLOG:DONE -->')  cur_bucket="done"; continue ;;
+      esac
+      if [[ $line =~ ^-\ \[[\ x]\]\ \*\*(BK-[0-9]{4})\*\*\ -\ (.*)$ ]]; then
+        cur=$((cur + 1)); in_meta=0
+        B_OLD[cur]="${BASH_REMATCH[1]}"; B_TITLE[cur]="${BASH_REMATCH[2]}"
+        B_ADDED[cur]=""; B_COMPLETED[cur]=""; B_WHY[cur]=""; B_DONE[cur]=""
+        B_BUCKET[cur]="${cur_bucket:-later}"
+        continue
+      fi
+      ((cur >= 0)) || continue
+      trimmed=${line#"  "}
+      if [[ $trimmed == '<!-- item' ]]; then in_meta=1; continue; fi
+      if [[ $trimmed == '-->' ]]; then in_meta=0; continue; fi
+      if ((in_meta)); then
+        case $trimmed in
+          "added:"*)     B_ADDED[cur]="${trimmed#added: }" ;;
+          "completed:"*) B_COMPLETED[cur]="${trimmed#completed: }" ;;
+        esac
+        continue
+      fi
+      case $trimmed in
+        '- why: '*)       B_WHY[cur]="${trimmed#'- why: '}" ;;
+        '- done-when: '*) B_DONE[cur]="${trimmed#'- done-when: '}" ;;
+      esac
+    done
+  fi
+
+  # --- Pass 1c: every timestamp, checked before anything is written ----------
+  # The filename timestamp comes from the entry's own record, which is what
+  # preserves both the shard and the window order the monolith had. Live
+  # backlog items take it from `added:`; done items from `completed:`, falling
+  # back to `added:`, because the done shard must be the shard the name implies.
+  local -a problems=() I_TS=() I_LOGGED=() B_TS=() B_ADDED_OUT=() B_COMPLETED_OUT=()
+  local i ts src
+  for i in ${I_OLD[@]+"${!I_OLD[@]}"}; do
+    if [[ -z ${I_RAW[i]} ]]; then
+      problems+=("${I_OLD[i]} has no logged timestamp - cannot place it in a shard")
+      continue
+    fi
+    ts=$(ps_to_utc_compact "${I_RAW[i]}") || ts=""
+    if [[ -z $ts ]]; then
+      problems+=("${I_OLD[i]} has an unparseable logged value: ${I_RAW[i]}")
+      continue
+    fi
+    I_TS[i]=$ts
+    I_LOGGED[i]=$(date -u -d "${I_RAW[i]}" +%Y-%m-%dT%H:%M:%SZ)
+  done
+  for i in ${B_OLD[@]+"${!B_OLD[@]}"}; do
+    if [[ ${B_BUCKET[i]} == done && -n ${B_COMPLETED[i]} ]]; then src=${B_COMPLETED[i]}; else src=${B_ADDED[i]}; fi
+    if [[ -z $src ]]; then
+      problems+=("${B_OLD[i]} ('${B_TITLE[i]}') has no timestamp - cannot place it")
+      continue
+    fi
+    ts=$(ps_to_utc_compact "$src") || ts=""
+    if [[ -z $ts ]]; then
+      problems+=("${B_OLD[i]} ('${B_TITLE[i]}') has an unparseable timestamp: $src")
+      continue
+    fi
+    B_TS[i]=$ts
+    # A value that is not the stamp source is normalised when it parses and
+    # kept verbatim when it does not: dropping it would lose information.
+    if [[ -n ${B_ADDED[i]} ]]; then
+      B_ADDED_OUT[i]=$(date -u -d "${B_ADDED[i]}" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null) || B_ADDED_OUT[i]=${B_ADDED[i]}
+    else
+      B_ADDED_OUT[i]="-"
+    fi
+    B_COMPLETED_OUT[i]=""
+    if [[ -n ${B_COMPLETED[i]} ]]; then
+      B_COMPLETED_OUT[i]=$(date -u -d "${B_COMPLETED[i]}" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null) || B_COMPLETED_OUT[i]=${B_COMPLETED[i]}
+    fi
+  done
+  if ((${#problems[@]})); then
+    local IFS=$'\n'
+    ps_die "$PS_VALIDATION" "migrate_bad_timestamp" \
+      "refused before writing anything; fix these in the monolith and rerun:"$'\n'"${problems[*]}"
+  fi
+
+  # --- One map for both trees ------------------------------------------------
+  # Every new suffix is minted before the first write, so refs and resolves
+  # can be rewritten through a map that already holds every ISS- and BK- key.
+  declare -A MAP=() USED=()
+  local -a I_NEW=() B_NEW=()
+  for i in ${I_OLD[@]+"${!I_OLD[@]}"}; do
+    ps_mint_unique "$project" USED
+    USED[$PS_MINTED]=1; I_NEW[i]=$PS_MINTED; MAP[${I_OLD[i]}]=$PS_MINTED
+  done
+  for i in ${B_OLD[@]+"${!B_OLD[@]}"}; do
+    ps_mint_unique "$project" USED
+    USED[$PS_MINTED]=1; B_NEW[i]=$PS_MINTED; MAP[${B_OLD[i]}]=$PS_MINTED
+  done
+
+  # --- Pass 2: write, with every file recorded in the undo log ---------------
+  local entry dir dst
+  for i in ${I_OLD[@]+"${!I_OLD[@]}"}; do
+    ts=${I_TS[i]}
+    dir="$project/issues/${ts:0:4}/${ts:4:2}"
+    mkdir -p "$dir" || ps_die "$PS_IO" "mkdir_failed" "cannot create $dir"
+    entry=$(ps_tempfile)
+    {
+      printf '# %s\n\n' "${I_TITLE[i]}"
+      printf '<!-- issue\n'
+      printf 'id: %s\n' "${I_NEW[i]}"
+      printf 'logged: %s\n' "${I_LOGGED[i]}"
+      printf 'severity: %s\n' "${I_SEV[i]}"
+      printf 'area: %s\n' "${I_AREA[i]}"
+      printf 'tags: %s\n' "${I_TAGS[i]}"
+      printf 'refs: %s\n' "$(ps_rewrite_tokens "${I_REFS[i]}" MAP)"
+      printf 'resolves: %s\n' "$(ps_rewrite_tokens "${I_RES[i]}" MAP)"
+      printf -- '-->\n\n'
+      printf -- '- **Symptom** - %s\n' "${I_SYM[i]}"
+      printf -- '- **Trigger** - %s\n' "${I_TRI[i]}"
+      printf -- '- **Cause** - %s\n' "${I_CAU[i]}"
+      printf -- '- **Resolution** - %s\n' "${I_FIX[i]}"
+      printf -- '- **Verification** - %s\n' "${I_VER[i]}"
+    } >"$entry"
+    dst="$dir/${ts}-${I_NEW[i]}.md"
+    ps_atomic_create "$entry" "$dst" || \
+      ps_die "$PS_IO" "name_collision" "name collision during migration at $dst"
+    PS_UNDO_RM+=("$dst")
+  done
+  for i in ${B_OLD[@]+"${!B_OLD[@]}"}; do
+    ts=${B_TS[i]}
+    if [[ ${B_BUCKET[i]} == done ]]; then
+      dir="$project/backlog/done/${ts:0:4}/${ts:4:2}"
+    else
+      dir="$project/backlog/${B_BUCKET[i]}"
+    fi
+    mkdir -p "$dir" || ps_die "$PS_IO" "mkdir_failed" "cannot create $dir"
+    entry=$(ps_tempfile)
+    {
+      printf '# %s\n\n' "${B_TITLE[i]}"
+      printf '<!-- item\n'
+      printf 'id: %s\n' "${B_NEW[i]}"
+      printf 'added: %s\n' "${B_ADDED_OUT[i]}"
+      [[ -z ${B_COMPLETED_OUT[i]} ]] || printf 'completed: %s\n' "${B_COMPLETED_OUT[i]}"
+      printf -- '-->\n\n'
+      printf -- '- why: %s\n' "${B_WHY[i]}"
+      printf -- '- done-when: %s\n' "${B_DONE[i]}"
+    } >"$entry"
+    dst="$dir/${ts}-${B_NEW[i]}.md"
+    ps_atomic_create "$entry" "$dst" || \
+      ps_die "$PS_IO" "name_collision" "name collision during migration at $dst"
+    PS_UNDO_RM+=("$dst")
+  done
+
+  # Renamed, not deleted: a monolith stays recoverable, but no longer collides
+  # with the tree check's "no monolith beside the directories" rule. The
+  # renames are in the undo log too, so a failed second one puts the first back.
+  local -a renamed=()
+  for src in "$iss_mono" "$bk_mono"; do
+    [[ -f $src ]] || continue
+    mv -- "$src" "$src.migrated" || \
+      ps_die "$PS_IO" "rename_failed" "could not rename $src to $src.migrated"
+    PS_UNDO_MV_FROM+=("$src.migrated"); PS_UNDO_MV_TO+=("$src")
+    renamed+=("$src.migrated")
+  done
+  ps_undo_clear
+
+  ps_info "migrated ${#I_OLD[@]} issues and ${#B_OLD[@]} backlog items; renamed aside: ${renamed[*]##*/}"
+  if ((PS_JSON)); then
+    printf '{"ok":true,"migrated":%d,"issues":%d,"backlog":%d,"renamed":[' \
+      $((${#I_OLD[@]} + ${#B_OLD[@]})) "${#I_OLD[@]}" "${#B_OLD[@]}"
+    for i in "${!renamed[@]}"; do
+      ((i > 0)) && printf ','
+      ps_json_string "${renamed[i]}"
+    done
+    printf ']}\n'
+  fi
 }
 
 # ---------------------------------------------------------------------------

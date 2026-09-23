@@ -32,7 +32,10 @@ IMAGE="${PS_TEST_IMAGE:-docker.io/library/python@sha256:2f17fc044b579bab302c2e80
 # other means a network fetch inside a suite that runs --network=none on purpose.
 # So the suite runs twice and sums the totals.
 #
-# Pinned by digest per root CLAUDE.md Rule 15, and it is the same digest
+# bitnami/git 2.55.0 (the image's org.opencontainers.image.version label, built
+# 2026-08-21 UTC), pinned by digest per root CLAUDE.md Rule 15. S-05 L8: this
+# comment used to name no version at all, so nobody but whoever chose the digest
+# could tell what it was or repin it deliberately. It is the same digest
 # living-docs, skill-registry and hydration-prompt already run on - a second
 # digest for the same purpose is how a repository ends up with two answers to
 # "what do the tests run on". It ships no cmp, which is why assert_same hashes
