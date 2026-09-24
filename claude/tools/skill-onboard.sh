@@ -85,7 +85,7 @@ CLAUDEMD_TMPL_PATH="$TMPL_DIR/CLAUDE.md.tmpl"
 #
 # What it costs: a project with no AGENTS.md still gets the section in CLAUDE.md,
 # markers under it, exactly as before #98. It moves when that project is
-# scaffolded forward, not here. Record: the pull request that carries this.
+# scaffolded forward, not here. Record: PR #102.
 AGENTSMD_TMPL_PATH="$TMPL_DIR/AGENTS.md.tmpl"
 REGISTRY_PATH="claude/skills/registry.json"
 SLOT_PATH="claude/skills/hydration-prompt/scripts/slot.sh"
