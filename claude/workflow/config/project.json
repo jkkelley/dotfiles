@@ -44,7 +44,7 @@
         "role": "builder",
         "tab_label": "agent-orch",
         "worktree": "~/dotfiles-wt/orch",
-        "branch": "feat/orchestration-failover"
+        "branch": "feat/workflow-ci-job"
       },
       {
         "name": "architect",

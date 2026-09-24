@@ -41,7 +41,8 @@
     ],
     "allowed_paths": [
       "claude/workflow/",
-      "claude/skills/work-order/"
+      "claude/skills/work-order/",
+      ".github/workflows/"
     ]
   },
   "gates": [
