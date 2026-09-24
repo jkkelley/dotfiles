@@ -26,13 +26,15 @@ work-order.sh - deterministic tickets for agent handoff
 
 Usage:
   work-order.sh new     [--project DIR] --title T --type T --problem T --out T...
-                        [--in T...] [--ac T...] [--test-plan T] [--surface T...]
+                        [--in T...] [--ac T...] [--test-plan T | --test-plan-file F]
+                        [--surface T...]
                         [--priority p0|p1|p2|p3] [--assume T...] [--question T...]
                         (--parent WO-... | --top-level)
                         [--depends-on WO-...] [--blocks WO-...]
                         [--from-figma DIR] [--frames GLOB] [--json]
   work-order.sh amend   [--project DIR] --id WO-... [--title T] [--problem T]
-                        [--in T...] [--out T...] [--ac T...] [--test-plan T] [--json]
+                        [--in T...] [--out T...] [--ac T...]
+                        [--test-plan T | --test-plan-file F] [--json]
   work-order.sh link    [--project DIR] --id WO-... [--parent WO-... | --detach]
                         [--depends-on WO-...] [--blocks WO-...]
                         [--no-depends-on WO-...] [--no-blocks WO-...] [--json]
@@ -73,7 +75,9 @@ Authority:
 
 new:
   --title      one line
-  --type       feature | bug | chore | spike
+  --type       feature | bug | chore | spike | test
+               A `test` ticket carries the plan its tester runs, and `start`
+               refuses it until that plan is runnable as written.
   --problem    what is broken or missing, and for whom
   --out        a non-goal. REQUIRED and repeatable - an empty Out list is what
                lets an agent wander, so it is a validation error, not a default.
@@ -87,6 +91,13 @@ new:
                parent's directory, so the tree mirrors the work.
   --depends-on an existing WO that must reach `done` first. Repeatable. The
                inverse `blocks` edge is written on the other ticket too.
+  --test-plan  one shell line, rendered as the whole ## Test plan section.
+  --test-plan-file  a filled copy of claude/workflow/templates/test-plan.md,
+               written verbatim as the ## Test plan section: scope under test,
+               cases (id, intent, command, expected), isolation (podman, an image
+               pinned by digest) and what CI covers instead. Required in effect
+               for --type test: `start` refuses a test ticket whose block is
+               missing, has no case, has a case missing a field, or is not pinned.
 
 amend:
   Corrects a `draft` before it is approved, and only a draft: an approved ticket
@@ -203,7 +214,7 @@ case ${1-} in --help | -h) usage; exit "$PS_OK" ;; esac
 
 command="$1"; shift
 
-title=""; type=""; problem=""; test_plan=""; priority="p2"
+title=""; type=""; problem=""; test_plan=""; test_plan_file=""; priority="p2"
 id=""; pr=""; reason=""; status_filter=""; from_figma=""; frames_glob="*"
 parent=""; text=""; answer=""; observed=""; index=""; match=""; superseded_by=""
 no_lavish=0; dry_run=0; detach=0; check=0; top_level=0
@@ -220,6 +231,7 @@ while (($#)); do
     --problem) problem="${2-}"; shift 2 ;;
     --priority) priority="${2-}"; shift 2 ;;
     --test-plan) test_plan="${2-}"; shift 2 ;;
+    --test-plan-file) test_plan_file="${2-}"; shift 2 ;;
     --in) in_items+=("${2-}"); shift 2 ;;
     --out) out_items+=("${2-}"); shift 2 ;;
     --ac) ac_items+=("${2-}"); shift 2 ;;
@@ -293,7 +305,9 @@ render_body() {
           OUT) bullets "- " "${out_items[@]+"${out_items[@]}"}" ;;
           CRITERIA) printf '%s\n' "$criteria" ;;
           TEST_PLAN)
-            if [[ -n $test_plan ]]; then
+            if [[ -n $test_plan_file ]]; then
+              test_plan_body
+            elif [[ -n $test_plan ]]; then
               printf '```sh\n%s\n```\n' "$(ps_sanitize_line "$test_plan")"
             else
               printf '%s\n' "_none recorded - Rule 14 says this runs in a container_"
@@ -329,6 +343,29 @@ render_guard() {
     ps_die "$PS_VALIDATION" "unsubstituted_placeholder" \
       "template placeholders survived rendering: ${hits% } - refusing to write the ticket"
   fi
+}
+
+# require_test_plan_file - refuse a --test-plan-file before anything is written.
+# The file becomes the body of `## Test plan` verbatim, so a heading inside it
+# would end the section early and every section parser here would then read the
+# rest of the plan as some other section.
+require_test_plan_file() {
+  [[ -z $test_plan_file ]] && return 0
+  [[ -z $test_plan ]] || ps_die "$PS_USAGE" "test_plan_conflict" \
+    "--test-plan and --test-plan-file both write ## Test plan - pass one"
+  [[ -r $test_plan_file ]] || ps_die "$PS_IO" "test_plan_file_missing" \
+    "--test-plan-file $test_plan_file is not a readable file"
+  if grep -qE '^#{1,2}[[:space:]]' "$test_plan_file"; then
+    ps_die "$PS_VALIDATION" "test_plan_heading" \
+      "--test-plan-file must be the block body only - a '#' or '##' heading in it would split the ticket's sections"
+  fi
+}
+
+# test_plan_body - the --test-plan-file content as the section body, with the
+# same comment-marker escaping every other multi-line body gets.
+test_plan_body() {
+  ps_sanitize_body "$(<"$test_plan_file")"
+  printf '\n'
 }
 
 # ---------------------------------------------------------------------------
@@ -404,6 +441,7 @@ cmd_new() {
       "a ticket needs a home: pass --parent WO-... to file it under existing work, or --top-level to open a new epic at the root of $WO_DIR_NAME/"
   fi
   if [[ -n $parent ]]; then require_edge_target parent "$parent"; fi
+  require_test_plan_file
   for e in "${dep_items[@]+"${dep_items[@]}"}"; do require_edge_target depends-on "$e"; done
   for e in "${block_items[@]+"${block_items[@]}"}"; do require_edge_target blocks "$e"; done
 
@@ -558,9 +596,10 @@ cmd_amend() {
   wo_require_status "$file" draft
 
   ((${#in_items[@]})) || ((${#out_items[@]})) || ((${#ac_items[@]})) \
-    || [[ -n $title || -n $problem || -n $test_plan ]] \
+    || [[ -n $title || -n $problem || -n $test_plan || -n $test_plan_file ]] \
     || ps_die "$PS_USAGE" "nothing_to_do" \
-      "amend needs one of --title, --problem, --in, --out, --ac, --test-plan"
+      "amend needs one of --title, --problem, --in, --out, --ac, --test-plan, --test-plan-file"
+  require_test_plan_file
 
   # The Out list may be replaced but never emptied, for the same reason `new`
   # requires one: a ticket with no non-goals is a ticket an agent may wander out
@@ -589,7 +628,7 @@ cmd_amend() {
   if [[ -n $problem ]] && ! printf '%s\n' "$body" | grep -q '^## Problem[[:space:]]*$'; then
     ps_die "$PS_VALIDATION" "section_missing" "$id has no ## Problem section to replace"
   fi
-  if [[ -n $test_plan ]] && ! printf '%s\n' "$body" | grep -q '^## Test plan[[:space:]]*$'; then
+  if [[ -n $test_plan || -n $test_plan_file ]] && ! printf '%s\n' "$body" | grep -q '^## Test plan[[:space:]]*$'; then
     ps_die "$PS_VALIDATION" "section_missing" "$id has no ## Test plan section to replace"
   fi
 
@@ -606,6 +645,7 @@ cmd_amend() {
   ((${#in_items[@]})) && f_in=$(section_file "$(bullets "- " "${in_items[@]}")")
   ((${#out_items[@]})) && f_out=$(section_file "$(bullets "- " "${out_items[@]}")")
   [[ -n $test_plan ]] && f_test=$(section_file "$(printf '```sh\n%s\n```' "$(ps_sanitize_line "$test_plan")")")
+  [[ -n $test_plan_file ]] && f_test=$(section_file "$(test_plan_body)")
 
   if ((${#ac_items[@]})); then
     # A wireframe-derived frozen block is carried through untouched: it is
@@ -715,6 +755,10 @@ cmd_start() {
   # Ticket state before environment: telling someone "not a git repo" when the
   # real problem is "this is still a draft" sends them down the wrong path.
   wo_require_status "$file" ready
+  # A test ticket moves to in-progress only with a plan its tester can run as
+  # written. Checked here rather than at approve, because start is when the
+  # tester picks the plan up - and before git, for the same reason as the status.
+  [[ $(wo_field "$file" '.type') != test ]] || wo_require_test_plan "$file"
   wo_require_git "$project"
 
   git -C "$project" diff --quiet && git -C "$project" diff --cached --quiet \

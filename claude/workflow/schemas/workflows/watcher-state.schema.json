@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "watcher-state.schema.json",
+  "title": "Watcher state file",
+  "description": "Every watcher writes exactly one of these beside its log and pid file in the configured state_dir. It exists so `status` reports machine-readable facts rather than a human parsing a log tail, and so a dead watcher is distinguishable from one that was never started. A bare pid file cannot answer what the watcher was watching or with what threshold.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "watcher",
+    "state",
+    "pid",
+    "started_at",
+    "log",
+    "interval_seconds"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "watcher": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*-watch$"
+    },
+    "state": {
+      "enum": [
+        "on",
+        "off",
+        "ended"
+      ]
+    },
+    "pid": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "0 when state is off or ended."
+    },
+    "started_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "stopped_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "log": {
+      "type": "string",
+      "minLength": 1
+    },
+    "interval_seconds": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 3600
+    },
+    "watches_workflow": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,31}$"
+    },
+    "context_threshold_percent": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 90,
+      "default": 30,
+      "description": "Required on any watcher that can raise a compaction: the threshold travels with the spec. Read from the watched workflow's agent spec via bin/workflow-spec.sh, never defaulted inside the watcher."
+    },
+    "idle_seconds": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 600
+    },
+    "pane": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]+:[A-Za-z0-9]+$",
+      "description": "The herdr pane of the seat a compaction watcher keeps under its threshold. Rediscovered at every start, never stored in configuration."
+    }
+  }
+}

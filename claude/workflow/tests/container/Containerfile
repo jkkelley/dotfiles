@@ -1,0 +1,12 @@
+# Test image for dotfiles' workflow machinery (claude/workflow/).
+# Carries exactly what the unit tests need: bash, jq, shellcheck, python3 with jsonschema.
+# Dotfiles owns this file rather than borrowing another project's locally built image, which would make
+# this suite pass or fail depending on whether some other repository happened to have been built here.
+# Base pinned by digest (Rule 15). Tag at pin time: debian:bookworm-slim.
+FROM docker.io/library/debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      bash jq shellcheck python3 python3-jsonschema \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /work

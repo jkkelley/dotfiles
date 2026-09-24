@@ -164,6 +164,15 @@ bash $WO new --title "Retry failed webhook deliveries" --type bug --parent "$EPI
   --ac "a 500 is retried three times then dead-lettered" \
   --test-plan "podman run --rm -v \$PWD:/w -w /w node:22 npm test -- webhooks"
 
+# testing ticket - the architect writes the plan, the tester runs exactly it.
+# Copy claude/workflow/templates/test-plan.md, fill every <...>, pass the copy.
+# start refuses a --type test ticket whose block is missing, has no case, has a
+# case without intent/command/expected, or is not podman on a digest-pinned image.
+bash $WO new --title "Webhook retry tests" --type test --parent "$EPIC" \
+  --problem "Retry behaviour has no plan a tester can run" \
+  --out "end-to-end delivery - CI covers it" --ac "every case in the plan passes" \
+  --test-plan-file plan.md
+
 # figma path - "a work-order with a side of figma"
 bash $WO new --title "Empty cart state" --type feature --problem "..." --parent "$EPIC" \
   --out "payment errors" --from-figma . --frames 'wf/checkout-cart/*'

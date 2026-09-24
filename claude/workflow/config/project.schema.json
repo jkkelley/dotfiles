@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project.schema.json",
+  "title": "Project configuration",
+  "description": "Shape of claude/workflow/config/project.json in dotfiles. Cut from the wsl-kimi-k3-proxy schema on 2026-09-22 down to the two sections this repository uses; the proxy, secrets, models, client, test and env sections describe that project's proxy and have no meaning here. Rejected: keeping them optional, which lets a config drift into carrying another project's facts with no validator objecting.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project",
+    "workflow"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "description",
+        "state_dir",
+        "gate_command"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gate_command": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "skills_dir",
+        "herdr",
+        "watchers",
+        "seats",
+        "compaction"
+      ],
+      "properties": {
+        "skills_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "herdr": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "watchers": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "seats": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "role",
+              "tab_label",
+              "worktree",
+              "branch"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+              },
+              "role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "tab_label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "worktree": {
+                "type": "string",
+                "minLength": 1
+              },
+              "branch": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "compaction": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ceiling_percent",
+            "cooldown_seconds",
+            "tick_seconds",
+            "auto_arm"
+          ],
+          "description": "How bin/compact-watch.sh behaves. The threshold itself is not here: it lives in schemas/workflows/compaction.workflow.json agent.context_threshold_percent, the one place every watcher reads it from.",
+          "properties": {
+            "ceiling_percent": {
+              "type": "integer",
+              "minimum": 50,
+              "maximum": 95
+            },
+            "cooldown_seconds": {
+              "type": "integer",
+              "minimum": 60,
+              "maximum": 7200
+            },
+            "tick_seconds": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 600
+            },
+            "auto_arm": {
+              "type": "boolean",
+              "description": "true: bin/workflow-spawn.sh arms a compaction watcher on every seat it starts, and refuses to report the seat started if the watcher does not come up. This is the enforcement: a seat without a watcher is a seat that can run out of context unseen."
+            }
+          }
+        },
+        "principal_pane": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]+$",
+          "description": "Label of the principal's herdr pane (claude-main in the orchestrator layout, dotfiles Rule 18). bin/seat-watch.sh resolves it to a pane id on every send, because herdr ids do not survive a herdr restart and a stored id delivers the next notification into a stranger's pane."
+        }
+      }
+    },
+    "$comment": {
+      "type": "string"
+    }
+  }
+}

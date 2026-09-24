@@ -46,7 +46,11 @@ The exception is auditable, never silent.
 - **Gate** creates and stamps the branch `feat/<slug>`
 - **Legal next** `in-review`
 - **Writes** `branch`, `updated`
-- **Refuses if** status is not `ready`; the working tree is dirty; the branch already exists
+- **Refuses if** status is not `ready`; a `test` ticket's `## Test plan` block is missing, has no case, has a case missing its intent, command or expected, or is not Podman on an image pinned by digest; the working tree is dirty; the branch already exists
+
+A `test` ticket is the testing ticket: the architect writes its plan from `claude/workflow/templates/test-plan.md` and the tester runs exactly that plan.
+The gate is at `start` rather than `approve` because `start` is when the tester picks the plan up.
+`claude/workflow/schemas/test-plan.schema.json` is the full contract for the block, and the gate checks the part a tester needs to run it without inventing anything.
 
 Ticket state is checked before the environment.
 Reporting "not a git repository" when the real problem is "this is still a draft" sends the reader down the wrong path.

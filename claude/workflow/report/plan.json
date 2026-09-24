@@ -1,0 +1,128 @@
+[
+  {
+    "id": "S-01",
+    "t": "Agent 1 - storage refactor, month-sharded entry trees",
+    "who": "builder",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "O-01",
+    "t": "Drive recon through the knowledge-steward seat",
+    "who": "steward",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "O-02",
+    "t": "Decision page - D6 to D9 on the record",
+    "who": "orchestrator",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "O-03",
+    "t": "Vendor the Execution Rail into project-scaffold",
+    "who": "orchestrator",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "O-04",
+    "t": "Prove the vendored rail in Podman",
+    "who": "orchestrator",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "O-05",
+    "t": "Publish this rail - one claude.ai URL for life",
+    "who": "orchestrator",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "O-12",
+    "t": "Automated compaction and herdr-first watchers, enforced",
+    "who": "orchestrator",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "O-06",
+    "t": "Owner picks failover mode - hot swap, standby, or halt",
+    "who": "owner",
+    "gate": true,
+    "owner": true
+  },
+  {
+    "id": "S-02",
+    "t": "Agent 2 - AGENTS.md canonical, CLAUDE.md pointer, template laws",
+    "who": "builder",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "S-03",
+    "t": "Agent 3 - lightweight cut, cache.sh out, CI template behind --ci",
+    "who": "builder",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "O-07",
+    "t": "Wire the rail into scaffold.sh so every project gets it",
+    "who": "builder",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "O-08",
+    "t": "Schema 1.1.0 - architect chain kimi, opus, codex sol",
+    "who": "architect",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "O-09",
+    "t": "Failover watcher - capture context, bring up the next rung",
+    "who": "builder",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "O-10",
+    "t": "Test-plan block in the ticket schema, reusable template",
+    "who": "architect",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "S-04",
+    "t": "Integration gate - full suite plus concurrent-writer proof",
+    "who": "orchestrator",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "S-05",
+    "t": "Reviewer seat - fresh-eyes diff review and PII hygiene",
+    "who": "reviewer",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "S-06",
+    "t": "Scaffold PR - squash to main, close issue 95",
+    "who": "owner",
+    "gate": true,
+    "owner": true
+  },
+  {
+    "id": "O-11",
+    "t": "Orchestration PR - squash to main",
+    "who": "owner",
+    "gate": true,
+    "owner": true
+  }
+]

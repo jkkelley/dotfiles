@@ -433,6 +433,34 @@ How to apply:
 - If not inside Herdr, say so and stop rather than silently falling back to
   background jobs - let the owner decide.
 
+## Rule 19 - Google Drive first, and the surface follows the model
+
+**Drive is the source of truth while the system is being built.**
+Design is doc-first: before anything is created - a design, a standard, a
+schema, a runbook, a template - Drive is searched first, so nothing is built
+twice. Drive questions go to the **knowledge-steward** seat, never answered by
+the seat that asked. The repo holds the implementation; Drive holds the
+decision it implements.
+
+**The owner-facing surface is chosen by the runtime, never by the model.**
+A Kimi or Codex seat cannot mint a `claude.ai` artifact URL - that URL comes
+from a Claude-only tool - and a seat with no way to produce a page either
+invents a URL or produces nothing.
+
+| Seat runtime        | `RAIL_SURFACE` | Surface                                          |
+| ------------------- | -------------- | ------------------------------------------------ |
+| claude              | `artifact`     | claude.ai artifact, one URL for the life of a plan |
+| kimi, codex, others | `lavish`       | `lavish-axi`, a local `127.0.0.1` session URL     |
+
+The spawner exports `RAIL_SURFACE` from the workflow declaration's runtime.
+Unset falls back to `lavish`, which every runtime can open. Decisions for the
+owner go through that surface, one question at a time. A lavish poll lives in a
+labeled herdr pane (Rule 18), never a background job.
+
+The Execution Rail engine that implements this ships with `project-scaffold`
+at `claude/skills/project-scaffold/references/templates/rail/`, so every
+scaffolded project gets the same routing.
+
 ## Adding a New Agent or Skill — Ship the MVP Immediately
 
 Every new agent or skill in this repo must reach `main` through a PR as soon

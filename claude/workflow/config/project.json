@@ -1,0 +1,71 @@
+{
+  "$comment": "Single source of non-secret configuration for the workflow machinery in claude/workflow/. Read only by bin/workflow-lib.sh (wf_cfg). Mirrors the wsl-kimi-k3-proxy layout so the ported scripts run byte-identical.",
+  "schema_version": "1.0.0",
+  "project": {
+    "name": "dotfiles",
+    "description": "Agents, skills and workflow machinery shared across projects",
+    "state_dir": "~/.local/state/dotfiles/execution",
+    "gate_command": "bash claude/skills/project-scaffold/testing/run-tests.sh"
+  },
+  "workflow": {
+    "skills_dir": "~/.claude/skills",
+    "herdr": {
+      "workspace_label": "dotfiles",
+      "agent_kind": "claude",
+      "start_timeout_ms": 60000,
+      "prompt_timeout_ms": 120000
+    },
+    "principal_pane": "claude-main",
+    "watchers": {
+      "interval_seconds": 60,
+      "idle_seconds": 45,
+      "auto_arm": true,
+      "stall_seconds": 900,
+      "resume_attempts": 3,
+      "rail_ledger": "~/.local/state/dotfiles/rail/ledger.tsv"
+    },
+    "seats": [
+      {
+        "name": "builder",
+        "role": "builder",
+        "tab_label": "agent-build",
+        "worktree": "~/dotfiles-wt/scaffold",
+        "branch": "feat/scaffold-multiagent"
+      },
+      {
+        "name": "reviewer",
+        "role": "verifier",
+        "tab_label": "agent-review",
+        "worktree": "~/dotfiles-wt/scaffold",
+        "branch": "feat/scaffold-multiagent"
+      },
+      {
+        "name": "orch-builder",
+        "role": "builder",
+        "tab_label": "agent-orch",
+        "worktree": "~/dotfiles-wt/orch",
+        "branch": "feat/orchestration-failover"
+      },
+      {
+        "name": "architect",
+        "role": "architect",
+        "tab_label": "agent-architect",
+        "worktree": "~/dotfiles-wt/orch",
+        "branch": "feat/orchestration-failover"
+      },
+      {
+        "name": "smoke",
+        "role": "operator",
+        "tab_label": "agent-smoke",
+        "worktree": "~/dotfiles-wt/orch",
+        "branch": "feat/orchestration-failover"
+      }
+    ],
+    "compaction": {
+      "ceiling_percent": 85,
+      "cooldown_seconds": 900,
+      "tick_seconds": 30,
+      "auto_arm": true
+    }
+  }
+}
