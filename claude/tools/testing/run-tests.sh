@@ -1849,7 +1849,7 @@ check "no runnable line of skill-sync.sh names jq" \
 # provably the only ones on PATH.
 #
 # The templates are NOT stubbed. Every run reads the real ones out of /repo, so a
-# heading renamed in CLAUDE.md.tmpl or a pattern dropped from gitignore.tmpl
+# heading renamed in AGENTS.md.tmpl or a pattern dropped from gitignore.tmpl
 # fails here rather than in somebody's project. That is the same shape as the
 # "the manifest project-scaffold ships" section above: feed the real file to the
 # thing that reads it.
@@ -2057,16 +2057,33 @@ md_section() { # $1 = file, $2 = heading
 
 TMPLS=/repo/claude/skills/project-scaffold/references/templates
 
+# The marker pair as CLAUDE.md.tmpl ships it, begin line to end line.
+md_markers() { awk '/skills:begin/ { f = 1 } f { print } f && /skills:end/ { exit }' "$1"; }
+
+# What a CLAUDE.md-only project's section must be: AGENTS.md.tmpl's prose with
+# CLAUDE.md.tmpl's marker pair under it, which is the shape the section had in a
+# single template before #98 split it.
+expected_single_file_section() {
+  md_section "$TMPLS/AGENTS.md.tmpl" '## Skills'
+  md_markers "$TMPLS/CLAUDE.md.tmpl"
+}
+
 # ── the source templates, before anything is written into a project ────────────
 hd "skill-onboard.sh: the templates it splices"
 check "gitignore.tmpl still carries the **/.claude/skills/ blanket" \
   "$(grep -qxF -- '**/.claude/skills/' "$TMPLS/gitignore.tmpl"; echo $?)"
 check "gitignore.tmpl still carries the .claude/cache/ line" \
   "$(grep -qxF -- '.claude/cache/' "$TMPLS/gitignore.tmpl"; echo $?)"
-check "CLAUDE.md.tmpl still carries a '## Skills' section" \
-  "$([[ -n $(md_section "$TMPLS/CLAUDE.md.tmpl" '## Skills') ]]; echo $?)"
-check "and that section carries the marker pair skill-sync writes between" \
-  "$(md_section "$TMPLS/CLAUDE.md.tmpl" '## Skills' | grep -q 'skills:begin'; echo $?)"
+# #98 split what used to be one section in CLAUDE.md.tmpl across two files: the
+# prose moved to AGENTS.md.tmpl and the marker pair stayed in CLAUDE.md.tmpl,
+# because CLAUDE.md is the file skill-sync fills. These pin both halves where
+# skill-onboard.sh reads them, so the next move fails here and not in a project.
+check "AGENTS.md.tmpl carries a '## Skills' section" \
+  "$([[ -n $(md_section "$TMPLS/AGENTS.md.tmpl" '## Skills') ]]; echo $?)"
+check "and that section carries no marker pair - skill-sync never fills AGENTS.md" \
+  "$(neg grep -q 'skills:begin' <<<"$(md_section "$TMPLS/AGENTS.md.tmpl" '## Skills')")"
+check "CLAUDE.md.tmpl carries the marker pair skill-sync writes between" \
+  "$(grep -q 'skills:begin' "$TMPLS/CLAUDE.md.tmpl" && grep -q 'skills:end' "$TMPLS/CLAUDE.md.tmpl"; echo $?)"
 check "skills.toml.tmpl still has a [skills] use list to replace" \
   "$(awk '/^\[skills\]/ { s = 1; next } s && /^[[:space:]]*use[[:space:]]*=/ { found = 1 }
           END { exit !found }' "$TMPLS/skills.toml.tmpl"; echo $?)"
@@ -2076,9 +2093,9 @@ hd "skill-onboard.sh: entry points"
 expect_rc "--help exits 0" 0 bash "$SO" --help
 expect_rc "an unknown argument is rejected" 2 bash "$SO" --frobnicate
 HELPTEXT=$(bash "$SO" --help 2>&1)
-check "--help names all three files it writes" \
+check "--help names every file it writes" \
   "$(grep -q 'skills.toml' <<<"$HELPTEXT" && grep -q '.gitignore' <<<"$HELPTEXT" \
-     && grep -q 'CLAUDE.md' <<<"$HELPTEXT"; echo $?)"
+     && grep -q 'CLAUDE.md' <<<"$HELPTEXT" && grep -q 'AGENTS.md' <<<"$HELPTEXT"; echo $?)"
 check "--help says exit 5 is a stranded workbench" \
   "$(grep -q 'STILL LEASED' <<<"$HELPTEXT"; echo $?)"
 
@@ -2211,14 +2228,18 @@ check "the project's other sections are untouched" \
 check "the section landed where the old one was, not at the end" \
   "$(awk '/^## Skills$/ { s = NR } /^## Deployment$/ { d = NR } END { exit !(s && d && s < d) }' \
      <<<"$CMD"; echo $?)"
-# Byte for byte against the template, which is the only assertion that catches a
-# section that was re-authored here instead of copied.
+# Byte for byte against the templates, which is the only assertion that catches
+# a section that was re-authored here instead of copied. This project has no
+# AGENTS.md, so its CLAUDE.md is where both halves go.
 printf '%s\n' "$CMD" > "$WORK/onboarded-claude.md"
-check "THE SECTION IS THE TEMPLATE'S, BYTE FOR BYTE" \
+check "THE SECTION IS THE TEMPLATES', BYTE FOR BYTE" \
   "$([[ "$(md_section "$WORK/onboarded-claude.md" '## Skills')" \
-        == "$(md_section "$TMPLS/CLAUDE.md.tmpl" '## Skills')" ]]; echo $?)"
+        == "$(expected_single_file_section)" ]]; echo $?)"
 check "so the marker pair skill-sync fills came with it" \
   "$(grep -q 'skills:end' <<<"$CMD"; echo $?)"
+check "and exactly once" "$([[ $(grep -c 'skills:begin' <<<"$CMD") -eq 1 ]]; echo $?)"
+check "no AGENTS.md was invented for a project that had none" \
+  "$([[ -z "$(on_main AGENTS.md)" ]]; echo $?)"
 
 # The manifest read by the thing that reads manifests. An onboarding that writes
 # a file skill-sync cannot parse is an onboarding that reports success and
@@ -2298,6 +2319,73 @@ check "and says why" "$(grep -q 'already on the sync' "$ERR"; echo $?)"
 check "the workbench went back" "$(holder_is ""; echo $?)"
 check "gh was called once, by the first run" \
   "$([[ "$(grep -c 'pr create' "$GHLOG")" -eq 1 ]]; echo $?)"
+
+# ── projects that already have AGENTS.md ───────────────────────────────────────
+# #98 made AGENTS.md the orientation file and CLAUDE.md a pointer that carries
+# only the marker pair. A project in that shape must get the prose in AGENTS.md
+# and keep exactly one marker pair in CLAUDE.md, or skill-sync has nowhere to
+# write the list and the agent reads two copies of the same instructions.
+commit_project() { # $1 = message
+  git -C "$PROJ_DIR" add -A
+  git -C "$PROJ_DIR" commit -q -m "$1"
+  git -C "$PROJ_DIR" push -q origin main
+}
+
+hd "skill-onboard.sh: a project scaffolded after #98 keeps its orientation files as they are"
+mkproject container-sandbox work-order
+cp "$TMPLS/AGENTS.md.tmpl" "$PROJ_DIR/AGENTS.md"
+cp "$TMPLS/CLAUDE.md.tmpl" "$PROJ_DIR/CLAUDE.md"
+commit_project "scaffolded from the templates as they ship"
+run_onboard; rc=$?
+check "it exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+[[ $rc -eq 0 ]] || { printf -- '--- stderr\n'; cat "$ERR"; }
+check "AGENTS.md is the template's, byte for byte - its section was already right" \
+  "$([[ "$(on_main AGENTS.md)" == "$(cat "$TMPLS/AGENTS.md.tmpl")" ]]; echo $?)"
+check "CLAUDE.md is the template's, byte for byte - it already had the markers" \
+  "$([[ "$(on_main CLAUDE.md)" == "$(cat "$TMPLS/CLAUDE.md.tmpl")" ]]; echo $?)"
+check "and the manifest still landed" \
+  "$(grep -q '"work-order"' <<<"$(on_main .claude/skills.toml)"; echo $?)"
+
+hd "skill-onboard.sh: AGENTS.md beside a CLAUDE.md that still carries the prose check"
+mkproject container-sandbox work-order
+printf '# Example Project\n\n## House rules\n\nBe careful.\n' > "$PROJ_DIR/AGENTS.md"
+commit_project "an AGENTS.md written by hand"
+run_onboard; rc=$?
+check "it exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+[[ $rc -eq 0 ]] || { printf -- '--- stderr\n'; cat "$ERR"; }
+AG=$(on_main AGENTS.md)
+CMD=$(on_main CLAUDE.md)
+printf '%s\n' "$AG" > "$WORK/onboarded-agents.md"
+check "AGENTS.md now carries the ## Skills section, byte for byte the template's" \
+  "$([[ "$(md_section "$WORK/onboarded-agents.md" '## Skills')" \
+        == "$(md_section "$TMPLS/AGENTS.md.tmpl" '## Skills')" ]]; echo $?)"
+check "AGENTS.md's own sections survived" "$(grep -qxF -- '## House rules' <<<"$AG"; echo $?)"
+check "AGENTS.md got no marker pair - skill-sync would never fill it" \
+  "$(neg grep -q 'skills:begin' <<<"$AG")"
+check "THE PROSE SESSION-START CHECK IS GONE FROM CLAUDE.md" \
+  "$(neg grep -qxF -- '## Session start - skill version check' <<<"$CMD")"
+check "and so is its curl" "$(neg grep -q 'example.invalid' <<<"$CMD")"
+check "CLAUDE.md carries no second ## Skills section" "$(neg grep -qxF -- '## Skills' <<<"$CMD")"
+check "CLAUDE.md carries the marker pair exactly once, spelled as skill-sync spells it" \
+  "$([[ $(grep -cxF -- "$MB" <<<"$CMD") -eq 1 && $(grep -cxF -- "$ME" <<<"$CMD") -eq 1 ]]; echo $?)"
+check "CLAUDE.md's other sections are untouched" \
+  "$(grep -qxF -- '## House rules' <<<"$CMD" && grep -qxF -- '## Deployment' <<<"$CMD"; echo $?)"
+
+# A symlinked AGENTS.md is a single-file project serving two names. Writing
+# through it with `mv` would replace the link with a copy and the two would
+# drift from the next edit on.
+hd "skill-onboard.sh: an AGENTS.md that is a symlink to CLAUDE.md"
+mkproject container-sandbox work-order
+ln -s CLAUDE.md "$PROJ_DIR/AGENTS.md"
+commit_project "AGENTS.md is CLAUDE.md"
+run_onboard; rc=$?
+check "it exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+[[ $rc -eq 0 ]] || { printf -- '--- stderr\n'; cat "$ERR"; }
+check "AGENTS.md is still a symlink on main" \
+  "$(git -C "$PROJ_DIR" ls-tree origin/main AGENTS.md | grep -q '^120000 '; echo $?)"
+check "and CLAUDE.md got the section with its marker pair" \
+  "$(grep -qxF -- '## Skills' <<<"$(on_main CLAUDE.md)" \
+     && grep -q 'skills:end' <<<"$(on_main CLAUDE.md)"; echo $?)"
 
 # ── the remote source path ─────────────────────────────────────────────────────
 # --from local is what every case above uses, because reading /repo directly is
