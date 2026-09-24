@@ -49,3 +49,18 @@ FROM docker.io/library/debian@sha256:328d16499860ae6cb9b345e2e4cebca08c2a36e4f72
 RUN apt-get update \
   && apt-get install -y --no-install-recommends bash jq git \
   && rm -rf /var/lib/apt/lists/*
+
+# The pinned chezmoi release archive setup.sh installs, placed as a file and NOT
+# installed. setup.sh fetches it with curl, and the cases serve this file through
+# a curl stub, so the checksum check, the extract and the mv in setup.sh run for
+# real against the genuine archive with the network off. Installing chezmoi here
+# instead would skip the very install path under test. The checksum is the one
+# setup.sh pins (CHEZMOI_VERSION, linux_amd64), so a repin that forgets this line
+# fails the build rather than the suite. The check is a sha256sum -c layer, not
+# ADD --checksum: buildah 1.33, which is what ubuntu-24.04 runners and this
+# repo's WSL hosts ship, rejects that flag ("ADD only supports --chmod/--chown").
+ADD https://github.com/twpayne/chezmoi/releases/download/v2.72.2/chezmoi_2.72.2_linux_amd64.tar.gz \
+  /opt/chezmoi/chezmoi_2.72.2_linux_amd64.tar.gz
+RUN echo "a2be1b8bcdf06c6f173e070bb3ddbcc52c50478fe9b57f6e6c63d15c7cff4f03  /opt/chezmoi/chezmoi_2.72.2_linux_amd64.tar.gz" \
+    | sha256sum -c - \
+  && chmod 0644 /opt/chezmoi/chezmoi_2.72.2_linux_amd64.tar.gz

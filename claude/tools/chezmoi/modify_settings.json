@@ -1,0 +1,79 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /*
+  ~/.claude/settings.json - the SessionStart matchers of the -axi hooks.
+
+  chezmoi's sourceDir is this directory and its destDir is ~/.claude (setup.sh
+  writes both into chezmoi.toml), so this file's target is ~/.claude/settings.json
+  and nothing else on the machine is managed. It is a modify_ template because
+  settings.json has other writers - Claude Code's /config, plugin installs and
+  the -axi installers - so chezmoi owns one field of it, not the whole file.
+  The current file arrives on .chezmoi.stdin and the output is the new file.
+
+  Breadcrumb, 2026-09-24T03:00Z. settings.json is JSON and cannot hold a
+  comment, so the reasoning for its matchers lives here.
+
+  What broke: the lavish-axi, gh-axi and chrome-devtools-axi SessionStart
+  entries in ~/.claude/settings.json each had matcher "" (every source), so they
+  also fired on `compact`. Every compaction of every Claude seat, in every
+  project, paid about 18 KB of hook output before the rebuilt seat read its own
+  checkpoint, most of it lavish-axi's list of 81 sessions - roughly five thousand
+  tokens (bearings-v2 runbooks/RB-seat-compaction.md, "Cost to cut"). The lavish
+  output also steers a rebuilt Claude seat toward lavish, which the owner's
+  global rule forbids for Claude seats outside the firstmate project.
+
+  Why this matcher: the owner approved "startup|resume" for all three on
+  2026-09-24 ("Change all three"), over changing only lavish-axi and over leaving
+  the file alone. Startup and resume behave as before. skill-sync's own entry
+  ("startup|resume|clear", setup.sh HOOK_MATCHER) is a separate decision and this
+  template never touches it: an entry is owned only if a hook command in it
+  names one of the three tools.
+
+  Why chezmoi: the matcher was first changed by hand with jq at 03:00Z, so
+  nothing in git owned it and any of the tools' installers could put "" back
+  unnoticed. The owner's rule is no hand edits, and no re-inventing what an
+  established tool already does. A hand-rolled jq setter plus a custom drift
+  check was written first and rejected: `chezmoi apply` is the setter,
+  `chezmoi verify` / `status` / `diff` are the drift check, and both are
+  maintained upstream.
+
+  Why the pass-through: toPrettyJson re-serialises with sorted keys, so emitting
+  it on every run would reorder the whole file and make `chezmoi verify` fail on
+  any key Claude Code appends. The template therefore returns .chezmoi.stdin
+  byte for byte unless an owned matcher is actually wrong, and verify fails only
+  on real drift. Cost: the one apply that does fix a matcher also sorts the
+  file's keys (a cosmetic, one-time rewrite; values and numbers are preserved).
+
+  Cost: after a compaction a seat no longer sees gh-axi's open-PR list or the
+  chrome and lavish tool reminders, and runs `gh-axi` itself when it needs them.
+  This applies machine wide, the firstmate project included.
+
+  Invalid JSON makes fromJson fail, so `chezmoi apply` exits non-zero and leaves
+  the file exactly as it was. A missing or empty file is passed through, so this
+  never creates a settings.json.
+
+  Backup of the pre-edit file: ~/.claude/settings.json.20260924T0300Z.bak.
+  Record: bearings-v2 memory owner-decisions-2026-09-24, decision 8.
+*/ -}}
+{{- $want := "startup|resume" -}}
+{{- $owned := "lavish-axi|gh-axi|chrome-devtools-axi" -}}
+{{- if eq (trim .chezmoi.stdin) "" -}}
+{{-   .chezmoi.stdin -}}
+{{- else -}}
+{{-   $s := fromJson .chezmoi.stdin -}}
+{{-   $drift := false -}}
+{{-   range $entry := dig "hooks" "SessionStart" list $s -}}
+{{-     $mine := false -}}
+{{-     range $h := index $entry "hooks" -}}
+{{-       if regexMatch $owned (toString (index $h "command")) -}}{{- $mine = true -}}{{- end -}}
+{{-     end -}}
+{{-     if and $mine (ne (toString (index $entry "matcher")) $want) -}}
+{{-       $_ := set $entry "matcher" $want -}}
+{{-       $drift = true -}}
+{{-     end -}}
+{{-   end -}}
+{{-   if $drift -}}
+{{-     toPrettyJson $s -}}
+{{-   else -}}
+{{-     .chezmoi.stdin -}}
+{{-   end -}}
+{{- end -}}
