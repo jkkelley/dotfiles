@@ -8,7 +8,7 @@ ROOT  := $(abspath $(CURDIR)/../..)
 RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:Z" -w /work/claude/workflow -e HOME=/tmp $(IMAGE)
 
 .DEFAULT_GOAL := help
-.PHONY: help image test schema lint herdr-first compaction chain failover test-plan
+.PHONY: help image test schema lint herdr-first compaction chain failover test-plan ci-job
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-10s %s\n", $$1, $$2}'
@@ -37,5 +37,8 @@ failover: image ## The seat watcher: done records, hot swap along the chain, exh
 test-plan: image ## The test-plan block: template, work-order's parser and the schema agree (O-10)
 	@$(RUN) bash tests/unit/test_test_plan.sh
 
-test: schema lint herdr-first compaction chain failover test-plan ## Everything
-	@echo "ok  workflow: schema, lint, herdr-first, compaction, chain, failover, test-plan"
+ci-job: image ## CI runs this suite: the gate's selector and the job that calls make test (PR 99 gap)
+	@$(RUN) bash tests/unit/test_ci_job.sh
+
+test: schema lint herdr-first compaction chain failover test-plan ci-job ## Everything
+	@echo "ok  workflow: schema, lint, herdr-first, compaction, chain, failover, test-plan, ci-job"
