@@ -44,7 +44,7 @@
     "terraform-patterns": { "version": "1.0.3", "sha256": "affdc3a0e86107d999600fd916c6d1a1ca02c6b8c268bfc43f8f97aa24d138f7", "type": "skill", "requires": [] },
     "test-writer": { "version": "1.0.3", "sha256": "9853f48e6adbac1e74bb23898c7a8f1d3dc8d00c742c74df6e73d8ab67b374cb", "type": "skill", "requires": [] },
     "web-scraping-guru": { "version": "1.0.3", "sha256": "059c6e01bde2b2139b96f47aa8ffdf5725341622d2c32d0524c3d5d87f33bad7", "type": "skill", "requires": [] },
-    "work-order": { "version": "2.0.1", "sha256": "463602804e911dc725e5a251b7600312a77eeba739b80f4de930c95ec14dfadf", "type": "skill", "requires": [] }
+    "work-order": { "version": "2.1.0", "sha256": "21d66606a9fd915fdee9d35c8b82586f0e87d18659ae680deb9fe35559cc2f1a", "type": "skill", "requires": [] }
   },
   "tools": {
     "skill-sync": { "version": "2.1.0", "sha256": "c0057c3744c6a22294a981cd98ab160e74ef0c1a0eb1513efeace4f251738dba" },
