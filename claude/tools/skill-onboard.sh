@@ -15,11 +15,14 @@
 #                         with the [skills] use list replaced by this project's
 #   .gitignore            the `**/.claude/skills/` and `.claude/cache/` stanzas,
 #                         comments and all, from gitignore.tmpl
-#   CLAUDE.md             the `## Skills` section from CLAUDE.md.tmpl, replacing
-#                         the prose session-start version check where it is still
-#                         there
+#   AGENTS.md             the `## Skills` section from AGENTS.md.tmpl, replacing
+#   or CLAUDE.md          the prose session-start version check where it is still
+#                         there. AGENTS.md when the project has one, CLAUDE.md
+#                         when CLAUDE.md is still its only orientation file
+#   CLAUDE.md             the skill-sync marker pair from CLAUDE.md.tmpl, where
+#                         it is not there already
 #
-# A second copy of any of those three is the failure this whole ordering was
+# A second copy of any of those is the failure this whole ordering was
 # designed to prevent - a manifest written here would drift from the template
 # within a release and nothing would report it. So there is no template text in
 # this file at all: it fetches the real ones and splices.
@@ -61,6 +64,29 @@ TMPL_DIR="claude/skills/project-scaffold/references/templates"
 MANIFEST_TMPL_PATH="$TMPL_DIR/skills.toml.tmpl"
 GITIGNORE_TMPL_PATH="$TMPL_DIR/gitignore.tmpl"
 CLAUDEMD_TMPL_PATH="$TMPL_DIR/CLAUDE.md.tmpl"
+# Why two templates and not one, 2026-09-24 UTC.
+#
+# What broke: this script read the `## Skills` section out of CLAUDE.md.tmpl
+# (the old write_claude_md, `section_of "$SRC/$CLAUDEMD_TMPL_PATH"`). PR #98 moved that
+# prose into AGENTS.md.tmpl and cut CLAUDE.md.tmpl down to a pointer stub that
+# carries only the marker pair skill-sync fills, so the lift came back empty.
+#
+# Why it mattered: every onboarding died at the write step with exit 4, "no
+# longer carries a '## Skills' section", after it had already leased a
+# workbench. claude/tools/testing/run-tests.sh went 39 checks red on main, and
+# #98 never saw it because it touched nothing under claude/tools/.
+#
+# Why this fix: it follows #98 rather than undoing it. The prose comes from
+# AGENTS.md.tmpl, the marker pair from CLAUDE.md.tmpl, and each lands in the
+# file #98 put it in. Rejected: putting a `## Skills` section back into
+# CLAUDE.md.tmpl, which reverts #98 and gives every scaffolded project two
+# copies of the same prose. Rejected: converting a CLAUDE.md-only project to
+# AGENTS.md here - that is project-scaffold's migration, not onboarding's.
+#
+# What it costs: a project with no AGENTS.md still gets the section in CLAUDE.md,
+# markers under it, exactly as before #98. It moves when that project is
+# scaffolded forward, not here. Record: the pull request that carries this.
+AGENTSMD_TMPL_PATH="$TMPL_DIR/AGENTS.md.tmpl"
 REGISTRY_PATH="claude/skills/registry.json"
 SLOT_PATH="claude/skills/hydration-prompt/scripts/slot.sh"
 
@@ -122,8 +148,10 @@ WHAT IT WRITES
                         skills - by default the ones already in .claude/skills/
                         that the registry knows about
   .gitignore            $(printf '%s and %s' "${IGNORE_PATTERNS[0]}" "${IGNORE_PATTERNS[1]}")
-  CLAUDE.md             the "$SKILLS_HEADING" section, replacing
-                        "$LEGACY_HEADING" where it is still present
+  AGENTS.md             the "$SKILLS_HEADING" section, replacing
+                        "$LEGACY_HEADING" where it is still present -
+                        in CLAUDE.md instead when there is no AGENTS.md
+  CLAUDE.md             the skill-sync marker pair, where it is missing
 
   and it stops git tracking the declared skill directories. A skill in
   .claude/skills/ that no registry knows is the project's own: it is not
@@ -224,7 +252,7 @@ resolve_src() {
 require_source_files() {
   local rel
   for rel in "$MANIFEST_TMPL_PATH" "$GITIGNORE_TMPL_PATH" "$CLAUDEMD_TMPL_PATH" \
-             "$REGISTRY_PATH" "$SLOT_PATH"; do
+             "$AGENTSMD_TMPL_PATH" "$REGISTRY_PATH" "$SLOT_PATH"; do
     [[ -s "$SRC/$rel" ]] || die "$EX_IO" "the source tree has no $rel"
   done
   SLOT="$SRC/$SLOT_PATH"
@@ -256,6 +284,56 @@ splice_section() { # $1 = file, $2 = heading, $3 = block file
     { print }
   ' "$1" > "$out"
   mv -f -- "$out" "$1"
+}
+
+# The file with the section under $2 taken out. Used to ask whether the marker
+# pair lives somewhere the splice is about to leave alone.
+without_section() { # $1 = file, $2 = heading
+  awk -v h="$2" '
+    $0 == h { s = 1; next }
+    s && /^## / { s = 0 }
+    !s { print }
+  ' "$1"
+}
+
+# The skill-sync marker pair, begin line to end line. Matched on the two words
+# every spelling shares rather than on the full line, so the full line is only
+# ever typed in CLAUDE.md.tmpl and in skill-sync.sh, whose suite pins the two to
+# each other.
+markers_of() { # $1 = file
+  awk '/skills:begin/ { f = 1 } f { print } f && /skills:end/ { exit }' "$1"
+}
+
+has_markers() { # $1 = text
+  grep -q 'skills:begin' <<< "$1"
+}
+
+# The heading a new section replaces in $1: the section itself, else the prose
+# check it supersedes, else nothing and it is appended.
+existing_heading() { # $1 = file
+  if [[ -n $(section_of "$1" "$SKILLS_HEADING") ]]; then
+    printf '%s' "$SKILLS_HEADING"
+  elif [[ -n $(section_of "$1" "$LEGACY_HEADING") ]]; then
+    printf '%s' "$LEGACY_HEADING"
+  fi
+  return 0
+}
+
+put_section() { # $1 = file, $2 = block file, $3 = heading it replaces, "" to append
+  local name
+  name=$(basename -- "$1")
+  if [[ $3 == "$SKILLS_HEADING" ]]; then
+    splice_section "$1" "$3" "$2"
+    note "replaced the existing $SKILLS_HEADING section in $name"
+  elif [[ -n $3 ]]; then
+    splice_section "$1" "$3" "$2"
+    note "replaced \"$3\" with $SKILLS_HEADING in $name"
+  else
+    end_with_newline "$1"
+    printf '\n' >> "$1"
+    cat "$2" >> "$1"
+    note "appended the $SKILLS_HEADING section to $name"
+  fi
 }
 
 # A gitignore pattern together with the comment block directly above it. The
@@ -411,26 +489,57 @@ write_gitignore() {
   note "added $added stanza(s) to .gitignore"
 }
 
-write_claude_md() {
-  local dest="$WT/CLAUDE.md" block="$WORK/skills-section.md"
-  [[ -f $dest ]] || die "$EX_VALIDATION" \
-    "$PROJECT has no CLAUDE.md on $BASE - there is nowhere to put the $SKILLS_HEADING section. Scaffold the project first"
+# The prose goes where the project's agents read their orientation, and the
+# marker pair goes into CLAUDE.md, because that is the one file skill-sync fills
+# (PROJECT_DOC in skill-sync.sh). After #98 those are two files; in a project
+# that has not been scaffolded forward they are still one.
+#
+# A symlinked AGENTS.md counts as no AGENTS.md. It is how a single-file project
+# serves both names, and splice_section's `mv` would replace the link with a
+# regular file and split the two apart.
+write_orientation() {
+  local claude="$WT/CLAUDE.md" agents="$WT/AGENTS.md" h rest
+  local section="$WORK/skills-section.md" markers="$WORK/skills-markers.md" block="$WORK/skills-block.md"
+  [[ -f $claude ]] || die "$EX_VALIDATION" \
+    "$PROJECT has no CLAUDE.md on $BASE - there is nowhere to put the skill-sync marker pair. Scaffold the project first"
 
-  section_of "$SRC/$CLAUDEMD_TMPL_PATH" "$SKILLS_HEADING" > "$block"
-  [[ -s $block ]] || die "$EX_IO" "$CLAUDEMD_TMPL_PATH no longer carries a '$SKILLS_HEADING' section"
+  section_of "$SRC/$AGENTSMD_TMPL_PATH" "$SKILLS_HEADING" > "$section"
+  [[ -s $section ]] || die "$EX_IO" "$AGENTSMD_TMPL_PATH no longer carries a '$SKILLS_HEADING' section"
+  markers_of "$SRC/$CLAUDEMD_TMPL_PATH" > "$markers"
+  grep -q 'skills:end' "$markers" \
+    || die "$EX_IO" "$CLAUDEMD_TMPL_PATH no longer carries the skill-sync marker pair"
 
-  if [[ -n $(section_of "$dest" "$SKILLS_HEADING") ]]; then
-    splice_section "$dest" "$SKILLS_HEADING" "$block"
-    note "replaced the existing $SKILLS_HEADING section in CLAUDE.md"
-  elif [[ -n $(section_of "$dest" "$LEGACY_HEADING") ]]; then
-    splice_section "$dest" "$LEGACY_HEADING" "$block"
-    note "replaced \"$LEGACY_HEADING\" with $SKILLS_HEADING in CLAUDE.md"
-  else
-    end_with_newline "$dest"
-    printf '\n' >> "$dest"
-    cat "$block" >> "$dest"
-    note "appended the $SKILLS_HEADING section to CLAUDE.md"
+  if [[ -f $agents && ! -L $agents ]]; then
+    put_section "$agents" "$section" "$(existing_heading "$agents")"
+
+    # What CLAUDE.md still says about skills is now a second copy, and the prose
+    # check is worse than a copy: it tells the agent to run a curl the sync made
+    # pointless. It goes, and the marker pair takes its place if it has none.
+    h=$(existing_heading "$claude")
+    if [[ -n $h ]]; then
+      rest=$(without_section "$claude" "$h")
+      : > "$block"
+      has_markers "$rest" || { cat "$markers"; printf '\n'; } > "$block"
+      splice_section "$claude" "$h" "$block"
+      note "took \"$h\" out of CLAUDE.md - AGENTS.md carries it now"
+    fi
+    if ! has_markers "$(cat "$claude")"; then
+      end_with_newline "$claude"
+      printf '\n' >> "$claude"
+      cat "$markers" >> "$claude"
+      note "added the skill-sync marker pair to CLAUDE.md"
+    fi
+    return 0
   fi
+
+  # CLAUDE.md is the only orientation file: the section goes there, with the
+  # marker pair under it unless the file keeps one somewhere the splice leaves
+  # alone. That is the shape every project had before #98.
+  h=$(existing_heading "$claude")
+  if [[ -n $h ]]; then rest=$(without_section "$claude" "$h"); else rest=$(cat "$claude"); fi
+  cp -- "$section" "$block"
+  has_markers "$rest" || { cat "$markers"; printf '\n'; } >> "$block"
+  put_section "$claude" "$block" "$h"
 }
 
 # `git rm -r --cached` only where they were committed. A project that never
@@ -481,7 +590,7 @@ to hand-maintain.
 | un-tracked | ${UNTRACKED[*]:-none - they were never committed} |
 | left alone | ${LOCAL_ONLY[*]:-none} |
 
-Applied by \`$SELF\` from $SRC_REPO@$SRC_REF. The three edits are spliced from
+Applied by \`$SELF\` from $SRC_REPO@$SRC_REF. The edits are spliced from
 the templates \`project-scaffold\` ships, not re-authored.
 EOF
 }
@@ -574,11 +683,14 @@ note "$BRANCH on origin/$BASE"
 step "write"
 write_manifest
 write_gitignore
-write_claude_md
+write_orientation
 untrack_skills
 
 step "commit"
 git -C "$WT" add -- .claude/skills.toml .gitignore CLAUDE.md
+if [[ -f $WT/AGENTS.md && ! -L $WT/AGENTS.md ]]; then
+  git -C "$WT" add -- AGENTS.md
+fi
 if git -C "$WT" diff --cached --quiet; then
   die "$EX_VALIDATION" "nothing changed - this project is already on the sync"
 fi
