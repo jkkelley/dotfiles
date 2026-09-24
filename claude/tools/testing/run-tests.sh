@@ -32,8 +32,9 @@ REPO_ROOT=$(cd "$TOOLS_DIR/../.." && pwd)
 # below only builds when the tag is absent, so an edited Containerfile under an
 # unchanged tag means every machine that already ran this suite keeps the old
 # image and the new checks fail for a reason that has nothing to do with them.
-# :2 added jq. :3 added git, for skill-onboard.sh.
-IMAGE="${CLAUDE_TOOLS_TEST_IMAGE:-localhost/dotfiles-claude-tools-test:3}"
+# :2 added jq. :3 added git, for skill-onboard.sh. :4 added the pinned chezmoi
+# archive under /opt/chezmoi, for setup.sh.
+IMAGE="${CLAUDE_TOOLS_TEST_IMAGE:-localhost/dotfiles-claude-tools-test:4}"
 
 # Re-exec inside the container unless we are already in it.
 if [[ ${IN_CLAUDE_TOOLS_CONTAINER:-0} != 1 ]]; then
@@ -1401,8 +1402,37 @@ printf '1\n3\n\ncontainer-sandbox\ny\n' > "$ANSWERS"
 
 fresh_home() { rm -rf "$SETUP_HOME"; mkdir -p "$SETUP_HOME"; }
 
+# setup.sh downloads the pinned chezmoi release with curl. The image carries no
+# curl and the run has no network, so this stub serves the genuine archive the
+# Containerfile placed under /opt/chezmoi - setup.sh's checksum check, extract
+# and install then run for real. CZMODE picks what the "download" returns:
+#   ok       the real archive
+#   corrupt  bytes that are not the archive, so the checksum must refuse them
+# Every call is logged, which is how "a re-run downloads nothing" is asserted.
+# The stub is on PATH for setup.sh runs only: other groups in this suite depend
+# on curl being absent.
+CZSTUB="$WORK/czstub"
+CZMODE="$WORK/cz-mode"
+CZLOG="$WORK/cz-curl.log"
+mkdir -p "$CZSTUB"
+cat > "$CZSTUB/curl" <<EOF
+#!/usr/bin/env bash
+dest=""; url=""
+while [[ \$# -gt 0 ]]; do
+  case "\$1" in -o) dest=\$2; shift 2 ;; -*) shift ;; *) url=\$1; shift ;; esac
+done
+printf '%s\n' "\$url" >> "$CZLOG"
+case "\$(cat "$CZMODE" 2>/dev/null || echo ok)" in
+  corrupt) printf 'not the release archive\n' > "\$dest" ;;
+  *)       cp "/opt/chezmoi/\${url##*/}" "\$dest" ;;
+esac
+EOF
+chmod +x "$CZSTUB/curl"
+echo ok > "$CZMODE"
+CZPATH="$CZSTUB:$PATH"
+
 setup_run() { # $@ = extra args passed through to setup.sh
-  ( cd "$WORK" && HOME="$SETUP_HOME" bash /repo/setup.sh "$@" ) \
+  ( cd "$WORK" && HOME="$SETUP_HOME" PATH="$CZPATH" bash /repo/setup.sh "$@" ) \
     < "$ANSWERS" > "$OUT" 2> "$ERR"
 }
 
@@ -1579,7 +1609,7 @@ check "--dest still installs the binary to ~/.local/bin" "$([[ -x $BIN ]]; echo 
 # before anything was written, which would now skip the whole point of the run.
 fresh_home
 printf '1\n3\n\n\ny\n' > "$WORK/answers-none"
-( cd "$WORK" && HOME="$SETUP_HOME" bash /repo/setup.sh ) \
+( cd "$WORK" && HOME="$SETUP_HOME" PATH="$CZPATH" bash /repo/setup.sh ) \
   < "$WORK/answers-none" > "$OUT" 2> "$ERR"
 rc=$?
 check "selecting no agents and no skills still exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
@@ -1595,7 +1625,7 @@ check "the run says why it installed nothing else" \
 # reads, so it has to hold for the new step as well as the old ones.
 fresh_home
 printf '1\n3\n\ncontainer-sandbox\nn\n' > "$WORK/answers-abort"
-( cd "$WORK" && HOME="$SETUP_HOME" bash /repo/setup.sh ) \
+( cd "$WORK" && HOME="$SETUP_HOME" PATH="$CZPATH" bash /repo/setup.sh ) \
   < "$WORK/answers-abort" > "$OUT" 2> "$ERR"
 rc=$?
 check "declining the confirmation exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
@@ -1603,6 +1633,179 @@ check "declining the confirmation installs no binary" "$([[ ! -e $BIN ]]; echo $
 check "declining the confirmation writes no hook" "$([[ ! -e $SETTINGS ]]; echo $?)"
 check "the summary named the hook before it was declined" \
   "$(grep -q 'SessionStart in' "$OUT"; echo $?)"
+check "declining the confirmation installs no chezmoi" \
+  "$([[ ! -e "$SETUP_HOME/.local/bin/chezmoi" ]]; echo $?)"
+
+# ── setup.sh - chezmoi owns the -axi SessionStart matchers ─────────────────────
+# Owner decision 2026-09-24: lavish-axi, gh-axi and chrome-devtools-axi fire on
+# startup and resume only, never on compact, where they cost ~18 KB per
+# compaction and steered Claude seats to lavish. The matcher was first set by a
+# hand edit; these cases prove the replacement - chezmoi applying
+# claude/tools/chezmoi/modify_settings.json - sets exactly those three, leaves
+# every other entry and key alone, never reformats a file it has no reason to
+# change, and that `chezmoi verify` is what finds an installer putting "" back.
+# Every case runs on a fixture HOME. The live ~/.claude/settings.json is never
+# mounted here.
+hd "setup.sh - chezmoi owns the -axi SessionStart matchers"
+
+CZ="$SETUP_HOME/.local/bin/chezmoi"
+CZCONF="$SETUP_HOME/.config/chezmoi/chezmoi.toml"
+cz() { HOME="$SETUP_HOME" "$CZ" --config "$CZCONF" --no-tty --no-pager "$@"; }
+matcher_of() { # $1 = exact hook command
+  jq -r --arg c "$1" '.hooks.SessionStart[]
+    | select(any(.hooks[]?; .command == $c)) | (.matcher // "(absent)")' "$SETTINGS"
+}
+settings_sha() { sha256sum < "$SETTINGS"; }
+
+# The shape the owner's file had before the 03:00Z edit (from its .bak), with
+# machine paths made generic, plus the values a careless re-serialiser breaks:
+# an && that Go's default JSON encoder would escape, and an integer too large
+# for a float to print plainly. One -axi entry has no matcher key at all, which
+# matches every source exactly as "" does.
+mkaxisettings() {
+  mkdir -p "$SETUP_HOME/.claude"
+  cat > "$SETTINGS" <<'EOF'
+{
+  "model": "opus",
+  "env": { "CMD": "a && b > c", "BIG": 12345678901 },
+  "hooks": {
+    "SessionStart": [
+      { "matcher": "", "hooks": [ { "type": "command", "command": "lavish-axi", "timeout": 10 } ] },
+      { "matcher": "", "hooks": [ { "type": "command", "command": "gh-axi", "timeout": 10 } ] },
+      { "hooks": [ { "type": "command", "command": "chrome-devtools-axi", "timeout": 10 } ] },
+      { "matcher": "", "hooks": [ { "type": "command", "command": "\"/opt/bin/agent-state\" idle", "timeout": 5 } ] },
+      { "matcher": "*", "hooks": [ { "type": "command", "command": "bash /opt/hooks/agent-state.sh session", "timeout": 10 } ] }
+    ]
+  }
+}
+EOF
+}
+
+fresh_home
+mkaxisettings
+: > "$CZLOG"
+setup_run
+rc=$?
+check "a run over the pre-edit settings exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+[[ $rc -eq 0 ]] || { printf -- '--- stderr\n'; cat "$ERR"; }
+check "chezmoi is installed to ~/.local/bin" "$([[ -x $CZ ]]; echo $?)"
+check "it is the pinned release" \
+  "$(HOME="$SETUP_HOME" "$CZ" --version | grep -q 'v2.72.2,'; echo $?)"
+check "the config points sourceDir at the repo's chezmoi tree" \
+  "$(grep -qx 'sourceDir = "/repo/claude/tools/chezmoi"' "$CZCONF"; echo $?)"
+check "the config scopes destDir to ~/.claude, not ~" \
+  "$(grep -qx "destDir = \"$SETUP_HOME/.claude\"" "$CZCONF"; echo $?)"
+check "lavish-axi is startup|resume" "$([[ "$(matcher_of lavish-axi)" == 'startup|resume' ]]; echo $?)"
+check "gh-axi is startup|resume" "$([[ "$(matcher_of gh-axi)" == 'startup|resume' ]]; echo $?)"
+check "chrome-devtools-axi, which had no matcher key, is startup|resume" \
+  "$([[ "$(matcher_of chrome-devtools-axi)" == 'startup|resume' ]]; echo $?)"
+check "an unowned \"\" entry keeps \"\"" \
+  "$([[ "$(matcher_of '"/opt/bin/agent-state" idle')" == '' ]]; echo $?)"
+check "an unowned \"*\" entry keeps \"*\"" \
+  "$([[ "$(matcher_of 'bash /opt/hooks/agent-state.sh session')" == '*' ]]; echo $?)"
+check "skill-sync keeps its own startup|resume|clear" \
+  "$([[ "$(last_hook .matcher)" == 'startup|resume|clear' ]]; echo $?)"
+check "no entry was added or dropped (five plus skill-sync)" \
+  "$([[ "$(jq '.hooks.SessionStart | length' "$SETTINGS")" == 6 ]]; echo $?)"
+check "an && in a value survives unescaped" \
+  "$(grep -qF '"a && b > c"' "$SETTINGS"; echo $?)"
+check "a large integer survives as an integer" \
+  "$(grep -qF '12345678901' "$SETTINGS"; echo $?)"
+check "an unrelated top-level key survives" \
+  "$([[ "$(jq -r .model "$SETTINGS")" == opus ]]; echo $?)"
+check "the fixed file is valid JSON" "$(jq -e . "$SETTINGS" >/dev/null 2>&1; echo $?)"
+check "chezmoi verify is clean after setup.sh" "$(cz verify >/dev/null 2>&1; echo $?)"
+
+# Idempotency, and no second download. Compared as sorted JSON, not bytes:
+# install_session_hook drops and re-appends the skill-sync entry with jq on every
+# run, so its key order can differ from the order chezmoi's one rewrite left. That
+# rewrite is setup.sh's own behaviour, older than chezmoi; the byte-for-byte
+# property that belongs to chezmoi is asserted on its own further down.
+BEFORE=$(jq -S . "$SETTINGS")
+DOWNLOADS=$(wc -l < "$CZLOG")
+setup_run
+rc=$?
+check "a second run exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+check "a second run leaves settings.json semantically identical" \
+  "$([[ "$(jq -S . "$SETTINGS")" == "$BEFORE" ]]; echo $?)"
+check "and chezmoi verify is still clean" "$(cz verify >/dev/null 2>&1; echo $?)"
+check "a second run downloads nothing, the pinned version is already there" \
+  "$([[ "$(wc -l < "$CZLOG")" == "$DOWNLOADS" ]]; echo $?)"
+
+# Drift. An -axi installer putting "" back is the case this whole change exists
+# for: chezmoi verify must fail and name the file, diff must show the matcher,
+# and apply - not a hand edit - must put it back.
+tmp="$SETTINGS.tmp"
+jq '(.hooks.SessionStart[] | select(any(.hooks[]; .command == "gh-axi")) | .matcher) = ""' \
+  "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
+cz verify >/dev/null 2>&1
+rc=$?
+check "chezmoi verify exits 1 when an installer reverts gh-axi to \"\"" "$([[ $rc -eq 1 ]]; echo $?)"
+check "chezmoi status names settings.json" "$(cz status | grep -q 'settings.json'; echo $?)"
+check "chezmoi diff shows the matcher it would restore" \
+  "$(cz diff | grep -qE '^\+ *"matcher": "startup\|resume"'; echo $?)"
+cz apply >/dev/null 2>&1
+check "chezmoi apply restores it" "$([[ "$(matcher_of gh-axi)" == 'startup|resume' ]]; echo $?)"
+check "and verify is clean again" "$(cz verify >/dev/null 2>&1; echo $?)"
+
+# A file already right is passed through byte for byte, in whatever layout and
+# key order it has. toPrettyJson sorts keys; emitting it every time would make
+# verify fail on every key Claude Code appends, which is noise, not drift.
+cat > "$SETTINGS" <<'EOF'
+{"zeta":1,"hooks":{"SessionStart":[{"matcher":"startup|resume","hooks":[{"type":"command","command":"gh-axi"}]}]},"alpha":2}
+EOF
+BEFORE=$(settings_sha)
+check "a clean file in any layout verifies clean" "$(cz verify >/dev/null 2>&1; echo $?)"
+cz apply >/dev/null 2>&1
+check "and apply leaves it byte-identical, key order included" \
+  "$([[ "$(settings_sha)" == "$BEFORE" ]]; echo $?)"
+
+# A file with no hooks at all is not this template's business.
+printf '{"model":"opus"}\n' > "$SETTINGS"
+check "a file with no SessionStart verifies clean" "$(cz verify >/dev/null 2>&1; echo $?)"
+
+# Invalid JSON is refused and left exactly as it was.
+printf 'not json at all\n' > "$SETTINGS"
+cz apply >/dev/null 2>&1
+rc=$?
+check "chezmoi apply refuses invalid JSON" "$([[ $rc -ne 0 ]]; echo $?)"
+check "and leaves it exactly as it was" \
+  "$([[ "$(cat "$SETTINGS")" == 'not json at all' ]]; echo $?)"
+
+# chezmoi never creates settings.json.
+rm -f "$SETTINGS"
+cz apply >/dev/null 2>&1
+rc=$?
+check "chezmoi apply with no settings.json exits 0" "$([[ $rc -eq 0 ]]; echo $?)"
+check "and does not create one" "$([[ ! -e $SETTINGS ]]; echo $?)"
+
+# A chezmoi.toml someone else wrote is their dotfiles setup. Repointing it would
+# hand their whole machine to this repository.
+fresh_home
+mkdir -p "$(dirname "$CZCONF")"
+printf 'sourceDir = "/somewhere/else"\n' > "$CZCONF"
+setup_run
+rc=$?
+check "a foreign chezmoi.toml makes setup.sh exit non-zero" "$([[ $rc -ne 0 ]]; echo $?)"
+check "and it is left exactly as it was" \
+  "$([[ "$(cat "$CZCONF")" == 'sourceDir = "/somewhere/else"' ]]; echo $?)"
+check "and the refusal says why" "$(grep -q 'not written by setup.sh' "$ERR"; echo $?)"
+
+# An archive that does not match the pinned checksum is never installed, and
+# nothing downstream of it runs.
+fresh_home
+mkaxisettings
+echo corrupt > "$CZMODE"
+setup_run
+rc=$?
+echo ok > "$CZMODE"
+check "a corrupt archive makes setup.sh exit non-zero" "$([[ $rc -ne 0 ]]; echo $?)"
+check "no chezmoi binary was installed" "$([[ ! -e $CZ ]]; echo $?)"
+check "the refusal names the checksum" "$(grep -q 'checksum mismatch' "$ERR"; echo $?)"
+check "no temp directory is left behind" \
+  "$(neg compgen -G "${TMPDIR:-/tmp}/setup-chezmoi.*")"
+check "settings.json was not rewritten by chezmoi" \
+  "$([[ "$(matcher_of gh-axi)" == '' ]]; echo $?)"
 
 # The containerisable half of AC-H1. A real session cannot be produced in here,
 # so what is proved is that the binary setup.sh installed is silent in a project

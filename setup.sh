@@ -34,6 +34,36 @@ HOOK_TIMEOUT=30
 # inner quotes matter on Windows, where $HOME routinely contains a space.
 HOOK_COMMAND="\"\$HOME/.local/bin/skill-sync\" --boot"
 
+# ── chezmoi - owns the -axi SessionStart matchers in ~/.claude/settings.json ────
+# Breadcrumb, 2026-09-24. Those three matchers were set to "startup|resume" by a
+# hand edit with jq at 03:00Z (the full reasoning is in the template,
+# claude/tools/chezmoi/modify_settings.json). Nothing in git owned the edit, and
+# the tools' own installers can put "" back. The owner's rule is no hand edits
+# and no re-invented wheels, so the established tool owns it: chezmoi applies
+# the modify_ template, and `chezmoi verify` / `status` / `diff` detect drift.
+# Rejected: a hand-rolled jq setter with a custom --check mode, which is
+# `chezmoi apply` and `chezmoi verify` written again, worse, and maintained here.
+# Cost: one more binary on the machine and one more tool to learn.
+#
+# Scope. destDir is ~/.claude, not ~, and the source directory holds exactly one
+# file, so chezmoi can reach ~/.claude/settings.json and nothing else. destDir ~
+# was tried first and rejected: chezmoi then owns ~/.claude as a directory and
+# enforces a umask-derived mode on it (775 under umask 002, against a real 755).
+#
+# Pinned per Rule 15: an exact release plus the sha256 from that release's
+# chezmoi_<ver>_checksums.txt. Repin deliberately:
+#   gh api repos/twpayne/chezmoi/releases/latest --jq .tag_name
+#   curl -fsSL https://github.com/twpayne/chezmoi/releases/download/v<ver>/chezmoi_<ver>_checksums.txt
+# then update the version, the four sums in chezmoi_asset, and the ADD in
+# claude/tools/testing/Containerfile.
+CHEZMOI_VERSION="2.72.2"
+CHEZMOI_SRC="$DOTFILES/claude/tools/chezmoi"
+CHEZMOI_DST="$BIN_DST/chezmoi"
+CHEZMOI_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/chezmoi/chezmoi.toml"
+# Marks a config this script wrote, so a chezmoi.toml someone else wrote is
+# refused rather than overwritten.
+CHEZMOI_MARK="# written by dotfiles setup.sh"
+
 # Set by the install-type prompt: "link" or "copy"
 INSTALL_TYPE="link"
 
@@ -81,6 +111,16 @@ SKILL SYNC  (always installed, after the confirmation prompt)
 
   Requires jq. Without it the binary is still installed, the hook is not, and
   setup.sh exits non-zero saying so.
+
+CHEZMOI  (always installed, after skill-sync)
+  Binary   ~/.local/bin/chezmoi, a pinned release checked against its sha256.
+  Config   ~/.config/chezmoi/chezmoi.toml: sourceDir claude/tools/chezmoi in
+           this repo, destDir ~/.claude. It manages ~/.claude/settings.json only,
+           and only the matcher of the lavish-axi, gh-axi and chrome-devtools-axi
+           SessionStart entries ("startup|resume", so they skip compact).
+  Drift    chezmoi verify     exit 1 when the live file has drifted
+           chezmoi diff       shows what apply would change
+           chezmoi apply      puts it back - never an edit by hand
 
 INSTALL TYPES  (chosen at runtime)
   Symlink   Live link back to this repo. Changes here are reflected instantly.
@@ -413,6 +453,126 @@ install_skill_sync_and_hook() {
   install_session_hook
 }
 
+# ── chezmoi: the binary, its config, then one apply ───────────────────────────
+# The release asset for this machine, as "<file> <sha256>". Windows is refused
+# by name rather than guessed at: its asset is a zip, and Git Bash has no unzip
+# by default (Rule 17). Install chezmoi there with winget, then re-run.
+chezmoi_asset() {
+  local os arch
+  case "$(uname -s)" in
+    Linux) os=linux ;; Darwin) os=darwin ;; *) return 1 ;;
+  esac
+  case "$(uname -m)" in
+    x86_64|amd64) arch=amd64 ;; aarch64|arm64) arch=arm64 ;; *) return 1 ;;
+  esac
+  local f="chezmoi_${CHEZMOI_VERSION}_${os}_${arch}.tar.gz"
+  case "$f" in
+    *_linux_amd64.tar.gz)  echo "$f a2be1b8bcdf06c6f173e070bb3ddbcc52c50478fe9b57f6e6c63d15c7cff4f03" ;;
+    *_linux_arm64.tar.gz)  echo "$f 499925fd10804b7c1a5dc4b4a275c8935261d02a4be0c18bbd41b7747810de67" ;;
+    *_darwin_amd64.tar.gz) echo "$f 08ad1ba33a73e68f7657ee226f72b5d800b5a947954b06e185e8591bd32b0063" ;;
+    *_darwin_arm64.tar.gz) echo "$f 2b0c7e57f3f2da44628fa9f6863b9bd41f0935cfd2416228aa9df6daab6690f5" ;;
+  esac
+}
+
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
+  else shasum -a 256 "$1" | awk '{print $1}'; fi
+}
+
+# Skips the download when the pinned version is already installed, so a re-run
+# costs nothing. The archive is checked before anything is extracted from it,
+# and the binary lands by mv, so a failed run leaves the old one (or none).
+install_chezmoi() {
+  if [[ -x "$CHEZMOI_DST" ]] \
+     && "$CHEZMOI_DST" --version 2>/dev/null | grep -q "v${CHEZMOI_VERSION},"; then
+    _green "  ✓ tool: chezmoi ${CHEZMOI_VERSION} already at $CHEZMOI_DST"
+    return 0
+  fi
+  local asset file want b tmp url got
+  if ! asset=$(chezmoi_asset) || [[ -z "$asset" ]]; then
+    _red "  ✗ No pinned chezmoi release for $(uname -s) $(uname -m)."
+    _yellow "    Install chezmoi ${CHEZMOI_VERSION} yourself (Windows: winget install twpayne.chezmoi), then re-run."
+    return 1
+  fi
+  file=${asset% *}
+  want=${asset#* }
+  for b in curl tar awk mktemp; do
+    if ! command -v "$b" >/dev/null 2>&1; then
+      _red "  ✗ $b not found - chezmoi was NOT installed."
+      return 1
+    fi
+  done
+  if ! mkdir -p "$BIN_DST"; then
+    _red "  ✗ Could not create $BIN_DST"
+    return 1
+  fi
+  if ! tmp=$(mktemp -d "${TMPDIR:-/tmp}/setup-chezmoi.XXXXXX"); then
+    _red "  ✗ Could not create a temporary directory"
+    return 1
+  fi
+  url="https://github.com/twpayne/chezmoi/releases/download/v${CHEZMOI_VERSION}/${file}"
+  if ! curl -fsSL -o "$tmp/$file" "$url"; then
+    rm -rf "$tmp"
+    _red "  ✗ Could not download $url"
+    return 1
+  fi
+  got=$(sha256_of "$tmp/$file")
+  if [[ "$got" != "$want" ]]; then
+    rm -rf "$tmp"
+    _red "  ✗ chezmoi archive checksum mismatch - refusing to install it."
+    _yellow "    want $want"
+    _yellow "    got  $got"
+    return 1
+  fi
+  if ! tar -xzf "$tmp/$file" -C "$tmp" chezmoi \
+     || ! chmod +x "$tmp/chezmoi" \
+     || ! mv "$tmp/chezmoi" "$CHEZMOI_DST"; then
+    rm -rf "$tmp"
+    _red "  ✗ Could not install $CHEZMOI_DST"
+    return 1
+  fi
+  rm -rf "$tmp"
+  _green "  ✓ tool: chezmoi ${CHEZMOI_VERSION} → $CHEZMOI_DST"
+}
+
+# The config is this script's to write only when it is absent or carries the
+# mark. A chezmoi.toml the user wrote is somebody's whole dotfiles setup, and
+# repointing its sourceDir would hand their machine to this repository.
+write_chezmoi_config() {
+  if [[ -f "$CHEZMOI_CONFIG" ]] && ! grep -qF "$CHEZMOI_MARK" "$CHEZMOI_CONFIG"; then
+    _red "  ✗ $CHEZMOI_CONFIG exists and was not written by setup.sh - refusing to replace it."
+    _yellow "    Set sourceDir = \"$CHEZMOI_SRC\" and destDir = \"$HOME/.claude\" in it yourself, or move it and re-run."
+    return 1
+  fi
+  if ! mkdir -p "$(dirname "$CHEZMOI_CONFIG")"; then
+    _red "  ✗ Could not create $(dirname "$CHEZMOI_CONFIG")"
+    return 1
+  fi
+  local tmp="${CHEZMOI_CONFIG}.setup.$$"
+  if ! printf '%s - re-run it rather than editing this file.\nsourceDir = "%s"\ndestDir = "%s"\n' \
+         "$CHEZMOI_MARK" "$CHEZMOI_SRC" "$HOME/.claude" > "$tmp" \
+     || ! mv "$tmp" "$CHEZMOI_CONFIG"; then
+    rm -f "$tmp"
+    _red "  ✗ Could not write $CHEZMOI_CONFIG"
+    return 1
+  fi
+  _green "  ✓ config: $CHEZMOI_CONFIG → $CHEZMOI_SRC"
+}
+
+# Returns 1 on any failure, for the same reason install_skill_sync_and_hook does.
+# The apply comes last and reaches settings.json only through the template, which
+# refuses invalid JSON and never creates the file.
+install_chezmoi_and_apply() {
+  _bold "\nInstalling chezmoi..."
+  install_chezmoi || return 1
+  write_chezmoi_config || return 1
+  if ! "$CHEZMOI_DST" --config "$CHEZMOI_CONFIG" --no-tty apply; then
+    _red "  ✗ chezmoi apply failed - $SETTINGS_FILE was left as it was."
+    return 1
+  fi
+  _green "  ✓ chezmoi apply: -axi SessionStart matchers → $SETTINGS_FILE"
+}
+
 # ── main ───────────────────────────────────────────────────────────────────────
 main() {
   # ── parse args ──
@@ -540,6 +700,7 @@ main() {
   [[ ${#SEL_SKILLS[@]} -gt 0 ]] && printf "           %s\n" "${SEL_SKILLS[*]}"
   printf "  Tool   → %s\n" "$SKILL_SYNC_DST"
   printf "  Hook   → SessionStart in %s\n" "$SETTINGS_FILE"
+  printf "  Tool   → %s (%s), then chezmoi apply\n" "$CHEZMOI_DST" "$CHEZMOI_VERSION"
   echo
   printf "Proceed? [y/N]: "
   read -r confirm
@@ -552,8 +713,16 @@ main() {
 
   local sync_ok=0
   install_skill_sync_and_hook || sync_ok=1
+  # After the hook, so the one apply sees the settings.json that step wrote.
+  local chezmoi_ok=0
+  install_chezmoi_and_apply || chezmoi_ok=1
 
   echo
+  if (( chezmoi_ok )) && ! (( sync_ok )); then
+    _red "Finished with errors — chezmoi did not apply. See above."
+    _yellow "Agents, skills and skill-sync were installed."
+    exit 1
+  fi
   if (( sync_ok )); then
     _red "Finished with errors — skill-sync is not fully installed. See above."
     _yellow "Agents and skills were installed into ${DEST_BASE}/"
