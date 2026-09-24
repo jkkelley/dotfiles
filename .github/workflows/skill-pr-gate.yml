@@ -19,6 +19,8 @@
 #   tools      claude/tools/, which has no registry row and cannot appear in a
 #              matrix keyed on skill names
 #   gate       this workflow's own script, when this workflow changes
+#   workflow   make -C claude/workflow test, when the machinery or a skill its
+#              suite calls changes
 #
 # The shell lives in .github/scripts/bump-gate.sh rather than in this file. A
 # shell block inside a workflow can only be tested by pushing, and CI has the
@@ -103,6 +105,7 @@ jobs:
       skills: ${{ steps.detect.outputs.skills }}
       tools: ${{ steps.detect.outputs.tools }}
       gate: ${{ steps.detect.outputs.gate }}
+      workflow: ${{ steps.workflow.outputs.workflow }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -114,6 +117,17 @@ jobs:
         run: |
           set -euo pipefail
           bash .github/scripts/bump-gate.sh detect --base "$BASE" \
+            | tee -a "$GITHUB_OUTPUT"
+
+      # The path list is claude/workflow's own, in tools/ci-select.sh, and is
+      # driven by that directory's test_ci_job.sh. Only the git diff is here.
+      - id: workflow
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          git diff --name-only "$BASE...HEAD" \
+            | bash claude/workflow/tools/ci-select.sh \
             | tee -a "$GITHUB_OUTPUT"
 
   # An empty matrix is a workflow error in Actions, not a skipped job. A
@@ -165,3 +179,33 @@ jobs:
         run: bash .github/scripts/require-podman.sh
 
       - run: bash .github/scripts/testing/run-tests.sh
+
+  # PR 99 (feat(workflow): herdr-first orchestration) merged with
+  # `make -C claude/workflow test` green only on the author's machine. Nothing
+  # in this file ran it: detect keys the test matrix on claude/skills/<name>/
+  # testing/run-tests.sh, and claude/workflow/ is neither a skill nor
+  # claude/tools, so the suite had no row anywhere. A regression in the
+  # compaction ceremony, the seat watcher or the model-chain spawner would have
+  # merged on a green check that never looked at it.
+  #
+  # Why a job in this workflow rather than a sibling with on.pull_request.paths:
+  # every pull request check lives here behind detect, and a path-filtered
+  # workflow that does not trigger leaves a required check pending forever,
+  # where a job skipped by `if:` reports as passed.
+  #
+  # Why the Makefile rather than a run-suite line: the Makefile already builds
+  # its own image from a digest-pinned base and runs every target in Podman
+  # with --network=none. Calling it is the same command a contributor runs, so
+  # CI and the local loop cannot disagree about what "the suite" means.
+  workflow:
+    name: claude/workflow
+    needs: detect
+    if: needs.detect.outputs.workflow == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: podman
+        run: bash .github/scripts/require-podman.sh
+
+      - run: make -C claude/workflow test
