@@ -1,31 +1,40 @@
 #!/usr/bin/env bash
-# The sliding-window rule reaches BACKLOG.md, not just ISSUES.md.
+# The sliding-window rule, applied to the entry-tree model.
 #
-# The rule only works if an agent meets it where it is looking. A scaffolded
-# project states it in three places on purpose - CLAUDE.md is the rule, COMPASS
-# routes to it, and BACKLOG.md restates it at the point of use - so an agent
-# that opens BACKLOG.md directly, without reading CLAUDE.md first, still stops
-# at 10. If any one of those drops the rule, the default silently becomes
-# "read all 20 Done entries" and nothing fails loudly.
+# Under the monolith the rule lived in three prose files. In the tree model
+# the depth is enforced by the tool itself - backlog.sh list shows done/ at
+# most 10 deep - with COMPASS.md restating it at the routing table. An agent
+# cannot over-read done/ through the script, which is stronger than a sentence
+# it was supposed to remember.
 CASE_NAME=130-backlog-read-window
 source "${SKILL:-/skill}/testing/assert.sh"
 
 p=$(scaffolded_project)
 
-assert_contains "$p/CLAUDE.md" "\`BACKLOG.md\`" "CLAUDE.md names BACKLOG in the sliding-window rule"
-assert_contains "$p/CLAUDE.md" "The window applies to \`Done\` only" "CLAUDE.md scopes the window to Done"
-assert_contains "$p/COMPASS.md" "top 10 entries only" "COMPASS.md carries the window into its routing table"
-assert_contains "$p/BACKLOG.md" "Read protocol:" "BACKLOG.md restates the rule at the point of use"
-assert_contains "$p/BACKLOG.md" "top 10 entries and stop" "BACKLOG.md states the depth"
+# The routing table points at the trees and carries the window.
+assert_contains "$p/COMPASS.md" '`issues/`' "COMPASS routes to the issues tree"
+assert_contains "$p/COMPASS.md" "newest 10 entries only" "COMPASS carries the issues window"
+assert_contains "$p/COMPASS.md" '`backlog/`' "COMPASS routes to the backlog tree"
+assert_contains "$p/COMPASS.md" '`done/` newest 10 only' "COMPASS scopes the backlog window to done"
 
-# The distinction that makes it correct rather than merely consistent: Now /
-# Next / Later are live work. A window over those would hide committed work an
-# agent is supposed to pull from, which is worse than reading too much.
-assert_contains "$p/CLAUDE.md" "read them in full" "live buckets are exempt from the window"
-assert_contains "$p/BACKLOG.md" "in full - that is live work" "BACKLOG.md exempts the live buckets too"
+# The window itself: 12 done items, but list shows the newest 10 and stops.
+for i in $(seq 1 12); do
+  backlog add --project "$p" --title "item $i" --why W --done-when D --bucket now >/dev/null
+done
+for f in "$p"/backlog/now/*.md; do
+  backlog done --project "$p" --id "$(basename "$f" .md | sed 's/.*-//')" >/dev/null
+done
+assert_count 12 "$(find "$p/backlog/done" -name '*.md' -type f | wc -l)" "all 12 items are retained in done/"
+capture done_listing backlog list --project "$p" --bucket done
+assert_count 10 "$(printf '%s\n' "$done_listing" | grep -c .)" "list shows the newest 10 of done and stops"
 
-# Retention is 20 and the read window is 10 - two different numbers, and the
-# file has to say why, or the next reader will "fix" one to match the other.
-assert_contains "$p/BACKLOG.md" "trimmed to the last 20" "retention limit still documented"
+# Live buckets are exempt: all 12 in now/ would be listed in full, because a
+# window over live work hides committed items an agent is supposed to pull.
+q=$(scaffolded_project)
+for i in $(seq 1 12); do
+  backlog add --project "$q" --title "live $i" --why W --done-when D --bucket now >/dev/null
+done
+capture now_listing backlog list --project "$q" --bucket now
+assert_count 12 "$(printf '%s\n' "$now_listing" | grep -c .)" "live buckets are listed in full"
 
 finish

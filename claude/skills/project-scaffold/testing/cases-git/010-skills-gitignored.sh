@@ -40,7 +40,7 @@ done
 # manifest, the settings or the vendored scripts would take the project's
 # declared intent out of git along with the copies, and the failure would be
 # invisible until someone cloned it.
-for f in .claude/skills.toml .claude/settings.json .claude/scripts/log-issue.sh CLAUDE.md; do
+for f in .claude/skills.toml .claude/settings.json .claude/scripts/log-issue.sh CLAUDE.md AGENTS.md; do
   if git -C "$p" check-ignore -q "$f"; then
     _fail "git tracks $f" "the blanket swallowed it"
   else

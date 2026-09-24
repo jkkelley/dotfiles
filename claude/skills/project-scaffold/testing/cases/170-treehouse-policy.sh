@@ -24,32 +24,32 @@ source "${SKILL:-/skill}/testing/assert.sh"
 
 p=$(scaffolded_project)
 
-assert_contains "$p/CLAUDE.md" "## Where your workspace comes from" \
-  "CLAUDE.md carries the treehouse policy section"
+assert_contains "$p/AGENTS.md" "## Where your workspace comes from" \
+  "AGENTS.md carries the treehouse policy section"
 
 # One source, named as one. "A workspace usually comes from the pool" leaves the
 # other options open, which is the state this section exists to close.
-assert_contains "$p/CLAUDE.md" "One source: the treehouse pool at" \
+assert_contains "$p/AGENTS.md" "One source: the treehouse pool at" \
   "the pool is named as the single source"
 
-assert_contains "$p/CLAUDE.md" '~/.treehouse/<repo>-<hash>/' \
+assert_contains "$p/AGENTS.md" '~/.treehouse/<repo>-<hash>/' \
   "the pool path is the user-level one from decision 19"
 
 # The two things an agent reaches for instead, refused by name. A hand-rolled
 # worktree is the reflex; a second in-project pool is what `--root .` gives you.
-assert_contains "$p/CLAUDE.md" "Never hand-roll a \`git worktree add\`" \
+assert_contains "$p/AGENTS.md" "Never hand-roll a \`git worktree add\`" \
   "hand-rolled worktrees are refused"
 
-assert_contains "$p/CLAUDE.md" "never create a second pool inside the repository" \
+assert_contains "$p/AGENTS.md" "never create a second pool inside the repository" \
   "an in-project pool is refused"
 
 # The pointer that pays for the hash directory being unreadable.
-assert_contains "$p/CLAUDE.md" "\`treehouse status\`" \
+assert_contains "$p/AGENTS.md" "\`treehouse status\`" \
   "treehouse status is named as the live map"
 
 # A pointer, not a manual. Flags copied into the template go stale silently, and
 # an agent following a stale flag gets an error that looks like a broken pool.
-assert_not_contains "$p/CLAUDE.md" "destroy --force" \
+assert_not_contains "$p/AGENTS.md" "destroy --force" \
   "no treehouse flags are reproduced in the template"
 
 finish

@@ -25,60 +25,60 @@ source "${SKILL:-/skill}/testing/assert.sh"
 
 p=$(scaffolded_project)
 
-assert_contains "$p/CLAUDE.md" "## Hard rule: documentation goes where its lifetime says it goes" \
-  "CLAUDE.md carries the documentation-lifetime rule"
+assert_contains "$p/AGENTS.md" "## Hard rule: documentation goes where its lifetime says it goes" \
+  "AGENTS.md carries the documentation-lifetime rule"
 
 # The question itself. Without it the two destinations are a list to choose from
 # rather than a decision that has already been made.
-assert_contains "$p/CLAUDE.md" "would this still be true after this repo is deleted?" \
+assert_contains "$p/AGENTS.md" "would this still be true after this repo is deleted?" \
   "the lifetime question is the thing that decides"
 
 # One answer per document, stated as such. This is the arbitration: a rule that
 # describes both destinations and stops there is the state this replaced.
-assert_contains "$p/CLAUDE.md" "every document has exactly one destination" \
+assert_contains "$p/AGENTS.md" "every document has exactly one destination" \
   "exactly one destination per document"
 
 # Both destinations, so the question has somewhere to route to. The URL, whole
 # and literal - the owner is the part that gets substituted away, so the owner
 # has to be inside the needle.
-assert_contains "$p/CLAUDE.md" "https://github.com/jkkelley/local-k8s-docs" \
+assert_contains "$p/AGENTS.md" "https://github.com/jkkelley/local-k8s-docs" \
   "the platform destination is literal, with its real owner"
 
-assert_not_contains "$p/CLAUDE.md" "<your-github-username>/local-k8s-docs" \
+assert_not_contains "$p/AGENTS.md" "<your-github-username>/local-k8s-docs" \
   "the platform URL was not turned into a placeholder"
 
-assert_contains "$p/CLAUDE.md" "\`docs.sh sop\`" \
+assert_contains "$p/AGENTS.md" "\`docs.sh sop\`" \
   "the in-repo destination names the script that owns it"
 
 # Both words. An agent that reads a rule about "documentation" and is looking for
 # where a runbook goes should not have to decide whether the rule covers it.
-assert_contains "$p/CLAUDE.md" "Runbooks and playbooks both" \
+assert_contains "$p/AGENTS.md" "Runbooks and playbooks both" \
   "runbooks and playbooks are covered by the same rule"
 
 # Access is a request, not a blocker. An agent that cannot reach the platform
 # repository and has not been told to ask will route around it, which is the
 # failure this whole rule exists to prevent.
-assert_contains "$p/CLAUDE.md" "If you need access to it, ask" \
+assert_contains "$p/AGENTS.md" "If you need access to it, ask" \
   "a missing grant is something to ask for, not to work around"
 
 # Follow the format that is there, not a better one. Divergent formats are how a
 # single source of truth stops being usable as one.
-assert_contains "$p/CLAUDE.md" "in the same format as the ones beside it" \
+assert_contains "$p/AGENTS.md" "in the same format as the ones beside it" \
   "a new document follows the existing format"
 
 # The write-it-if-missing case. This is the one that gets skipped, and skipping
 # it is the whole failure mode: the process gets worked out, the task ships, and
 # the knowledge never leaves the session it was derived in.
-assert_contains "$p/CLAUDE.md" "that process is a document that does not exist yet" \
+assert_contains "$p/AGENTS.md" "that process is a document that does not exist yet" \
   "working a process out obliges you to write it down"
 
 # The negative half of the same rule. Stated separately because "write the
 # missing one" and "do not invent a parallel one" fail in opposite directions.
-assert_contains "$p/CLAUDE.md" "Do not invent a local procedure when a documented one exists" \
+assert_contains "$p/AGENTS.md" "Do not invent a local procedure when a documented one exists" \
   "an existing documented process wins over a local invention"
 
 # The rule this arbitrated away. If the old heading is back, so is the conflict.
-assert_not_contains "$p/CLAUDE.md" "## Hard rule: every runbook and playbook lives in one repository" \
+assert_not_contains "$p/AGENTS.md" "## Hard rule: every runbook and playbook lives in one repository" \
   "the unarbitrated one-repository rule is gone"
 
 finish

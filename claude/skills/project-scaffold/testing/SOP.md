@@ -3,7 +3,7 @@
 What each case runs, what it asserts, and **why that failure would matter**.
 
 A case whose "why" cannot be written is a case not worth keeping.
-Three of the seventeen case files are mostly negative tests, because a validator that never rejects anything is not a validator.
+Three of the eighteen case files are mostly negative tests, because a validator that never rejects anything is not a validator.
 
 Run everything with:
 
@@ -61,9 +61,10 @@ Without an injectable clock, "same input produces the same output" cannot be ass
 
 **Runs:** a dry run then an apply against an empty directory.
 
-**Asserts:** the dry run writes nothing; apply creates all five markdown files, `.claude/settings.json`, `.claude/skills.toml` and the vendored scripts, and creates **no** `.claude/scaffold.json`; `ISSUES.md` carries its sentinel; `CLAUDE.md` carries the `CONTEXT_STATE.md` pointer.
+**Asserts:** the dry run writes nothing; apply creates the four markdown files, the `issues/` and `backlog/{now,next,later,done}/` directory trees with their `.gitkeep` files, `.claude/settings.json`, `.claude/skills.toml` and the vendored scripts; it creates **no** `.claude/scaffold.json` and **no** `ISSUES.md` or `BACKLOG.md` monolith; none of `AGENTS.md`, `CLAUDE.md` or `COMPASS.md` points at `CONTEXT_STATE.md` or `HYDRATION.md`.
 
-The negative assertion is the one that earns its keep. `scaffold.json` was removed rather than emptied, and a file nobody writes is not something a test notices - it just stops appearing, and reappears the moment someone restores the block that wrote it.
+The negative assertions are the ones that earn their keep. `scaffold.json` was removed rather than emptied, and a file nobody writes is not something a test notices - it just stops appearing, and reappears the moment someone restores the block that wrote it.
+The monolith assertions are the same shape: the trees replaced the files (dotfiles #95), and a re-added template would silently put every project back on the storage model that conflicts on every merge.
 
 **Why it matters:** dry-run-by-default is the safety property that makes this tool safe to point at an existing project.
 A dry run that wrote anything would make every later "it is non-destructive" claim false.
@@ -73,9 +74,9 @@ The pointer assertion catches the `context-compaction` integration silently regr
 
 ## 020-scaffold-existing
 
-**Runs:** apply against three shapes of pre-existing file - zero bytes, hand-written prose with no structure, and a partially-populated template.
+**Runs:** apply against four shapes of pre-existing content - a zero-byte file, hand-written prose with no structure, a partially-populated template, and the old monoliths.
 
-**Asserts:** empty files gain their sections; the unstructured file is left byte-identical; the partial file gains only what it lacks, each section exactly once.
+**Asserts:** the empty file gains its sections; the unstructured file is left byte-identical; the partial file gains only what it lacks, each section exactly once; an `ISSUES.md` or `BACKLOG.md` monolith is named in the plan, left byte-identical, and given an entry tree beside it.
 
 **Why it matters:** this is the entire no-clobber promise, and each shape fails differently.
 
@@ -86,6 +87,9 @@ The unstructured case is the dangerous one: guessing an insertion point in a fil
 Refusing is the correct behaviour, and `assert_same` against a pre-run copy is the only assertion that proves it.
 
 The partial case catches double-appending, which would quietly duplicate sections on every run.
+
+The monolith case is the migration boundary: a project mid-transition holds both the old file and the new tree, and scaffold is the one tool guaranteed to run there.
+If it deleted or rewrote the monolith, the only copy of a project's history would be gone before `migrate` ever ran.
 
 ---
 
@@ -103,11 +107,11 @@ There is no longer an exclusion. `scaffold.json` used to be one - it recorded a 
 
 ## 040-log-issue-happy
 
-**Runs:** two issues, a resolving entry, and a write into a project with no `ISSUES.md` yet.
+**Runs:** two issues, a resolving entry, and a write into a project with no `issues/` tree yet.
 
-**Asserts:** IDs increment; the newest entry is the first heading in the file; the resolution is recorded; the original entry is not rewritten; a missing file is created from the template with its sentinel intact.
+**Asserts:** IDs are 5-char suffixes and distinct; each entry is one file in the shard its timestamp implies; the metadata ID is the suffix, not a sequential number; the resolution is a new file carrying `resolves:`; the original entry is not rewritten; a missing tree is created.
 
-**Why it matters:** newest-first ordering is what makes the 10-entry window meaningful - if ordering regressed, the window would show the _oldest_ ten and every agent reading it would be misled.
+**Why it matters:** one file per entry in a timestamped shard is the storage model the whole refactor is for (dotfiles #95) - if entries went back into a shared file, concurrent agents would be racing for one path again and merges would conflict.
 "Original not rewritten" is the append-only guarantee stated as an assertion.
 
 ---
@@ -116,28 +120,30 @@ There is no longer an exclusion. `scaffold.json` used to be one - it recorded a 
 
 **Runs:** every rejection path, plus `--help` on all four entry points.
 
-**Asserts:** missing and empty required values exit 2; a bad severity exits 3; an unknown flag exits 2; an unresolvable `--resolves` exits 6; a malformed ID exits 2; a file with no sentinel exits 3 and is left untouched; a read-only directory exits 4.
+**Asserts:** missing and empty required values exit 2; a bad severity exits 3; an unknown flag exits 2; an unresolvable `--resolves` exits 6; an old-format ID (ISS-0041, BK-0014) exits 2 as malformed; a monolith beside the tree exits 3 and is left untouched; a read-only directory exits 4.
 
 **Why it matters:** each assertion is on the exit code, not on whether error text appeared, because a typo in a filename produces the same "it failed" as a correctly-fired rule.
-The untouched-file assertions matter most: a rejected write that had already modified the file would be worse than no validation at all.
+The untouched-file assertions matter most: a rejected write that had already modified anything would be worse than no validation at all.
+
+The monolith case replaced the old missing-sentinel case, and it is the same failure in the new model: a second source of truth beside the first.
+Writing beside it would split a project's history across two formats with no tool that can read both.
 
 The `--help` checks are not filler.
-They caught a real bug: `backlog.sh` and `cache.sh` take a subcommand as `$1`, so `--help` was consumed as a command name and reported as unknown.
+They caught a real bug: `backlog.sh` takes a subcommand as `$1`, so `--help` was consumed as a command name and reported as unknown.
 `--help` reaches code paths the happy path never touches, which is exactly where syntax errors hide.
 
 ---
 
 ## 060-log-issue-concurrent
 
-**Runs:** eight simultaneous writers against one `ISSUES.md`.
+**Runs:** eight simultaneous writers into one project's `issues/` tree, all under the suite's fixed clock - so all eight mint the SAME timestamp into the SAME shard, the worst case rather than a convenient one.
 
-**Asserts:** all eight entries land, all eight IDs are distinct, and the sequence has no gaps.
+**Asserts:** all eight entries land, all eight filenames are distinct, and `check` is green over the tree the race left behind.
 
-**Why it matters:** parallel agents are normal, not exotic.
-Two writers reading "highest is 41" at the same moment would both write `ISS-0042`, and one entry would be silently lost.
-Silent data loss is the worst failure this tool could have, so it gets the most direct test.
-
-The no-gaps assertion is the subtler one: a gap means an ID was allocated and its write then lost, which a distinctness check alone would not catch.
+**Why it matters:** this is the money property of dotfiles #95.
+Under the monolith, two writers reading "highest is 41" at the same moment would both write `ISS-0042` and one entry would be silently lost - and even when the lock held, git still saw one file touched by every writer, so merges conflicted.
+Random suffixes minted at write time remove the race by construction; the distinct-names assertion is what proves it.
+The green `check` proves the race left a valid tree, not merely eight files.
 
 ---
 
@@ -145,22 +151,22 @@ The no-gaps assertion is the subtler one: a gap means an ID was allocated and it
 
 **Runs:** add, move, done, list, plus every refusal.
 
-**Asserts:** IDs increment across buckets; a move preserves `why` and `done-when` exactly; moving to the current bucket is a reported no-op; `done` flips the checkbox and records `completed:` in the metadata rather than in the title; unknown IDs exit 6, unknown buckets exit 3, malformed IDs and unknown subcommands exit 2; a duplicated ID exits 3.
+**Asserts:** IDs are distinct 5-char suffixes across buckets; a move is a rename between bucket directories that preserves `why` and `done-when` exactly; moving to the current bucket is a reported no-op; `done` lands the item in the done shard with `completed:` in the metadata rather than the title, and removes the live copy; a second `done` is a reported no-op; unknown IDs exit 6, unknown buckets exit 3, malformed IDs and unknown subcommands exit 2; a duplicated suffix exits 3.
 
-**Why it matters:** `move` is the one operation that rewrites existing content, so byte-preservation of the item body is its core guarantee - anything less means a move quietly edits your text.
+**Why it matters:** `move` is the one operation that relocates existing content, so preservation of the item body is its core guarantee - anything less means a move quietly edits your text.
 
 The title assertion exists because an earlier implementation appended the completion date to the heading, which leaked the date into every JSON parse of the item's name.
 
-The duplicate-ID case is about refusing to guess.
-Two items with one ID is a file a human broke; picking one and proceeding would compound it.
+The duplicate-suffix case is about refusing to guess.
+Two files with one suffix is a tree a human broke; picking one and proceeding would compound it.
 
 ---
 
 ## 080-encoding-and-injection
 
-**Runs:** text that fights back - shell metacharacters, a literal `-->`, multi-line values, CRLF line endings, a file with no trailing newline, and a path containing spaces.
+**Runs:** text that fights back - shell metacharacters, a literal `-->`, multi-line values, a file with no trailing newline, and a path containing spaces.
 
-**Asserts:** `$(id)` and backticks are written literally and nothing is executed; `-->` becomes `--&gt;` and _not_ `---->gt;`; every metadata block stays balanced; multi-line values collapse to one line; a CRLF file still matches its sentinel; an appended section is not glued to an unterminated last line; a path with spaces works.
+**Asserts:** `$(id)` and backticks are written literally and nothing is executed; `-->` becomes `--&gt;` and _not_ `---->gt;`; every metadata block stays balanced across every entry file; multi-line values collapse to one line; an appended section is not glued to an unterminated last line; a path with spaces works.
 
 **Why it matters:** an issue title is attacker-adjacent input in the only sense that matters here - it is arbitrary text that an agent pastes in without thinking.
 If it were ever evaluated, logging an issue would execute it.
@@ -168,24 +174,14 @@ If it were ever evaluated, logging an issue would execute it.
 The `---->gt;` assertion is a regression test for a real bug found while building this: bash 5.2 expands a bare `&` in a `${var//pat/repl}` replacement to the matched text, so the escape silently corrupted itself.
 Nothing about that is obvious from reading the code, which is precisely why it is pinned by a test.
 
-CRLF matters because a file touched once on Windows would otherwise stop matching its own sentinel and be refused forever.
-The trailing-newline case prevents corrupting the last record in a file.
+The CRLF case from the monolith era is gone: the sentinel it defended went away with the monolith, and entry files are always script-written, so there is no Windows-touched file left to mis-parse.
+The trailing-newline case remains because it guards a scaffold append, not an entry write.
 
 ---
 
 ## 090-cache-freshness
 
-**Runs:** build, verify, mutate a source, verify again, tamper with a recorded hash, delete the cache entirely and rebuild.
-
-**Asserts:** all six slices are produced; verify passes immediately after a build; a resolved issue is absent from `open-issues.json` and an unresolved one is present; mutating a source makes verify exit 3 and name the stale file; a tampered hash reports stale rather than crashing; a deleted cache rebuilds cleanly.
-
-**Why it matters:** a cache trusted while stale is worse than no cache, because it turns a speed optimisation into a source of confidently wrong answers.
-Detection is the whole product.
-
-The open-issues assertions test the one thing the cache _computes_ rather than reshapes.
-If that logic inverted, an agent would be told a fixed bug is live, or worse, that a live bug is fixed.
-
-The delete-and-rebuild case enforces "derived, never authoritative" - if anything were only stored in the cache, this case would lose it.
+Removed. The script it covered read the monoliths the entry-tree refactor deleted, and was itself deleted in S-03 - `220-cache-gone` asserts that it stays gone.
 
 ---
 
@@ -236,21 +232,47 @@ The byte-for-byte assertion is also what makes drift visible: if someone hand-ed
 
 ## 130-backlog-read-window
 
-**Runs:** a scaffold, then inspects `CLAUDE.md`, `COMPASS.md` and `BACKLOG.md` for the read-depth rule.
+**Runs:** a scaffold, then 12 items driven to done and 12 more left in now, listing both.
 
-**Asserts:** all three state the 10-entry window for `BACKLOG.md`; two of them scope it explicitly to the `Done` bucket; `Now` / `Next` / `Later` are stated as read-in-full; the 20-item retention limit is still documented alongside the 10-item read window.
+**Asserts:** `COMPASS.md` routes to `issues/` and `backlog/` and states the newest-10 window for both; `backlog.sh list --bucket done` shows the newest 10 of 12 and stops, while all 12 are retained on disk; a live bucket is listed in full.
 
-**Why it matters:** a read-depth rule is only load-bearing where the agent actually looks.
-An agent that opens `BACKLOG.md` directly, without reading `CLAUDE.md` first, has to meet the rule in the file itself - which is why it is stated in three places and why all three are asserted.
-Drop it from any one of them and the default silently reverts to reading all 20 `Done` entries. Nothing fails; the cost just shows up as tokens.
+**Why it matters:** under the monolith the window was a prose rule stated in three files and enforced by nobody.
+In the tree model the tool enforces it - `list` cannot over-read `done/` - which is stronger than a sentence an agent was supposed to remember, and this case is what keeps that enforcement from quietly widening.
 
-The retention assertion guards the other direction. `Done` keeps 20 but is read 10 deep, and two nearby numbers that differ look like a bug to the next reader - the file has to say why, or someone will "fix" one to match the other and destroy either the window or the lookup.
+The live-bucket assertion guards the other direction.
+A window over `now/` / `next/` / `later/` would hide committed work an agent is supposed to pull from, which is worse than reading too much.
+
+---
+
+## 180-migrate
+
+**Runs:** a fixture `ISSUES.md` (three entries across two months, a resolves chain, an internal ref, mixed timezone offsets) and a fixture `BACKLOG.md` (items in now, later, and done-with-completed) through `migrate`.
+
+**Asserts:** every entry becomes a file in the shard its own timestamp implies; offsets are normalised to UTC; body and metadata fields survive; internal `refs:`/`resolves:` are rewritten to the new suffixes with no sequential ID surviving; a done item is sharded by its completion date; the monolith is renamed aside rather than deleted; `check` is green over the result; the newest entry sorts first in a directory walk; a second migrate exits 3.
+
+**Why it matters:** migrate runs exactly once per project and touches history that exists nowhere else.
+A field dropped in conversion is not a test failure anyone would notice - it is a project's memory silently thinning.
+The refuse-twice assertion is the idempotence guarantee: a second run over the same output would either duplicate every entry or fail confusingly, and refusing with exit 3 is the only honest answer.
+
+The reference-rewriting assertions defend the DAG: a migration that kept `resolves: ISS-0001` would leave a tree full of pointers to IDs that no longer exist, and `check` would (correctly) fail the tree forever after.
+
+---
+
+## 190-check
+
+**Runs:** plants each fault `check` exists to catch, in a fresh scaffolded project per fault.
+
+**Asserts:** a clean tree passes in both scopes; a file in the wrong shard, a duplicate suffix, a dangling `resolves:`, a missing mandatory field, an id/filename mismatch, a monolith beside the directories, a missing `done-when`, a done file in the wrong shard, and a stray non-entry file each exit 3 - and the recurring offenders are named in the output.
+
+**Why it matters:** the tree has no lock and no allocator guarding it at write time, by design.
+`check` is the compensating control: the thing that makes "any agent can write any entry" safe after the fact.
+Every fault here is a state a human edit or a crashed tool can actually produce, and an unnamed offender is a red check nobody can act on - so the naming is asserted, not just the exit code.
 
 ---
 
 ## 140-skills-block
 
-**Runs:** a scaffold, then inspects `CLAUDE.md` for the skills section and the marker pair the sync writes between.
+**Runs:** a scaffold, then inspects `AGENTS.md` for the skills section and the `CLAUDE.md` stub for the marker pair the sync writes between.
 
 **Asserts:** the section is present; the agent is told it runs nothing; editing a managed skill in place is refused; `.claude/skills.toml` is named as the file to edit instead; both markers are present byte for byte; the block between them is empty; no hand-maintained version table survives; and the agent is not asked to fetch `registry.json` itself.
 
@@ -272,7 +294,7 @@ Until it lands, "the block is empty" is the whole contract, which is why it is a
 
 ## 150-documentation-lifetime
 
-**Runs:** a scaffold, then inspects `CLAUDE.md` for the rule that decides where a document goes.
+**Runs:** a scaffold, then inspects `AGENTS.md` for the rule that decides where a document goes.
 
 **Asserts:** the section is present; the lifetime question is what decides; every document has exactly one destination; the `local-k8s-docs` URL is carried literally, owner and all; it has not been rewritten into an angle-bracket placeholder; `docs.sh sop` is named for the in-repo half; runbooks and playbooks are covered by the same rule; a missing grant is something to ask for rather than route around; a new document follows the format of the ones beside it; working a process out obliges you to write it down; a documented process beats a locally invented one; and the unarbitrated one-repository heading is gone.
 
@@ -315,7 +337,7 @@ The section-header assertions guard a silent failure specific to this format.
 
 ## 170-treehouse-policy
 
-**Runs:** a scaffold, then inspects `CLAUDE.md` for the section naming where a workspace comes from.
+**Runs:** a scaffold, then inspects `AGENTS.md` for the section naming where a workspace comes from.
 
 **Asserts:** the section is present; the pool is named as the single source; the path is the user-level `~/.treehouse/<repo>-<hash>/` from decision 19; a hand-rolled `git worktree add` is refused; a second in-project pool is refused; `treehouse status` is named as the live map; and no treehouse flag is reproduced in the template.
 
@@ -334,11 +356,52 @@ treehouse went v1.8.0 to v2.3.0 in a morning, so an interface copied into a temp
 
 ---
 
+## 200-agents-md
+
+**Runs:** a scaffold, then inspects `AGENTS.md` and `CLAUDE.md`; then a scaffold over an `AGENTS.md` missing one law, and one over a hand-written `CLAUDE.md`.
+
+**Asserts:** both files are rendered; `CLAUDE.md` points at `AGENTS.md`, has no `## ` section, states no rule and is 20 lines or fewer; every law heading is present in `AGENTS.md`, one assertion per law; the surface law states the unset default and the compaction law forbids self-compaction; each cited Drive document is named and no Drive URL appears; no `__PLACEHOLDER__` token survives in any rendered file; an `AGENTS.md` missing a law gains it exactly once and keeps its own content; a hand-written `CLAUDE.md` is left byte-identical.
+
+**Why it matters:** the laws used to live in `CLAUDE.md`, which only a Claude runtime reads.
+A Kimi or Codex seat in the same project read `AGENTS.md`, found nothing, and ran without herdr-first, the surface rule or the compaction rule, and all three fail silently.
+Each law is asserted by its own heading because a count stays green when one law is swapped for another.
+
+The stub assertions are the other half.
+A `CLAUDE.md` that restates a rule is a second copy, and two copies drift until an agent follows the stale one.
+The stub keeps the `skill-sync` marker pair because `claude/tools/skill-sync.sh` fills it in `CLAUDE.md`, which is why the stub is capped by line count rather than asserted empty.
+
+The Drive assertions exist because this repository is public: documents are cited by name and version, never by id or URL.
+
+---
+
+## 210-ci-workflow
+
+**Runs:** a scaffold with no flag; a `--ci` dry run and apply; a re-run over an edited workflow; then the workflow's own `run:` lines against a real tree, green and then broken.
+
+**Asserts:** no flag means no workflow, no `.github/` and no plan row; `--ci` plans the workflow on a dry run without writing it, then copies it byte for byte; an edited workflow is skipped and left byte-identical; every `uses:` is pinned by a 40-hex SHA with a tag comment; both check commands exit 0 on a valid tree and 3 once a monolith sits beside it.
+
+**Why it matters:** a workflow that arrived without `--ci` is a red X on every host that never runs GitHub Actions, and a `--ci` that copied nothing leaves a project believing CI backs its trees when nothing does.
+The run lines are executed rather than diffed because a workflow calling a verb the vendored scripts lack would otherwise first fail on somebody's pull request.
+The pin assertion is Rule 15 made mechanical: a moving tag means the check that ran is not the check that was reviewed.
+
+---
+
+## 220-cache-gone
+
+**Runs:** a search of every file in the skill, then a scaffold and its plan.
+
+**Asserts:** the deleted script is absent from `scripts/`; no file in the skill but the case itself names it; a scaffolded project vendors no copy and the plan names none.
+
+**Why it matters:** the directory of small files is the cheap window (decision D4), so the script went - but a reference left behind is worse than the script was.
+A doc telling an agent to verify a cache sends it to a command that exits 127, and a vendoring list naming the file makes every scaffold run die on a missing source.
+
+---
+
 ## cases-git/010-skills-gitignored
 
 **Runs:** a scaffold, `git init`, a managed skill and a hand-authored one written under `.claude/skills/`, then `git check-ignore` on each path and a `git add -A` to see what actually reaches the index.
 
-**Asserts:** every path under `.claude/skills/` is ignored, hand-authored included; `.claude/skills.toml`, `.claude/settings.json`, `.claude/scripts/log-issue.sh` and `CLAUDE.md` are **not** ignored; after `git add -A` nothing under `.claude/skills/` is staged and the manifest is.
+**Asserts:** every path under `.claude/skills/` is ignored, hand-authored included; `.claude/skills.toml`, `.claude/settings.json`, `.claude/scripts/log-issue.sh`, `CLAUDE.md` and `AGENTS.md` are **not** ignored; after `git add -A` nothing under `.claude/skills/` is staged and the manifest is.
 
 **Why it matters:** this is the acceptance criterion of the change, asserted in the sentence it was written in.
 A committed skill copy is worse than no copy: it never updates again, `registry.json` moves on without it, and the divergence is invisible because a project's copy is _expected_ to differ from upstream, so the content hash cannot catch it either.

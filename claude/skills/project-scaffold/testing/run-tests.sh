@@ -17,7 +17,12 @@
 set -euo pipefail
 
 SKILL_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-IMAGE="${PS_TEST_IMAGE:-docker.io/library/python:3.12-slim}"
+# python:3.12-slim, pinned by digest per root CLAUDE.md Rule 15 (S-03). The
+# floating tag let the base image rebase itself under the suite between runs, so
+# a red run could be the image and not the change. Repin deliberately:
+#   podman pull docker.io/library/python:3.12-slim
+#   podman image inspect docker.io/library/python:3.12-slim --format '{{index .RepoDigests 0}}'
+IMAGE="${PS_TEST_IMAGE:-docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9}"
 
 # The second image, and why there are two.
 #
@@ -27,7 +32,10 @@ IMAGE="${PS_TEST_IMAGE:-docker.io/library/python:3.12-slim}"
 # other means a network fetch inside a suite that runs --network=none on purpose.
 # So the suite runs twice and sums the totals.
 #
-# Pinned by digest per root CLAUDE.md Rule 15, and it is the same digest
+# bitnami/git 2.55.0 (the image's org.opencontainers.image.version label, built
+# 2026-08-21 UTC), pinned by digest per root CLAUDE.md Rule 15. S-05 L8: this
+# comment used to name no version at all, so nobody but whoever chose the digest
+# could tell what it was or repin it deliberately. It is the same digest
 # living-docs, skill-registry and hydration-prompt already run on - a second
 # digest for the same purpose is how a repository ends up with two answers to
 # "what do the tests run on". It ships no cmp, which is why assert_same hashes

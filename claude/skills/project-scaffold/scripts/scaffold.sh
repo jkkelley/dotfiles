@@ -19,8 +19,54 @@ SKILL_DIR=$(cd -- "$SCRIPT_DIR/.." && pwd)
 source "$SCRIPT_DIR/lib/common.sh"
 
 readonly TEMPLATE_DIR="$SKILL_DIR/references/templates"
-readonly CONTEXT_FILES=(CLAUDE.md COMPASS.md BACKLOG.md ISSUES.md NAMING.md)
-readonly VENDORED=(lib/common.sh log-issue.sh backlog.sh cache.sh)
+# AGENTS.md is the orientation file and CLAUDE.md is a stub that points at it.
+# What broke: references/templates/CLAUDE.md.tmpl carried every rule, so only a
+# Claude runtime ever read them - a Kimi or Codex seat in the same project read
+# AGENTS.md, found none, and ran without the herdr-first, surface and compaction
+# laws. Why this fix: one file every runtime reads, rendered by the same verbatim
+# heading-delimited path as the other context files, so an existing AGENTS.md
+# gains a missing law as an appended section rather than being overwritten.
+# Rejected: rendering the laws into both files, which is two copies that drift.
+# Cost: CLAUDE.md keeps the skills marker pair, because claude/tools/skill-sync.sh
+# (PROJECT_DOC) fills it there and moving it is outside this skill. The stub has
+# no `## ` headings, so an existing hand-written CLAUDE.md is always skipped,
+# never rewritten. Record: S-02, feat/scaffold-multiagent.
+readonly CONTEXT_FILES=(AGENTS.md CLAUDE.md COMPASS.md NAMING.md)
+# issues/ and backlog/ are directories of one-file-per-entry, not files: two
+# concurrent agents must never need to touch the same path (dotfiles #95).
+# Each leaf gets a .gitkeep so a fresh, empty tree survives git.
+readonly ENTRY_DIRS=(issues backlog/now backlog/next backlog/later backlog/done)
+# The cache builder is gone (S-03, decision D4). What broke: it built derived
+# JSON slices of ISSUES.md / BACKLOG.md so an agent could read the window for
+# fewer tokens, and the monoliths it read were replaced by entry trees in
+# 967972f. Why this fix: a directory of small files IS the cheap window - the
+# newest 10 paths are the newest 10 entries, with no index to go stale and no
+# verify step to forget. Rejected: porting it to the trees, which re-adds a
+# second copy of every entry plus the staleness check that guards it. Cost:
+# open-issues.json, the one computed slice, is now a grep (references/
+# standards.md, "Why a fix is a new entry"). A project vendored before this
+# keeps its old copy; it is not ours to delete, and it no longer refreshes.
+readonly VENDORED=(lib/common.sh log-issue.sh backlog.sh)
+# The CI workflow is opt-in, behind --ci. It runs the vendored check verb, so it
+# only means something in a repository hosted where GitHub Actions runs; putting
+# a workflow into every scaffolded project would be a red X on hosts that never
+# asked for one. Create-if-absent: a workflow a project has edited is its own.
+readonly CI_TEMPLATE="ci/context-check.yml"
+readonly CI_TARGET=".github/workflows/context-check.yml"
+# The Execution Rail, the owner-facing status page for a numbered plan (O-07).
+# What broke: the rail existed only as a template in this skill, so a project
+# had to copy it by hand, and a hand copy of rail.sh.tmpl kept its
+# __PROJECT_NAME__ placeholder - the wrapper then kept its state under
+# ~/.local/state/__PROJECT_NAME__/, one directory shared by every project that
+# made the same mistake. Why this fix: scaffold renders the wrapper from the one
+# input it always has, the project directory's name, so no placeholder reaches
+# the project. Rejected: new --rail-title style flags, which are four more
+# inputs for values the owner can edit in report/rail.sh on day one. Cost: the
+# title is the directory name until someone edits it. The engine (report/rail/)
+# is refreshed like .claude/scripts; the wrapper and plan.json are the
+# project's own from the moment they exist and are never overwritten.
+readonly RAIL_TEMPLATE="$TEMPLATE_DIR/rail"
+readonly RAIL_ENGINE=(bin/ledger.sh bin/rail-build.sh assets/template.html)
 
 APPLY=0
 WITH_README=0
@@ -30,6 +76,7 @@ WITH_README=0
 WITH_GITIGNORE=1
 WITH_DOCKERIGNORE=1
 GIT_INIT=0
+WITH_CI=0
 ASSUME_YES=0
 
 usage() {
@@ -48,6 +95,8 @@ Options:
   --no-gitignore     do not create .gitignore (created by default if absent)
   --no-dockerignore  do not create .dockerignore (created by default if absent)
   --git-init         run git init if the project is not already a repository
+  --ci               also install .github/workflows/context-check.yml, which
+                     runs the vendored check verb on every pull request
   --full             shorthand for --with-readme --git-init
   --yes              skip the interview and take the flags as given
   --project DIR      project directory (default: .)
@@ -55,11 +104,15 @@ Options:
   --help
 
 What it installs:
-  CLAUDE.md COMPASS.md BACKLOG.md ISSUES.md NAMING.md
+  AGENTS.md CLAUDE.md COMPASS.md NAMING.md
+  issues/YYYY/MM/     one entry file per issue        (log-issue.sh)
+  backlog/{now,next,later,done}/   one entry file per item (backlog.sh)
   .gitignore and .dockerignore
   .claude/settings.json and .claude/settings.local.json
   .claude/skills.toml    (which skills this project uses - skill-sync installs them)
-  .claude/scripts/   (log-issue.sh, backlog.sh, cache.sh, lib/common.sh)
+  .claude/scripts/   (log-issue.sh, backlog.sh, lib/common.sh)
+  report/rail.sh, report/plan.json, report/rail/   the Execution Rail
+  .github/workflows/context-check.yml   only with --ci
 
 Existing files are APPENDED to, never deleted or overwritten.
 
@@ -76,6 +129,7 @@ while (($#)); do
     --no-gitignore) WITH_GITIGNORE=0; shift ;;
     --no-dockerignore) WITH_DOCKERIGNORE=0; shift ;;
     --git-init) GIT_INIT=1; shift ;;
+    --ci) WITH_CI=1; shift ;;
     --full) WITH_README=1; GIT_INIT=1; shift ;;
     --yes | -y) ASSUME_YES=1; shift ;;
     --help | -h) usage; exit "$PS_OK" ;;
@@ -89,8 +143,8 @@ project=$(ps_resolve_project "${PS_PROJECT:-.}")
 # Section extraction.
 #
 # A template either carries explicit `<!-- scaffold:section=NAME -->` markers,
-# or it does not - in which case its `## ` headings are the sections. CLAUDE.md
-# is deliberately in the second group: it ships verbatim, with no markers added
+# or it does not - in which case its `## ` headings are the sections. AGENTS.md
+# and CLAUDE.md are deliberately in the second group: they ship verbatim, with no markers added
 # to text the user wrote.
 # ---------------------------------------------------------------------------
 
@@ -197,6 +251,24 @@ build_plan() {
   local f
   for f in "${CONTEXT_FILES[@]}"; do plan_context_file "$f"; done
 
+  local d
+  for d in "${ENTRY_DIRS[@]}"; do
+    if [[ ! -d $project/$d ]]; then
+      plan_add "$d/" create "absent"
+    else
+      plan_add "$d/" skip "exists"
+    fi
+  done
+
+  # A monolith is not ours to delete, but it is worth naming: beside the
+  # directories it is a second source of truth, and migrate is the way out.
+  if [[ -f $project/ISSUES.md ]]; then
+    plan_add "ISSUES.md" skip "old monolith - convert with: log-issue.sh migrate"
+  fi
+  if [[ -f $project/BACKLOG.md ]]; then
+    plan_add "BACKLOG.md" skip "old monolith - convert with: backlog.sh migrate"
+  fi
+
   # All three are copied verbatim from a template and never touched again. A
   # file that exists is skipped rather than refreshed: settings.local.json is
   # machine-specific and skills.toml is the project's own declared intent, so
@@ -222,6 +294,21 @@ build_plan() {
     fi
   done
 
+  local r
+  for r in "${RAIL_ENGINE[@]}"; do
+    local dst="$project/report/rail/$r"
+    if [[ ! -e $dst ]]; then
+      plan_add "report/rail/$r" create "absent"
+    elif cmp -s "$RAIL_TEMPLATE/$r" "$dst"; then
+      plan_add "report/rail/$r" skip "up to date"
+    else
+      plan_add "report/rail/$r" refresh "differs from skill version ${PS_TOOL_VERSION}"
+    fi
+  done
+  for r in report/rail.sh report/plan.json; do
+    if [[ -e $project/$r ]]; then plan_add "$r" skip "exists"; else plan_add "$r" create "absent"; fi
+  done
+
   if ((WITH_README)); then
     if [[ -e $project/README.md ]]; then plan_add "README.md" skip "exists"; else plan_add "README.md" create "absent"; fi
   fi
@@ -230,6 +317,9 @@ build_plan() {
   fi
   if ((WITH_DOCKERIGNORE)); then
     if [[ -e $project/.dockerignore ]]; then plan_add ".dockerignore" skip "exists"; else plan_add ".dockerignore" create "absent"; fi
+  fi
+  if ((WITH_CI)); then
+    if [[ -e $project/$CI_TARGET ]]; then plan_add "$CI_TARGET" skip "exists"; else plan_add "$CI_TARGET" create "absent"; fi
   fi
   if ((GIT_INIT)); then
     if [[ -d $project/.git ]]; then plan_add "git repository" skip "already initialised"; else plan_add "git repository" create "git init"; fi
@@ -271,14 +361,16 @@ project-scaffold - installing the agent context layer into:
   $project
 
 Always installed (the context layer):
-  CLAUDE.md     how an agent should behave here
+  AGENTS.md     how an agent should behave here, whatever its runtime
+  CLAUDE.md     a stub that points at AGENTS.md
   COMPASS.md    the map - pointers to everything else, capped at 100 lines
-  BACKLOG.md    Now / Next / Later / Done, managed by backlog.sh
-  ISSUES.md     append-only issue log, newest first, managed by log-issue.sh
+  issues/       one file per issue, month-sharded, managed by log-issue.sh
+  backlog/      one file per item in now/next/later/done, managed by backlog.sh
   NAMING.md     naming conventions, inherited and project-specific
   .gitignore    the shared ignore set, plus the files the scaffold tools create
   .dockerignore the same set, trimmed for a build context
   .claude/      settings, the skills manifest, and a versioned copy of the tools
+  report/       the Execution Rail - rail.sh, an empty plan.json, and its engine
 
 Optional extras:
   README.md     e.g. a title, one-paragraph description, and setup steps
@@ -331,6 +423,46 @@ apply_context_file() {
   esac
 }
 
+# rail_escape <value> -> the value, safe inside a double-quoted bash string.
+# The wrapper assigns each fact as PROJECT="...", so a directory name carrying a
+# quote, a dollar or a backtick would otherwise become code in report/rail.sh.
+# Single-quoted replacements keep bash 5.2's patsub_replacement from reading an
+# & in the name as "the matched text".
+rail_escape() {
+  local v="$1"
+  v=${v//'\'/'\\'}
+  v=${v//'"'/'\"'}
+  v=${v//'$'/'\$'}
+  v=${v//'`'/'\`'}
+  printf '%s' "$v"
+}
+
+# render_rail_wrapper <out> - rail.sh.tmpl with its four facts and its state key filled in.
+render_rail_wrapper() {
+  local out="$1" name; name=$(basename -- "$project")
+  local text; text=$(<"$RAIL_TEMPLATE/rail.sh.tmpl")
+  local project_v title_v eyebrow_v source_v
+  # S-05 L3: the state key that keeps two same-named projects apart; see the
+  # breadcrumb at KEY= in rail.sh.tmpl.
+  ps_mint_unique "$project"
+  local key_v=$PS_MINTED
+  project_v=$(rail_escape "$name")
+  title_v=$(rail_escape "$name")
+  eyebrow_v=$(rail_escape "$name · execution rail")
+  source_v=$(rail_escape "report/plan.json")
+  text=${text//__PROJECT_NAME__/"$project_v"}
+  text=${text//__RAIL_TITLE__/"$title_v"}
+  text=${text//__RAIL_EYEBROW__/"$eyebrow_v"}
+  text=${text//__RAIL_SOURCE__/"$source_v"}
+  text=${text//__RAIL_KEY__/"$key_v"}
+  # Fail loud rather than install a wrapper that still names a placeholder: a
+  # new token added to the template without a line above would otherwise ship.
+  if grep -qE '__(PROJECT_NAME|RAIL_[A-Z]+)__' <<<"$text"; then
+    ps_die "$PS_IO" "template_unrendered" "rail.sh.tmpl carries a placeholder scaffold does not fill"
+  fi
+  printf '%s\n' "$text" >"$out"
+}
+
 apply_plan() {
   mkdir -p "$project/.claude/scripts/lib"
 
@@ -338,8 +470,15 @@ apply_plan() {
   for i in "${!PLAN_FILES[@]}"; do
     local f="${PLAN_FILES[i]}" a="${PLAN_ACTIONS[i]}"
     case $f in
-      CLAUDE.md | COMPASS.md | BACKLOG.md | ISSUES.md | NAMING.md)
+      AGENTS.md | CLAUDE.md | COMPASS.md | NAMING.md)
         apply_context_file "$f" "$a" ;;
+      */)
+        # Entry directories: mkdir -p plus a .gitkeep, so an empty tree
+        # survives git. Existing directories are skipped in the plan.
+        if [[ $a == create ]]; then
+          mkdir -p "$project/$f" || ps_die "$PS_IO" "mkdir_failed" "cannot create $project/$f"
+          [[ -e $project/$f.gitkeep ]] || : >"$project/$f.gitkeep"
+        fi ;;
       .claude/settings.json | .claude/settings.local.json | .claude/skills.toml)
         if [[ $a == create ]]; then
           local base="${f#.claude/}"
@@ -363,6 +502,32 @@ apply_plan() {
           ps_atomic_install "$s" "$project/.claude/scripts/$rel"
           chmod +x "$project/.claude/scripts/$rel" 2>/dev/null || true
         fi ;;
+      report/rail/*)
+        if [[ $a == create || $a == refresh ]]; then
+          local rel="${f#report/rail/}"
+          mkdir -p "$project/report/rail/${rel%/*}" || ps_die "$PS_IO" "mkdir_failed" "cannot create $project/report/rail/${rel%/*}"
+          local s; s=$(ps_tempfile)
+          cat -- "$RAIL_TEMPLATE/$rel" >"$s"
+          ps_atomic_install "$s" "$project/report/rail/$rel"
+          [[ $rel == bin/* ]] && { chmod +x "$project/report/rail/$rel" 2>/dev/null || true; }
+        fi ;;
+      report/rail.sh)
+        if [[ $a == create ]]; then
+          mkdir -p "$project/report" || ps_die "$PS_IO" "mkdir_failed" "cannot create $project/report"
+          local s; s=$(ps_tempfile)
+          render_rail_wrapper "$s"
+          ps_atomic_install "$s" "$project/report/rail.sh"
+          chmod +x "$project/report/rail.sh" 2>/dev/null || true
+        fi ;;
+      report/plan.json)
+        # An empty array, which rail-build.sh accepts: the page renders with no
+        # steps until the plan is written, rather than failing to build.
+        if [[ $a == create ]]; then
+          mkdir -p "$project/report" || ps_die "$PS_IO" "mkdir_failed" "cannot create $project/report"
+          local s; s=$(ps_tempfile)
+          printf '[]\n' >"$s"
+          ps_atomic_install "$s" "$project/report/plan.json"
+        fi ;;
       README.md)
         if [[ $a == create ]]; then
           local s; s=$(ps_tempfile)
@@ -380,6 +545,15 @@ apply_plan() {
           local s; s=$(ps_tempfile)
           cat -- "$tmpl" >"$s"
           ps_atomic_install "$s" "$project/$f"
+        fi ;;
+      "$CI_TARGET")
+        if [[ $a == create ]]; then
+          local tmpl="$TEMPLATE_DIR/$CI_TEMPLATE"
+          [[ -r $tmpl ]] || ps_die "$PS_IO" "template_missing" "template not found: $tmpl"
+          mkdir -p "$project/${CI_TARGET%/*}" || ps_die "$PS_IO" "mkdir_failed" "cannot create $project/${CI_TARGET%/*}"
+          local s; s=$(ps_tempfile)
+          cat -- "$tmpl" >"$s"
+          ps_atomic_install "$s" "$project/$CI_TARGET"
         fi ;;
       "git repository")
         if [[ $a == create ]]; then

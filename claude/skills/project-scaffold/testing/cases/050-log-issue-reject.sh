@@ -6,12 +6,11 @@ CASE_NAME=050-log-issue-reject
 source "${SKILL:-/skill}/testing/assert.sh"
 
 p=$(scaffolded_project)
-cp "$p/ISSUES.md" "$WORK/issues-before.md"
 
 # Missing required fields, with stdin closed so no prompt is reachable.
 run 2 "missing required fields" bash -c \
   "exec </dev/null; bash '$SKILL/scripts/log-issue.sh' --project '$p' --title x"
-assert_same "$p/ISSUES.md" "$WORK/issues-before.md" "rejected write left the file untouched"
+assert_count 0 "$(find "$p/issues" -name '*.md' -type f | wc -l)" "rejected write left the tree empty"
 
 run 2 "empty required value" bash -c \
   "exec </dev/null; bash '$SKILL/scripts/log-issue.sh' --project '$p' --title '' --severity low --area a --symptom s --trigger t --cause c --fix f --verify v"
@@ -20,18 +19,21 @@ run 3 "invalid severity" bash -c \
   "exec </dev/null; bash '$SKILL/scripts/log-issue.sh' --project '$p' --title x --severity URGENT --area a --symptom s --trigger t --cause c --fix f --verify v"
 
 run 2 "unknown flag" log_issue --project "$p" --bogus x
-run 6 "resolves an ID that does not exist" log_issue --project "$p" --resolves ISS-9998 \
+run 6 "resolves a suffix that does not exist" log_issue --project "$p" --resolves zzzzz \
   --title x --severity low --area a --symptom s --trigger t --cause c --fix f --verify v
-run 2 "malformed resolves ID" log_issue --project "$p" --resolves nonsense \
+run 2 "malformed resolves ID" log_issue --project "$p" --resolves ISS-0041 \
+  --title x --severity low --area a --symptom s --trigger t --cause c --fix f --verify v
+run 2 "malformed refs ID" log_issue --project "$p" --refs BK-0014 \
   --title x --severity low --area a --symptom s --trigger t --cause c --fix f --verify v
 
-# A file with no sentinel must be refused, not guessed at.
+# A hand-written monolith beside the tree is two sources of truth: refuse and
+# point at migrate rather than write beside it.
 q=$(new_project)
-printf '# ISSUES\n\nHand-written, no marker.\n' >"$q/ISSUES.md"
-cp "$q/ISSUES.md" "$WORK/nosentinel-before.md"
-run 3 "no sentinel is refused" log_issue --project "$q" --title x --severity low --area a \
+printf '# ISSUES\n\nHand-written, old format.\n' >"$q/ISSUES.md"
+cp "$q/ISSUES.md" "$WORK/monolith-before.md"
+run 3 "monolith is refused" log_issue --project "$q" --title x --severity low --area a \
   --symptom s --trigger t --cause c --fix f --verify v
-assert_same "$q/ISSUES.md" "$WORK/nosentinel-before.md" "file without a sentinel untouched"
+assert_same "$q/ISSUES.md" "$WORK/monolith-before.md" "monolith untouched by the refusal"
 
 # A read-only directory must fail loudly rather than half-write.
 r=$(new_project)
@@ -46,6 +48,5 @@ chmod u+w "$r"
 run 0 "log-issue --help" log_issue --help
 run 0 "backlog --help" backlog --help
 run 0 "scaffold --help" scaffold --help
-run 0 "cache --help" cache --help
 
 finish

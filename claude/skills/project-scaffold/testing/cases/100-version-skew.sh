@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The vendored copy only works if drift from the skill is visible. A silently
-# stale copy would write yesterday's format into today's file.
+# stale copy would write yesterday's format into today's tree.
 CASE_NAME=100-version-skew
 source "${SKILL:-/skill}/testing/assert.sh"
 
@@ -21,6 +21,9 @@ assert_same "$SKILL/scripts/log-issue.sh" "$p/.claude/scripts/log-issue.sh" "ven
 run 0 "vendored script runs in place" bash "$p/.claude/scripts/log-issue.sh" --project "$p" \
   --title "via vendored copy" --severity low --area vendor \
   --symptom s --trigger t --cause c --fix f --verify v
-assert_contains "$p/ISSUES.md" "via vendored copy" "vendored copy wrote the entry"
+capture made grep -rl 'via vendored copy' "$p/issues"
+case $made in
+  "$p/issues/"*) _pass "vendored copy wrote the entry" ;;
+  *) _fail "vendored copy wrote the entry" ;; esac
 
 finish
