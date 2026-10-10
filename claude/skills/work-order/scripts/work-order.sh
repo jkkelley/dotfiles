@@ -26,14 +26,14 @@ work-order.sh - deterministic tickets for agent handoff
 
 Usage:
   work-order.sh new     [--project DIR] --title T --type T --problem T --out T...
-                        [--in T...] [--ac T...] [--test-plan T | --test-plan-file F]
-                        [--surface T...]
+                        [--in T...] [--freedom T...] [--ac T...]
+                        [--test-plan T | --test-plan-file F] [--surface T...]
                         [--priority p0|p1|p2|p3] [--assume T...] [--question T...]
                         (--parent WO-... | --top-level)
                         [--depends-on WO-...] [--blocks WO-...]
                         [--from-figma DIR] [--frames GLOB] [--json]
   work-order.sh amend   [--project DIR] --id WO-... [--title T] [--problem T]
-                        [--in T...] [--out T...] [--ac T...]
+                        [--in T...] [--out T...] [--freedom T...] [--ac T...]
                         [--test-plan T | --test-plan-file F] [--json]
   work-order.sh link    [--project DIR] --id WO-... [--parent WO-... | --detach]
                         [--depends-on WO-...] [--blocks WO-...]
@@ -82,6 +82,12 @@ new:
   --out        a non-goal. REQUIRED and repeatable - an empty Out list is what
                lets an agent wander, so it is a validation error, not a default.
   --in         an in-scope item, repeatable
+  --freedom    a degree of freedom: one decision the implementer may make without
+               asking, repeatable. Rendered as `- [free] <text>` under
+               ## Degrees of freedom. Without one the section carries a single
+               `[fixed]` line saying none were declared, so silence never reads
+               as "use your judgement". The body also opens with ## Contents,
+               generated from the template's own headings.
   --ac         a human acceptance criterion, repeatable, phrased as a check
   --from-figma DIR containing wireframe-brief.json and build-plan.json. Both are
                snapshotted into work-orders/evidence/<ID>/ so a later wireframe
@@ -108,6 +114,8 @@ amend:
   --title      rewrites the H1 and the frontmatter title. The slug and the file
                name are minted once by `new` and are left alone.
   --out        replaces the non-goals. As in `new`, an empty Out list is refused.
+  --freedom    replaces the degrees of freedom. `--freedom ""` withdraws them all
+               and the section falls back to its `[fixed]` line.
   --ac         replaces the human criteria. A wireframe-derived frozen block is
                preserved untouched - it is derived from build-plan.json, not
                from the caller.
@@ -218,7 +226,7 @@ title=""; type=""; problem=""; test_plan=""; test_plan_file=""; priority="p2"
 id=""; pr=""; reason=""; status_filter=""; from_figma=""; frames_glob="*"
 parent=""; text=""; answer=""; observed=""; index=""; match=""; superseded_by=""
 no_lavish=0; dry_run=0; detach=0; check=0; top_level=0
-declare -a in_items=() out_items=() ac_items=() surfaces=() assumptions=() questions=()
+declare -a in_items=() out_items=() ac_items=() freedom_items=() surfaces=() assumptions=() questions=()
 declare -a dep_items=() block_items=() no_dep_items=() no_block_items=()
 
 while (($#)); do
@@ -235,6 +243,7 @@ while (($#)); do
     --in) in_items+=("${2-}"); shift 2 ;;
     --out) out_items+=("${2-}"); shift 2 ;;
     --ac) ac_items+=("${2-}"); shift 2 ;;
+    --freedom) freedom_items+=("${2-}"); shift 2 ;;
     --surface) surfaces+=("${2-}"); shift 2 ;;
     --assume) assumptions+=("${2-}"); shift 2 ;;
     --question) questions+=("${2-}"); shift 2 ;;
@@ -289,6 +298,32 @@ bullets() {
   for x in "$@"; do printf '%s%s\n' "$prefix" "$(ps_sanitize_line "$x")"; done
 }
 
+# contents_body - the `## Contents` list, derived from the template's own H2
+# headings so it can never disagree with the body beneath it. A hand-maintained
+# list drifts the first time a section is added; a generated one cannot. The
+# Contents heading itself is left out - a map does not list the map.
+contents_body() {
+  awk '/^## / && $0 != "## Contents" { sub(/^## /, "- "); print }' "$TEMPLATE"
+}
+
+# freedom_body [text...] - the `## Degrees of freedom` section. Each declared
+# freedom is `- [free] <text>`; with none the section says so in one `[fixed]`
+# line rather than going quiet, because an empty section reads as "use your
+# judgement", which is the exact ambiguity the section exists to remove. The
+# tag is the first thing on the line so a reader scanning a ticket can tell
+# free from fixed without reading the sentence.
+readonly WO_FREEDOM_FIXED='- [fixed] None declared: implement exactly as specified; raise a question before deviating.'
+freedom_body() {
+  local x any=0
+  for x in "$@"; do
+    x=$(ps_sanitize_line "$x")
+    [[ -n $x ]] || continue
+    any=1
+    printf -- '- [free] %s\n' "$x"
+  done
+  ((any)) || printf '%s\n' "$WO_FREEDOM_FIXED"
+}
+
 render_body() {
   local criteria="$1" outcome="$2"
   local line token safe_title
@@ -300,6 +335,8 @@ render_body() {
         case $token in
           ID) printf '%s\n' "$id" ;;
           TITLE) printf '%s\n' "$safe_title" ;;
+          CONTENTS) contents_body ;;
+          DEGREES_OF_FREEDOM) freedom_body "${freedom_items[@]+"${freedom_items[@]}"}" ;;
           PROBLEM) printf '%s\n' "$(ps_sanitize_line "$problem")" ;;
           IN) bullets "- " "${in_items[@]+"${in_items[@]}"}" ;;
           OUT) bullets "- " "${out_items[@]+"${out_items[@]}"}" ;;
@@ -517,7 +554,12 @@ cmd_new() {
   local hn=0 a
   for a in "${ac_items[@]+"${ac_items[@]}"}"; do
     hn=$((hn + 1))
-    criteria+=$'\n'"- [ ] \`AC-H${hn}\` *(human)* $(ps_sanitize_line "$a")"
+    # Join with a newline only after something is already there. Unconditional
+    # joining left a leading blank line in every human-only ticket (seen in the
+    # rendered body on 2026-10-10 UTC); `amend` already joins this way, so a
+    # minted and an amended ticket now agree on the section's shape.
+    [[ -n $criteria ]] && criteria+=$'\n'
+    criteria+="- [ ] \`AC-H${hn}\` *(human)* $(ps_sanitize_line "$a")"
   done
   [[ -n $criteria ]] || criteria="_none - approve will refuse until at least one exists_"
 
@@ -595,10 +637,10 @@ cmd_amend() {
   local file; file=$(wo_find "$project" "$id")
   wo_require_status "$file" draft
 
-  ((${#in_items[@]})) || ((${#out_items[@]})) || ((${#ac_items[@]})) \
+  ((${#in_items[@]})) || ((${#out_items[@]})) || ((${#ac_items[@]})) || ((${#freedom_items[@]})) \
     || [[ -n $title || -n $problem || -n $test_plan || -n $test_plan_file ]] \
     || ps_die "$PS_USAGE" "nothing_to_do" \
-      "amend needs one of --title, --problem, --in, --out, --ac, --test-plan, --test-plan-file"
+      "amend needs one of --title, --problem, --in, --out, --freedom, --ac, --test-plan, --test-plan-file"
   require_test_plan_file
 
   # The Out list may be replaced but never emptied, for the same reason `new`
@@ -625,6 +667,9 @@ cmd_amend() {
   if ((${#ac_items[@]})) && ! printf '%s\n' "$body" | grep -q '^## Acceptance criteria[[:space:]]*$'; then
     ps_die "$PS_VALIDATION" "section_missing" "$id has no ## Acceptance criteria section to replace"
   fi
+  if ((${#freedom_items[@]})) && ! printf '%s\n' "$body" | grep -q '^## Degrees of freedom[[:space:]]*$'; then
+    ps_die "$PS_VALIDATION" "section_missing" "$id has no ## Degrees of freedom section to replace"
+  fi
   if [[ -n $problem ]] && ! printf '%s\n' "$body" | grep -q '^## Problem[[:space:]]*$'; then
     ps_die "$PS_VALIDATION" "section_missing" "$id has no ## Problem section to replace"
   fi
@@ -634,7 +679,7 @@ cmd_amend() {
 
   # Every section is built by the same helpers `new` uses, so an amended ticket
   # and a freshly minted one are the same bytes for the same inputs.
-  local f_title="" f_problem="" f_in="" f_out="" f_ac="" f_test=""
+  local f_title="" f_problem="" f_in="" f_out="" f_ac="" f_test="" f_freedom=""
   local safe_title=""
   if [[ -n $title ]]; then
     safe_title=$(ps_sanitize_line "$title")
@@ -644,6 +689,7 @@ cmd_amend() {
   [[ -n $problem ]] && f_problem=$(section_file "$(ps_sanitize_line "$problem")")
   ((${#in_items[@]})) && f_in=$(section_file "$(bullets "- " "${in_items[@]}")")
   ((${#out_items[@]})) && f_out=$(section_file "$(bullets "- " "${out_items[@]}")")
+  ((${#freedom_items[@]})) && f_freedom=$(section_file "$(freedom_body "${freedom_items[@]}")")
   [[ -n $test_plan ]] && f_test=$(section_file "$(printf '```sh\n%s\n```' "$(ps_sanitize_line "$test_plan")")")
   [[ -n $test_plan_file ]] && f_test=$(section_file "$(test_plan_body)")
 
@@ -671,7 +717,7 @@ cmd_amend() {
     printf -- '---\n'
     printf '%s\n' "$body" | awk \
       -v h1="$f_title" -v problem="$f_problem" -v inb="$f_in" -v outb="$f_out" \
-      -v ac="$f_ac" -v testp="$f_test" '
+      -v ac="$f_ac" -v testp="$f_test" -v freedom="$f_freedom" '
       function emit(f,   line) { while ((getline line < f) > 0) print line; close(f) }
       {
         # A replaced section runs to the next heading. **In** and **Out** are
@@ -685,6 +731,8 @@ cmd_amend() {
           print; print ""; emit(problem); print ""; skip = 1; next }
         if (ac != "" && /^## Acceptance criteria[[:space:]]*$/) {
           print; print ""; emit(ac); print ""; skip = 1; next }
+        if (freedom != "" && /^## Degrees of freedom[[:space:]]*$/) {
+          print; print ""; emit(freedom); print ""; skip = 1; next }
         if (testp != "" && /^## Test plan[[:space:]]*$/) {
           print; print ""; emit(testp); print ""; skip = 1; next }
         if (inb != "" && /^\*\*In\*\*[[:space:]]*$/) {

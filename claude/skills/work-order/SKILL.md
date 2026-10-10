@@ -119,7 +119,7 @@ it refuse, is in `references/lifecycle.md`.
 | 4   | `in-review`   | `submit`  | Human review gate on the PR          | `done`                   |
 | 5   | `done`        | `done`    | Every criterion evidenced            | _(archived by `done`)_   |
 | -   | `cancelled`   | `cancel`  | A stated reason. Nothing shipped     | _(archived immediately)_ |
-| —   | `stale`       | `verify`  | Frozen block drifted                 | `ready` via `resync`     |
+| -   | `stale`       | `verify`  | Frozen block drifted                 | `ready` via `resync`     |
 
 `done` is the whole close-out and it runs on the feature branch **before** the PR
 lands, alongside the `context-compaction` update to `CONTEXT_STATE.md`. It stamps
@@ -149,8 +149,36 @@ Two verbs are deliberately not in that list. `evidence` requires `in-progress` o
 `in-review`, because a criterion is an observation of work in flight and ticking
 one on a draft would let `done` pass with nothing ever run. `amend` requires
 `draft`, because a ticket whose scope can move after `approve` is not a contract;
-it replaces the In, Out, Acceptance criteria or Test plan sections wholesale, and
-leaves a wireframe-derived frozen block untouched.
+it replaces the In, Out, Degrees of freedom, Acceptance criteria or Test plan
+sections wholesale, and leaves a wireframe-derived frozen block untouched.
+
+## What a ticket says
+
+Every ticket opens with `## Contents`, a bullet list of the H2 sections beneath it in order.
+It is generated from the template's own headings, never maintained by hand, so it cannot disagree with the body - and `repair` and `reindex` leave it alone, because neither writes a section.
+
+The sections an agent reads, in order: Problem, Scope, Degrees of freedom, Acceptance criteria, Test plan, Assumptions, Open questions, Notes, Outcome.
+
+### Degrees of freedom
+
+A degree of freedom is a decision the implementer may make without asking.
+Everything else in the ticket is fixed: Scope says what to build and what not to, the criteria say what to prove, and between them a junior agent has no way to tell which choices are its own.
+It either asks about everything, which stalls the work, or decides everything, which is how "pick an HTTP client" turns into a dependency nobody approved.
+
+`--freedom` names each free decision, and each one renders as `- [free] <text>`.
+When none are declared the section carries exactly one line, `- [fixed] None declared: implement exactly as specified; raise a question before deviating.`, so silence never reads as "use your judgement".
+A good degree of freedom bounds the choice so that any pick inside it is acceptable without a review.
+
+| Verdict | Line                                                                       | Why                                                               |
+| ------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| GOOD    | `any HTTP client library already in go.mod`                                | the set is closed, and every member is already approved           |
+| GOOD    | `backoff schedule, as long as the ceiling stays under one minute`          | the shape is free, the limit that matters is stated               |
+| GOOD    | `table name, as long as it carries the wh_ prefix the migrations expect`   | names the one constraint and leaves the rest                      |
+| NEVER   | `whatever you think is best`                                               | not a decision but an abdication - nothing is bounded             |
+| NEVER   | `the storage layer`                                                        | a whole area, not a decision; the agent cannot tell free from fixed |
+| NEVER   | `retries`                                                                  | one word names a topic, and a topic is not a choice with a boundary |
+
+If a freedom cannot be written as "X, as long as Y" or "any of this closed set", it is not a freedom: it is an open question, and `--question` is where it goes.
 
 ## Usage
 
@@ -161,6 +189,8 @@ WO=.claude/skills/work-order/scripts/work-order.sh
 bash $WO new --title "Retry failed webhook deliveries" --type bug --parent "$EPIC" \
   --problem "Deliveries that 500 are dropped silently" \
   --in "exponential backoff" --out "changing the payload schema" \
+  --freedom "any HTTP client library already in go.mod" \
+  --freedom "backoff schedule, as long as the ceiling stays under one minute" \
   --ac "a 500 is retried three times then dead-lettered" \
   --test-plan "podman run --rm -v \$PWD:/w -w /w node:22 npm test -- webhooks"
 
@@ -180,6 +210,8 @@ bash $WO new --title "Empty cart state" --type feature --problem "..." --parent 
 bash $WO resolve --id WO-20260805-3f2a --index 1 --answer "v2 only"
 bash $WO amend   --id WO-20260805-3f2a --ac "a 500 is retried three times" \
   --out "changing the payload schema"      # drafts only; replaces the section
+bash $WO amend   --id WO-20260805-3f2a --freedom "any client already in go.mod"
+                                           # same rule: the whole section, drafts only
 bash $WO approve --id WO-20260805-3f2a     # after Lavish review
 bash $WO start   --id WO-20260805-3f2a     # creates feat/<slug>
 bash $WO submit  --id WO-20260805-3f2a --pr 42
@@ -452,11 +484,22 @@ criterion of two is unobserved. It also asserts that the refusal names the verb
 that fixes it, because an error that says what is wrong but not what to run is
 how a hand edit gets invented.
 
+Case 250 covers the Degrees of freedom section and the Contents list. Its
+load-bearing assertions are the fixed line when no freedom is declared - silence
+must never read as "use your judgement" - and that the Contents list is compared
+against the rendered body's own headings rather than against a list typed into
+the test, so the map is proved to agree with the territory. It reuses case 150's
+doctored-template technique to show `render_guard` still refuses an unwired
+`%%DEGREES_OF_FREEDOM%%`.
+
+`testing/SOP.md` carries the why of every case.
+
 ## Bundled resources
 
-- `references/lifecycle.md` — the full status table: setter, gate, legal successors, what it writes, what makes it refuse.
-- `references/ticket.tmpl` — the body skeleton. `new` fills it; nobody edits a ticket by hand. A `%%TOKEN%%` added here without a matching case in `render_body` makes `new` refuse rather than ship the placeholder.
-- `scripts/work-order.sh` — every subcommand.
-- `scripts/lib/wo.sh` — identity, frontmatter, hierarchy, the graph, wireframe binding.
-- `scripts/lib/common.sh` — vendored from project-scaffold so this skill is independently consumable.
-- `settings.local.json.tmpl` — allowlists `work-order.sh` as a whole, so a new subcommand needs no permission change, and deliberately does **not** allowlist raw `git branch -D` / `git push --delete`, so hand-rolled cleanup is not an available path.
+- `references/lifecycle.md` - the full status table: setter, gate, legal successors, what it writes, what makes it refuse.
+- `references/ticket.tmpl` - the body skeleton. `new` fills it; nobody edits a ticket by hand. A `%%TOKEN%%` added here without a matching case in `render_body` makes `new` refuse rather than ship the placeholder. `## Contents` is derived from this file's own H2 headings, so a section added here lists itself.
+- `scripts/work-order.sh` - every subcommand.
+- `scripts/lib/wo.sh` - identity, frontmatter, hierarchy, the graph, wireframe binding.
+- `scripts/lib/common.sh` - vendored from project-scaffold so this skill is independently consumable.
+- `testing/SOP.md` - what each test case runs, what it asserts, and why that failure would matter.
+- `settings.local.json.tmpl` - allowlists `work-order.sh` as a whole, so a new subcommand needs no permission change, and deliberately does **not** allowlist raw `git branch -D` / `git push --delete`, so hand-rolled cleanup is not an available path.
