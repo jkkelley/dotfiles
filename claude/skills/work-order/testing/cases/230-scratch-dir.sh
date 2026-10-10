@@ -25,3 +25,8 @@ run 0 "the scratch directory is removed when the shell exits" \
     [ -n "$p" ] || exit 1
     [ ! -d "$p" ]
   ' _ "$lib"
+# Every case ends with `finish`, and this one did not (found 2026-10-10 UTC while
+# adding case 250): without it the case printed no totals line, so run-tests.sh
+# never counted its checks, and its exit status was that of the last helper call
+# rather than of the checks - a failing assertion here could not fail the suite.
+finish

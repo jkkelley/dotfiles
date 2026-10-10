@@ -160,9 +160,10 @@ It ticks an acceptance criterion, and `done` refuses while any criterion is unch
 A gate is only as good as the moment it may be satisfied.
 
 `amend` requires `draft`.
-It replaces the In, Out, Acceptance criteria or Test plan sections of a ticket that has not been approved yet, which is what a review of a draft needs and what previously had to land as a note contradicting the section above it.
+It replaces the In, Out, Degrees of freedom, Acceptance criteria or Test plan sections of a ticket that has not been approved yet, which is what a review of a draft needs and what previously had to land as a note contradicting the section above it.
 An approved ticket is amended by `reopen`, or by a new ticket that says why: a ticket whose scope can move after approval is not a contract.
 Each repeatable flag replaces its whole section, an empty `Out` list is refused exactly as in `new`, and a wireframe-derived frozen block is carried through untouched because it is derived from `build-plan.json` rather than from the caller.
+`--freedom ""` is the one empty replacement that is accepted: it withdraws every declared freedom and the section falls back to its single `[fixed]` line, because a ticket with no freedoms is a complete ticket where a ticket with no non-goals is not.
 
 ## The frozen block
 
