@@ -798,3 +798,19 @@ podman run --rm --userns=keep-id -v "$DIR:/work:Z" -w /work -e HOME=/tmp \
 The probe (`architect/design/system-dashboard/phone-probe.py` in local-k8s-docs is the worked example) opens the page at the device viewport (iPhone 16 Pro Max: 440 by 956, device scale 3, `is_mobile`, `has_touch`, the iOS user agent, the dark scheme), waits for `networkidle`, and prints observations, never asserts: `innerWidth`, `scrollWidth`, the first elements whose right edge passes the viewport, whether the intended scroller scrolls, the fonts in `document.fonts` that loaded, then a full-page screenshot per engine.
 The page under test needs a `<meta name="viewport">`; an artifact body without one gets it prepended in the mounted copy.
 **What it saves:** the fix and the proof land in one loop instead of a round trip through the user's phone, and the same probe becomes the lane's regression test.
+
+## Testing a local page server with a real browser, in one container
+
+**What is tested:** a tool that serves a page on 127.0.0.1 (the bearings decision page is the worked example at `coq-jev-herdr-plugin/tools/bearings/tests`): the server starts from config into a scratch state dir, the page loads in headless Chromium with zero page errors, an action on the page (queue an answer) reaches the server's files, the tool's second process (a wait loop) reports it, and a second start of the same tier is refused.
+**Why:** a page can answer 200 from `curl` and still be dead in the browser; the bearings page shipped once with a startup script crash that only a browser sees. Server and browser live in the same container so `--network=none` holds and nothing listens on the host.
+**How:** do not hand-write the harness. Scaffold it from templates and fill in cases:
+
+```bash
+claude/skills/container-sandbox/scripts/new-podman-suite.sh --target tools/<name> --name <name>
+claude/skills/container-sandbox/scripts/new-podman-suite.sh --target tools/<name> --name <name> --test-plan > plan.md   # for work-order.sh new --test-plan-file
+```
+
+It writes `tests/Containerfile` (Node Playwright image pinned by digest, `jq`, `python3-jsonschema`, the matching `playwright` package installed at build time), `tests/run-tests.sh` (builds the image once, then `podman run --rm --network=none --userns=keep-id -v tool:/skill:ro,Z -v scratch:/work:Z`), `tests/inside.sh` (the case file: `check` per case, summary line `<name> tests: N passed, M failed`, exit 3 on any failure) and `tests/probe.mjs` (opens the url, answers every non-local request with an empty 200 so a blocked font never counts as a page error, records `pageerror` and console errors, drives the page, polls the server from Node for the result).
+Three traps the templates already carry: ESM `import` ignores `NODE_PATH`, so the probe resolves the global `playwright` through `createRequire`; `waitForFunction` with interval polling treats a promise-returning predicate as true at once, so the probe polls from Node; a process that blocks until an event (a wait loop) gets `timeout` in its case or the suite hangs forever.
+Run the suite from a labelled herdr pane, never backgrounded under an agent: `herdr pane run <pane> "make test"` then `herdr pane wait-output <pane> --regex 'tests: .* failed'`. A process under an agent is invisible and blocks the compaction cycle.
+**What it saves:** the harness, the image pin and the three traps arrive in one command instead of being rediscovered per tool; the test plan block is generated from the same script, so the ticket and the suite cannot disagree.

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Runs inside the test container for __NAME__. /skill is the tool (read-only),
+# /work is scratch, the network is off. One `check` per case; the summary line
+# "<name> tests: N passed, M failed" is what a pane watcher or CI greps.
+set -euo pipefail
+PASS=0; FAIL=0
+ok() { PASS=$((PASS+1)); echo "ok   - $*"; }
+bad() { FAIL=$((FAIL+1)); echo "FAIL - $*" >&2; }
+check() { if "$@"; then ok "${CASE:-$*}"; else bad "${CASE:-$*}"; fi; }
+
+# T0 config lint against its JSON schema, when the tool has one.
+if [ -f /skill/config/__CONFIG__.json ]; then
+  CASE="config/__CONFIG__.json validates against its schema"
+  check python3 -c 'import json,jsonschema; jsonschema.validate(json.load(open("/skill/config/__CONFIG__.json")), json.load(open("/skill/config/__CONFIG__.schema.json")))'
+fi
+[ "${MODE:-all}" = --lint-only ] && { echo "lint: $PASS passed, $FAIL failed"; exit $((FAIL>0?3:0)); }
+
+# T1 ... add cases here. A browser case: start the server with --no-herdr into
+# /work/state, then `node /skill/tests/probe.mjs "$URL" /work/shot.png > /work/probe.json`
+# and assert on its fields (live, errors, queued). On failure dump /work/probe.json to
+# stderr so the pane shows why.
+
+echo "__NAME__ tests: $PASS passed, $FAIL failed"
+[ "$FAIL" = 0 ] || exit 3

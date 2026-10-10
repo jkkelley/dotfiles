@@ -1,0 +1,9 @@
+# Test image for __NAME__: Node plus Playwright browsers, pinned by digest (Rule 15).
+# Human tag: mcr.microsoft.com/playwright:v1.55.0-noble. Built once by run-tests.sh;
+# the suite itself runs with --network=none.
+FROM mcr.microsoft.com/playwright@sha256:b27e719ecbfef153e13fd24e8341736733bf2658b229677eb21ff57ff5d7fb29
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends jq python3-jsonschema __APT_EXTRA__ >/dev/null \
+ && rm -rf /var/lib/apt/lists/* \
+ && npm install -g --no-audit --no-fund playwright@1.55.0 >/dev/null
+# ESM import ignores NODE_PATH; probe.mjs resolves the global package through this.
+ENV PLAYWRIGHT_GLOBAL_MODULES=/usr/lib/node_modules
