@@ -48,6 +48,7 @@ Everything the sweep touches, read before designing it.
 | I12 | Claude in Chrome extension       | Chrome profile `Default`, native host `%USERPROFILE%\.claude\chrome\chrome-native-host.bat`  | Proton and LinkedIn tabs, one tab per seat                                    |
 | I13 | Gmail connector                  | claude.ai Gmail MCP, reachable from WSL Claude                                               | Gmail seat; no browser needed                                                 |
 | I14 | Repo rules                       | `CLAUDE.md` Rules 14, 15, 17, 18, 19                                                         | Podman testing, pinned images, entry point, herdr-first, surface by runtime   |
+| I15 | Screen capture script | `%USERPROFILE%\inbox-triage-20261015\screen.ps1`, ported to `claude/workflow/inbox-sweep/bin/screen.ps1` | Windows screenshot of the tab bar, the completion proof for browser seats |
 
 ## 3. Failures this design removes
 
@@ -58,6 +59,8 @@ Everything the sweep touches, read before designing it.
 | F3  | Seats refused prompts without the owner's own words                     | `sweep-init.sh` renders every brief with the owner's words from `owner-words.md` and refuses (`PF-NO-OWNER-WORDS`) if the file is missing                             |
 | F4  | A watcher matched `DONE` inside the echoed prompt                       | Done is a result file that parses and validates against the schema, bridged into a seat record row; the screen is never read for completion                           |
 | F5  | Background watcher jobs broke Rule 18                                   | The controller loop runs in the labeled herdr pane `sweep-ctl`; `make herdr-first` fails the suite on any `&`, `nohup`, `disown` or `setsid`                          |
+| F6  | Closing the blank anchor tab that `tabs_context_mcp` with `createIfEmpty` creates (the owner asked for it) dissolved the seat's tab group and orphaned its working tab; tools then failed with "Tab is not in Claude's tab group for this session" | Rule `tab-anchor`: the anchor is never closed early; the seat navigates it to the work URL and uses it as its first working tab, and closes the group's tabs only at the very end, anchor last. The result records it in `tab_group`, and the schema refuses a browser result that did not |
+| F7  | A seat's own "tab closed" was taken as proof | Completion proof is a Windows screenshot of the tab bar taken by `screen.ps1` before and after the run (R2 baseline, R7 final), read by a verifier, never the seat's say-so |
 
 ## 4. Shape of one run
 
@@ -117,6 +120,7 @@ flowchart TD
   - [ ] Inside herdr - proof: `HERDR_ENV=1` and `herdr workspace list` shows the configured label.
   - [ ] `claude.exe` resolves and runs - proof: `claude.exe --version` output captured.
   - [ ] Chrome is running - proof: `tasklist.exe` row for `chrome.exe`.
+  - [ ] Baseline tab bar captured before any seat starts - proof: `proof/R2-tabbar-<UTC>.png` from `screen.ps1`.
   - [ ] Extension connected - proof: probe output lists at least one browser, tries recorded (max 3).
 
 ### R3 seats
@@ -127,7 +131,8 @@ flowchart TD
   - [ ] Seat started in tab `agent-sweep-<seat>` - proof: seat-link written by the spawner.
   - [ ] Counts before and after recorded, after verified by a second read - proof: `counts.after.verified_at` in the result.
   - [ ] No forbidden mutation - proof: `mutations[]` holds only `marked-read`, enforced by the schema.
-  - [ ] Own tab closed - proof: `tab_closed: true` in the result.
+  - [ ] Anchor tab reused as the first working tab, never closed early - proof: `tab_group.anchor_reused: true` in the result.
+  - [ ] Group closed at the very end, anchor last - proof: `tab_group.closed_anchor_last: true`; the claim is checked by the R7 screenshot, not trusted.
 
 ### R4 watch and bridge
 
@@ -158,12 +163,13 @@ flowchart TD
 - Input: `run.json` with a final status.
 - Output: seat tabs closed, `briefs/` removed, run dir kept for retention, `run.json.cleaned_at` set.
 - Checklist:
-  - [ ] No `agent-sweep-*` tab left for this run - proof: `herdr tab list` captured after close.
+  - [ ] No `agent-sweep-*` herdr tab left for this run - proof: `herdr tab list` captured after close.
+  - [ ] No Claude tab group and no orphaned seat tab left in Chrome - proof: `proof/R7-tabbar-<UTC>.png` from `screen.ps1`, compared with the R2 baseline by the verifier, verdict in `proof/R7-verdict.json`.
   - [ ] Controller pane left open showing the final summary line - proof: pane title `sweep-ctl <run-id> <status>`.
 
 ## 6. Status code map
 
-Seat codes appear in a result's `status`; run codes in `summary.json.status`; preflight codes in `preflight.json`.
+Seat codes appear in a result's `status`; run codes in `summary.json.status`; preflight codes in `preflight.json`; clean codes in `proof/R7-verdict.json`.
 
 | Code                 | Level     | Meaning                                                                   | Who acts                                                                       |
 | -------------------- | --------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -179,7 +185,7 @@ Seat codes appear in a result's `status`; run codes in `summary.json.status`; pr
 | `FAILED-SCHEMA`      | seat      | The result did not validate after 3 rewrite requests                      | Orchestrator                                                                   |
 | `SKIPPED`            | seat      | Not started because preflight said `PF-NO-BROWSER`                        | Nobody beyond the `BLOCKED-NO-BROWSER` card                                    |
 | `RUN-RUNNING`        | run       | Controller is between R1 and R7                                           | Nobody                                                                         |
-| `RUN-OK`             | run       | Every seat `OK`                                                           | Nobody                                                                         |
+| `RUN-OK`             | run       | Every seat `OK` and R7 returned `CLEAN-OK`                                | Nobody                                                                         |
 | `RUN-PARTIAL`        | run       | At least one seat `OK` and at least one not                               | Orchestrator for `PARTIAL`, `TIMEOUT`, `FAILED-*`; owner for `BLOCKED-*` cards |
 | `RUN-BLOCKED`        | run       | No seat `OK`, at least one `BLOCKED-*` or `SKIPPED`                       | Owner, through the cards                                                       |
 | `RUN-FAILED`         | run       | No seat `OK` and none blocked, or the controller itself failed            | Orchestrator                                                                   |
@@ -189,6 +195,10 @@ Seat codes appear in a result's `status`; run codes in `summary.json.status`; pr
 | `PF-NO-CHROME`       | preflight | Chrome not running; browser seats `SKIPPED`                               | Owner, through one card                                                        |
 | `PF-NO-BROWSER`      | preflight | Extension not connected after 3 tries; browser seats `SKIPPED`            | Owner, through one card                                                        |
 | `PF-NO-OWNER-WORDS`  | preflight | `owner-words.md` missing; the run stops before any seat                   | Orchestrator restores it from its backup                                       |
+| `CLEAN-OK`           | clean     | R7 screenshot shows no Claude tab group and no tab beyond the R2 baseline | Nobody |
+| `CLEAN-TABS-LEFT`    | clean     | A seat group is still open in the R7 screenshot; the controller asks the seat pane to close it, up to 3 times | Orchestrator |
+| `CLEAN-ORPHAN-TAB`   | clean     | A seat tab is open outside any Claude group, so no tool can close it | Owner, through one card: close that tab |
+| `CLEAN-NO-PROOF`     | clean     | `screen.ps1` failed 3 times, so completion is unproven | Orchestrator; the run cannot be `RUN-OK` |
 
 ## 7. Tool chosen for each step
 
@@ -200,6 +210,7 @@ Seat codes appear in a result's `status`; run codes in `summary.json.status`; pr
 | Browser seats    | `claude.exe --chrome` from WSL                                             | The extension's native host is registered to Windows Claude Code only (I11, I12)                         | WSL `claude --chrome` (F1); the separate debug Chrome profile (owner rejected)       |
 | Gmail seat       | WSL `claude` with the Gmail connector                                      | Structured API, no browser, no tab contention                                                            | Gmail in the browser: slower, and contends for the one Chrome                        |
 | Done detection   | Result file validated by `tools/validate-schema.sh`                        | A file either validates or it does not; the screen never decides (F4)                                    | `herdr pane wait-output DONE`                                                        |
+| Completion proof | `screen.ps1` through `powershell.exe`, read by `claude -p --model haiku` against the R2 baseline | A seat's own report is not proof (F7); the screen is what the owner sees; reading an image is a judgment call, the one place a model belongs here (Rule 5) | Trusting `tab_closed`; `tabs_context_mcp` from another session, which cannot see another session's group |
 | Seat supervision | `seat-watch.sh`                                                            | Existing respawn up to `resume_attempts: 3` and retirement on the record row                             | A new watcher                                                                        |
 | Owner decisions  | Bearings cards                                                             | The only permitted owner surface; one card per decision                                                  | Prose in the summary                                                                 |
 | Extension probe  | `claude.exe -p --chrome` asking only for `list_connected_browsers`         | No local API exposes the connection; the probe is one tool call with a 90 second timeout                 | Reading Chrome's extension storage, which is undocumented and moves between versions |
@@ -240,6 +251,7 @@ Run dirs sit on the Windows drive because both runtimes reach it natively; WSL g
 | Seat results              | `<run dir>/results/<seat>.json`                                 | `make prune`                                                                                        |
 | Logs                      | `<run dir>/logs/<node>.log`                                     | `make prune`                                                                                        |
 | Checklist proofs          | `<run dir>/checklist.jsonl`                                     | `make prune`                                                                                        |
+| Tab bar screenshots and verdict | `<run dir>/proof/` | `make prune` |
 | Summary                   | `<run dir>/summary.json`, `summary.md`                          | `make prune`                                                                                        |
 | Seat record rows          | `~/.local/state/dotfiles/execution/records/inbox-sweep-*.jsonl` | `make prune` trims rows older than the retention                                                    |
 | Seat watcher dirs         | `~/.local/state/dotfiles/execution/seats/<pane>/`               | `make clean` removes the run's seat dirs                                                            |
@@ -274,6 +286,8 @@ flowchart TD
   B8 --> B9
   B10 --> B9
   B9 --> B11[B11 live end-to-end run]
+  B0 --> B13[B13 tab bar proof]
+  B13 --> B9
   B12[B12 spike: wake the extension] -.-> B4
 ```
 
@@ -290,8 +304,9 @@ flowchart TD
 | B8   | `sweep-collect.sh`                                                          | B1                             | `summary.json`, `summary.md`                                                                             | Run code table in spec `codes/run` covered by fixtures (test)                                                                     |
 | B9   | `sweep.sh` controller and the `Makefile`                                    | B3 to B8, B10                  | `bin/sweep.sh`, `Makefile`                                                                               | Full stubbed run reaches `RUN-OK` (test); `make sweep` returns in under 5 seconds (test)                                          |
 | B10  | `sweep-clean.sh` for `clean` and `prune`                                    | B0                             | Clean and prune verbs                                                                                    | Prune keeps a 13-day run and removes a 15-day run (test); clean leaves no `agent-sweep-*` tab in the stub (test)                  |
-| B11  | Live end-to-end run                                                         | B9 merged                      | One real `summary.json`                                                                                  | `RUN-OK` or every non-OK seat has its card; no `sent` in any result (`jq`); tabs gone (`herdr tab list`)                          |
+| B11  | Live end-to-end run                                                         | B9 merged                      | One real `summary.json`                                                                                  | `RUN-OK` or every non-OK seat has its card; no `sent` in any result (`jq`); herdr tabs gone and `R7-verdict.json` says `CLEAN-OK`                          |
 | B12  | Spike: can the extension be woken without the owner                         | None                           | A short finding in this design's D3                                                                      | Reproducible command or a documented no                                                                                           |
+| B13  | Tab bar proof: port `screen.ps1`, add `sweep-proof.sh` for capture and verdict | B0 | `bin/screen.ps1`, `bin/sweep-proof.sh`, R2 and R7 hooks | Stubbed `powershell.exe` capture failing 3 times gives `CLEAN-NO-PROOF` (test); a verdict naming an orphan tab gives one `CLEAN-ORPHAN-TAB` card (test); `screen.ps1` carries a breadcrumb naming F6 and F7 |
 
 ## 11. Testing
 
