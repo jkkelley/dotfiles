@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/jkkelley/dotfiles/tree/main/docs/design/inbox-sweep.result.schema.json",
+  "$id": "inbox-sweep.result.schema.json",
   "title": "Inbox sweep seat result",
   "description": "One seat's result record for one inbox sweep run. Written by the seat to <run dir>/results/<seat>.json, validated by sweep-watch.sh before it counts as done. Status codes are defined in docs/design/inbox-sweep.md section 6.",
   "type": "object",
