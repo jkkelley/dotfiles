@@ -4,15 +4,15 @@
   "slug": "test-timed-run-every-target-of-claude-workflow-a",
   "title": "Test - timed-run: every target of claude/workflow/a2a.mk runs through the timing wrapper",
   "type": "test",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:06:11+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/test-timed-run-every-target-of-claude-workflow-a",
+  "pr": 268,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -63,8 +63,10 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+- [x] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
+  - observed `2026-10-16` TP-1: wrapped-target count 5, exit 0. TP-2: 'WARN bus unreachable' printed for start and end of probe, rc=0.
+- [x] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+  - observed `2026-10-16` run output written with frontmatter to /home/luna/.local/state/zenith/log/2026/10/20261016-090524-wo-6e55-timed-run-a2a-mk-plan.md
 
 ## Test plan
 
