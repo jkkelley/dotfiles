@@ -36,6 +36,7 @@
 - [The wo defaults](#the-wo-defaults)
 - [420-code-dir-checks](#420-code-dir-checks)
 - [430-approve-make-wildcard-include](#430-approve-make-wildcard-include)
+- [450-code-dir-worktree](#450-code-dir-worktree)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -244,3 +245,8 @@ Why: WO-20261016-2d63 passed in its code worktree but `done` ran in the business
 
 `approve` passes a make target defined in a file reached through `-include $(wildcard $(D)mk/*.mk)` where `D` is the including makefile's own directory, and still refuses (exit 3) a target that is not defined.
 Why: wiki-process was refused as tool_missing although `make -n wiki-process` exits 0 on main (WO-20261016-0f38).
+
+## 450-code-dir-worktree
+
+`approve`, `check`, `evidence` and `done` on a ticket with a repo run in a detached worktree of `--code-dir` at freshly fetched origin/main, the open PR head, or `--code-ref`; the checkout's working tree is never read, `code_fetch_failed` follows three failed fetches, and no worktree is left behind.
+Why: a stale or dirty code checkout passed approve for tools not on main, and done in the wrong tree failed WO-20261016-64f2 (F44, WO-20261016-318d).
