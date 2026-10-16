@@ -1,0 +1,11 @@
+{
+  "schema": "herdr-bus/config/1",
+  "nats_url": "nats://127.0.0.1:4222",
+  "stream": "LINE",
+  "subject_root": "herdr",
+  "consumer": "herdr-bus-notify",
+  "nats_box_image": "docker.io/natsio/nats-box@sha256:71ea2fc4bc84e1bebac817e0b0a6d5d7a0ad93b6dc50c7041e0d80e489933072",
+  "owner_statuses": ["blocked"],
+  "reconcile_s": 30,
+  "state_dir": "~/.local/state/zenith/herdr-bus"
+}
