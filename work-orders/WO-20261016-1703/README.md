@@ -12,4 +12,4 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-5328` | draft | p1 | - | [Inbox sweep B12 - spike, can the extension be woken without the owner](WO-20261016-5328-inbox-sweep-b12-spike-can-the-extension-be-woken.md) |
 | `WO-20261016-80aa` | draft | p1 | - | [Inbox sweep B18 - live first LinkedIn send](WO-20261016-80aa-inbox-sweep-b18-live-first-linkedin-send.md) |
 | `WO-20261016-41f2` | ready | p1 | WO-20261016-61ae | [Inbox sweep B21b - integer schema_version on every built record with migrations](WO-20261016-41f2-inbox-sweep-b21b-integer-schema-version-on-every.md) |
-| `WO-20261016-61ae` | ready | p1 | - | [Inbox sweep B9 - sweep.sh controller, Makefile and README](WO-20261016-61ae-inbox-sweep-b9-sweep-sh-controller-makefile-and-.md) |
+| `WO-20261016-61ae` | in-progress | p1 | - | [Inbox sweep B9 - sweep.sh controller, Makefile and README](WO-20261016-61ae-inbox-sweep-b9-sweep-sh-controller-makefile-and-.md) |
