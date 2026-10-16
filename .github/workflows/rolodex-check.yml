@@ -1,4 +1,5 @@
 # Fast check: a new script must carry the six header keys (name, purpose, inputs, outputs, writes-to, cleanup).
+# Also fails when git tracks a path .gitignore excludes (tracked-ignored-check).
 # It reads the diff and writes nothing. The full header drafting is `make rolodex-headers WRITE=1`.
 name: rolodex check
 
@@ -22,3 +23,4 @@ jobs:
         with:
           fetch-depth: 0
       - run: make rolodex-check BASE=origin/${{ github.base_ref }}
+      - run: make tracked-ignored-check
