@@ -92,4 +92,33 @@ bash "$L" --run $run >/dev/null; check 4 "$(rows)" "AC-H1: ledger after qualify 
 
 # AC-H4: integer schema_version everywhere
 check 0 "$(jq -s '[.[] | select((.schema_version | type) != "number" or (.schema_version | floor) != .schema_version)] | length' "$D/leads.jsonl")" "AC-H4: every leads.jsonl row has an integer schema_version"
+
+# B21d (design 18, R3): lead-ledger.sh is the only writer of leads.jsonl, and `append` is an idempotent upsert by lead_id.
+# AC-H1: no script in bin/ other than lead-ledger.sh redirects into, moves onto, or tees into leads.jsonl.
+# shellcheck disable=SC2016 # the patterns hold literal $LEADS, single quotes are the point
+writes_leads() { grep -vE '^[[:space:]]*#' "$1" | grep -qE '(>>?|\btee\b|\bmv\b|\bcp\b)[^|;]*(\$LEADS|\$\{LEADS|leads\.jsonl)'; }   # comment lines do not write
+writers=""; for f in "$R"/bin/*.sh; do [ "$(basename "$f")" = lead-ledger.sh ] || ! writes_leads "$f" || writers="$writers $f"; done
+check "" "$writers" "AC-H1: no bin/ script but lead-ledger.sh writes leads.jsonl"
+# the check can fail: a planted writer is found
+mkdir -p "$T/fake"; printf "%s\n" "echo x >>\"\$LEADS\"" >"$T/fake/w.sh"
+writes_leads "$T/fake/w.sh"; check 0 "$?" "AC-H1: the writer pattern does catch a redirect into \$LEADS"
+grep -q 'lead-ledger.sh" append' "$R/bin/lead-qualify.sh"; check 0 "$?" "AC-H2: lead-qualify.sh calls lead-ledger.sh append"
+grep -q 'lead-ledger.sh" append' "$R/bin/lead-followup.sh"; check 0 "$?" "AC-H2: lead-followup.sh calls lead-ledger.sh append"
+# AC-H3: the same row twice leaves one row, byte for byte unchanged
+row='{"schema_version":1,"lead_id":"lead-aaaaaaaaaaaa","thread_key":"k","code":"LD-NEW","reason":"r"}'
+before="$(cat "$D/leads.jsonl")"
+printf '%s\n' "$row" | bash "$L" append --run $run; check 0 "$?" "AC-H3: append exits 0"
+printf '%s\n' "$row" | bash "$L" append --run $run
+check $(( $(wc -l <"$D/leads.jsonl") )) "$(( $(wc -l <<<"$before") + 1 ))" "AC-H3: the same row twice adds exactly one row"
+check 1 "$(jq -s '[.[] | select(.lead_id == "lead-aaaaaaaaaaaa")] | length' "$D/leads.jsonl")" "AC-H3: and it is one row for that lead"
+# a changed row replaces its predecessor in place instead of adding a second
+printf '%s\n' "${row/LD-NEW/LD-CLOSED}" | bash "$L" append --run $run
+check 1 "$(jq -s '[.[] | select(.lead_id == "lead-aaaaaaaaaaaa")] | length' "$D/leads.jsonl")" "AC-H3: an updated row replaces, never duplicates"
+check LD-CLOSED "$(jq -r 'select(.lead_id == "lead-aaaaaaaaaaaa") | .code' "$D/leads.jsonl")" "AC-H3: and carries the new value"
+# a row without a lead_id or an integer schema_version is refused and nothing is written
+sum="$(sha256sum "$D/leads.jsonl")"
+echo '{"schema_version":1,"code":"x"}' | bash "$L" append --run $run 2>/dev/null; check 2 "$?" "append refuses a row with no lead_id"
+echo '{"schema_version":"1","lead_id":"lead-bbbbbbbbbbbb"}' | bash "$L" append --run $run 2>/dev/null; check 2 "$?" "append refuses a non-integer schema_version"
+check "$sum" "$(sha256sum "$D/leads.jsonl")" "a refused append leaves leads.jsonl untouched"
+check no "$([ -e "$D/leads.jsonl.lock" ] && echo yes || echo no)" "append leaves no lock behind"
 finish

@@ -5,13 +5,21 @@
 #
 #   lead-ledger.sh --run <run-id>                    record every thread in reply/linkedin.md as one LD-NEW row
 #   lead-ledger.sh gate --run <run-id> --lead <id>   exit 0 only if that lead is LD-QUALIFIED (the drafting step's guard)
+#   lead-ledger.sh append --run <run-id>             upsert the lead rows read from stdin (JSONL) into leads.jsonl, by lead_id
+#
+# This script is the ONLY writer of leads.jsonl (design 18, ruling R3, node B21d). lead-qualify.sh and lead-followup.sh
+# change rows by piping them to `append`, so a change to the file's shape or location is a change to this one file.
+# append: a row whose lead_id is new is added at the end; a row whose lead_id exists replaces that row in place; a row
+# identical to the stored one changes nothing, so the same row twice leaves one row. Each row must carry a lead_id and an
+# integer schema_version or nothing is written (exit 2). Rejected alternative: pure append-only rows with the last one
+# winning; every reader here counts rows per thread, so the file keeps exactly one row per lead.
 #
 # Reads <run dir>/reply/linkedin.md, the L1 output (design 14.3): one block per conversation. A block starts at a `## ` line;
 # inside it the lines `Thread: <url>`, `Sender: <name>` and `Last message: <date>` (optional leading `- `) are fields and
 # every other line is the thread text. The text is DATA: it is stored and matched by lead-qualify.sh, never executed or
 # followed as an instruction.
 #
-# Output: <run dir>/leads.jsonl, one row per thread, rewritten whole through a temp file and mv so no reader sees half a row.
+# Output: <run dir>/leads.jsonl, one row per thread, swapped in whole through a temp file and mv so no reader sees half a row.
 # The thread key is the thread URL, or sender|last message when the block has none; lead_id is "lead-" plus the first 12 hex
 # of sha256(key), so the same thread is the same lead on every rerun. A thread already in leads.jsonl is left exactly as it
 # is: a rerun must not push a qualified or terminal lead back to LD-NEW. Rejected alternative: append-only event rows with
@@ -32,9 +40,9 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=sweep-lib.sh
 . "$HERE/sweep-lib.sh"
 
-usage() { echo "usage: lead-ledger.sh --run <run-id> | gate --run <run-id> --lead <lead-id>" >&2; exit 2; }
+usage() { echo "usage: lead-ledger.sh --run <run-id> | gate --run <run-id> --lead <lead-id> | append --run <run-id> < rows.jsonl" >&2; exit 2; }
 mode=ingest
-if [ "${1:-}" = gate ]; then mode=gate; shift; fi
+if [ "${1:-}" = gate ] || [ "${1:-}" = append ]; then mode="$1"; shift; fi
 run="" lead=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -49,6 +57,32 @@ RUN_DIR="$root/$run"
 LEADS="$RUN_DIR/leads.jsonl"
 [ -d "$RUN_DIR" ] || { echo "lead-ledger: no run $RUN_DIR" >&2; exit 3; }
 export SWEEP_RUN_DIR="$RUN_DIR"
+
+# upsert <rows file>: merge JSONL rows into $LEADS by lead_id (see header). Locks with mkdir (atomic on every platform, Rule 17)
+# so two writers never interleave, and swaps the file in through a temp file and mv so no reader sees half a row.
+upsert() {
+  local n=0 lock="$LEADS.lock"
+  jq -e -s 'all(.[]; (.lead_id | type) == "string" and (.schema_version | type) == "number" and (.schema_version | floor) == .schema_version)' "$1" >/dev/null \
+    || { echo "lead-ledger: append rows need a lead_id and an integer schema_version" >&2; exit 2; }
+  until mkdir "$lock" 2>/dev/null; do n=$((n + 1)); [ "$n" -lt 100 ] || { echo "lead-ledger: $lock held" >&2; exit 3; }; sleep 0.1; done
+  trap 'rmdir "$lock" 2>/dev/null; rm -rf "$SCRATCH"' EXIT
+  touch "$LEADS"
+  jq -c -n --slurpfile add "$1" '
+    reduce $add[] as $r ([inputs];
+      (map(.lead_id) | index($r.lead_id)) as $i
+      | if $i == null then . + [$r] elif .[$i] == $r then . else .[$i] = $r end) | .[]' "$LEADS" >"$SCRATCH/merged.jsonl"
+  if ! cmp -s "$SCRATCH/merged.jsonl" "$LEADS"; then mv "$SCRATCH/merged.jsonl" "$LEADS.tmp" && mv "$LEADS.tmp" "$LEADS"; fi
+  rmdir "$lock"; trap 'rm -rf "$SCRATCH"' EXIT
+}
+
+if [ "$mode" = append ]; then
+  [ -z "$lead" ] || usage
+  mkdir -p "$RUN_DIR/logs"
+  SCRATCH="$(mktemp -d)"; trap 'rm -rf "$SCRATCH"' EXIT
+  cat >"$SCRATCH/rows.jsonl"
+  upsert "$SCRATCH/rows.jsonl"
+  exit 0
+fi
 
 if [ "$mode" = gate ]; then
   [ -n "$lead" ] || usage
@@ -91,7 +125,6 @@ for blk in "$SCRATCH"/blk.*; do
   log "$id: LD-NEW for $key"
 done
 
-cat "$LEADS" "$SCRATCH/new.jsonl" >"$SCRATCH/all.jsonl"
-mv "$SCRATCH/all.jsonl" "$LEADS.tmp" && mv "$LEADS.tmp" "$LEADS"
+upsert "$SCRATCH/new.jsonl"
 jq -r '[.lead_id, .code] | join(" ")' "$LEADS"
 sweep_check S1 "One LD-NEW row per thread" "$(jq -s '[.[].thread_key] | length == (unique | length)' "$LEADS") unique keys in leads.jsonl"

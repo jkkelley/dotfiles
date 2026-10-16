@@ -93,7 +93,8 @@ while IFS= read -r row; do
   printf '%s\n' "$row" >>"$SCRATCH/out.jsonl"
 done <"$LEADS"
 
-mv "$SCRATCH/out.jsonl" "$LEADS.tmp" && mv "$LEADS.tmp" "$LEADS"
+# leads.jsonl has one writer (design 18, R3, node B21d): lead-ledger.sh. Unchanged rows are no-ops there.
+bash "$HERE/lead-ledger.sh" append --run "$run" <"$SCRATCH/out.jsonl"
 cat "$SCRATCH/moved.txt"
 sweep_check S2 "Rubric read from the owner's file, never inlined" "rubric sha256 $rubric_sha from $(basename "$OWNER_FILE")"
 sweep_check S2 "A reason recorded for every outcome" "$(jq -s '[.[] | select(.code == "LD-QUALIFIED" or .code == "LD-NOT-A-FIT") | select((.reason // "") == "")] | length' "$LEADS") rows without a reason"

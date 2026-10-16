@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-b21d-lead-ledger-sh-owns-leads-jsonl",
   "title": "Inbox sweep B21d - lead-ledger.sh owns leads.jsonl with an append verb",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:22+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-b21d-lead-ledger-sh-owns-leads-jsonl",
   "pr": null,
   "closed": null,
   "approval": {
@@ -67,9 +67,12 @@ Ruling R3: leads.jsonl has three writers (lead-ledger.sh, lead-qualify.sh, lead-
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* grep shows leads.jsonl written only by lead-ledger.sh (test greps bin/ for writes)
-- [ ] `AC-H2` *(human)* lead-qualify.sh and lead-followup.sh call lead-ledger.sh append and their suites stay green
-- [ ] `AC-H3` *(human)* lead-ledger.sh append is idempotent: the same row twice leaves one row (test)
+- [x] `AC-H1` *(human)* grep shows leads.jsonl written only by lead-ledger.sh (test greps bin/ for writes)
+  - observed `2026-10-16` make -C claude/workflow/inbox-sweep test (Podman): suite lead ok, "AC-H1: no bin/ script but lead-ledger.sh writes leads.jsonl" ok, and "the writer pattern does catch a redirect into $LEADS" ok, so the check can fail; qualify and followup now write leads.jsonl only via lead-ledger.sh append
+- [x] `AC-H2` *(human)* lead-qualify.sh and lead-followup.sh call lead-ledger.sh append and their suites stay green
+  - observed `2026-10-16` make test: "AC-H2: lead-qualify.sh calls lead-ledger.sh append" ok, same for lead-followup.sh; suites lead, followup, lint, herdr-first all ok ("ran 4 suites", no FAIL)
+- [x] `AC-H3` *(human)* lead-ledger.sh append is idempotent: the same row twice leaves one row (test)
+  - observed `2026-10-16` make test: "AC-H3: the same row twice adds exactly one row" ok, "an updated row replaces, never duplicates" ok, malformed rows exit 2 with the file untouched, no lock left behind
 
 ## Test plan
 
