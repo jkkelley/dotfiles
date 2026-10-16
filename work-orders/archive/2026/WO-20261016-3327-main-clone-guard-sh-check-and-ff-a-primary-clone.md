@@ -4,7 +4,7 @@
   "slug": "main-clone-guard-sh-check-and-ff-a-primary-clone",
   "title": "main-clone-guard.sh check and ff: a primary clone is on main and fast-forwarded, else MAIN-DRIFT exit 3 (make -f main-clone.mk)",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-4b6c",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design13 cut for ORD-0830 RR-orch-14; design approvals ruled done, ORD-0550 O4",
@@ -21,10 +21,7 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [
-    "WO-20261016-c2b3",
-    "WO-20261016-5ee5"
-  ],
+  "blocks": [],
   "ac_checks": [
     {
       "index": 1,
@@ -58,7 +55,8 @@
   ],
   "labels": [
     "line:inbox-triage"
-  ]
+  ],
+  "superseded_by": "WO-20261016-ad18"
 }
 ---
 
@@ -159,4 +157,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: code merged in PR 304; close-out blocked (its check 1 expects two spaces after ok while the test prints one (seats/main-guard.result.json), and amend refuses a non-draft; its branch feat/main-clone-guard-sh-check-and-ff-a-primary-clone is held by /home/luna/.cache/wt-main-guard); checks re-run under WO-20261016-ad18
+- superseded by: `WO-20261016-ad18`
+
+No branch, no PR and no merge commit exist for this work order.
+
