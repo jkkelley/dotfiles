@@ -4,13 +4,13 @@
   "slug": "dag-state-t4-drift-verb",
   "title": "dag-state T4 - drift verb",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:06:58+00:00",
   "parent": "WO-20261016-41d0",
-  "branch": null,
+  "branch": "feat/dag-state-t4-drift-verb",
   "pr": null,
   "closed": null,
   "approval": {
@@ -71,9 +71,12 @@ Owner, 2026-10-16 UTC: "DAG SHOULD BE EFFORTLESS WITH EASY MIGRATION PLANS FOR U
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_drift.sh'` exit 0; every case prints ok and the last line is the pass count with fail=0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `make spec-check` exits 0 (the specs were read, not edited) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_drift.sh'` exit 0; every case prints ok and the last line is the pass count with fail=0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -C claude/workflow image && podman run ... test_dag_drift.sh: exit 0; 36 cases ok; last line: pass=36 fail=0
+- [x] `AC-H2` *(human)* `make spec-check` exits 0 (the specs were read, not edited) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make spec-check: BASE=origin/main LIMIT=1000 PATTERN='*.spec.xml' bash scripts/spec-check.sh spec-check: nothing in scope rc=0
+- [x] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` git diff --name-only origin/main: claude/workflow/dag/bin/dag-drift.sh claude/workflow/dag/tests/unit/test_dag_drift.sh claude/workflow/pre-push/pre-push.json claude/workflow/pre-push/pre-push.mk claude/workflow/pre-push/pre-push.sh claude/workflow/pre-push/tests/e2e_pre_push.sh claude/workflow/pre-push/tests/test_pre_push.sh work-orders/WO-20261016-0272/WO-20261016-41d0/WO-20261016-bf7f-dag-state-t4-drift-verb.md work-orders/WO-20261016-ebe4/WO-20261016-5222-pre-push-sh-every-fast-gate-on-the-changed-files.md (In files plus the ticket file work-order.sh start rewrote)
 
 ## Test plan
 
