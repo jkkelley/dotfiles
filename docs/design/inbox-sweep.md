@@ -4,6 +4,7 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Contents](#contents)
+- [Design principles 101](#design-principles-101)
 - [1. Goal](#1-goal)
 - [2. Inventory](#2-inventory)
 - [3. Failures this design removes](#3-failures-this-design-removes)
@@ -47,6 +48,11 @@
   - [15.3 Migration plan](#153-migration-plan)
 - [16. No-bottleneck check](#16-no-bottleneck-check)
 - [17. Lead stage](#17-lead-stage)
+- [18. Architect rulings R1 to R4](#18-architect-rulings-r1-to-r4)
+  - [18.1 R1 run-time seats declared per run](#181-r1-run-time-seats-declared-per-run)
+  - [18.2 R2 the live first send has no card of its own](#182-r2-the-live-first-send-has-no-card-of-its-own)
+  - [18.3 R3 one owning writer per record](#183-r3-one-owning-writer-per-record)
+  - [18.4 R4 one typed line per batch](#184-r4-one-typed-line-per-batch)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -74,6 +80,45 @@ Companion files: [`inbox-sweep.spec.xml`](inbox-sweep.spec.xml) (the build spec)
 15. [Versioned nodes and migrations](#15-versioned-nodes-and-migrations)
 16. [No-bottleneck check](#16-no-bottleneck-check)
 17. [Lead stage](#17-lead-stage)
+18. [Architect rulings R1 to R4](#18-architect-rulings-r1-to-r4)
+
+## Design principles 101
+
+Required by `~/AGENTS.md`, Hard rule: Design principles 101; added 2026-10-16 UTC when this design was next touched (rulings R1 to R4).
+One line per principle: how this design meets it, or why it does not yet.
+
+| # | Principle | How this design meets it |
+| - | --------- | ------------------------ |
+| 1 | CI/CD speed is king | Suites are selected per changed file (`make test`); CI runs lint and the full suite |
+| 2 | Parallelism | Seats per account, per conversation and per batch; serial steps carry a reason ([16](#16-no-bottleneck-check)) |
+| 3 | Make and scripts, never hands | Every verb is a Make target over `bin/*.sh` ([8](#8-make-and-script-plan)) |
+| 4 | Portable, generic, reused | Reuses the workflow spawner, seat watcher, Bearings and `screen.ps1`; inventory in [2](#2-inventory) |
+| 5 | Small scope, proven | One build node per concern, each with a checklist and a test ([10](#10-build-dag)) |
+| 6 | Tests where they count | Changed suites locally; the live steps B11 and B18 are the end-to-end tests |
+| 7 | Evidence or silence | Every checklist box names its proof; a seat reports by result record, never by prose |
+| 8 | Specs | `inbox-sweep.spec.xml` and `linkedin-reply.spec.xml`, each under 1000 lines, checked by `make spec-lint` |
+| 9 | DAG and doc design first | Run DAG ([5](#5-run-dag)), reply DAG ([14.2](#142-reply-dag)), lead DAG ([17](#17-lead-stage)) in mermaid |
+| 10 | Migrations and easy node updates | One declaration per node, copy-forward migrations ([15](#15-versioned-nodes-and-migrations)) |
+| 11 | Clean up after itself | Cleanup table per output ([9](#9-where-everything-lives-and-how-it-is-cleaned), [14.7](#147-where-everything-lives-and-how-it-is-cleaned)) |
+| 12 | Frictionless for the owner | One Bearings card per reply plus one typed line per batch ([18.4](#184-r4-one-typed-line-per-batch)) |
+| 13 | Context discipline | Not met yet: seats get compaction only through the workflow spawner's watcher; no per-seat budget is declared here |
+| 14 | Multi-agent, GOOD and NEVER examples | Not met yet: the rules here carry no GOOD and NEVER examples; added when each section is next touched |
+| 15 | XML spec, mermaid, the DAG is the source | Node declarations are what the code reads; `make nodes-check` reports drift for R1 to R7 |
+| 16 | Migration is the test of the design | Every record migrates copy-forward; record owners in [18.3](#183-r3-one-owning-writer-per-record) make that one-file work |
+| 17 | Config and arguments | Scripts take `--run`, env and `config.json`; run-time seats come from a run-local config ([18.1](#181-r1-run-time-seats-declared-per-run)) |
+| 18 | Agent to agent is schema | Seat results validate against `result.schema.json` and `send-result.schema.json` |
+| 19 | Small tickets, disjoint files | Each build ticket declares its files; tickets that share a file run in DAG order |
+| 20 | Worktree, branch, DAG as state | Each ticket on its own worktree and branch; runs pin `nodes.lock/` |
+| 21 | Merge, never park | Green CI on an approved design merges |
+| 22 | Fix or hand off | Bugs are reproduced, fixed in a small PR or filed with the repro (example: WO-20261016-73cd) |
+| 23 | Artifacts outside git | Every run output lives under the run dir or the Windows triage folder, never the repo |
+| 24 | Checkpointing with compaction | Inherited from the workflow spawner for every seat it starts |
+| 25 | No AWS spend | Nothing here uses AWS; it runs locally under herdr and Podman |
+| 26 | Producer and consumer, never push into a pane | Not met: `sweep-watch.sh`, `sweep-proof.sh` and `reply-send.sh` type rewrite and tab requests into seat panes; flagged for re-plan onto the bus |
+| 27 | One pattern for watchers | Not met yet: `sweep-watch.sh` is its own watcher, not a monitors-config entry; flagged with 26 |
+| 28 | XML specs, idempotency, recovery | Specs parse and stay under 1000 lines; reruns add no duplicate card, row or send |
+| 29 | Status codes, work orders | Every outcome is a code in [6](#6-status-code-map) or [14.6](#146-status-code-map); work is cut with the work-order skill |
+| 30 | Ape-sized work, scripted tests, everything up front | Partly met: build tickets carry files, commands, test plan and AC; tests are not yet cut as separate `--type test` work orders |
 
 ## 1. Goal
 
@@ -541,8 +586,8 @@ Owners: L6b is the owner, in the send pane; L1 and L2 are the sweep's LinkedIn s
 | L3 | Owner card | `drafts/<id>.txt` | One Bearings card per draft with options `Send as written`, `Send with my edits`, `Drop`; `RP-AWAITING-OWNER` | Card holds the full draft text, never a summary; rerun adds no duplicate; the card text states that nothing sends until this card is answered |
 | L4 | Apply decision | Card answer in `answers.json` | `decisions.jsonl` row: id, choice, the text, sha256 | `Send as written`: text equals the draft, bytes compared; `Send with my edits`: text equals the owner's words exactly (see [14.5](#145-the-edit-path)); `Drop`: row only, no text file |
 | L5 | Write approval file | A `RP-APPROVED` or `RP-APPROVED-EDITED` row | `<win-home>/inbox-triage-<yyyymmdd>/send-<id>.txt` (or `-r<n>`), `approvals.jsonl` row with the sha256, thread URL and card id | File bytes hash to the row's sha256; file sits under a folder the allow rule matches (path test); an older file for the same thread is marked `RP-SUPERSEDED` |
-| L6 | Send seat | One approval file path | A running seat `agent-reply-<id>` (Windows `claude.exe --chrome`, bypass permissions, launcher `claude-win-chrome`) holding at `RP-AWAITING-CONFIRM` | Preflight `PF-OK` for this seat; the brief names exactly one file and one thread URL; ledger has no `RP-SENT` for this sha256 and thread (the exactly-once check); the pane shows the id, recipient, text and sha256 |
-| L6b | Owner confirm | The owner's typed line in the send pane (or the retry from Recently denied) | Ledger row `RP-CONFIRMED`; the seat proceeds to L7 | Line names the id and is the owner's own message in this session; nothing was typed into LinkedIn before it; this is the only wait ([14.3](#143-nodes)) |
+| L6 | Send seat | One batch of approval file paths ([18.4](#184-r4-one-typed-line-per-batch)) | A running seat `agent-reply-<id>` (Windows `claude.exe --chrome`, bypass permissions, launcher `claude-win-chrome`) holding at `RP-AWAITING-CONFIRM` | Preflight `PF-OK` for this seat; the brief names exactly one file and one thread URL; ledger has no `RP-SENT` for this sha256 and thread (the exactly-once check); the pane shows the id, recipient, text and sha256 |
+| L6b | Owner confirm | The owner's one typed line for the whole batch in the send pane, `Send them` ([18.4](#184-r4-one-typed-line-per-batch)), or the retry from Recently denied | Ledger row `RP-CONFIRMED`; the seat proceeds to L7 | Line names the id and is the owner's own message in this session; nothing was typed into LinkedIn before it; this is the only wait ([14.3](#143-nodes)) |
 | L7 | Clear box and type | Approval file, thread URL | Thread open in the seat's own tab; text typed; `readback-<id>.txt` | Thread found by URL and sender name; last outbound message does not already equal the text; box emptied first, then typed from the file, never from memory |
 | L8 | Character-for-character check | `readback-<id>.txt` and the approval file | `verified-<id>.token` or `RP-TEXT-MISMATCH` | `reply-verify.sh` compares bytes after one fixed newline rule, written down in the script; the seat waits for the token and clicks nothing before it appears |
 | L9 | One Send | The token | Exactly one click on Send | The seat's result records one `send_clicked_at`; the result schema refuses two; the Send is never retried |
@@ -722,7 +767,8 @@ The owner's approval is the only intended wait.
 | R5 collect, then R6 cards, then R7 clean | Each reads what the one before wrote; collect is a join over all seats | Scripts only; no model call |
 | One seat's own tab, read to write | A tab shows one page at a time | Parallelism comes from more tabs, not from this |
 | L4 then L5 for one reply | The file needs the decision | Script only |
-| L6b owner confirm | **The single intended wait.** The owner decides each reply | Per reply; the rest of the replies do not queue behind it |
+| L6b owner confirm | **The single intended wait.** The owner decides on cards, then types one line per batch | Per batch ([18.4](#184-r4-one-typed-line-per-batch)) |
+| L7 to L11 inside one batch | The owner's line approves one session, so one seat sends the batch in its own tab | One reply after another; bounded by `reply_batch_max` |
 | L8 handshake, then L9 Send, for one reply | The click must follow the check, or the check is worthless | Seconds; a file token |
 | One Send per thread | Two Sends to one thread could post twice | Enforced by the ledger check |
 
@@ -732,7 +778,7 @@ The owner's approval is the only intended wait.
 | Gmail and LinkedIn seats | Each its own seat, alongside Proton |
 | L2 drafting | One draft per conversation, independent drafts |
 | L3 cards | All cards raised together; the owner answers in any order |
-| L4 to L12 | One send seat per approved reply, each in its own tab |
+| L4 to L12 | One send seat per batch; batches run side by side ([18.4](#184-r4-one-typed-line-per-batch)) |
 | Migrations | One per record file |
 
 Send seats run at most `reply_send_parallel` at once, a config field with a default of 4.
@@ -788,3 +834,69 @@ Two points where the order and the standing rules meet:
 
 Per lead everything runs in parallel; the owner approval remains the only intended wait ([section 16](#16-no-bottleneck-check)).
 Lead rows are versioned records under [section 15](#15-versioned-nodes-and-migrations) like any other.
+
+## 18. Architect rulings R1 to R4
+
+Rulings from the architect, 2026-10-16T04:25Z, on the questions the build line raised.
+Each one changes this design, so it is recorded here first and then built from here.
+
+### 18.1 R1 run-time seats declared per run
+
+Ruling: "fix it yourself now as config"; `bin/workflow-spawn.sh` is not edited.
+Seat names are known only at run time (`proton-<label>` from the owner's config, `agent-reply-<id>` per approval), and Proton labels are owner data that must not enter this public repo.
+So every run writes a run-local copy of `claude/workflow/config/project.json` that declares that run's seats, and starts each seat with `WORKFLOW_CONFIG` pointing at it (the spawner's existing override).
+The copy lives in the run dir (`<run dir>/seats/project.json`) or the triage folder (`<folder>/seats/project.json`) and is pruned with it.
+Built in WO-20261016-73cd, PR 149.
+
+### 18.2 R2 the live first send has no card of its own
+
+Ruling: "No separate card. B18 is proven on the next real reply the owner approves on Bearings; that approval is the gate."
+B18 needs no extra owner action: it is the first run of `make reply-send` after the owner approves a real reply, together with the batch line in [18.4](#184-r4-one-typed-line-per-batch).
+Until that happens B18 stays open with its live proof marked pending.
+
+### 18.3 R3 one owning writer per record
+
+Ruling: "one owning writer per record. Every record type names the one script that writes it; every other node reads only."
+A record with several writers cannot be migrated by changing one file, which fails principles 10, 16 and 19.
+
+| Record | Owner (the only writer) | Today's other writers, which become readers or callers |
+| ------ | ----------------------- | ------------------------------------------------------ |
+| `run.json` | `sweep-init.sh`, once, at R1 | `sweep.sh` (run status, panes), `sweep-watch.sh` (seat status), `sweep-clean.sh` (`cleaned_at`), `sweep-lib.sh` (`steps`, `win_home`) |
+| `controller.json` (new) | `sweep.sh` | Takes run status, `finished_at` and seat panes out of `run.json` |
+| `seats/<seat>.status.json` (new) | `sweep-watch.sh` | Takes seat status out of `run.json`; `sweep.sh` writes a synthesized `results/<seat>.json` only for a seat it never started |
+| `clean.json` (new) | `sweep-clean.sh` | Takes `cleaned_at` out of `run.json` |
+| `steps/<node>.jsonl`, `checklist/<node>.jsonl` (new) | The script that runs the node, through `sweep-lib.sh` | Replace the shared `run.json.steps` and `checklist.jsonl`; `sweep-collect.sh` reads them all |
+| `preflight.json` | `sweep-preflight.sh` | Already single |
+| `summary.json` | `sweep-collect.sh` | Already single |
+| `proof/R7-verdict.json` | `sweep-proof.sh` | Already single |
+| `questions.json` (Bearings) | `sweep-cards.sh`, through a new `add` verb | `reply-cards.sh`, `sweep-proof.sh` and `reply-send.sh` call `sweep-cards.sh add` |
+| `ledger.jsonl` | `reply-ledger.sh` (new), `append` verb | `reply-cards.sh`, `reply-approve.sh`, `reply-send.sh` and `lead-followup.sh` call it |
+| `leads.jsonl` | `lead-ledger.sh`, `append` verb | `lead-qualify.sh` and `lead-followup.sh` call it |
+| `approvals.jsonl` | `reply-approve.sh` | `reply-send.sh` and `reply-verify.sh` read only |
+| `decisions.jsonl` | `reply-cards.sh` | `reply-approve.sh` and `lead-followup.sh` read only |
+
+```mermaid
+flowchart LR
+  I[sweep-init.sh] -->|writes once| RJ[run.json]
+  C[sweep.sh] --> CJ[controller.json]
+  W[sweep-watch.sh] --> SS[seats/seat.status.json]
+  K[sweep-clean.sh] --> CL[clean.json]
+  RL[reply-ledger.sh append] --> LG[ledger.jsonl]
+  RC[reply-cards.sh] & RA[reply-approve.sh] & RS[reply-send.sh] & LF[lead-followup.sh] --> RL
+  SC[sweep-cards.sh add] --> Q[questions.json]
+```
+
+Once each record has one owner, the integer `schema_version` and its migration ([15.2](#152-schema-versions-and-migrations)) are a change to that owner plus one migration, which is the small ticket principle 19 asks for.
+
+### 18.4 R4 one typed line per batch
+
+Ruling: "Both stay, at minimum cost. The Bearings card is where the owner decides the exact text. The Claude Code classifier only accepts approval typed by the owner in the send pane, so the send seat waits for one typed line per batch of approved replies (for example: Send them), never one per message. Agents never route around the classifier."
+
+- A batch is every approval file in state `RP-READY` when `make reply-send` runs, capped at `reply_batch_max` (config, default 10); the rest wait for the next batch.
+- One send seat, `agent-reply-batch-<batch-id>`, holds the batch. Before it types anything it prints, for every reply, the id, the recipient, the sha256 and the exact text, then `RP-AWAITING-CONFIRM batch <batch-id>`.
+- The owner types `Send them` in that pane. It is accepted only in that pane and only while that batch awaits, and `RP-CONFIRMED` is recorded in the ledger for each file in the batch. Any other line is ignored, never guessed at.
+- The seat then walks the batch one reply after another in its own tab, each reply through L7 to L11 unchanged: its own token, its own single Send, its own proof, its own ledger rows.
+- Exactly-once is still per sha256 and thread URL, so a reply already sent is skipped inside a batch.
+- A failure on one reply ends that reply with its code and the seat moves to the next. A classifier denial stops the whole batch (`RP-DENIED-CLASSIFIER` on every unsent file), because the only recovery is the owner's own action in that session.
+- A seat that dies mid-batch is replaced by a fresh seat for the unsent files only. A fresh session needs the owner's line again, so the fresh seat waits at `RP-AWAITING-CONFIRM` too; nothing is typed for the owner.
+- Why one seat per batch rather than one per reply: the owner's line approves one session only, so one session must do the batch's sends. Batches still run side by side, each with its own line.

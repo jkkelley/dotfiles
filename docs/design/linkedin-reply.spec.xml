@@ -52,11 +52,11 @@
   <approval-delivery>
     <finding at="2026-10-16" tz="UTC">With the autoMode.allow entry in place the classifier still denied the Guru Nagaraj send ([Real-World Transactions], batched click, clear and type). Owner reading of https://code.claude.com/docs/en/auto-mode-config: explicit intent must come from the user's own message in the sending session; prompts relayed by another agent did not clear it. Not re-verified against the live docs by the design seat; B18 is the test.</finding>
     <split>The Bearings card decides wording (as written, edits, drop). The owner's own message in the send pane delivers the approval to the sending session.</split>
-    <option id="A" recommended="true" action="owner types send &lt;id&gt; in the labeled send pane after the pane prints id, recipient, exact text and sha256" per="one line per reply"/>
+    <option id="A" decided="architect R4, 2026-10-16T04:25Z" action="owner types Send them in the labeled batch send pane after the pane prints id, recipient, exact text and sha256 for every reply in the batch" per="one line per batch, never one per reply"/>
     <option id="B" action="owner opens /permissions, Recently denied, selects the denied step, presses r to retry" per="one retry per denied step" use="recovery when A was typed and a step was still denied"/>
-    <agreement>The pane prints the sha256; the line names the id; reply-send.sh records RP-CONFIRMED. A line that does not name a ready id is ignored, never guessed at.</agreement>
-    <single-wait>RP-AWAITING-CONFIRM is the single intended wait in the whole process. It is per reply and blocks no other reply.</single-wait>
-    <ruling-needed>Choice of A or B as the default is raised to the owner as one card.</ruling-needed>
+    <agreement>The pane prints every sha256 and RP-AWAITING-CONFIRM batch &lt;batch-id&gt;; the line is exactly Send them, typed in that pane while that batch awaits; reply-send.sh records RP-CONFIRMED for each file in the batch. Any other line is ignored, never guessed at.</agreement>
+    <single-wait>RP-AWAITING-CONFIRM is the single intended wait in the whole process. It is per batch and blocks no other batch.</single-wait>
+    <batch max-config="reply_batch_max" default="10">Every RP-READY file at make reply-send, up to the cap. One seat agent-reply-batch-&lt;batch-id&gt; per batch; inside it, replies go one after another through L7 to L11, each with its own token, Send, proof and ledger rows. A failure ends that reply only; a classifier denial ends the batch. A replacement seat takes the unsent files and waits for the owner line again. Design 18.4.</batch>
   </approval-delivery>
 
   <!-- 4. codes -->
@@ -110,14 +110,14 @@
       <check box="path matches the Windows allow rule glob" proof="path test"/>
       <check box="older file for the thread marked RP-SUPERSEDED" proof="ledger row"/>
     </node>
-    <node id="L6" name="send seat" after="L5" parallel="per approved reply" script="reply-send.sh" input="one approval file path" output="seat agent-reply-&lt;id&gt; at RP-AWAITING-CONFIRM">
+    <node id="L6" name="send seat" after="L5" parallel="per batch" script="reply-send.sh" input="one batch of approval file paths" output="seat agent-reply-batch-&lt;batch-id&gt; at RP-AWAITING-CONFIRM">
       <check box="launcher claude-win-chrome, bypass" proof="dry-run output"/>
-      <check box="brief names one file and one thread" proof="grep"/>
+      <check box="brief names each file with its one thread, and no other" proof="grep"/>
       <check box="ledger has no RP-SENT for this sha256 and thread" proof="ledger query"/>
-      <check box="pane shows id, recipient, text, sha256" proof="pane read"/>
+      <check box="pane shows id, recipient, text, sha256 for every reply in the batch" proof="pane read"/>
     </node>
-    <node id="L6b" name="owner confirm" after="L6" actor="owner" intended-wait="true" input="owner's own line in the send pane, or Recently denied retry" output="RP-CONFIRMED ledger row">
-      <check box="line names the id and is the owner's own message in this session" proof="ledger row quotes the line"/>
+    <node id="L6b" name="owner confirm" after="L6" actor="owner" intended-wait="true" input="owner's own line Send them in the batch send pane, or Recently denied retry" output="RP-CONFIRMED ledger row per file in the batch">
+      <check box="line is Send them, the owner's own message in this session, while this batch awaits" proof="ledger rows quote the line and the batch id"/>
       <check box="nothing typed into LinkedIn before it" proof="seat log"/>
     </node>
     <node id="L7" name="clear box and type" after="L6b" input="approval file, thread URL" output="thread open in the seat's own tab, text typed, readback-&lt;id&gt;.txt">
@@ -193,6 +193,24 @@
     <lock>sweep-init.sh copies the declarations it needs into &lt;run dir&gt;/nodes.lock/ and writes node_versions into run.json.</lock>
   </node-declarations>
 
+  <!-- record owners, architect R3 2026-10-16T04:25Z, design 18.3 -->
+  <record-owners rule="Each record file has exactly one writing script; every other node reads it or calls the owner's verb.">
+    <record name="run.json" owner="sweep-init.sh" when="once at R1"/>
+    <record name="controller.json" owner="sweep.sh"/>
+    <record name="seats/&lt;seat&gt;.status.json" owner="sweep-watch.sh"/>
+    <record name="clean.json" owner="sweep-clean.sh"/>
+    <record name="steps/&lt;node&gt;.jsonl" owner="the node's script, through sweep-lib.sh"/>
+    <record name="checklist/&lt;node&gt;.jsonl" owner="the node's script, through sweep-lib.sh"/>
+    <record name="preflight.json" owner="sweep-preflight.sh"/>
+    <record name="summary.json" owner="sweep-collect.sh"/>
+    <record name="proof/R7-verdict.json" owner="sweep-proof.sh"/>
+    <record name="questions.json" owner="sweep-cards.sh" verb="add" callers="reply-cards.sh sweep-proof.sh reply-send.sh"/>
+    <record name="ledger.jsonl" owner="reply-ledger.sh" verb="append" callers="reply-cards.sh reply-approve.sh reply-send.sh lead-followup.sh"/>
+    <record name="leads.jsonl" owner="lead-ledger.sh" verb="append" callers="lead-qualify.sh lead-followup.sh"/>
+    <record name="approvals.jsonl" owner="reply-approve.sh"/>
+    <record name="decisions.jsonl" owner="reply-cards.sh"/>
+  </record-owners>
+
   <!-- 9. migrations -->
   <migrations dir="claude/workflow/inbox-sweep/migrations">
     <rule id="schema-version">Every input and output record carries schema_version, an integer.</rule>
@@ -218,16 +236,18 @@
     <serial step="R5 then R6 then R7" why="Each reads what the previous wrote; collect is a join" bound="scripts only"/>
     <serial step="one seat's own tab" why="A tab shows one page at a time" bound="parallelism comes from more tabs"/>
     <serial step="L4 then L5 for one reply" why="The file needs the decision" bound="script only"/>
-    <serial step="L6b owner confirm" why="The owner decides each reply" bound="the single intended wait; per reply; blocks no other reply"/>
+    <serial step="L6b owner confirm" why="The owner decides on cards, then types one line per batch" bound="the single intended wait; per batch; blocks no other batch"/>
+    <serial step="L7 to L11 inside one batch" why="The owner line approves one session, so one seat sends its batch" bound="reply_batch_max replies, one after another"/>
     <serial step="L8 then L9 for one reply" why="The click must follow the check" bound="seconds, a file token"/>
     <serial step="one Send per thread" why="Two Sends could post twice" bound="ledger check"/>
     <parallel step="Proton seats" by="account"/>
     <parallel step="Gmail and LinkedIn seats" by="seat, alongside Proton"/>
     <parallel step="L2 drafting" by="conversation"/>
     <parallel step="L3 cards" by="all raised together, answered in any order"/>
-    <parallel step="L4 to L12" by="approved reply, one send seat each"/>
+    <parallel step="L4 to L12" by="batch, one send seat each"/>
     <parallel step="migrations" by="record file"/>
-    <config name="reply_send_parallel" default="4">Cap on simultaneous send seats. A guess at what LinkedIn tolerates, not a measured limit; B18 and the first real batch tune it.</config>
+    <config name="reply_batch_max" default="10">Replies per batch seat; the rest wait for the next batch.</config>
+    <config name="reply_send_parallel" default="4">Cap on simultaneous batch send seats. A guess at what LinkedIn tolerates, not a measured limit; B18 and the first real batch tune it.</config>
     <note>Waits other than L6b (sleeping extension, classifier denial) are failures with a code and a card, never a queue.</note>
   </bottlenecks>
 
