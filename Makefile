@@ -62,6 +62,13 @@ rolodex:                ## scan the host (config/rolodex.conf) and write SYSTEM_
 rolodex-headers:        ## draft script headers (ROOT=<repo>; dry run unless WRITE=1)
 	python3 scripts/rolodex.py headers --root $(ROOT) $(if $(WRITE),--write)
 
+tracked-ignored-check:  ## fail when git tracks a path .gitignore excludes (a generated view re-added by a stale branch)
+	@# Breadcrumb: #222 untracked work-orders/INDEX.md and epic READMEs, then #223, branched before it,
+	@# re-added INDEX.md through a merge of main, so the index conflicts returned on every ticket PR.
+	@# The guard is generic: any ignored path that is tracked fails, whichever generator wrote it.
+	@# Fix an offender with: make wo-untrack-generated REPO=. APPLY=1 (or git rm --cached <path>).
+	@bad="$$(git ls-files -ci --exclude-standard)"; if [ -n "$$bad" ]; then echo "tracked-ignored-check: tracked but ignored:"; echo "$$bad"; exit 1; fi; echo "tracked-ignored-check: ok"
+
 rolodex-check:          ## fail a new script with no header (ALL=1 checks every script)
 	python3 scripts/rolodex.py check --root $(ROOT) --base $(BASE) $(if $(ALL),--all)
 
