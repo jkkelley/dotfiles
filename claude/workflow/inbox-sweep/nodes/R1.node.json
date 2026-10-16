@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "R1",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/sweep-init.sh",
+  "input_schema": {
+    "path": "~/.config/zenith/inbox-sweep/config.json",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/run.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Config validates against `config.schema.json`",
+      "proof": "validator exit 0 in `logs/init.log`."
+    },
+    {
+      "box": "Owner words present and non-empty",
+      "proof": "sha256 of the file in `run.json.owner_words_sha256`."
+    },
+    {
+      "box": "One brief per enabled seat, each containing the owner words block",
+      "proof": "`grep -c '<owner-words>'` equals seat count in `logs/init.log`."
+    }
+  ],
+  "serial": "The seats need the run dir before anything else can start",
+  "parallel": "none"
+}

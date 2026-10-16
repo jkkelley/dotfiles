@@ -13,3 +13,4 @@ cards	bin/sweep-cards.sh,bin/sweep-lib.sh,tests/lib/,tests/fixtures/results/,tes
 collect	bin/sweep-collect.sh,bin/sweep-lib.sh,tests/fixtures/results/,tests/unit/test_collect.sh	bash tests/unit/test_collect.sh
 watch	bin/sweep-watch.sh,tests/lib/stub-seat-record.sh,tests/unit/test_watch.sh	bash tests/unit/test_watch.sh
 spec-lint	bin/spec-lint.sh,tests/unit/test_spec_lint.sh	bash tests/unit/test_spec_lint.sh
+nodes	bin/node-lib.sh,nodes/,schemas/node.schema.json,tests/fixtures/nodes/,tests/unit/test_nodes.sh	bash tests/unit/test_nodes.sh

@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-b20a-node-schema-loader-nodes-check-",
   "title": "Inbox sweep B20a - node schema, loader, nodes-check and bottleneck-check with R1 to R7 declared",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T03:03:14+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-b20a-node-schema-loader-nodes-check-",
   "pr": null,
   "closed": null,
   "approval": {
@@ -68,10 +68,14 @@ Nodes have no declaration files, so changing a node means editing prose and code
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* each declaration validates against node.schema.json (test)
-- [ ] `AC-H2` *(human)* a script naming an undeclared node fails nodes-check (test)
-- [ ] `AC-H3` *(human)* a serial node with no reason fails bottleneck-check (test)
-- [ ] `AC-H4` *(human)* the design table and a declaration that disagree fail nodes-check (test)
+- [x] `AC-H1` *(human)* each declaration validates against node.schema.json (test)
+  - observed `2026-10-16` test_nodes.sh: ok R1..R7 .node.json validates (make nodes-check); malformed declarations refused (ok AC-H1)
+- [x] `AC-H2` *(human)* a script naming an undeclared node fails nodes-check (test)
+  - observed `2026-10-16` test_nodes.sh: ok AC-H2 a script naming undeclared node R8 fails nodes-check, names rogue.sh and R8
+- [x] `AC-H3` *(human)* a serial node with no reason fails bottleneck-check (test)
+  - observed `2026-10-16` test_nodes.sh: ok AC-H3 serial node with empty reason fails bottleneck-check, names R5
+- [x] `AC-H4` *(human)* the design table and a declaration that disagree fail nodes-check (test)
+  - observed `2026-10-16` test_nodes.sh: ok AC-H4 edited design table and edited declaration each fail nodes-check, naming the node
 
 ## Test plan
 

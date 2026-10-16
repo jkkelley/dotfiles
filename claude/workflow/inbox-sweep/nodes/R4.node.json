@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "R4",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/sweep-watch.sh",
+  "input_schema": {
+    "path": "<runs>/<run-id>/results/",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/logs/watch.log",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Each result parsed and validated, or `FAILED-SCHEMA` after 3 rewrite requests",
+      "proof": "`logs/watch.log`."
+    },
+    {
+      "box": "No seat outlives its deadline",
+      "proof": "`TIMEOUT` row for any seat with no result at deadline."
+    }
+  ],
+  "serial": null,
+  "parallel": "per account"
+}
