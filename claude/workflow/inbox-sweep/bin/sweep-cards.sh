@@ -3,6 +3,13 @@
 # sweep-cards.sh - R6 of the inbox sweep: turn a finished run's results into Getting My Bearings cards.
 #
 #   sweep-cards.sh --run <run-id>
+#   sweep-cards.sh add            cards (one JSON object, or an array) on stdin; prints "added <n>"
+#
+# B21e (ruling R3): this script is the only writer of questions.json. `add` is the one write path; reply-cards.sh,
+# sweep-proof.sh and reply-send.sh call it instead of rewriting the file themselves, and `--run` uses it too. It merges
+# by card id, so a rerun adds nothing and an existing card (answered or not) is never edited or removed. An empty
+# array creates the file if it is missing. Rejected: each caller keeping its own jq merge (four writers, four copies of
+# the idempotence rule, which is how the file lost its single owner).
 #
 # Three kinds of card, each with a stable id so a rerun adds nothing (spec script `sweep-cards.sh`, design section 5 R6):
 #   owner_decisions[]   IS-<run>-<seat>-<Qn>   about/decide/options/rec copied from the seat's own record
@@ -34,14 +41,34 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=sweep-lib.sh
 . "$HERE/sweep-lib.sh"
 
-usage() { echo "usage: sweep-cards.sh --run <run-id>" >&2; exit 2; }
+CARDS="${SWEEP_CARDS_FILE:-$HOME/.bearings/inbox-sweep/questions.json}"
+
+# add_cards <json on stdin>: the single write path. Echoes the number of cards actually added.
+add_cards() {
+  local incoming before after
+  incoming="$(jq -c 'if type == "array" then . else [.] end | if all(.[]; type == "object" and (.id | type == "string" and length > 0)) then . else error("every card needs a string id") end')" || return 2
+  mkdir -p "$(dirname "$CARDS")"
+  [ -f "$CARDS" ] || echo '{"title":"Inbox sweep","items":[]}' >"$CARDS"
+  # A questions.json that is not {items:[...]} used to drop every incoming card and still print "added 0", exit 0: jq and
+  # sweep_json_set failed but nothing checked them (sweep-build UAT, 2026-10-16). It now fails loud with exit 2 and
+  # leaves the file as it was, so the caller sees the cards were not written.
+  local cur
+  before="$(jq -e '.items | length' "$CARDS")" || return 2
+  cur="$(jq -c '[.items[].id]' "$CARDS")" || return 2
+  sweep_json_set "$CARDS" '.items += ([$c[] | select(.id as $i | ($cur | index($i)) == null)] | unique_by(.id) | map(. + {asked:$at}))' \
+    --argjson c "$incoming" --argjson cur "$cur" --arg at "$(sweep_now)" || return 2
+  after="$(jq '.items | length' "$CARDS")"
+  echo "added $((after - before))"
+}
+
+usage() { echo "usage: sweep-cards.sh --run <run-id> | add (cards JSON on stdin)" >&2; exit 2; }
+if [ "${1:-}" = add ] && [ $# -eq 1 ]; then add_cards || { echo "sweep-cards: add: bad input" >&2; exit 2; }; exit 0; fi
 if [ $# -ne 2 ] || [ "$1" != --run ]; then usage; fi
 run="$2"
 [[ $run =~ ^[0-9]{8}T[0-9]{6}Z$ ]] || { echo "sweep-cards: bad run id '$run'" >&2; exit 2; }
 
 root="${SWEEP_RUNS_ROOT:-$(sweep_win_home)/.local/state/zenith/inbox-sweep/runs}"
 RUN_DIR="$root/$run"
-CARDS="${SWEEP_CARDS_FILE:-$HOME/.bearings/inbox-sweep/questions.json}"
 SERVER_JS="${SWEEP_BEARINGS_SERVER:-$HOME/.claude/skills/bearings/scripts/server.mjs}"
 [ -f "$RUN_DIR/summary.json" ] || { echo "sweep-cards: no summary.json in $RUN_DIR" >&2; exit 3; }
 export SWEEP_RUN_DIR="$RUN_DIR"
@@ -106,10 +133,9 @@ candidates="$(
   } | jq -sc 'unique_by(.id)'
 )"
 
-[ -f "$CARDS" ] || echo '{"title":"Inbox sweep","items":[]}' >"$CARDS"
+[ -f "$CARDS" ] || add_cards <<<'[]' >/dev/null
 before="$(jq '.items | length' "$CARDS")"
-sweep_json_set "$CARDS" '.items += ([$c[] | select(.id as $i | ($cur | index($i)) == null)] | map(. + {asked:$at}))' \
-  --argjson c "$candidates" --argjson cur "$(jq -c '[.items[].id]' "$CARDS")" --arg at "$(sweep_now)"
+add_cards <<<"$candidates" >/dev/null
 after="$(jq '.items | length' "$CARDS")"
 log "candidates $(jq length <<<"$candidates"), items before $before, after $after, added $((after - before))"
 
