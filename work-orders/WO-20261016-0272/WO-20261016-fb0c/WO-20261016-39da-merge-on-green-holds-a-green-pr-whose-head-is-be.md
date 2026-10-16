@@ -60,7 +60,10 @@
       "expect": null
     }
   ],
-  "provides": []
+  "provides": [],
+  "labels": [
+    "line:inbox-triage"
+  ]
 }
 ---
 

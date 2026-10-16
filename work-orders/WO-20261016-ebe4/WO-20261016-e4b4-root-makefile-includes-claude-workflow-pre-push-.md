@@ -61,6 +61,9 @@
   ],
   "provides": [
     "make:pre-push"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

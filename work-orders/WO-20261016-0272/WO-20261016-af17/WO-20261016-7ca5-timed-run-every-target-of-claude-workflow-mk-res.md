@@ -23,6 +23,9 @@
   "depends_on": [],
   "blocks": [
     "WO-20261016-8590"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

@@ -38,7 +38,10 @@
       "expect": "ok  local image form valid"
     }
   ],
-  "provides": []
+  "provides": [],
+  "labels": [
+    "line:inbox-triage"
+  ]
 }
 ---
 

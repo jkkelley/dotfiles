@@ -4,13 +4,13 @@
   "slug": "label-every-open-dotfiles-work-order-line-inbox-",
   "title": "Label every open dotfiles work-order line:inbox-triage by one scripted set --tree run over the five roots (ORD-0932 Q2)",
   "type": "chore",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:44:20+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
+  "branch": "feat/8a35-label-every-open-dotfiles-work-order-line-inbox-",
   "pr": null,
   "closed": null,
   "approval": {
@@ -44,7 +44,10 @@
       "expect": null
     }
   ],
-  "provides": []
+  "provides": [],
+  "labels": [
+    "line:inbox-triage"
+  ]
 }
 ---
 

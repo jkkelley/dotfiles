@@ -54,6 +54,9 @@
   ],
   "provides": [
     "claude/skills/work-order/testing/cases/310-local-image-plan.sh"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

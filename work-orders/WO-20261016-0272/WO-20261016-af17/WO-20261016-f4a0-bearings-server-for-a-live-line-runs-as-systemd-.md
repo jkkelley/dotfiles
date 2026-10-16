@@ -71,6 +71,9 @@
     "make:bearings-up",
     "make:bearings-down",
     "make:bearings-status"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

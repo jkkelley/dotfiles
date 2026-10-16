@@ -50,6 +50,9 @@
   "provides": [
     "claude/skills/work-order/testing/cases/320-stale-merged.sh",
     "stale-merged"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

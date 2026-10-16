@@ -63,6 +63,9 @@
   ],
   "provides": [
     "path:claude/workflow/pr-flow/tests/stale-base.test.sh"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

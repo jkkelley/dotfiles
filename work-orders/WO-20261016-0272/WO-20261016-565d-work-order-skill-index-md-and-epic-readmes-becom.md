@@ -26,6 +26,9 @@
   "blocks": [
     "WO-20261016-1844",
     "WO-20261016-1c04"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---
