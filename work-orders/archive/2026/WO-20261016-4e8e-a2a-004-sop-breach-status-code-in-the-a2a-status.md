@@ -4,15 +4,15 @@
   "slug": "a2a-004-sop-breach-status-code-in-the-a2a-status",
   "title": "A2A-004 SOP-breach status code in the a2a status code map",
   "type": "chore",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:44:46+00:00",
   "parent": null,
   "branch": "feat/a2a-004-sop-breach-status-code-in-the-a2a-status",
-  "pr": null,
-  "closed": null,
+  "pr": 155,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat: lavish prohibited for Claude runtime; brief BR-20261016-sop-code is the approval",
@@ -63,7 +63,8 @@ Design principles 101 item 31 makes an error raised without repro or screenshot 
 
 - [x] `AC-H1` *(human)* A2A-004 row exists in claude/workflow/templates/a2a/README.md Status codes table
   - observed `2026-10-16` claude/workflow/templates/a2a/README.md:34 holds the A2A-004 row
-- [ ] `AC-H2` *(human)* PR checks green
+- [x] `AC-H2` *(human)* PR checks green
+  - observed `2026-10-16` gh pr checks 155: all pass or skipping, exit 0
 
 ## Test plan
 
