@@ -4,15 +4,15 @@
   "slug": "close-wo-20261016-5569-seat-up-waits-for-idle-or",
   "title": "Close WO-20261016-5569 (seat-up waits for idle or working, PR 199 merged as 1d672ef): every criterion is evidenced, only done is missing",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T12:10:20+00:00",
   "parent": "WO-20261016-4b6c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/5092-close-wo-20261016-5569-seat-up-waits-for-idle-or",
+  "pr": 350,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design20 close-out leaf for the buffer; design approvals ruled done, ORD-0550 O4",
@@ -104,11 +104,14 @@ Found by infra-design20 inventory: bash claude/skills/work-order/scripts/work-or
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the merged 5569 code is green on main
+- [x] `AC-H1` *(human)* the merged 5569 code is green on main
+  - observed `2026-10-16` make -C claude/workflow grid exit 0, last line ok herdr-grid
   - check: `make -C claude/workflow grid` exit 0 expect /ok herdr-grid/
-- [ ] `AC-H2` *(human)* WO-20261016-5569 is done
+- [x] `AC-H2` *(human)* WO-20261016-5569 is done
+  - observed `2026-10-16` work-order.sh done ran for WO-20261016-5569, archived to work-orders/archive/2026/
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-5569 --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H3` *(human)* the diff holds only work-orders files
+- [x] `AC-H3` *(human)* the diff holds only work-orders files
+  - observed `2026-10-16` diff holds only work-orders/ paths
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan
