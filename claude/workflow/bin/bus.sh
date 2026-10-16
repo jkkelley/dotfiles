@@ -48,9 +48,16 @@ ensure() { # the stream and every configured consumer, created only when missing
     --retention limits --discard old --max-age "$(c .bus.max_age)" --defaults >/dev/null || return 1
   local con
   for con in $(c '.consumers | keys[]'); do
-    nats_ consumer info "$STREAM" "$con" >/dev/null 2>&1 && continue
     local -a f=()
     while read -r code; do f+=(--filter "line.*.event.$code"); done < <(c ".consumers[\"$con\"].codes[]")
+    # Drift repair (item 28, idempotent): a consumer whose filters no longer match config is edited in place, keeping
+    # its position in the stream; created-only-when-missing left new codes (LW-ORDER) undelivered after a config change.
+    local have want
+    if have="$(nats_ consumer info "$STREAM" "$con" -j 2>/dev/null | jq -r '(.config.filter_subjects // [.config.filter_subject]) | sort | join(",")')"; then
+      want="$(c ".consumers[\"$con\"].codes | map(\"line.*.event.\" + .) | sort | join(\",\")")"
+      [ "$have" = "$want" ] || nats_ consumer edit "$STREAM" "$con" "${f[@]}" --force >/dev/null || return 1
+      continue
+    fi
     nats_ consumer add "$STREAM" "$con" --pull --ack explicit --deliver all --wait "$(c ".consumers[\"$con\"].ack_wait")" \
       "${f[@]}" --defaults >/dev/null || return 1
   done

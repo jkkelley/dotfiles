@@ -16,7 +16,9 @@
   "consumers": {
     "line-consume": {
       "ack_wait": "120s",
-      "codes": ["LW-DONE"]
+      "codes": [
+        "LW-DONE"
+      ]
     },
     "orchestrator": {
       "ack_wait": "30s",
@@ -26,12 +28,16 @@
         "LW-ALERT-EXITED",
         "LW-ALERT-DISCOVERY",
         "LW-AC-FAILED",
-        "LW-DOWN-FAILED"
+        "LW-DOWN-FAILED",
+        "LW-ORDER"
       ]
     },
     "architect": {
       "ack_wait": "30s",
-      "codes": ["LW-RULING"]
+      "codes": [
+        "LW-RULING",
+        "LW-PERM-MISSING"
+      ]
     }
   }
 }
