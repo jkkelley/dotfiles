@@ -32,6 +32,7 @@ Prose is for the owner only.
 | A2A-002 | result done, every AC ticked | orchestrator |
 | A2A-003 | result blocked, blockers listed | orchestrator re-routes |
 | A2A-004 | SOP breach: error raised without repro or screenshot evidence; claim dropped | orchestrator files the checklist gap as a work order against the design |
+| DESIGN-GAP | a build brief names no ready work order, or a ready work order lacks a file, command, test plan or AC; seat not started or stopped | orchestrator routes it to the design seat; the design seat cuts or fixes the work order |
 | PERM-MISSING | blocked on a missing permission for approved work; exact permission and evidence attached; node stopped | orchestrator forwards to the architect at once, architect hotfixes, a work order designs it in |
 
 A2A-004 is Design principles 101 item 31 (owner, 2026-10-16 UTC): a claim without a reproduction or clear screenshot is dropped, and the node checklist that let it through is the defect.

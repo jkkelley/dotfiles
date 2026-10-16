@@ -11,6 +11,7 @@ RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:Z" -w
 include mk/line-watch.mk
 include mk/resources.mk
 include a2a-guard/a2a-guard.mk
+include pr-flow/pr-flow.mk
 .PHONY: help image test schema lint herdr-first compaction chain failover test-plan ci-job grid step-time lease treehouse-gate inbox-sweep
 
 help: ## Show targets
@@ -53,8 +54,8 @@ ci-job: image ## CI runs this suite: the gate's selector and the job that calls 
 inbox-sweep: ## Every inbox-sweep suite, for CI
 	@$(MAKE) -s -C inbox-sweep test-all
 
-test: schema lint herdr-first compaction chain failover test-plan ci-job step-time inbox-sweep ## Everything
-	@echo "ok  workflow: schema, lint, herdr-first, compaction, chain, failover, test-plan, ci-job, inbox-sweep"
+test: schema lint herdr-first compaction chain failover test-plan ci-job step-time inbox-sweep pr-flow-lint pr-flow-test ## Everything
+	@echo "ok  workflow: schema, lint, herdr-first, compaction, chain, failover, test-plan, ci-job, inbox-sweep, pr-flow"
 
 # ---- herdr 3x3 grid (docs/design/herdr-grid.md). Inputs are VAR=value; defaults live in config/project.json .workflow.herdr.grid
 need = $(if $($(1)),,$(error $(1)= is required))
