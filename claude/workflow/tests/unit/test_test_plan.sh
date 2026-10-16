@@ -76,5 +76,13 @@ rejects "a case with no intent" "$TMP/nointent.json"
 jq '.out_of_scope = []' "$TMP/filled.json" >"$TMP/noci.json"
 rejects "a plan that names nothing CI covers" "$TMP/noci.json"
 
+# ---- 4. the local image form (RR-orch-18) ----
+jq '.isolation = {runtime: "podman", image: "localhost/dotfiles-workflow-test:1", build: "make -C claude/workflow image", containerfile: "claude/workflow/tests/container/Containerfile"}' "$TMP/filled.json" >"$TMP/local.json"
+if bash "$R/tools/validate-schema.sh" "$S" "$TMP/local.json" 2>"$TMP/err"; then echo "ok  local image form valid"; else echo "FAIL: schema REJECTED the local image form"; cat "$TMP/err"; fail=1; fi
+jq '.isolation.image = "localhost/dotfiles-workflow-test@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"' "$TMP/local.json" >"$TMP/localdigest.json"
+if bash "$R/tools/validate-schema.sh" "$S" "$TMP/localdigest.json" 2>/dev/null; then echo "FAIL: schema ACCEPTED a localhost digest"; fail=1; else echo "ok  rejects a localhost digest"; fi
+jq 'del(.isolation.build, .isolation.containerfile)' "$TMP/local.json" >"$TMP/localnobuild.json"
+if bash "$R/tools/validate-schema.sh" "$S" "$TMP/localnobuild.json" 2>/dev/null; then echo "FAIL: schema ACCEPTED a localhost image with no build"; fail=1; else echo "ok  rejects a localhost image with no build"; fi
+
 [ "$fail" -eq 0 ] || exit 1
 echo "ok  test-plan: template, parser and schema agree; unfilled, unpinned and caseless plans refused"

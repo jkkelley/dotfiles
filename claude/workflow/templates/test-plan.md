@@ -17,6 +17,8 @@ _Test plan from claude/workflow/templates/test-plan.md, shaped by claude/workflo
 
 **Isolation**
 
+_A locally built image uses `- image: localhost/<name>:<tag>` plus `- build: <command>` and `- containerfile: <path>` lines, never a localhost digest (RR-orch-18)._
+
 - runtime: podman
 - image: `<registry>/<name>@sha256:<64 hex digest>` (<human tag at pin time>)
 
