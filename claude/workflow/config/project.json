@@ -15,6 +15,13 @@
       "start_timeout_ms": 60000,
       "prompt_timeout_ms": 120000
     },
+    "launchers": {
+      "claude.exe": {
+        "$comment": "Link claude-win-chrome (docs/design/inbox-sweep.spec.xml launchers). Flags for Windows Claude Code, so the declaration names only the bare launcher. win_home is empty on purpose: the spawner asks Windows for it, and WIN_HOME or a value here overrides.",
+        "win_home": "",
+        "args": ["--chrome", "--dangerously-skip-permissions"]
+      }
+    },
     "principal_pane": "claude-main",
     "watchers": {
       "interval_seconds": 60,

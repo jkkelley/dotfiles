@@ -183,7 +183,34 @@ codex_restrict() {
   args+=(--disable multi_agent --disable multi_agent_v2 -a never)
   if [ "$ro" = 1 ]; then args+=(-s read-only); else args+=(-s workspace-write); fi
 }
+# BREADCRUMB - a link whose launcher is claude.exe is Windows Claude Code, started from a Windows-side directory.
+# What broke: WSL `claude --chrome` never connects, because the Claude in Chrome native host is registered to Windows
+#   Claude Code only (docs/design/inbox-sweep.md F1, spec launcher/claude-win-chrome; seen 2026-10-15). The spawner could
+#   launch only a bare binary name, so a browser seat could not be started at all.
+# Why it mattered: the Proton and LinkedIn sweep seats have no other way to reach the owner's signed-in Chrome.
+# Why this fix: the launcher is resolved to <win-home>/.local/bin/claude.exe, the link's flags come from
+#   workflow.launchers.claude.exe in config/project.json (so the declaration stays runtime-neutral), and the pane first
+#   cd's into a directory under <win-home> (WF_LINK_CWD, else <win-home> itself), because claude.exe started from a WSL
+#   UNC path fails to find its settings. No WSL path is passed as an argument. <win-home> is the config's win_home, else
+#   WIN_HOME, else asked of Windows once through cmd.exe and wslpath. Rejected: hardcoding the owner's profile name.
+# Cost: a claude.exe link cannot start where Windows interop is absent and win_home is not configured; it refuses loudly.
+winclaude_cwd=""
+case "$launcher" in
+  claude.exe)
+    win_home="${WIN_HOME:-$(wf_cfg '.workflow.launchers["claude.exe"].win_home // empty')}"
+    if [ -z "$win_home" ] && command -v cmd.exe >/dev/null 2>&1 && command -v wslpath >/dev/null 2>&1; then
+      win_home="$(wslpath -u "$(cmd.exe /c 'echo %USERPROFILE%' 2>/dev/null | tr -d '\r')" 2>/dev/null || true)"
+    fi
+    [ -n "$win_home" ] || wf_die "link $LINK ($link_id) is claude.exe but the Windows home is unknown; set workflow.launchers[\"claude.exe\"].win_home or WIN_HOME"
+    launcher="$win_home/.local/bin/claude.exe"
+    winclaude_cwd="${WF_LINK_CWD:-$win_home}"
+    case "$winclaude_cwd" in "$win_home"|"$win_home"/*) ;; *) wf_die "link $LINK ($link_id) cwd $winclaude_cwd is not under the Windows home $win_home" ;; esac
+    ;;
+esac
 args=()
+if [ -n "$winclaude_cwd" ]; then
+  while IFS= read -r a; do [ -n "$a" ] && args+=("$a"); done < <(wf_cfg '.workflow.launchers["claude.exe"].args // [] | .[]')
+fi
 case "$kind" in
   claude) [ -n "$model" ] && args+=(--model "$model"); args+=(--allowed-tools "$allow" --disallowed-tools "$deny") ;;
   codex)  [ -n "$model" ] && args+=(-m "$model"); codex_restrict ;;
@@ -206,7 +233,9 @@ printf 'seat %s: link %s/%s %s via %s (herdr kind %s), RAIL_SURFACE=%s\n' "$name
 if [ "$launcher" = "$kind" ]; then
   run herdr agent start "$name" --kind "$kind" --pane "$pane" --timeout "$start_timeout" -- "${args[@]}"
 else
-  run herdr pane run "$pane" "$(printf '%q ' "$launcher" "${args[@]}")"
+  cmd="$(printf '%q ' "$launcher" "${args[@]}")"
+  [ -z "$winclaude_cwd" ] || cmd="cd $(printf '%q' "$winclaude_cwd") && $cmd"
+  run herdr pane run "$pane" "$cmd"
   run herdr agent wait "$pane" --until idle --timeout "$start_timeout"
   run herdr agent rename "$pane" "$name"
 fi
