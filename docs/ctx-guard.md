@@ -18,8 +18,8 @@
 2. Parallelism: the dedupe proof and the spawner change were built by parallel subagents.
 3. Make and scripts: every action is a `make ctx-guard-*` target over `ctx-guard.sh`.
 4. Portable, reused: wraps the existing compaction-guard, no new guard; one `.mk` any repo includes.
-5. Small scope, proven: one wrapper, one spawner hook, dedupe proven in Podman with the real `claude`.
-6. Tests where they count: ctx-guard test and spawner test only; CI runs lint and the full suite.
+5. Small scope, proven: one wrapper, dedupe proven in Podman with the real `claude`.
+6. Tests where they count: ctx-guard test only; CI runs lint and the full suite.
 7. Specs: the XML spec below is far under 1000 lines.
 8. DAG first: the DAG below is the source; the build follows it.
 9. Migrations: install and uninstall are idempotent and backed up; see Migration and updates.
@@ -31,7 +31,7 @@
 15. Migration is the test: install, upgrade (guard release promote) and removal are each one target; no workflow needs a hand rebuild.
 17. Config and arguments: inputs come from `CTX_GUARD_*` variables, a conf file or arguments, passed as `make VAR=value`; nothing hard-coded.
 18. Schemas with defined AC: the result is JSON with `acceptance_criteria [{id, statement, proof_kind, proof}]`; switches to `result.schema.json` when it merges.
-19. Small tickets, disjoint files: files touched are declared (`claude/tools/ctx-guard/*`, `Makefile`, `docs/ctx-guard.md`, `claude/workflow/bin/workflow-spawn.sh`, `claude/workflow/Makefile`, `claude/workflow/tests/unit/test_spawn_ctx_bind.sh`, `container-sandbox/references/hook-dedupe.md`); the two parallel subagents touched disjoint sets, no collision; order follows the DAG.
+19. Small tickets, disjoint files: files touched are declared (`claude/tools/ctx-guard/*`, `Makefile`, `docs/ctx-guard.md`, `container-sandbox/references/hook-dedupe.md`); `workflow-spawn.sh` belongs to seat herdr-grid and is not edited here (architect ruling); order follows the DAG.
 20. Worktree, branch, DAG walk: this ticket ran in its own worktree `~/.cache/wt-dotfiles-ctx-guard` on `feat/ctx-guard-seats`; each node has a checklist and recovery step (Node checklists and recovery), the state file is the truth.
 
 ## DAG
@@ -68,7 +68,7 @@ The state file is the source of truth: `compaction-guard doctor` and `~/.local/s
 Each node is idempotent, so recovery is re-running the target from where it stopped.
 
 - install: [ ] backup written, [ ] install exit 0 within 3 tries, [ ] doctor hooks and tap true. Recover: `make ctx-guard-install`. Runbook: this file, Use.
-- bind: [ ] binding for the pane exists, [ ] name and role set. Recover: `compaction-guard bind --session <id> --name <n> --role <r>`.
+- bind (wired by herdr-grid): [ ] binding for the pane exists, [ ] name and role set. Recover: `compaction-guard bind --session <id> --name <n> --role <r>`.
 - watch: [ ] pane labeled, [ ] no model calls. Recover: `make ctx-guard-watch`.
 
 ## Use
