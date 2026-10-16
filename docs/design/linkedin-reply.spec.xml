@@ -26,6 +26,7 @@
     <owner-order at="2026-10-16" tz="UTC">i need to approve, because i may want the wording changed or updated or drop or all of it, you feel me, so yah, it needs me, thats the dag to this fucking process, doc design first fuvcker, dag this process</owner-order>
     <owner-order at="2026-10-16" tz="UTC">i want agents being the ones to send the message, i don't want to at all ever</owner-order>
     <owner-order at="2026-10-16" tz="UTC">ensure migrations plans and easy updates to the nodes, if not, you cause friction from beginning, speed is the name of the game, no bottlenecks</owner-order>
+    <owner-order at="2026-10-16T02:54Z" tz="UTC">we're basically using Linkedin to fish, get our name (Yieldpoint) out there and hope we can get people to come talk to us so I can get on the phone, all comms on linkedin are driven by agents though, i'm too slow</owner-order>
     <owner-order at="2026-10-16" tz="UTC">xml spec 1000 lins or less unlimited amount, never fuck my shit up</owner-order>
     <goal>Agents draft, the owner approves, edits or drops each reply, agents send exactly the approved text, and agents prove it was sent. The owner only decides.</goal>
     <home>claude/workflow/inbox-sweep/</home>
@@ -295,5 +296,52 @@
       <check box="schema bump without migration fails nodes-check" proof="test"/>
     </node>
   </build-dag>
+
+  <!-- 12. lead-stage -->
+  <lead-stage>
+    <outcome>A conversation that becomes a phone call with the owner. Every post, reply and follow-up aims at it.</outcome>
+    <wraps>The lead stage wraps the reply DAG. Every message, first reply and each follow-up, goes through L2 to L11 and the owner approval; there is no second send path.</wraps>
+    <stage id="S1" name="inbound" output="leads.jsonl row LD-NEW" check="one row per thread, no duplicate on rerun"/>
+    <stage id="S2" name="qualify" input="thread text as data, rubric in owner-words.md" output="LD-QUALIFIED or LD-NOT-A-FIT with reason" check="rubric read from the file; reason recorded; not-a-fit gets no draft"/>
+    <stage id="S3" name="reply" maps-to="L2" check="draft moves toward a call; no YieldPoint tie from the personal profile"/>
+    <stage id="S4" name="owner approval" maps-to="L3 to L6b" intended-wait="true" check="unchanged"/>
+    <stage id="S5" name="send" maps-to="L7 to L10" check="ledger row links the send to the lead id"/>
+    <stage id="S6" name="follow-up" after="RP-SENT and followup_after_days with no reply" output="new draft entering S4 as a new card" check="never sent without its own approval; none after a decline, an answer or a booked call"/>
+    <stage id="S7" name="call booked" output="LD-CALL-BOOKED" check="the time and any calendar event reach the owner as a card first; the thread shows the agreed time"/>
+    <codes>
+      <code id="LD-NEW" meaning="Inbound recorded" acts="agent qualifies"/>
+      <code id="LD-QUALIFIED" meaning="Fits the rubric" acts="agent drafts"/>
+      <code id="LD-NOT-A-FIT" meaning="Rubric rejects; no draft" acts="nobody" terminal="true"/>
+      <code id="LD-REPLIED" meaning="Our reply is out" acts="agent waits then follows up"/>
+      <code id="LD-ANSWERED" meaning="They wrote back" acts="agent drafts the next reply"/>
+      <code id="LD-CALL-PROPOSED" meaning="A call or time is on the table" acts="agent drafts, owner approves"/>
+      <code id="LD-CALL-BOOKED" meaning="Call agreed with a time" acts="owner takes the call" terminal="true"/>
+      <code id="LD-CLOSED" meaning="Owner dropped or lead declined" acts="nobody" terminal="true"/>
+      <code id="LD-COLD" meaning="followup_max spent with no answer" acts="nobody" terminal="true"/>
+    </codes>
+    <config name="followup_after_days" default="3">A guess, to be tuned; not an owner ruling.</config>
+    <config name="followup_max" default="2">A guess, to be tuned; not an owner ruling.</config>
+    <conflict>Purpose is to get the YieldPoint name out; the personal profile never shows YieldPoint and says "my LLC" at most. Personal-profile replies invite the call without the name; the yieldpoint-ai company page carries the name once designed and approved. Both rules stand.</conflict>
+    <parallel by="lead"/>
+    <node-declarations>S1 to S7 are declared under nodes/ like every node, and leads.jsonl rows carry schema_version.</node-declarations>
+  </lead-stage>
+
+  <!-- 11. build-dag (continued) -->
+  <build-dag-lead>
+    <node id="B22" name="lead ledger and qualify" after="B15" files="inbox-sweep/bin/lead-ledger.sh, inbox-sweep/bin/lead-qualify.sh">
+      <input>L1 threads, rubric in owner-words.md</input>
+      <output>leads.jsonl and LD rows</output>
+      <check box="one LD row per inbound thread" proof="test"/>
+      <check box="not-a-fit gets no draft" proof="test"/>
+      <check box="rubric read from the file, never inlined" proof="grep"/>
+    </node>
+    <node id="B23" name="follow-up scheduler" after="B17 B22" files="inbox-sweep/bin/lead-followup.sh">
+      <input>leads.jsonl, ledger</input>
+      <output>follow-up drafts that enter L3 as new cards</output>
+      <check box="due lead gets one draft and one card, never a send" proof="test"/>
+      <check box="declined or answered lead gets none" proof="test"/>
+      <check box="LD-COLD after followup_max" proof="test"/>
+    </node>
+  </build-dag-lead>
 
 </spec>

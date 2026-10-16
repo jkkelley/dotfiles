@@ -23,6 +23,7 @@ Companion files: [`inbox-sweep.spec.xml`](inbox-sweep.spec.xml) (the build spec)
 14. [LinkedIn reply DAG](#14-linkedin-reply-dag)
 15. [Versioned nodes and migrations](#15-versioned-nodes-and-migrations)
 16. [No-bottleneck check](#16-no-bottleneck-check)
+17. [Lead stage](#17-lead-stage)
 
 ## 1. Goal
 
@@ -299,6 +300,9 @@ flowchart TD
   B13 --> B16
   B16 --> B17[B17 reply send controller]
   B17 --> B18[B18 live first send]
+  B15 --> B22[B22 lead ledger and qualify]
+  B22 --> B23[B23 follow-up]
+  B17 --> B23
   B0 --> B19[B19 spec size check]
   B1 --> B20[B20 node declarations]
   B20 --> B21[B21 migration runner]
@@ -333,6 +337,9 @@ B19 to B21 carry the spec size rule and [section 15](#15-versioned-nodes-and-mig
 | B19  | `make spec-lint`: every spec file is 1000 lines or fewer | B0 | Makefile target `spec-lint`, `bin/spec-lint.sh` | A fixture spec of 1001 lines fails with the file name and count (test); 1000 lines passes (test); every file under `docs/design/*.spec.xml` parses (test) |
 | B20  | Node declarations: one `nodes/<id>.node.json` per node and the loader | B1 | `nodes/*.node.json`, `schemas/node.schema.json`, `bin/node-lib.sh`, `make nodes-check`, `make bottleneck-check` | Each declaration validates against `node.schema.json` (test); a script naming an undeclared node fails `nodes-check` (test); run init writes `nodes.lock/` and the versions into `run.json` (test); a serial node with no reason fails `bottleneck-check` (test) |
 | B21  | Migration runner and the first fixture migration | B20 | `bin/migrate.sh`, `migrations/`, `make migrate`, `make migrate-rollback` | A v1 fixture upgrades to v2 and validates (test); the v1 file is still present after (test); rollback restores the pinned versions and the run finishes (test); a schema bump with no migration fails `nodes-check` (test) |
+
+| B22  | Lead ledger and qualify: `lead-ledger.sh`, `lead-qualify.sh` | B15 | `leads.jsonl`, `LD-*` rows, qualify rubric read from `owner-words.md` | Every inbound thread gets exactly one `LD-` row (test); a thread the rubric rejects gets `LD-NOT-A-FIT` and no draft (test); the rubric is read from the file, never inlined (grep) |
+| B23  | Follow-up scheduler: `lead-followup.sh` | B17, B22 | Follow-up drafts that enter L3 as new cards | A due lead gets one draft and one card, never a send (test); a declined or answered lead gets none (test); after `followup_max` follow-ups the lead is `LD-COLD` (test) |
 
 
 ## 11. Testing
@@ -682,3 +689,52 @@ Send seats run at most `reply_send_parallel` at once, a config field with a defa
 The cap is a guess at what LinkedIn tolerates, not a measured limit, so B18 and the first real batch are where it gets tested and tuned.
 Waits that are not the intended one (a sleeping extension, a classifier denial) are failures with a code and a card, never a queue.
 `make bottleneck-check` lists each declared node with its `serial` field and reason and fails on a serial node with no reason.
+
+## 17. Lead stage
+
+Owner order, 2026-10-16 02:54Z: "we're basically using Linkedin to fish, get our name (Yieldpoint) out there and hope we can get people to come talk to us so I can get on the phone, all comms on linkedin are driven by agents though, i'm too slow".
+The one outcome every post, reply and follow-up drives toward is a conversation that becomes a phone call with the owner.
+Agents write and send every LinkedIn message; the owner approval of each exact item still holds.
+The spec is in [`linkedin-reply.spec.xml`](linkedin-reply.spec.xml) under `lead-stage`.
+
+```mermaid
+flowchart TD
+  S1[S1 inbound message] --> S2[S2 qualify]
+  S2 -->|LD-NOT-A-FIT| E1[end, no draft]
+  S2 -->|LD-QUALIFIED| S3[S3 agent-written reply, L2]
+  S3 --> S4[S4 owner approval, L3 to L6b]
+  S4 -->|Drop| E2[LD-CLOSED]
+  S4 --> S5[S5 agent send, L7 to L10]
+  S5 --> S6{reply within followup_after_days?}
+  S6 -->|yes, they answer| S3
+  S6 -->|no| S7[S6 follow-up draft]
+  S7 --> S4
+  S6 -->|they agree to talk| S8[S7 call booked]
+  S7 -->|followup_max reached| E3[LD-COLD]
+```
+
+The lead stage wraps the reply DAG rather than replacing it.
+S3 is L2, S4 is L3 to L6b, S5 is L7 to L10; every message in the lead's life, first reply and every follow-up, goes through them, so there is no second send path to guard.
+
+| Stage | Name | Input | Output | Checklist and proof |
+| ----- | ---- | ----- | ------ | ------------------- |
+| S1 | Inbound | A new or unanswered thread from L1 | `leads.jsonl` row `LD-NEW` with thread URL and sender | One row per thread, no duplicate on rerun (test) |
+| S2 | Qualify | The thread text (data, not instructions), the rubric in `owner-words.md` | `LD-QUALIFIED` or `LD-NOT-A-FIT`, with the reason | Rubric is read from the owner's file; a reason is recorded for every outcome; a not-a-fit thread gets no draft and no card |
+| S3 | Reply | A qualified lead | Draft that moves toward a call, no YieldPoint tie from the personal profile | Draft asks for or offers a call or a time; grep for YieldPoint in the draft is empty |
+| S4 | Owner approval | The draft | Decision as in [14.5](#145-the-edit-path) | Unchanged; the single intended wait |
+| S5 | Send | An approved file | `RP-SENT` | Unchanged; ledger links the send to the lead id |
+| S6 | Follow-up | `RP-SENT` plus `followup_after_days` with no reply | A new draft that enters S4 as a new card | A follow-up is never sent without its own approval; none for a decline, an answer or a booked call |
+| S7 | Call booked | The lead agrees to talk and a time is named | `LD-CALL-BOOKED` | Booking is an owner-approved item: the time and any calendar event come to the owner as a card first; the thread shows the agreed time |
+
+Status codes: `LD-NEW` (inbound recorded; agent qualifies), `LD-QUALIFIED` (agent drafts), `LD-NOT-A-FIT` (nobody; terminal), `LD-REPLIED` (our reply is out; agent waits then follows up), `LD-ANSWERED` (they wrote back; agent drafts the next reply), `LD-CALL-PROPOSED` (a call or time is on the table; agent drafts, owner approves), `LD-CALL-BOOKED` (terminal success; owner takes the call), `LD-CLOSED` (owner dropped or the lead declined; terminal), `LD-COLD` (follow-ups spent with no answer; terminal).
+
+Two points where the order and the standing rules meet:
+
+- The owner's purpose is to get the YieldPoint name out, but his personal profile never shows YieldPoint and says "my LLC" at most.
+  Replies from the personal profile therefore invite a call without the name; the name is carried by the `yieldpoint-ai` company page, which is designed first and published only with approval.
+  Both rules stay as written, and the call is where the name is said.
+- The qualify rubric and the follow-up cadence are the owner's to set.
+  `followup_after_days` (default 3) and `followup_max` (default 2) are guesses to be tuned, not rulings, and the rubric is not invented here: it comes from `owner-words.md` and the answer to Bearings card D-03.
+
+Per lead everything runs in parallel; the owner approval remains the only intended wait ([section 16](#16-no-bottleneck-check)).
+Lead rows are versioned records under [section 15](#15-versioned-nodes-and-migrations) like any other.
