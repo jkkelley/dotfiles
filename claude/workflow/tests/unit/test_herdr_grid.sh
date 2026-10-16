@@ -212,4 +212,30 @@ touch "$T/fx/fail"; : > "$T/log"; out="$($G line-status L 2>&1)"; rc=$?
 grep -q 'FAILED after 3' <<<"$out" && ok "and the failure is reported" || bad "failure reported" "$out"
 rm -f "$T/fx/fail"
 
+# ---- seat-down gives back the treehouse slot the seat leased, pinned to the holder, never with --force
+mk_tab1 a b c free free free
+printf 'DONE a https://example.test/pr/1\n' > "$T/fx/read-wT_p1.txt"
+git init -q "$T/repo"
+cat > "$T/bin/treehouse" <<'STUB'
+#!/usr/bin/env bash
+printf 'treehouse %s\n' "$*" >> "$T/log"
+case "$1" in
+  status) printf '[{"name":"1","path":"/slot/1","lease_holder":"a"},{"name":"2","path":"/slot/2","lease_holder":"zz"}]\n' ;;
+  return) [ -f "$T/fx/th-dirty" ] && { echo 'uncommitted changes' >&2; exit 1; }; exit 0 ;;
+esac
+STUB
+chmod +x "$T/bin/treehouse"
+: > "$T/log"; WF_REPO="$T/repo" $G seat-down a L >/dev/null 2>&1; rc=$?
+has   "seat-down returns the slot leased to the seat"     'treehouse return /slot/1 --if-lease-holder a'
+hasnt "seat-down never forces a return (uncommitted work)" '--force'
+hasnt "seat-down never returns another holder's slot"     '/slot/2'
+[ "$rc" = 0 ] && ok "seat-down with its slot returned exits 0" || bad "slot returned exit 0" "rc=$rc"
+touch "$T/fx/th-dirty"
+: > "$T/log"; WF_REPO="$T/repo" $G seat-down a L >/dev/null 2>&1; rc=$?
+[ "$rc" = 1 ] && ok "a slot that will not return is reported (exit 1), never forced" || bad "dirty slot exit 1" "rc=$rc"
+rm -f "$T/fx/th-dirty"
+: > "$T/log"; FORCE=1 WF_REPO="$T/repo" $G seat-down c L >/dev/null 2>&1
+hasnt "a seat with no lease triggers no return"           'treehouse return'
+rm -f "$T/bin/treehouse"
+
 [ "$fail" = 0 ] && echo "ok  herdr-grid" || { echo "FAIL herdr-grid"; exit 1; }

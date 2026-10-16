@@ -82,12 +82,51 @@ claude_model() {
 
 # ---- the worktree ----------------------------------------------------------
 # One seat is one worktree on its own branch. Creating it here rather than by hand is what makes the
-# spawn reproducible; `git worktree add` is idempotent enough that an existing directory is left alone.
+# spawn reproducible. Order: a slot the seat already leases, then a configured directory that already exists, then a
+# new lease, so a rerun lands in the same place and never takes a second slot.
+# BREADCRUMB 2026-10-16 - the seat's worktree is a treehouse lease, not `git worktree add` (brief BR-20261016-treehouse-seats).
+# What broke: this line ran `git -C "$repo_root" worktree add "$worktree" "$branch"`, a fresh checkout per seat with no
+#   pool, no lease record and nothing that gave it back, while coq's herdr/bin/seat.sh already leased pre-warmed slots
+#   (firstmate-treehouse-research.md, practice 1). Why this fix: the same pool and lease calls coq uses, so
+#   `treehouse status` names every seat's slot by holder and herdr-grid.sh seat-down returns it by holder. -b is used
+#   only for a branch that exists nowhere, because v3 `get -b` fails on an existing branch; an existing branch is checked
+#   out in the leased slot, tracking origin when only origin has it (coq slot_to_branch). --no-fetch is not passed:
+#   a fresh slot is cut from origin's head. Rejected: keeping `git worktree add` beside the lease, which is two sources
+#   of worktrees. Cost: needs treehouse >= v3 on PATH (dev gate: log/2026/10/20261016-052204-th-v3-dev-gate-clean.md in
+#   the artifact store); a branch already checked out in another slot cannot be leased again and the start refuses.
+#   Measured on the host (log/2026/10/20261016-052559-th-seat-start-timing.md): git worktree add 0.17-0.19s; lease
+#   0.90-1.16s, of which the origin fetch is most (0.26s with --no-fetch). Dotfiles has no deps to warm, so here the
+#   lease costs about 0.8s per seat start for a base that is current with origin; repos with deps gain the warmed slot.
 repo_root="$(git -C "$WF_REPO" rev-parse --show-toplevel 2>/dev/null || printf '%s' "$WF_REPO")"
-if [ -d "$worktree" ]; then
+th_row() { (cd "$repo_root" && treehouse status --json 2>/dev/null) | jq -c --arg h "$1" '[.[]? | select(.lease_holder == $h)] | last // empty'; }
+lease=""
+command -v treehouse >/dev/null 2>&1 && lease="$(th_row "$name")"
+if [ -n "$lease" ]; then
+  worktree="$(jq -r .path <<<"$lease")"
+  printf 'seat %s: already leases %s\n' "$name" "$worktree"
+elif [ -d "$worktree" ]; then
   printf 'seat %s: worktree present at %s\n' "$name" "$worktree"
 else
-  run git -C "$repo_root" worktree add "$worktree" "$branch"
+  command -v treehouse >/dev/null 2>&1 || wf_die "treehouse is not on PATH; a seat's worktree is leased from the pool"
+  g=(git -C "$repo_root")
+  if "${g[@]}" show-ref --verify --quiet "refs/heads/$branch" 2>/dev/null \
+     || "${g[@]}" show-ref --verify --quiet "refs/remotes/origin/$branch" 2>/dev/null; then
+    get=(treehouse get --lease --lease-holder "$name" --json); newbr=0
+  else
+    get=(treehouse get --lease --lease-holder "$name" -b "$branch" --json); newbr=1
+  fi
+  if [ "$DRY" = 1 ]; then
+    run "${get[@]}"; worktree="<treehouse-slot>"
+  else
+    worktree="$(cd "$repo_root" && "${get[@]}" | jq -r '.path // empty')" || true
+    [ -d "$worktree" ] || wf_die "treehouse get --lease gave seat $name no slot"
+    if [ "$newbr" = 0 ] && ! { git -C "$worktree" checkout --quiet "$branch" 2>/dev/null \
+             || git -C "$worktree" checkout --quiet -b "$branch" --track "origin/$branch"; }; then
+      treehouse return "$worktree" --if-lease-holder "$name" --force </dev/null >/dev/null 2>&1 || true
+      wf_die "slot $worktree could not check out $branch for seat $name; the lease was given back"
+    fi
+    printf 'seat %s: leased %s on %s\n' "$name" "$worktree" "$branch"
+  fi
 fi
 
 # ---- herdr: rediscover every id -------------------------------------------
