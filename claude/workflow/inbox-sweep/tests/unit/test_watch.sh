@@ -148,7 +148,7 @@ jq '(.seats[] | select(.seat=="linkedin")) |= (.status="SKIPPED")' "$SWEEP_RUN_D
 run_watch
 check "gmail OK|proton-first TIMEOUT" "$(jq -r '"\(.pane|sub("wS:";"")) \(.status)"' "$TEST_OUT/records.jsonl" | sort | paste -sd'|')" "mixed run: one row each for the two live seats"
 check 0 "$(jq '[.seats[] | select(.status=="RUN-RUNNING")] | length' "$SWEEP_RUN_DIR/run.json")" "no seat is left running"
-check 2 "$(grep -c 'R4' "$SWEEP_RUN_DIR/checklist.jsonl")" "the two R4 checklist boxes were ticked"
+check 2 "$(cat "$SWEEP_RUN_DIR"/checklist/*.jsonl | grep -c 'R4')" "the two R4 checklist boxes were ticked"
 
 # 8. a record write that fails 3 times does not loop
 fresh "gmail:gmail:$FUTURE"; cp "$FIX/OK.json" "$SWEEP_RUN_DIR/results/gmail.json"
