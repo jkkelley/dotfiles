@@ -64,6 +64,8 @@ M rollback R1 1.0.0 fixture 9 "$T/d" >/dev/null 2>&1; check 2 "$?" "rollback ref
 # AC-H4
 rm -rf "$T/rec" "$T/mig" "$T/fx" "$T/n" "$T/s"; mkdir -p "$T/rec" "$T/mig/fixture" "$T/fx/fixture" "$T/n" "$T/s"
 cp "$R"/nodes/*.node.json "$T/n/"; cp "$R"/schemas/records/* "$T/rec/"; cp "$R/migrations/fixture/v1-to-v2.sh" "$T/mig/fixture/"; cp "$FIX" "$T/fx/fixture/"
+# every other record name in the tree ships its own migration and fixture; the cases below only vary the fixture one
+for d in "$R"/migrations/*/; do n="$(basename "$d")"; [ "$n" = fixture ] && continue; mkdir -p "$T/mig/$n" "$T/fx/$n"; cp "$d"/* "$T/mig/$n/"; cp "$R/tests/fixtures/migrations/$n"/* "$T/fx/$n/"; done
 cp "$R/../../../docs/design/inbox-sweep.md" "$T/design.md"
 NC() { NODE_DIR="$T/n" NODE_DESIGN="$T/design.md" NODE_SCRIPTS="$T/s" REC_DIR="$T/rec" MIG_DIR="$T/mig" MIG_FIX="$T/fx" node_check 2>&1; }
 NC >/dev/null; check 0 "$?" "AC-H4 a bump that ships its migration and fixture passes nodes-check"

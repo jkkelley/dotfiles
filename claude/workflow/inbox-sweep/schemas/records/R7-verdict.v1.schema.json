@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "inbox-sweep.records.R7-verdict.v1.schema.json",
+  "title": "R7 verdict v1 (sweep-proof.sh before WO-20261016-870d)",
+  "description": "proof/R7-verdict.json as sweep-proof.sh wrote it before the integer schema_version: no schema_version, the string 1.0.0, or the integer 1 in a hand-made copy. Kept so a v1 record still validates and the v1-to-v2 migration has a stated input.",
+  "type": "object",
+  "required": ["code", "run_id"],
+  "properties": {
+    "schema_version": { "enum": [1, "1.0.0"] },
+    "code": { "enum": ["CLEAN-OK", "CLEAN-TABS-LEFT", "CLEAN-ORPHAN-TAB", "CLEAN-NO-PROOF"] },
+    "run_id": { "type": "string", "minLength": 1 }
+  }
+}

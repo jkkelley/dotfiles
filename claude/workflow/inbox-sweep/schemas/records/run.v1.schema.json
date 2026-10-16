@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "inbox-sweep.records.run.v1.schema.json",
+  "title": "Run record v1 (sweep-init.sh before WO-20261016-5f8d)",
+  "description": "run.json as R1 wrote it before the integer schema_version: the string 1.0.0, or the integer 1 in a hand-made copy. Kept so a v1 record still validates and the v1-to-v2 migration has a stated input.",
+  "type": "object",
+  "required": ["schema_version", "run_id", "status", "seats"],
+  "properties": {
+    "schema_version": { "enum": [1, "1.0.0"] },
+    "run_id": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "minLength": 1 },
+    "seats": { "type": "array", "items": { "type": "object" } }
+  }
+}

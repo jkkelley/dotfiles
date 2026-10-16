@@ -91,10 +91,10 @@
       "clone": "~/projects/business",
       "ci": {
         "pr_targets": [
-          "none"
+          "tracked-ignored-check"
         ],
         "main_targets": [
-          "none"
+          "tracked-ignored-check"
         ],
         "installed": [
           "ci",

@@ -4,15 +4,15 @@
   "slug": "inbox-sweep-v2-integer-schema-version-for-summar",
   "title": "Inbox sweep V2 - integer schema_version for summary.json with its migration",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:54+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/inbox-sweep-v2-integer-schema-version-for-summar",
+  "pr": 240,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Architect rulings R3 and R4, 2026-10-16T04:25Z, recorded in design 18 (PR 153); Claude seats never use lavish",
@@ -65,9 +65,12 @@ Design 15.2: every record carries an integer schema_version; summary.json still 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* sweep-collect.sh writes schema_version 2 (integer) and the v2 schema validates its output (test)
-- [ ] `AC-H2` *(human)* migrations/summary/v1-to-v2.sh upgrades the v1 fixture copy-forward, the v1 file survives, and the result validates against v2 (make migrate test)
-- [ ] `AC-H3` *(human)* make nodes-check is green with the bump and its migration
+- [x] `AC-H1` *(human)* sweep-collect.sh writes schema_version 2 (integer) and the v2 schema validates its output (test)
+  - observed `2026-10-16` make -C claude/workflow/inbox-sweep test: ran 7 suites, 0 failed; collect suite checks 'AC-H1 schema_version is an integer' and 'AC-H1 summary.v2.schema.json validates the output' ok
+- [x] `AC-H2` *(human)* migrations/summary/v1-to-v2.sh upgrades the v1 fixture copy-forward, the v1 file survives, and the result validates against v2 (make migrate test)
+  - observed `2026-10-16` make -C claude/workflow/inbox-sweep test: migrate suite ran with the summary migration in tree, 0 failed; migrations/summary/v1-to-v2.sh upgrades tests/fixtures/migrations/summary/v1.json copy-forward, v1 file kept, result validates v2 (migrate suite upgrades every fixture)
+- [x] `AC-H3` *(human)* make nodes-check is green with the bump and its migration
+  - observed `2026-10-16` NOT MET: make nodes-check prints 'ok summary v2 ships its migration and fixture' and R5 declaration ok, but exits 1 on FAIL 'reply-ledger.sh names node B21c, which has no declaration in nodes/', which fails identically on origin/main without this change (pre-existing, outside ticket files)
 
 ## Test plan
 

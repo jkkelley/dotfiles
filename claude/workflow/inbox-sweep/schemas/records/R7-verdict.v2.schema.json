@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "inbox-sweep.records.R7-verdict.v2.schema.json",
+  "title": "R7 verdict v2 (design 15.2)",
+  "description": "proof/R7-verdict.json as sweep-proof.sh writes it: an integer schema_version and the spec clean code. The fields the haiku reader returns (claude_groups_open, tabs_beyond_baseline, orphan_tabs) and the CLEAN-NO-PROOF reason are optional and not constrained further, because the reader's output is a model reply and the writer only checks the code.",
+  "type": "object",
+  "required": ["schema_version", "code", "run_id", "baseline", "final", "tabs_left_prompts", "at"],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "code": { "enum": ["CLEAN-OK", "CLEAN-TABS-LEFT", "CLEAN-ORPHAN-TAB", "CLEAN-NO-PROOF"] },
+    "run_id": { "type": "string", "minLength": 1 },
+    "baseline": { "type": "string" },
+    "final": { "type": "string" },
+    "tabs_left_prompts": { "type": "integer", "minimum": 0 },
+    "at": { "type": "string", "minLength": 1 },
+    "reason": { "type": "string" },
+    "orphan_tabs": { "type": "array" }
+  }
+}

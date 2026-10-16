@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "R1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "script": "claude/workflow/inbox-sweep/bin/sweep-init.sh",
   "input_schema": {
     "path": "~/.config/zenith/inbox-sweep/config.json",
@@ -9,7 +9,7 @@
   },
   "output_schema": {
     "path": "<runs>/<run-id>/run.json",
-    "schema_version": 1
+    "schema_version": 2
   },
   "checklist": [
     {

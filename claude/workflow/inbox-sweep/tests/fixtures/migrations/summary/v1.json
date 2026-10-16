@@ -1,0 +1,1 @@
+{"schema_version":1,"run_id":"20261016T040000Z","status":"RUN-PARTIAL","seats":[{"seat":"gmail","status":"OK","before":3,"after":0,"processed":3,"flagged":1},{"seat":"linkedin","status":"SKIPPED","before":null,"after":null,"processed":0,"flagged":0}],"finished_at":"2026-10-16T04:05:00Z","steps":0,"steps_failed":0,"checklist_rows":2}
