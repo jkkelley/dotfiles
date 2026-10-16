@@ -14,6 +14,11 @@
     "subjects": "line.>",
     "max_age": "7d"
   },
+  "health": {
+    "$comment": "Containers whose podman healthcheck bin/bus.sh health runs each interval seconds. Any podman service with a healthcheck is one more containers entry. Breadcrumb in bin/bus.sh (health_of).",
+    "containers": ["zenith-nats"],
+    "interval": 30
+  },
   "consumers": {
     "line-consume": {
       "ack_wait": "120s",

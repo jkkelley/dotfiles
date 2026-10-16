@@ -17,7 +17,7 @@ LW_ENV = $(if $(WS),WS=$(WS)) $(if $(LW_INTERVAL),LW_INTERVAL=$(LW_INTERVAL)) $(
 TIMED = bash $(abspath bin/timed-run.sh) --node $@ --kind make --
 lw_need = $(if $(LINE),,$(error LINE= is required))
 .PHONY: monitors-up monitors-down monitors-status line-watch line-watch-off line-watch-adopt line-watch-status \
-  line-watch-stop line-sweep line-consume line-queue bus-up bus-logs bus-down bus-status bus-tail bus-clean line-watch-test
+  line-watch-stop line-sweep line-consume line-queue bus-up bus-logs bus-down bus-status bus-health bus-health-loop bus-tail bus-clean line-watch-test
 
 monitors-up: ## make monitors-up LINE= [WS= LW_RESULTS=]: tab "<LINE> monitor", every monitor of config/monitors.json in its slot
 	$(lw_need)
@@ -56,6 +56,10 @@ bus-down: ## Stop and remove the bus container; the JetStream store stays
 	@$(TIMED) bash $(LW_DIR)/bin/bus.sh down
 bus-status: ## Container health, the stream, every consumer with pending and unacked counts
 	@$(TIMED) bash $(LW_DIR)/bin/bus.sh status
+bus-health: ## Run each configured container's podman healthcheck once, print and publish its code (exit 3 unless all HEALTHY)
+	@$(TIMED) env $(LW_ENV) bash $(LW_DIR)/bin/bus.sh health
+bus-health-loop: ## bus-health every config interval, forever (the bus monitor's foreground)
+	@$(TIMED) env $(LW_ENV) bash $(LW_DIR)/bin/bus.sh health-loop
 bus-tail: ## Print every bus event as it lands, one line each (the events pane of the monitor tab; never acks)
 	@$(TIMED) env $(LW_ENV) bash $(LW_DIR)/bin/bus.sh tail
 

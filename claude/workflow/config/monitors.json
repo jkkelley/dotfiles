@@ -8,7 +8,7 @@
       "owner": "line-watch",
       "slot": "1.1",
       "interval": 0,
-      "command": "make -C ${repo} bus-up && make -C ${repo} bus-logs",
+      "command": "make -C ${repo} bus-up && make -C ${repo} bus-health-loop",
       "down": "make -C ${repo} bus-down"
     },
     {
