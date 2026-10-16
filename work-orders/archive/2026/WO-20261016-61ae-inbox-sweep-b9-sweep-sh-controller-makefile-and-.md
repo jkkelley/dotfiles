@@ -4,15 +4,15 @@
   "slug": "inbox-sweep-b9-sweep-sh-controller-makefile-and-",
   "title": "Inbox sweep B9 - sweep.sh controller, Makefile and README",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T01:19:16+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/inbox-sweep-b9-sweep-sh-controller-makefile-and-",
+  "pr": 118,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner approved the design on Bearings card D-04, 2026-10-16 UTC; Claude seats never use lavish (global owner rule)",
@@ -74,9 +74,12 @@ Nothing ties the pieces into one make sweep command
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a stubbed full run reaches RUN-OK (integration test)
-- [ ] `AC-H2` *(human)* a stubbed run with probe [] gives RUN-PARTIAL with gmail OK and one card (integration test)
-- [ ] `AC-H3` *(human)* make sweep returns in under 5 seconds (integration test timing)
+- [x] `AC-H1` *(human)* a stubbed full run reaches RUN-OK (integration test)
+  - observed `2026-10-16` test_controller: 'ok AC-H1: a full stubbed run reaches RUN-OK in summary.json'; run.json also RUN-OK; test-all ran 15 suites, none failed
+- [x] `AC-H2` *(human)* a stubbed run with probe [] gives RUN-PARTIAL with gmail OK and one card (integration test)
+  - observed `2026-10-16` test_controller: 'ok AC-H2: probe [] gives RUN-PARTIAL', 'ok AC-H2: the Gmail seat is OK', 'ok AC-H2: exactly one card' (IS-<run>-preflight-B-PF-NO-BROWSER)
+- [x] `AC-H3` *(human)* make sweep returns in under 5 seconds (integration test timing)
+  - observed `2026-10-16` test_controller: 'ok AC-H3: start returned in 414 ms, under 5000'
 
 ## Test plan
 
