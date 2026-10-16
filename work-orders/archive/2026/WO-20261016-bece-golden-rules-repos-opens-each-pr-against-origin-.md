@@ -4,15 +4,15 @@
   "slug": "golden-rules-repos-opens-each-pr-against-origin-",
   "title": "golden-rules repos opens each PR against origin, never the fork parent",
   "type": "bug",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:06:54+00:00",
   "parent": "WO-20261016-949a",
   "branch": "feat/golden-rules-repos-opens-each-pr-against-origin-",
-  "pr": null,
-  "closed": null,
+  "pr": 165,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "owner: i approved of everything (brief BR-20261016-spec-check)",
@@ -61,8 +61,10 @@ make golden-rules-repos reported firstmate FAIL pr create: gh resolved the repo 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* firstmate row is PR with a jkkelley/firstmate URL
-- [ ] `AC-H2` *(human)* evidence: repro command and output written by claude/tools/artifact/artifact.sh new --key log to the artifact store
+- [x] `AC-H1` *(human)* firstmate row is PR with a jkkelley/firstmate URL
+  - observed `2026-10-16` firstmate PR https://github.com/jkkelley/firstmate/pull/6: /home/luna/.local/state/zenith/log/2026/10/20261016-050654-golden-rules-pr-origin.txt
+- [x] `AC-H2` *(human)* evidence: repro command and output written by claude/tools/artifact/artifact.sh new --key log to the artifact store
+  - observed `2026-10-16` evidence: /home/luna/.local/state/zenith/log/2026/10/20261016-050654-golden-rules-pr-origin.txt
 
 ## Test plan
 

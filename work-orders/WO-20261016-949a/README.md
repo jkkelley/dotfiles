@@ -6,6 +6,5 @@ This ticket: [Spec check - golden rules 25 to 30 and make spec-check](WO-2026101
 
 One level down only. A child of a child is listed in its own directory, not here.
 
-| ID | status | pri | waiting on | title |
-|---|---|---|---|---|
-| `WO-20261016-bece` | in-progress | p1 | - | [golden-rules repos opens each PR against origin, never the fork parent](WO-20261016-bece-golden-rules-repos-opens-each-pr-against-origin-.md) |
+_No children yet. This ticket sits at the top level, so it holds the directory
+on its own until work is filed underneath it._
