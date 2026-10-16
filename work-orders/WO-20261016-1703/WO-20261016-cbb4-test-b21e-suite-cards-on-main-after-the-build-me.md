@@ -4,13 +4,13 @@
   "slug": "test-b21e-suite-cards-on-main-after-the-build-me",
   "title": "Test B21e - suite cards on main after the build merges",
   "type": "test",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:30+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/test-b21e-suite-cards-on-main-after-the-build-me",
   "pr": null,
   "closed": null,
   "approval": {
@@ -61,7 +61,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+- [x] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+  - observed `2026-10-16` TP-1 on main 4393517: podman run (dotfiles-workflow-test:1) bash tests/run.sh --suite cards exit 0; output 'ok cards' / 'ran 1 suite'. Captured: make: *** [claude/tools/artifact/artifact.mk:14: artifact-new] Error 2
 
 ## Test plan
 
@@ -98,6 +99,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` Evidence correction: AC-H1 output captured at /home/luna/.local/state/zenith/log/2026/10/20261016-080919-t21e-cards-suite.txt
 
 ## Outcome
 
