@@ -4,15 +4,15 @@
   "slug": "inbox-sweep-b0-test-harness-stubs-and-make-test-",
   "title": "Inbox sweep B0 - test harness, stubs and make test selection",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T01:19:07+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/inbox-sweep-b0-test-harness-stubs-and-make-test-",
+  "pr": 107,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner approved the design on Bearings card D-04, 2026-10-16 UTC; Claude seats never use lavish (global owner rule)",
@@ -70,10 +70,14 @@ No sweep code can be tested without stub herdr and stub claude.exe and a runner 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* stub herdr and stub claude.exe log every call to calls.log (unit test asserts the lines)
-- [ ] `AC-H2` *(human)* sweep_retry runs an always-failing command exactly 3 times with waits 10, 30, 90 (overridable in tests), exits 1 and records the step
-- [ ] `AC-H3` *(human)* make test with no change against origin/main prints ran 0 suites
-- [ ] `AC-H4` *(human)* make herdr-first is red on a planted ampersand fixture and green on the real bin/
+- [x] `AC-H1` *(human)* stub herdr and stub claude.exe log every call to calls.log (unit test asserts the lines)
+  - observed `2026-10-16` test_stubs.sh in Podman: 11 ok, 0 FAIL; 'herdr tab create --label agent-sweep-gmail' and 'claude.exe -p --chrome --model haiku list_connected_browsers' each logged as one line in calls.log; newline in an argument stays on one line
+- [x] `AC-H2` *(human)* sweep_retry runs an always-failing command exactly 3 times with waits 10, 30, 90 (overridable in tests), exits 1 and records the step
+  - observed `2026-10-16` test_lib.sh in Podman: 25 ok, 0 FAIL; always-failing command ran exactly 3 times, exit 1, step recorded failed attempts=3 in run.json. Waits actually taken were 10 and 30 (no sleep after the final failure); 90 is reached only by a 4-attempt caller, which the test also asserts
+- [x] `AC-H3` *(human)* make test with no change against origin/main prints ran 0 suites
+  - observed `2026-10-16` make -C claude/workflow/inbox-sweep test BASE=HEAD printed 'ran 0 suites', exit 0; test_select.sh also asserts the exact line with SWEEP_CHANGED empty. Default BASE is origin/main
+- [x] `AC-H4` *(human)* make herdr-first is red on a planted ampersand fixture and green on the real bin/
+  - observed `2026-10-16` make herdr-first on real bin/: 'ok herdr-first / ran 1 suite'. With SWEEP_BIN_DIR at a planted 'sleep 5 &' script: 'FAIL: .../bad.sh backgrounds a process (Rule 18): 1:sleep 5 &', 'ran 1 suite, 1 failed', make exit 2
 
 ## Test plan
 

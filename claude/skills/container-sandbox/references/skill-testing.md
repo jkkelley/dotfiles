@@ -443,6 +443,28 @@ Stub the tool as it is. Test the wrapper that makes it safe.
 
 The general shape: **every recorded misbehaviour of an external tool is a fixture, and the case that matters is the one where the tool reports success and nothing happened.**
 
+## Stubbing a Windows binary
+
+Some workflows call a Windows executable from WSL: `claude.exe`, `powershell.exe`, `cmd.exe`.
+The Podman image is Linux and has none of them, and a test must never start the real one (a real `claude.exe --chrome` opens a seat in the owner's browser).
+The binary is an external CLI, so the section above applies, with three additions.
+
+**Name the stub exactly as the script calls it, `.exe` included.**
+Linux resolves `claude.exe` on `PATH` like any other file, so a stub file called `claude.exe` is found when the script says `claude.exe` and is not found when it says `claude`.
+Install a copy, not a symlink, so the stub works under any mount layout.
+
+**Log every call as one line, and assert on the log.**
+The stub appends `<name> <args>` to `$TEST_OUT/calls.log`, with a newline inside an argument written as the two characters `\n`.
+A multi-line prompt body would otherwise split one call across lines and make a count of calls wrong.
+The test then asserts what the script did by reading that file, not by watching output.
+
+**Script the answers per call, not per run.**
+A probe that must fail three times and then succeed needs call N to return line N of a file (`STUB_CLAUDE_SEQ`), repeating the last line.
+A single fixed answer cannot test a retry.
+
+The worked example is `claude/workflow/inbox-sweep/tests/lib/` (`stub-herdr.sh`, `stub-claude-exe.sh`, `stubs.sh`) and its suite `tests/unit/test_stubs.sh`.
+Two limits to state in a suite that uses these stubs: the stub proves what the script *asked for*, never that the real binary behaves so, and the real path-translation (`wslpath`, `cmd.exe /c echo %USERPROFILE%`) is only exercised by a live run, so give the code an override (`SWEEP_WIN_HOME`) and test the override.
+
 ## Testing a destructive path
 
 A script that runs `git branch -D`, `git push --delete`, or `rm -rf` needs its destructive path exercised, not reasoned about.
