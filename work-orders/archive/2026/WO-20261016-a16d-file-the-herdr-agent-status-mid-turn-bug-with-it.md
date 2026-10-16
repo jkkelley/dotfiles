@@ -4,15 +4,15 @@
   "slug": "file-the-herdr-agent-status-mid-turn-bug-with-it",
   "title": "File the herdr agent_status mid-turn bug with its evidence",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:04:53+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/file-the-herdr-agent-status-mid-turn-bug-with-it",
+  "pr": 280,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -66,8 +66,10 @@ ORD-0550 O3: "file the herdr status bug with that evidence". Evidence: wD9:p3 sw
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `gh issue list -R jkkelley/dotfiles --search 'agent_status reads idle while a Claude seat is mid-turn' --json number -q length` prints 1 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* the artifact file exists and opens with frontmatter (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `gh issue list -R jkkelley/dotfiles --search 'agent_status reads idle while a Claude seat is mid-turn' --json number -q length` prints 1 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` 0 exit 0
+- [x] `AC-H2` *(human)* the artifact file exists and opens with frontmatter (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` --- what: herdr agent_status reads idle while a Claude seat is mid-turn (evidence) by: herdr-bug build seat (WO-20261016-a16d) exit 0
 
 ## Test plan
 

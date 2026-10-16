@@ -82,6 +82,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-16` infra-design10: shipped in PR 170 (merged 857d290); closed by WO-20261016-3ac1, do not start this ticket for build work
 - `2026-10-16` DESIGN-GAP: AC-H1..H5 are live-system checks (ntfy 200 on phone within 2 min, killing stuck-watch and a phone alert within 4 min, dedupe, merge-train) with no scripted command or test plan, so none was run. PR 170 is MERGED on main (857d290).
 
 ## Outcome
