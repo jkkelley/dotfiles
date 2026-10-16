@@ -4,7 +4,7 @@
   "slug": "close-wo-20261016-6e7f-wk-d-pr-285-merged-start-",
   "title": "Close WO-20261016-6e7f (WK-D, PR 285 merged): start, submit, check, done, so WK-Dt and WK0 can start",
   "type": "chore",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-35de",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design12 cut for ORD-0830 RR-orch-14; design approvals ruled done, ORD-0550 O4",
@@ -36,7 +36,8 @@
       "expect": null
     }
   ],
-  "provides": []
+  "provides": [],
+  "superseded_by": null
 }
 ---
 
@@ -119,4 +120,9 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: superseded: 6e7f closed on main by the land-6e7f PR 294 (3285e3b); ea9e's start of 6e7f failed on branch_exists (seats/close-6e7f.result.json). infra-design14, ORD-0830 RR-orch-14 F36
+
+No branch, no PR and no merge commit exist for this work order.
+
