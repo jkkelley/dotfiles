@@ -58,7 +58,7 @@ OUT="$T/d110"; mknode N1 1.0.0 s/n1.sh '[]' a; mknode N2 1.1.0 s/n2.sh '["N1"]' 
 mknode N4 1.1.0 s/n4.sh '["N1","N5"]' d; mknode N5 1.0.0 s/n5.sh '["N1"]' e
 
 out="$(bash "$M" --design "$T/d110" "$RUN" 2>&1)"; check 0 $? "migrate 1.0.0 -> 1.1.0 exits 0"
-echo "$out" | sed 's/^/     /'
+printf '     %s\n' "${out//$'\n'/$'\n     '}"
 S="$RD/state.json"
 check 1.1.0 "$(jq -r .design.version "$S")" "design pin moved to 1.1.0"
 check "$(sha_of "$T/d110")" "$(jq -r .design.sha256 "$S")" "design hash is the new nodes.lock hash"
@@ -70,7 +70,7 @@ check "DG-STALE 1.1.0" "$(jq -r '.nodes.N4|"\(.status) \(.version)"' "$S")" "don
 check "DG-PENDING 1.0.0" "$(jq -r '.nodes.N5|"\(.status) \(.version)"' "$S")" "added node N5 is DG-PENDING"
 check 1 "$(jq '.nodes.N2.proofs|length' "$S")" "an edited done node keeps its proofs"
 dag_validate state "$S"; check 0 $? "the migrated state is still valid"
-check 1 "$([ -d "$RD/nodes.lock.v1.0.0" ] && ls "$RD/nodes.lock.v1.0.0"/*.node.json | wc -l | grep -qx 4 && echo 1)" "the 1.0.0 declarations are kept beside the new ones"
+check 4 "$(find "$RD/nodes.lock.v1.0.0" -name '*.node.json' 2>/dev/null | wc -l)" "the 1.0.0 declarations are kept beside the new ones"
 [ -e "$RD/records/rec.v2.jsonl" ]; check 0 $? "record schema bump wrote rec.v2.jsonl beside the original"
 check 1 "$(jq -r .schema_version "$RD/records/rec.jsonl")" "the original record is not edited"
 [ -e "$RD/state.v2.json" ]; check 0 $? "state schema bump wrote state.v2.json beside state.json"
@@ -97,7 +97,7 @@ bash "$M" --design "$T/d110x" "$RUN" >/dev/null 2>&1; check 1 $? "DR-DESIGN is e
 
 # --- rollback: back to 1.0.0
 out="$(bash "$M" rollback "$RUN" 1.0.0 2>&1)"; check 0 $? "rollback to 1.0.0 exits 0"
-echo "$out" | sed 's/^/     /'
+printf '     %s\n' "${out//$'\n'/$'\n     '}"
 check 1.0.0 "$(jq -r .design.version "$S")" "the pin is back at 1.0.0"
 check "$(sha_of "$T/d100")" "$(jq -r .design.sha256 "$S")" "the design hash is the 1.0.0 hash"
 check "$(sha_of "$T/d100")" "$(sha_of "$RD/nodes.lock")" "nodes.lock holds the 1.0.0 declarations again"
