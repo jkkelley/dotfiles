@@ -4,7 +4,7 @@
   "slug": "wk0-wiki-engine-skeleton-wiki-mk-with-per-verb-i",
   "title": "WK0: wiki engine skeleton - wiki.mk with per-verb includes, wikilib.py, default secret patterns",
   "type": "feature",
-  "status": "draft",
+  "status": "ready",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "design seat infra-design12 cut from wiki.spec.xml (PR 285), ORD-0830 RR-orch-14; design approvals ruled done, ORD-0550 O4; owner surface is Bearings, lavish prohibited for Claude seats",
+    "at": "2026-10-16"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [
@@ -27,6 +31,41 @@
     "WO-20261016-b6a8",
     "WO-20261016-0b9c",
     "WO-20261016-6584"
+  ],
+  "ac_checks": [
+    {
+      "index": 1,
+      "command": "podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py",
+      "exit": 0,
+      "expect": "^OK"
+    },
+    {
+      "index": 2,
+      "command": "env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk0 --fallback \"podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py\" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py",
+      "exit": 0,
+      "expect": "FALLBACK FB-001"
+    },
+    {
+      "index": 3,
+      "command": "make -n wiki-test",
+      "exit": 0,
+      "expect": "podman"
+    },
+    {
+      "index": 4,
+      "command": "make rolodex-check BASE=origin/main",
+      "exit": 0,
+      "expect": null
+    },
+    {
+      "index": 5,
+      "command": "git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|Makefile|claude/tools/wiki/wiki\\.mk|claude/tools/wiki/wikilib\\.py|claude/tools/wiki/secret-patterns\\.json|claude/tools/wiki/tests/test_wikilib\\.py|claude/tools/wiki/README\\.md)$'",
+      "exit": 1,
+      "expect": null
+    }
+  ],
+  "provides": [
+    "make:wiki-test"
   ]
 }
 ---
@@ -53,18 +92,26 @@ Owner words, verbatim: "MAKE SURE A KNOWLEDGE BASE WIKI OF YIELDPOINT AI IS BUIL
 
 **In**
 
-- claude/tools/wiki/wiki.mk: `WIKI ?=` (required by every verb, usage error exit 2 when empty), `WIKI_DIR := $(dir $(lastword $(MAKEFILE_LIST)))`, `include $(wildcard $(WIKI_DIR)mk/*.mk)`, target `wiki-test` running every tests/test_*.py in the python image
-- Makefile (dotfiles root): one line `include claude/tools/wiki/wiki.mk` after the artifact include
-- claude/tools/wiki/wikilib.py (stdlib only): utc_now() -> 'YYYY-MM-DDTHH:MM:SSZ'; sha256_file(path); slug(text) lowercase [a-z0-9-] max 40; read_frontmatter(path) -> (dict, body) and write_frontmatter(path, dict, body) for 'key: value' and 'key: [a, b]' lines; load_config(root) reading <root>/wiki.json with the defaults above; atomic_write(path, text) via tmp and os.replace; secret_patterns(root) merging the default file with <root>/secret-patterns.json
-- claude/tools/wiki/secret-patterns.json: AKIA[0-9A-Z]{16}, ghp_[A-Za-z0-9]{36}, github_pat_[A-Za-z0-9_]{40,}, -----BEGIN [A-Z ]*PRIVATE KEY-----, xox[baprs]-[A-Za-z0-9-]+, sk-[A-Za-z0-9]{20,}
-- claude/tools/wiki/tests/test_wikilib.py: one case per function; frontmatter round trip byte identical
-- claude/tools/wiki/README.md: contents list, verbs, config keys, fallbacks
-- Tool: podman with a digest-pinned image (python image pinned above). Fallback: rerun with --pull=never on the locally cached image of the same digest. Switch: timed-run.sh --fallback ... --fallback-code FB-001 (status code FB-001; switch from WO-20261016-d304 - TR-FB: timed-run.sh --fallback CMD --fallback-code FB-NNN, the one scripted fallback switch, with the FB code catalog)
+- touches: Makefile
+- touches: claude/tools/wiki/wiki.mk
+- touches: claude/tools/wiki/wikilib.py
+- touches: claude/tools/wiki/secret-patterns.json
+- touches: claude/tools/wiki/tests/test_wikilib.py
+- touches: claude/tools/wiki/README.md
+- touches (generated, written only by work-order.sh start/submit/done, never by hand or git add): this ticket file and its archive path
+- exact behaviour: docs/design/wiki.spec.xml and docs/design/wiki.md (PR 285); the Problem section of this ticket carries the same contract verbatim
+- step: branch from origin/main in your own worktree after every depends_on ticket is merged; write exactly the files above
+- step: run `podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py` then the AC checks only; CI runs the rest
+- step: commit 'feat(wiki): engine skeleton, wiki.mk, wikilib, secret patterns (WO-20261016-96c4)'; no Bump trailer (no file under claude/skills changes); push, open the PR, write the result, leave
+- tool: cmd:podman with docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 (python:3.12-slim at pin time 2026-10-16) - fallback: registry pull refused: rerun with --pull=never on the locally cached image of the same digest; switch: timed-run.sh --fallback ... --fallback-code FB-001 (WO-20261016-d304); fallback test: the FB-001 AC below
+- tool: cmd:git, cmd:gh, cmd:make - fallback: missing on the host: stop with ENV-MISSING naming it; gh or GitHub down: retry 3 times, then stop with A2A-003 and its output
+- tool: script:claude/workflow/bin/timed-run.sh and make:Makefile:rolodex-check - on main; fallback: missing: stop with DESIGN-GAP naming it
 
 **Out - non-goals**
 
-- Any verb
-- Any wiki content
+- work-orders/INDEX.md and epic READMEs by hand or by git add
+- waiting on CI or merging: push, open the PR, write the result, leave
+- any file not named under In: stop with DESIGN-GAP
 
 ## Degrees of freedom
 
@@ -72,14 +119,21 @@ Owner words, verbatim: "MAKE SURE A KNOWLEDGE BASE WIKI OF YIELDPOINT AI IS BUIL
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `podman run --rm --network=none -v ~/dotfiles:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py` -> exit 0, output ends `OK`. Proof: command output
-- [ ] `AC-H2` *(human)* `FORCE_FALLBACK=1 bash ~/dotfiles/claude/workflow/bin/timed-run.sh --node wk0 --fallback "podman run --rm --pull=never --network=none -v ~/dotfiles:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py" --fallback-code FB-001 -- podman run --rm --network=none -v ~/dotfiles:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py` -> exit 0, stderr contains `FALLBACK FB-001`. Proof: command output
-- [ ] `AC-H3` *(human)* `make -C ~/dotfiles help | grep -c wiki-test` -> exit 0, output `1`. Proof: command output
+- [ ] `AC-H1` *(human)* the unit tests pass in the pinned image
+  - check: `podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py` exit 0 expect /^OK/
+- [ ] `AC-H2` *(human)* the FB-001 fallback path runs the cached digest
+  - check: `env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk0 --fallback "podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py` exit 0 expect /FALLBACK FB-001/
+- [ ] `AC-H3` *(human)* wiki-test is included from the root Makefile and runs the pinned image
+  - check: `make -n wiki-test` exit 0 expect /podman/
+- [ ] `AC-H4` *(human)* every changed script has a rolodex header
+  - check: `make rolodex-check BASE=origin/main` exit 0
+- [ ] `AC-H5` *(human)* the diff holds only In files and generated work-orders files
+  - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|Makefile|claude/tools/wiki/wiki\.mk|claude/tools/wiki/wikilib\.py|claude/tools/wiki/secret-patterns\.json|claude/tools/wiki/tests/test_wikilib\.py|claude/tools/wiki/README\.md)$'` exit 1
 
 ## Test plan
 
 ```sh
-podman run --rm --network=none -v ~/dotfiles:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py
+{"scope":"claude/tools/wiki wikilib","cases":[{"id":"TP-1","intent":"the unit tests of claude/tools/wiki wikilib prove the spec contract; a broken one corrupts every wiki that calls it","command":"podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py","expected":"exit 0; the last line is OK"},{"id":"TP-2","intent":"fallback path (owner item 28): registry pull refused, the cached digest runs through the FB-001 switch","command":"env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk0-t --fallback \"podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py\" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py","expected":"exit 0; output contains FALLBACK FB-001"}],"isolation":{"runtime":"podman","image":"docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9"},"out_of_scope":["lint and the full suite: CI runs them"]}
 ```
 
 ## Assumptions

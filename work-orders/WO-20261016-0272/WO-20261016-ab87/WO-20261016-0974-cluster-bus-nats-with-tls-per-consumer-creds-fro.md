@@ -73,11 +73,14 @@ _none_
 
 ## Open questions
 
-- [ ] Which homelab-gitops app directory, ClusterSecretStore and Vault path does the NATS deployment use?
+- [x] Which homelab-gitops app directory, ClusterSecretStore and Vault path does the NATS deployment use?
+  - answer `2026-10-16` homelab-gitops origin/main: app apps/line-ops (base + overlays/stable, overlays/uat; Makefile targets render, lint, gate-dev, gate-uat, gate-stable); Argo CD apps argocd-apps/workloads/line-ops.yaml and line-ops-uat.yaml (NATS Helm chart 2.15.1 + overlay, token auth from ESO Password generator nats-token, Service LoadBalancer); store is the namespaced SecretStore vault-backend (apps/line-ops/base/vault-store.yaml, sync wave 5), not a ClusterSecretStore; Vault path secret/homelab/apps/line-ops, role line-ops-vault-eso, seed doc docs/line-ops/vault-seed-line-ops.md; TLS issuer ClusterIssuer local-ca-issuer; no NetworkPolicy exists in the repo.
 
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` DESIGN-GAP (infra-design12 inventory of homelab-gitops origin/main): held in draft, two facts not fixed on main. (1) TLS SAN for local units: bus-env.sh connects local units to the LoadBalancer IP read at runtime (svc line-ops/nats .status.loadBalancer.ingress[0].ip); no pinned IP or MetalLB pool exists in homelab-gitops, so the cert-manager Certificate (issuer local-ca-issuer) cannot carry the IP SAN the local units verify against: needs the fixed LB IP (metallb.universe.tf/loadBalancerIPs) or a DNS name for the bus. (2) Ruling conflict: ORD-0553 R1 says per-consumer creds from Vault via external-secrets, but apps/line-ops/base/nats-token.yaml generates the bus credential in-cluster with the ESO Password generator 'never in Vault', and vault-store.yaml holds SecretStore vault-backend at sync wave 5 because an unseeded store blocks earlier waves (PR 99); Vault-sourced NATS users would make the bus wait on the owner seed. Needs an owner ruling: Vault keys (owner seeds nats-pass-<consumer> under secret/homelab/apps/line-ops, bus waits) or ESO Password generator per consumer. Also: homelab-gitops draft WO-20261016-9126 (W1-W4 NATS bus, bus-init and deadman) shares argocd-apps/workloads/line-ops.yaml and must be ordered against this ticket.
 
 ## Outcome
 
