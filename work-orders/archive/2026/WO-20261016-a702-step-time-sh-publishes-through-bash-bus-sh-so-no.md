@@ -4,15 +4,15 @@
   "slug": "step-time-sh-publishes-through-bash-bus-sh-so-no",
   "title": "step-time.sh publishes through bash bus.sh, so no timed step loses its bus events to a non-executable bus.sh (exit 126)",
   "type": "bug",
-  "status": "ready",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:26:33+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/step-time-sh-publishes-through-bash-bus-sh-so-no",
+  "pr": 308,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design14 cut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -117,13 +117,17 @@ Fix, exactly: step-time.sh line 39 default becomes "bash $HERE/bus.sh pub" (STEP
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* step-time unit cases pass, including the non-executable bus.sh case
+- [x] `AC-H1` *(human)* step-time unit cases pass, including the non-executable bus.sh case
+  - observed `2026-10-16` check: make -C claude/workflow step-time exit 0 output: make: Entering directory '/home/luna/.local/share/wt/step-time/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 ok command output passes through ok start then end on line.test.time.N4 ok end record: code 200, rc, dur_s, UTC at ok no SLOW under budget ok over budget posts SLOW ok timeout returns 124 after retries ok each attempt posts its own end, code 124 ok failure retried 3 times then exits with its code ok a flaky step succeeds on retry ok bus down: step still succeeds, error on stderr ok missing --line exits 2 ok a dot in line exits 2 (subject injection) ok no command exits 2 ok non-executable bus.sh is published through bash pass=14 fail=0 make: Leaving directory '/home/luna/.local/share/wt/step-time/claude/workflow'
   - check: `make -C claude/workflow step-time` exit 0
-- [ ] `AC-H2` *(human)* the default publisher runs bus.sh through bash
+- [x] `AC-H2` *(human)* the default publisher runs bus.sh through bash
+  - observed `2026-10-16` check: grep -c 'STEP_TIME_PUB:-bash $HERE/bus.sh pub' claude/workflow/bin/step-time.sh exit 0 output: 1
   - check: `grep -c 'STEP_TIME_PUB:-bash $HERE/bus.sh pub' claude/workflow/bin/step-time.sh` exit 0 expect /^1$/
-- [ ] `AC-H3` *(human)* every changed script has a rolodex header
+- [x] `AC-H3` *(human)* every changed script has a rolodex header
+  - observed `2026-10-16` check: make rolodex-check BASE=origin/main exit 0 output: python3 scripts/rolodex.py check --root . --base origin/main rolodex-check: 0 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/(bin/step-time.sh|tests/unit/test_step_time.sh))$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/(bin/step-time\.sh|tests/unit/test_step_time\.sh))$'` exit 1
 
 ## Test plan
