@@ -97,7 +97,32 @@ new_project() {
   printf '%s' "$d"
 }
 
-wo() { bash "$SKILL/scripts/work-order.sh" "$@"; }
+# Replaces line 100 of claude/skills/work-order/testing/assert.sh ("wo() { bash \"$SKILL/scripts/work-order.sh\" \"$@\"; }").
+# ORD-0552 O1 made --owner-words, --context and an --ac-check per --ac required on new (and --ac-check per --ac on
+# amend). The existing cases test other behaviour, so wo() supplies inert defaults: owner words and context on new
+# when absent, and "--ac-check true --ac-exit 0" after every non-empty --ac not already followed by --ac-check.
+# Cases that test the refusals (260, 270) call bash "$SKILL/scripts/work-order.sh" directly, never wo().
+wo() {
+  case "${1:-}" in new|amend) ;; *) bash "$SKILL/scripts/work-order.sh" "$@"; return ;; esac
+  local argv=("$@") a=() i=0 n=$# ow=0 cx=0
+  while [ "$i" -lt "$n" ]; do
+    case "${argv[$i]}" in --owner-words) ow=1 ;; --context) cx=1 ;; esac
+    a+=("${argv[$i]}")
+    if [ "${argv[$i]}" = --ac ] && [ $((i + 1)) -lt "$n" ]; then
+      a+=("${argv[$((i + 1))]}")
+      if [ -n "${argv[$((i + 1))]}" ] && [ "${argv[$((i + 2))]:-}" != --ac-check ]; then
+        a+=(--ac-check true --ac-exit 0)
+      fi
+      i=$((i + 2)); continue
+    fi
+    i=$((i + 1))
+  done
+  if [ "$1" = new ]; then
+    [ "$ow" = 1 ] || a+=(--owner-words "test owner words")
+    [ "$cx" = 1 ] || a+=(--context "test context")
+  fi
+  bash "$SKILL/scripts/work-order.sh" "${a[@]}"
+}
 
 # A project with one draft ticket, returned as "<dir> <id>".
 drafted_project() {

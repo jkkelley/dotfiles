@@ -4,15 +4,15 @@
   "slug": "work-order-skill-owner-words-context-scripted-ac",
   "title": "work-order skill: owner words, context, scripted AC checks, check verb, approve resolves tools",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:45:34+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/work-order-skill-owner-words-context-scripted-ac",
+  "pr": 225,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design2 recut closing DESIGN-GAP on WO-20261016-0e3a; design approvals ruled done, ORD-0550 O4",
@@ -97,12 +97,18 @@ ORD-0552 O1 (architect, relayed 2026-10-16T05:56Z): "upgrade the work-order skil
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `bash claude/skills/work-order/testing/run-tests.sh` exits 0 and its output matches /260-owner-words-context: [0-9]+ checks, 0 failed/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `bash claude/skills/work-order/testing/run-tests.sh` exits 0 and its output matches /270-ac-check: [0-9]+ checks, 0 failed/ (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H3` *(human)* `bash claude/skills/work-order/testing/run-tests.sh` exits 0 and its output matches /280-approve-resolves-tools: [0-9]+ checks, 0 failed/ (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H4` *(human)* `bash claude/skills/work-order/testing/run-tests.sh` exits 0 and its output matches /150-heading-and-repair: [0-9]+ checks, 0 failed/ and /250-degrees-of-freedom: [0-9]+ checks, 0 failed/ (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H5` *(human)* `make -C claude/workflow timing-test` exits 0 and its output matches /fail=0/ (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H6` *(human)* `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/|claude/skills/work-order/(scripts/work-order.sh|scripts/lib/wo.sh|references/ticket.tmpl|references/lifecycle.md|SKILL.md|testing/SOP.md|testing/assert.sh|testing/cases/(150|250|260|270|280)-[a-z-]+.sh)|claude/workflow/timing/lib.sh)$'` exits 1 and prints nothing: only In files, plus generated work-orders/ close-out files
+- [x] `AC-H1` *(human)* `bash claude/skills/work-order/testing/run-tests.sh` exits 0 and its output matches /260-owner-words-context: [0-9]+ checks, 0 failed/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` bash claude/skills/work-order/testing/run-tests.sh exit 0 output: 260-owner-words-context: 13 checks, 0 failed
+- [x] `AC-H2` *(human)* `bash claude/skills/work-order/testing/run-tests.sh` exits 0 and its output matches /270-ac-check: [0-9]+ checks, 0 failed/ (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` bash claude/skills/work-order/testing/run-tests.sh exit 0 output: 270-ac-check: 25 checks, 0 failed
+- [x] `AC-H3` *(human)* `bash claude/skills/work-order/testing/run-tests.sh` exits 0 and its output matches /280-approve-resolves-tools: [0-9]+ checks, 0 failed/ (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` bash claude/skills/work-order/testing/run-tests.sh exit 0 output: 280-approve-resolves-tools: 9 checks, 0 failed
+- [x] `AC-H4` *(human)* `bash claude/skills/work-order/testing/run-tests.sh` exits 0 and its output matches /150-heading-and-repair: [0-9]+ checks, 0 failed/ and /250-degrees-of-freedom: [0-9]+ checks, 0 failed/ (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` bash claude/skills/work-order/testing/run-tests.sh exit 0 output: 150-heading-and-repair: 17 checks, 0 failed / 250-degrees-of-freedom: 26 checks, 0 failed
+- [x] `AC-H5` *(human)* `make -C claude/workflow timing-test` exits 0 and its output matches /fail=0/ (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make -C claude/workflow timing-test exit 0 output: pass=21 fail=0
+- [x] `AC-H6` *(human)* `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/|claude/skills/work-order/(scripts/work-order.sh|scripts/lib/wo.sh|references/ticket.tmpl|references/lifecycle.md|SKILL.md|testing/SOP.md|testing/assert.sh|testing/cases/(150|250|260|270|280)-[a-z-]+.sh)|claude/workflow/timing/lib.sh)$'` exits 1 and prints nothing: only In files, plus generated work-orders/ close-out files
+  - observed `2026-10-16` literal command exit 0 printing only the generated ticket file work-orders/WO-20261016-0272/WO-20261016-6ef4-*.md (the AC regex anchors work-orders/ with $, so no generated file can match: ticket defect). With the prefix unanchored (^work-orders/|...) the command prints nothing and exits 1: only In files plus generated work-orders/ files changed
 
 ## Test plan
 

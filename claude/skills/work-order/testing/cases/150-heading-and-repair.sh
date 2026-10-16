@@ -32,7 +32,7 @@ printf '\n%%%%UNWIRED%%%%\n' >>"$sk/references/ticket.tmpl"
 d3=$(new_project)
 run 3 "an unwired template token refuses the write" \
   bash "$sk/scripts/work-order.sh" new --project "$d3" --title "Guarded" --type chore \
-    --problem P --out X --ac "it works"
+    --problem P --out X --ac "it works" --ac-check true --ac-exit 0 --owner-words W --context C
 run 0 "and no ticket file was written" bash -c \
   "[ -z \"\$(find '$d3/work-orders' -name 'WO-*.md' 2>/dev/null)\" ]"
 

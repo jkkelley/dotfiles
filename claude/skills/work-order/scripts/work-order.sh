@@ -26,14 +26,17 @@ work-order.sh - deterministic tickets for agent handoff
 
 Usage:
   work-order.sh new     [--project DIR] --title T --type T --problem T --out T...
-                        [--in T...] [--freedom T...] [--ac T...]
+                        --owner-words T... --context T...
+                        [--in T...] [--freedom T...] [--provides T...]
+                        [--ac T --ac-check CMD --ac-exit N [--ac-expect RE]]...
                         [--test-plan T | --test-plan-file F] [--surface T...]
                         [--priority p0|p1|p2|p3] [--assume T...] [--question T...]
                         (--parent WO-... | --top-level)
                         [--depends-on WO-...] [--blocks WO-...]
                         [--from-figma DIR] [--frames GLOB] [--json]
   work-order.sh amend   [--project DIR] --id WO-... [--title T] [--problem T]
-                        [--in T...] [--out T...] [--freedom T...] [--ac T...]
+                        [--in T...] [--out T...] [--freedom T...] [--provides T...]
+                        [--ac T --ac-check CMD --ac-exit N [--ac-expect RE]]...
                         [--test-plan T | --test-plan-file F] [--json]
   work-order.sh link    [--project DIR] --id WO-... [--parent WO-... | --detach]
                         [--depends-on WO-...] [--blocks WO-...]
@@ -43,6 +46,7 @@ Usage:
                         --answer T [--json]
   work-order.sh evidence [--project DIR] --id WO-... (--index N | --match TEXT)
                         --observed T [--json]
+  work-order.sh check   [--project DIR] --id WO-... [--index N] [--json]
   work-order.sh next    [--project DIR] [--json]
   work-order.sh tree    [--project DIR] [--json]
   work-order.sh reindex [--project DIR] [--check] [--json]
@@ -89,6 +93,12 @@ new:
                as "use your judgement". The body also opens with ## Contents,
                generated from the template's own headings.
   --ac         a human acceptance criterion, repeatable, phrased as a check
+  --ac-check   the scripted check for the --ac just before it (required)
+  --ac-exit    the exit code that check must return
+  --ac-expect  optional regex the check's output must also match
+  --owner-words  the owner's words, verbatim, repeatable (required on new)
+  --context    the full context and ideas behind the ticket, repeatable (required on new)
+  --provides   a tool, script or Make target this ticket itself creates, repeatable
   --from-figma DIR containing wireframe-brief.json and build-plan.json. Both are
                snapshotted into work-orders/evidence/<ID>/ so a later wireframe
                run cannot destroy this ticket's evidence.
@@ -228,6 +238,7 @@ id=""; pr=""; reason=""; status_filter=""; from_figma=""; frames_glob="*"
 parent=""; text=""; answer=""; observed=""; index=""; match=""; superseded_by=""
 no_lavish=0; dry_run=0; detach=0; check=0; top_level=0
 declare -a in_items=() out_items=() ac_items=() freedom_items=() surfaces=() assumptions=() questions=()
+declare -a owner_items=() context_items=() provides_items=() ac_cmd=() ac_exit=() ac_expect=()
 declare -a dep_items=() block_items=() no_dep_items=() no_block_items=()
 
 while (($#)); do
@@ -243,7 +254,21 @@ while (($#)); do
     --test-plan-file) test_plan_file="${2-}"; shift 2 ;;
     --in) in_items+=("${2-}"); shift 2 ;;
     --out) out_items+=("${2-}"); shift 2 ;;
-    --ac) ac_items+=("${2-}"); shift 2 ;;
+    --ac) ac_items+=("${2-}"); ac_cmd+=(""); ac_exit+=(""); ac_expect+=(""); shift 2 ;;
+    --ac-check | --ac-exit | --ac-expect)
+      # Binds to the --ac given just before it; with none before, there is
+      # nothing to bind to and silently dropping it would hide a typo.
+      ((${#ac_items[@]})) || ps_die "$PS_USAGE" "ac_check_without_ac" \
+        "$1 binds to the --ac just before it, and none was given"
+      case $1 in
+        --ac-check) ac_cmd[${#ac_items[@]} - 1]="${2-}" ;;
+        --ac-exit) ac_exit[${#ac_items[@]} - 1]="${2-}" ;;
+        --ac-expect) ac_expect[${#ac_items[@]} - 1]="${2-}" ;;
+      esac
+      shift 2 ;;
+    --owner-words) owner_items+=("${2-}"); shift 2 ;;
+    --context) context_items+=("${2-}"); shift 2 ;;
+    --provides) provides_items+=("${2-}"); shift 2 ;;
     --freedom) freedom_items+=("${2-}"); shift 2 ;;
     --surface) surfaces+=("${2-}"); shift 2 ;;
     --assume) assumptions+=("${2-}"); shift 2 ;;
@@ -325,6 +350,75 @@ freedom_body() {
   ((any)) || printf '%s\n' "$WO_FREEDOM_FIXED"
 }
 
+# owner_words_body - each --owner-words as its own `> T` quote, blank line
+# between, so consecutive quotes do not merge into one paragraph when rendered.
+owner_words_body() {
+  local x first=1
+  for x in "${owner_items[@]+"${owner_items[@]}"}"; do
+    x=$(ps_sanitize_line "$x"); [[ -n $x ]] || continue
+    ((first)) || printf '\n'
+    first=0; printf '> %s\n' "$x"
+  done
+  ((first)) && printf '%s\n' "_none_"
+  return 0
+}
+
+# context_body - each --context as its own paragraph.
+context_body() {
+  local x first=1
+  for x in "${context_items[@]+"${context_items[@]}"}"; do
+    x=$(ps_sanitize_line "$x"); [[ -n $x ]] || continue
+    ((first)) || printf '\n'
+    first=0; printf '%s\n' "$x"
+  done
+  ((first)) && printf '%s\n' "_none_"
+  return 0
+}
+
+# any_nonblank <text...> - true when at least one argument has content.
+any_nonblank() {
+  local x
+  for x in "$@"; do [[ -n $(ps_sanitize_line "$x") ]] && return 0; done
+  return 1
+}
+
+# require_ac_checks - every non-empty --ac carries its scripted check and exit
+# code (item 30: an AC is a check with an exit condition). An empty --ac is the
+# amend withdrawal and needs none. Wireframe-frozen criteria never pass through
+# here, so they are exempt by construction.
+require_ac_checks() {
+  local i
+  for i in "${!ac_items[@]}"; do
+    [[ -n $(ps_sanitize_line "${ac_items[i]}") ]] || continue
+    [[ -n ${ac_cmd[i]} ]] || ps_die "$PS_VALIDATION" "missing_ac_check" \
+      "--ac '${ac_items[i]}' has no --ac-check: every criterion is a scripted check with an exit condition"
+    [[ ${ac_exit[i]} =~ ^[0-9]+$ ]] || ps_die "$PS_VALIDATION" "missing_ac_exit" \
+      "--ac '${ac_items[i]}' needs --ac-exit N (a whole number) beside its --ac-check"
+  done
+}
+
+# ac_line <index> <text> <check> <exit> <expect> - one criterion, plus its check
+# as a sub-bullet. The sub-bullet is not a checkbox, so criteria_of never reads it.
+ac_line() {
+  printf -- '- [ ] `AC-H%s` *(human)* %s' "$1" "$(ps_sanitize_line "$2")"
+  if [[ -n $3 ]]; then
+    printf '\n  - check: `%s` exit %s' "$(ps_sanitize_line "$3")" "$4"
+    [[ -z $5 ]] || printf ' expect /%s/' "$(ps_sanitize_line "$5")"
+  fi
+}
+
+# ac_checks_json <base> - the ac_checks frontmatter array for the --ac items,
+# indexed from base+1 (base = criteria already above them, the frozen block).
+ac_checks_json() {
+  local base="$1" i
+  for i in "${!ac_items[@]}"; do
+    [[ -n ${ac_cmd[i]} ]] || continue
+    jq -n --argjson idx $((base + i + 1)) --arg c "${ac_cmd[i]}" \
+      --argjson e "${ac_exit[i]}" --arg x "${ac_expect[i]}" \
+      '{index:$idx, command:$c, exit:$e, expect:(if $x == "" then null else $x end)}'
+  done | jq -s .
+}
+
 render_body() {
   local criteria="$1" outcome="$2"
   local line token safe_title
@@ -339,6 +433,8 @@ render_body() {
           CONTENTS) contents_body ;;
           DEGREES_OF_FREEDOM) freedom_body "${freedom_items[@]+"${freedom_items[@]}"}" ;;
           PROBLEM) printf '%s\n' "$(ps_sanitize_line "$problem")" ;;
+          OWNER_WORDS) owner_words_body ;;
+          CONTEXT) context_body ;;
           IN) bullets "- " "${in_items[@]+"${in_items[@]}"}" ;;
           OUT) bullets "- " "${out_items[@]+"${out_items[@]}"}" ;;
           CRITERIA) printf '%s\n' "$criteria" ;;
@@ -459,6 +555,12 @@ cmd_new() {
   ((${#out_items[@]})) || ps_die "$PS_VALIDATION" "no_non_goals" \
     "at least one --out is required: a work-order with no non-goals lets an agent wander"
 
+  any_nonblank "${owner_items[@]+"${owner_items[@]}"}" || ps_die "$PS_VALIDATION" "missing_owner_words" \
+    "at least one --owner-words is required: the owner's words, verbatim, so no idea is lost between design and build"
+  any_nonblank "${context_items[@]+"${context_items[@]}"}" || ps_die "$PS_VALIDATION" "missing_context" \
+    "at least one --context is required: the full context and ideas behind the ticket"
+  require_ac_checks
+
   [[ -w $project ]] || ps_die "$PS_IO" "dir_not_writable" "not writable: $project"
 
   local stamp today slug
@@ -552,7 +654,8 @@ cmd_new() {
       jq -r '.non_goals[]? // empty' "$evdir/build-plan.json")
   fi
 
-  local hn=0 a
+  local hn=0 a base_n=0
+  [[ -z $criteria ]] || base_n=$(printf '%s\n' "$criteria" | grep -c '^- \[ \] ' || true)
   for a in "${ac_items[@]+"${ac_items[@]}"}"; do
     hn=$((hn + 1))
     # Join with a newline only after something is already there. Unconditional
@@ -560,7 +663,7 @@ cmd_new() {
     # rendered body on 2026-10-10 UTC); `amend` already joins this way, so a
     # minted and an amended ticket now agree on the section's shape.
     [[ -n $criteria ]] && criteria+=$'\n'
-    criteria+="- [ ] \`AC-H${hn}\` *(human)* $(ps_sanitize_line "$a")"
+    criteria+="$(ac_line "$hn" "$a" "${ac_cmd[hn - 1]}" "${ac_exit[hn - 1]}" "${ac_expect[hn - 1]}")"
   done
   [[ -n $criteria ]] || criteria="_none - approve will refuse until at least one exists_"
 
@@ -571,6 +674,8 @@ cmd_new() {
     --arg pri "$priority" --arg now "$stamp" --arg today "$today" \
     --argjson ev "$ev_json" \
     --arg parent "$parent" \
+    --argjson acchecks "$(ac_checks_json "$base_n")" \
+    --argjson provides "$(printf '%s\n' "${provides_items[@]+"${provides_items[@]}"}" | grep -v '^$' | jq -R . | jq -s .)" \
     --argjson surfaces "$(printf '%s\n' "${surfaces[@]+"${surfaces[@]}"}" | grep -v '^$' | jq -R . | jq -s .)" \
     --argjson deps "$(printf '%s\n' "${dep_items[@]+"${dep_items[@]}"}" | grep -v '^$' | jq -R . | jq -s .)" \
     --argjson blocks "$(printf '%s\n' "${block_items[@]+"${block_items[@]}"}" | grep -v '^$' | jq -R . | jq -s .)" \
@@ -579,7 +684,7 @@ cmd_new() {
       parent:(if $parent == "" then null else $parent end),
       branch:null, pr:null, closed:null,
       approval:null, evidence:$ev, surfaces:$surfaces,
-      depends_on:$deps, blocks:$blocks}')
+      depends_on:$deps, blocks:$blocks, ac_checks:$acchecks, provides:$provides}')
 
   tmp=$(ps_tempfile)
   {
@@ -639,9 +744,10 @@ cmd_amend() {
   wo_require_status "$file" draft
 
   ((${#in_items[@]})) || ((${#out_items[@]})) || ((${#ac_items[@]})) || ((${#freedom_items[@]})) \
-    || [[ -n $title || -n $problem || -n $test_plan || -n $test_plan_file ]] \
+    || ((${#provides_items[@]})) || [[ -n $title || -n $problem || -n $test_plan || -n $test_plan_file ]] \
     || ps_die "$PS_USAGE" "nothing_to_do" \
-      "amend needs one of --title, --problem, --in, --out, --freedom, --ac, --test-plan, --test-plan-file"
+      "amend needs one of --title, --problem, --in, --out, --freedom, --ac, --provides, --test-plan, --test-plan-file"
+  require_ac_checks
   require_test_plan_file
 
   # The Out list may be replaced but never emptied, for the same reason `new`
@@ -680,6 +786,7 @@ cmd_amend() {
 
   # Every section is built by the same helpers `new` uses, so an amended ticket
   # and a freshly minted one are the same bytes for the same inputs.
+  local amend_base=0
   local f_title="" f_problem="" f_in="" f_out="" f_ac="" f_test="" f_freedom=""
   local safe_title=""
   if [[ -n $title ]]; then
@@ -703,10 +810,12 @@ cmd_amend() {
       index($0, s) == 1 { f = 1 }
       f { print }
       index($0, e) == 1 { f = 0 }')
+    amend_base=0
+    [[ -z $criteria ]] || amend_base=$(printf '%s\n' "$criteria" | grep -c '^- \[ \] ' || true)
     for a in "${ac_items[@]}"; do
       hn=$((hn + 1))
       [[ -n $criteria ]] && criteria+=$'\n'
-      criteria+="- [ ] \`AC-H${hn}\` *(human)* $(ps_sanitize_line "$a")"
+      criteria+="$(ac_line "$hn" "$a" "${ac_cmd[hn - 1]}" "${ac_exit[hn - 1]}" "${ac_expect[hn - 1]}")"
     done
     f_ac=$(section_file "$criteria")
   fi
@@ -756,6 +865,16 @@ cmd_amend() {
   else
     wo_fm_set "$file" '.updated=$d' --arg d "$(ps_today)"
   fi
+  # The frozen block's criteria carry no check, so only entries above it survive;
+  # the --ac set replaces the rest wholesale, like the criteria themselves.
+  if ((${#ac_items[@]})); then
+    wo_fm_set "$file" '.ac_checks = ([(.ac_checks // [])[] | select(.index <= $b)] + $n)' \
+      --argjson b "$amend_base" --argjson n "$(ac_checks_json "$amend_base")"
+  fi
+  if ((${#provides_items[@]})); then
+    wo_fm_set "$file" '.provides = $p' \
+      --argjson p "$(printf '%s\n' "${provides_items[@]}" | grep -v '^$' | jq -R . | jq -s .)"
+  fi
   reindex
   emit_ok "$id" draft "$file"
 }
@@ -763,6 +882,125 @@ cmd_amend() {
 # ---------------------------------------------------------------------------
 # transitions
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# approve resolves tools (ORD-0555).
+#
+# A ready ticket that names a command or Make target which is not on main sends
+# a build seat off to invent it. So approve reads every backticked command in the
+# In `step:` lines and every ac_check command, and refuses (tool_missing) when one
+# does not resolve. A tool the ticket itself creates is listed under provides.
+# ---------------------------------------------------------------------------
+
+# tool_ref - the git ref tools resolve against: origin/main when the project has
+# it, else HEAD, else "" (not a git repo: the working tree).
+tool_ref() {
+  git -C "$project" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  if git -C "$project" rev-parse --verify -q origin/main >/dev/null 2>&1; then
+    printf 'origin/main'
+  elif git -C "$project" rev-parse --verify -q HEAD >/dev/null 2>&1; then
+    printf 'HEAD'
+  fi
+}
+
+# tool_cat <ref> <path> - the file as the ref has it, failing when it is absent.
+tool_cat() {
+  local path="${2#./}"
+  if [[ -n $1 ]]; then git -C "$project" show "$1:$path" 2>/dev/null
+  else cat -- "$project/$path" 2>/dev/null
+  fi
+}
+
+# provided <name...> - true when any name is in the ticket's provides list.
+provided() {
+  local n p
+  for n in "$@"; do
+    for p in "${tool_provides[@]+"${tool_provides[@]}"}"; do
+      [[ $p == "$n" || $p == *":$n" ]] && return 0
+    done
+  done
+  return 1
+}
+
+# make_has_target <ref> <makefile-path> <dir> <target> <depth> - the target is
+# defined in the makefile or in one it includes (paths relative to <dir>, where
+# make runs).
+make_has_target() {
+  local ref="$1" mf="$2" dir="$3" target="$4" depth="$5" text inc
+  text=$(tool_cat "$ref" "$mf") || return 1
+  if printf '%s\n' "$text" | awk -v t="$target" '
+      /^[^[:space:]#][^=]*:($|[^=])/ {
+        split($0, a, ":"); n = split(a[1], w, /[[:space:]]+/)
+        for (i = 1; i <= n; i++) if (w[i] == t) { found = 1 }
+      }
+      END { exit !found }'; then
+    return 0
+  fi
+  ((depth < 5)) || return 1
+  while IFS= read -r inc; do
+    [[ -n $inc && $inc != *'$'* && $inc != *'*'* ]] || continue
+    make_has_target "$ref" "${dir:+$dir/}$inc" "$dir" "$target" $((depth + 1)) && return 0
+  done < <(printf '%s\n' "$text" | sed -nE 's/^-?include[[:space:]]+([^[:space:]]+).*/\1/p')
+  return 1
+}
+
+# resolve_tool <ref> <command-string> - dies tool_missing on a miss.
+resolve_tool() {
+  local ref="$1" cmd="$2" first
+  local -a w=()
+  IFS=" " read -ra w <<<"$cmd"
+  first="${w[0]-}"
+  [[ -n $first ]] || return 0
+  if [[ $first == make ]]; then
+    local dir="." mf="" target="" k=1
+    while ((k < ${#w[@]})); do
+      case ${w[k]} in
+        -C) dir="${w[k + 1]-.}"; k=$((k + 2)) ;;
+        -f) mf="${w[k + 1]-}"; k=$((k + 2)) ;;
+        -*) k=$((k + 1)) ;;
+        *=*) k=$((k + 1)) ;;
+        *) target="${w[k]}"; break ;;
+      esac
+    done
+    [[ -n $target ]] || return 0
+    dir="${dir#./}"; [[ $dir == . ]] && dir=""
+    [[ -n $mf ]] || mf="Makefile"
+    provided "$target" "make:$target" && return 0
+    make_has_target "$ref" "${dir:+$dir/}$mf" "$dir" "$target" 0 && return 0
+    ps_die "$PS_VALIDATION" "tool_missing" \
+      "tool_missing $target: make target not found in ${dir:+$dir/}$mf on ${ref:-the working tree}, and not listed under provides"
+  fi
+  if [[ $first == bash && -n ${w[1]-} && ${w[1]} != -* ]]; then
+    local path="${w[1]#./}"
+    provided "$path" "path:$path" "$(basename -- "$path")" && return 0
+    if [[ -n $ref ]]; then git -C "$project" cat-file -e "$ref:$path" 2>/dev/null && return 0
+    else [[ -e $project/$path ]] && return 0
+    fi
+    ps_die "$PS_VALIDATION" "tool_missing" \
+      "tool_missing $path: script not found on ${ref:-the working tree}, and not listed under provides"
+  fi
+  provided "$first" "cmd:$first" && return 0
+  command -v -- "$first" >/dev/null 2>&1 && return 0
+  ps_die "$PS_VALIDATION" "tool_missing" \
+    "tool_missing $first: command does not resolve, and is not listed under provides"
+}
+
+# require_tools_resolve <file> - the approve gate.
+require_tools_resolve() {
+  local file="$1" ref cmd span
+  ref=$(tool_ref)
+  declare -ga tool_provides=()
+  while IFS= read -r span; do tool_provides+=("$span"); done < <(wo_fm "$file" | jq -r '(.provides // [])[]')
+  local -a cmds=()
+  while IFS= read -r span; do
+    [[ -n $span ]] && cmds+=("$span")
+  done < <(wo_body "$file" | awk '/^\*\*In\*\*[[:space:]]*$/{f=1;next} /^\*\*Out/{f=0} /^## /{f=0} f && /^- step:/' \
+             | grep -o '`[^`]*`' | sed 's/^`//; s/`$//')
+  while IFS= read -r span; do
+    [[ -n $span ]] && cmds+=("$span")
+  done < <(wo_fm "$file" | jq -r '(.ac_checks // [])[].command')
+  for cmd in "${cmds[@]+"${cmds[@]}"}"; do resolve_tool "$ref" "$cmd"; done
+}
 
 cmd_approve() {
   wo_require_jq; require_id
@@ -778,6 +1016,7 @@ cmd_approve() {
   fi
   printf '%s' "$body" | grep -q '`AC-' || ps_die "$PS_VALIDATION" "no_criteria" \
     "ticket has no acceptance criteria"
+  require_tools_resolve "$file"
 
   local approval
   if ((no_lavish)); then
@@ -850,6 +1089,12 @@ cmd_done() {
   wo_require_jq; require_id
   local file; file=$(wo_find "$project" "$id")
   wo_require_status "$file" in-review
+
+  # Scripted checks run first; a failing one refuses the close-out outright,
+  # before the unchecked-criteria gate below. They verify only: ticking is the
+  # job of `check`, so a done never ticks a box nobody ran a check for.
+  run_checks "$file" "" notick >&2 || ps_die "$PS_VALIDATION" "ac_check_failed" \
+    "ac_check_failed $CHECK_FAILED - fix the work, then re-run: work-order.sh check --id $id"
 
   local body; body=$(wo_body "$file")
   printf '%s' "$body" | awk '/^## Acceptance criteria/{f=1;next} /^## /{f=0} f' \
@@ -1500,6 +1745,88 @@ criteria_of() {
     }'
 }
 
+# tick_criterion <file> <n> <observed> - tick criterion n and record the
+# observation under it. The one code path for `evidence` and `check`, so a
+# scripted pass and a hand-recorded observation leave identical records.
+tick_criterion() {
+  local file="$1" pick="$2" observed="$3" stamp entry tmp
+  stamp=$(ps_today)
+  entry="  - observed \`$stamp\` $(ps_sanitize_line "$observed")"
+  tmp=$(ps_tempfile)
+  {
+    printf -- '---\n'
+    wo_fm "$file"
+    printf -- '---\n'
+    wo_body "$file" | awk -v pick="$pick" -v entry="$entry" '
+      BEGIN { inc = 0; seen = 0 }
+      /^## Acceptance criteria[[:space:]]*$/ { inc = 1; print; next }
+      /^## / { inc = 0 }
+      inc && /^- \[[ xX]\] / {
+        seen++
+        if (seen == pick) { print "- [x] " substr($0, 7); print entry; next }
+      }
+      { print }
+    '
+  } >"$tmp"
+  ps_atomic_install "$tmp" "$file"
+  wo_fm_set "$file" '.updated=$d' --arg d "$stamp"
+}
+
+# ---------------------------------------------------------------------------
+# check - run every scripted acceptance check and tick what passes.
+#
+# Item 30: every acceptance criterion is a scripted check with its exit
+# condition, run by script to tick the box. A tick made by hand is a claim; one
+# made here carries the command, its exit code and its output.
+# ---------------------------------------------------------------------------
+
+# run_checks <file> [only-index] [notick] - runs the checks, ticking passes
+# unless the third argument is "notick" (the done gate verifies, it does not
+# tick: a box is ticked by `check` or `evidence`, never as a side effect of
+# closing, so a criterion nobody observed cannot be ticked into done). Prints
+# AC-PASS / AC-FAIL lines; returns 0 when every check run passed, 1 otherwise.
+# Sets CHECK_FAILED to the first failing index.
+run_checks() {
+  local file="$1" only="${2-}" notick="${3-}" i cmd want expect out rc ok failed=0 states rec
+  CHECK_FAILED=""
+  states=$(criteria_of "$file" | cut -f1)
+  # One JSON record per line, fields pulled with jq -r: @tsv would double any
+  # backslash in a command or regex on the way through `read`.
+  while IFS= read -r rec; do
+    i=$(jq -r .index <<<"$rec"); cmd=$(jq -r .command <<<"$rec")
+    want=$(jq -r .exit <<<"$rec"); expect=$(jq -r '.expect // ""' <<<"$rec")
+    [[ -z $only || $only == "$i" ]] || continue
+    rc=0
+    out=$(cd "$project" && timeout 600 bash -c "$cmd" 2>&1) || rc=$?
+    ok=0
+    if [[ $rc == "$want" ]]; then
+      ok=1
+      if [[ -n $expect ]] && ! printf '%s\n' "$out" | grep -Eq -- "$expect"; then ok=0; fi
+    fi
+    if ((ok)); then
+      if [[ $notick != notick && $(printf '%s\n' "$states" | sed -n "${i}p") == unmet ]]; then
+        tick_criterion "$file" "$i" "check: $cmd exit $rc output: $(printf '%s\n' "$out" | head -n 20)"
+      fi
+      printf 'AC-PASS %s\n' "$i"
+    else
+      printf 'AC-FAIL %s rc=%s\n' "$i" "$rc"
+      failed=1
+      [[ -n $CHECK_FAILED ]] || CHECK_FAILED=$i
+    fi
+  done < <(wo_fm "$file" | jq -c '(.ac_checks // [])[]')
+  return "$failed"
+}
+
+cmd_check() {
+  wo_require_jq; require_id
+  local file; file=$(wo_find "$project" "$id")
+  wo_require_status "$file" in-progress in-review
+  if [[ -n $index ]]; then
+    [[ $index =~ ^[0-9]+$ ]] || ps_die "$PS_USAGE" "bad_index" "--index must be a whole number (got: $index)"
+  fi
+  run_checks "$file" "$index" || exit 1
+}
+
 # The selector logic below is a deliberate mirror of cmd_resolve rather than a
 # shared helper: every refusal names the thing it refused, and "criterion" and
 # "question" are different nouns to the human reading the error. Factoring them
@@ -1558,27 +1885,8 @@ cmd_evidence() {
   [[ ${states[pick - 1]} == unmet ]] || ps_die "$PS_VALIDATION" "already_evidenced" \
     "criterion $pick on $id is already evidenced: ${texts[pick - 1]}"
 
-  local stamp entry tmp
-  stamp=$(ps_today)
-  entry="  - observed \`$stamp\` $(ps_sanitize_line "$observed")"
-  tmp=$(ps_tempfile)
-  {
-    printf -- '---\n'
-    wo_fm "$file"
-    printf -- '---\n'
-    wo_body "$file" | awk -v pick="$pick" -v entry="$entry" '
-      BEGIN { inc = 0; seen = 0 }
-      /^## Acceptance criteria[[:space:]]*$/ { inc = 1; print; next }
-      /^## / { inc = 0 }
-      inc && /^- \[[ xX]\] / {
-        seen++
-        if (seen == pick) { print "- [x] " substr($0, 7); print entry; next }
-      }
-      { print }
-    '
-  } >"$tmp"
-  ps_atomic_install "$tmp" "$file"
-  wo_fm_set "$file" '.updated=$d' --arg d "$stamp"
+  local stamp; stamp=$(ps_today)
+  tick_criterion "$file" "$pick" "$observed"
 
   if ((PS_JSON)); then
     printf '{"ok":true,"id":"%s","criterion":%s,"index":%d,"observed":%s,"at":"%s","file":%s}\n' \
@@ -2291,6 +2599,7 @@ case $command in
   note) cmd_note ;;
   resolve) cmd_resolve ;;
   evidence) cmd_evidence ;;
+  check) cmd_check ;;
   next) cmd_next ;;
   tree) cmd_tree ;;
   reindex) cmd_reindex ;;
@@ -2311,5 +2620,5 @@ case $command in
   # only listing an agent that guessed wrong ever sees. `evidence` and `reflow`
   # were missing from it for as long as they have existed.
   *) ps_die "$PS_USAGE" "unknown_command" \
-       "unknown command: $command (new|amend|link|note|resolve|evidence|approve|start|submit|done|cleanup|cancel|reopen|verify|resync|show|list|next|tree|reindex|reflow|repair)" ;;
+       "unknown command: $command (new|amend|link|note|resolve|evidence|check|approve|start|submit|done|cleanup|cancel|reopen|verify|resync|show|list|next|tree|reindex|reflow|repair)" ;;
 esac
