@@ -1,0 +1,27 @@
+# Reusable fast check for any repo with wireframes (brief BR-20261016-design-drift):
+# fails when a <dir>/design.md changed after the version <dir>/wireframes/README.md records.
+# A repo adopts it with one job:
+#   design-drift:
+#     uses: jkkelley/dotfiles/.github/workflows/design-drift.yml@main
+# The script is read from this repo, so every caller runs the same check (never a copy).
+name: design-drift
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  design-drift:
+    name: wireframes in step with design.md
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: jkkelley/dotfiles
+          path: .design-drift-dotfiles
+          sparse-checkout: scripts/design-drift.sh
+          sparse-checkout-cone-mode: false
+      - run: bash .design-drift-dotfiles/scripts/design-drift.sh check
