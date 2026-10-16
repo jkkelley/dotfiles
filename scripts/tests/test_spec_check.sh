@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header reviewed
+# name: test_spec_check.sh
+# purpose: Test plan WO-20261016-bdcb (TP-1 to TP-6) for scripts/spec-check.sh. Run in podman: make spec-check-test.
+# inputs: none; runs ../spec-check.sh against fixtures it writes
+# outputs: stdout ok / not ok lines; exit 0 when every case passes
+# writes-to: a mktemp scratch path
+# cleanup: removes its own temp files on exit
 # Test plan WO-20261016-bdcb (TP-1 to TP-6) for scripts/spec-check.sh. Run in podman: make spec-check-test.
 # Rules out: an off-by-one cap, a malformed spec passing because only length was checked, a spec without a
 # <contents> first child passing, a check that writes files, and bad usage mistaken for a violation.

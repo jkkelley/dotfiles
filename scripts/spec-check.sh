@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header reviewed
+# name: spec-check.sh
+# purpose: every XML spec is 1000 lines or less, parses, and opens with a contents element.
+# inputs: FILE... arguments; env BASE (origin/main), LIMIT (1000), PATTERN (*.spec.xml)
+# outputs: stdout ok/FAIL lines; exit 0 ok, 3 violation, 2 usage
+# writes-to: nothing (read-only)
+# cleanup: none needed
 # spec-check.sh - every XML spec is 1000 lines or less, parses, and opens with a contents element.
 # Owner order 2026-10-16 UTC, Design principles 101 item 28: "xml specs 1000 lines or less with content list and
 # mermaid code for doc design first with graceful recovery and idempotentency, automation forever NEVER HAND FED".

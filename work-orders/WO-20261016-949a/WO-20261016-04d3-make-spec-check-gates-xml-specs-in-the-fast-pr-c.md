@@ -4,7 +4,7 @@
   "slug": "make-spec-check-gates-xml-specs-in-the-fast-pr-c",
   "title": "make spec-check gates XML specs in the fast PR check",
   "type": "feature",
-  "status": "draft",
+  "status": "ready",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "owner: i approved of everything (brief BR-20261016-spec-check)",
+    "at": "2026-10-16"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [
@@ -47,14 +51,14 @@ Nothing enforces item 28 on XML specs outside inbox-sweep, and nothing checks fo
 
 **In**
 
-- scripts/md-contents.sh check pattern; claude/workflow/inbox-sweep/bin/spec-lint.sh line counting
+- files: scripts/spec-check.sh (new), Makefile (spec-check, spec-check-test block), .github/workflows/skill-pr-gate.yml (one step in md-contents job)
+- commands: make spec-check FILES=<spec.xml>; make spec-check-test; make rolodex-check
+- docs: ~/AGENTS.md Design principles 101 item 28; scripts/md-contents.sh (scope rule); claude/workflow/inbox-sweep/bin/spec-lint.sh (line count)
 
 **Out - non-goals**
 
-- scripts/spec-check.sh
-- Makefile spec-check target, FILES= or changed *.xml vs BASE
-- skill-pr-gate.yml md-contents job step
-- scripts/tests/test_spec_check.sh
+- migrating existing docs/design/*.spec.xml to a <contents> element
+- changing claude/workflow/inbox-sweep/bin/spec-lint.sh
 
 ## Degrees of freedom
 
@@ -62,9 +66,10 @@ Nothing enforces item 28 on XML specs outside inbox-sweep, and nothing checks fo
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* spec-check fails a 1001-line spec, a malformed spec, a spec without a contents element, passes a good one (exit 3 / 0)
-- [ ] `AC-H2` *(human)* two runs give the same result and git status is clean
-- [ ] `AC-H3` *(human)* bad usage exits 2
+- [ ] `AC-H1` *(human)* make spec-check FILES=<1001-line spec> exits non-zero with FAIL <file>: 1001 lines, limit 1000
+- [ ] `AC-H2` *(human)* make spec-check with no spec changed prints spec-check: nothing in scope and exits 0
+- [ ] `AC-H3` *(human)* md-contents CI job runs make spec-check with BASE = PR base sha
+- [ ] `AC-H4` *(human)* evidence: repro command and output written by claude/tools/artifact/artifact.sh new --key log to the artifact store, path in the PR body
 
 ## Test plan
 
