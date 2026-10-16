@@ -109,20 +109,34 @@ cp_repo() { local top; top=$(cp_top "$1"); basename "${top:-$(cd "$1" && pwd)}";
 
 # Allocate a store path for this project and its repo index link. Prints the path.
 cp_store_path() {
-  local project=$1 repo slug now base dir path ldir
+  local project=$1 repo slug now stem base dir path ldir n=1
   repo=$(cp_repo "$project")
   slug=$(printf '%s' "$repo" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '-' | sed 's/--*/-/g; s/^-//; s/-$//')
-  # YYYYMMDD-HHMMSS- (16) + <slug> + -context-state (14) must stay under 55.
-  slug=${slug:0:24}; slug=${slug%-}; [[ -n $slug ]] || slug=project
+  # YYYYMMDD-HHMMSS- (16) + <slug> + -context-state (14) + a -NN collision suffix (3) must stay under 55.
+  slug=${slug:0:21}; slug=${slug%-}; [[ -n $slug ]] || slug=project
   now=$(cp_stamp)
-  base="${now:0:8}-${now:9:6}-$slug-context-state"
+  stem="${now:0:8}-${now:9:6}-$slug-context-state"
   dir="$CP_ROOT/$CP_KEY/${now:0:4}/${now:4:2}"
-  path="$dir/$base.md"
   mkdir -p "$dir" || cp_die "$CP_IO" "cannot create store directory: $dir"
-  [[ -e $path ]] && cp_die "$CP_IO" "store file already exists: $path"
+  # Claim the name atomically, and take the next -N suffix when it is taken.
+  # What broke: the name has one-second resolution, and this used to die with
+  # "store file already exists" on a second init of the same repo within that
+  # second (PR 145, claude/workflow make compaction: test_compaction.sh resets a
+  # seat and re-inits it several times a second, so compact-now refused with
+  # exit 3). Two parallel seats of one repo starting together hit the same wall.
+  # Why a suffix: sleeping to the next second is useless under a fixed
+  # SOURCE_DATE_EPOCH, and the noclobber claim also closes the race in which two
+  # writers both saw the name free and the later mv -f silently replaced the
+  # earlier one. Cost: a collided name carries -2, -3, ... after context-state.
+  base=$stem
+  until ( set -C; : > "$dir/$base.md" ) 2>/dev/null; do
+    n=$(( n + 1 )); (( n < 100 )) || cp_die "$CP_IO" "no free store name for $stem in $dir"
+    base="$stem-$n"
+  done
+  path="$dir/$base.md"
   ldir="$CP_ROOT/repos/$repo/$CP_KEY/${now:0:4}/${now:4:2}"
   mkdir -p "$ldir" && ln -s "../../../../../$CP_KEY/${now:0:4}/${now:4:2}/$base.md" "$ldir/$base.md" \
-    || cp_die "$CP_IO" "cannot write the repo index link in $ldir"
+    || { rm -f -- "$path"; cp_die "$CP_IO" "cannot write the repo index link in $ldir"; }
   printf '%s' "$path"
 }
 

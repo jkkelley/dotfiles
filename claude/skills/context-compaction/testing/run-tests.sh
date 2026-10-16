@@ -250,6 +250,14 @@ bash "$CP" new --project "$G" --body-file "$WORK/s1.md" >/dev/null 2>&1
 expect_exit 0 "verify reads through the link" bash "$CP" verify --project "$G"
 [[ $(bash "$CP" path --project "$G" 2>/dev/null) == "$sp" ]] && ok "path prints the store file" || bad "path prints the store file" "wrong"
 
+# Two inits of one repo in the same second (a reset seat, or parallel seats)
+# must both land, under distinct names, rather than the second dying on exit 4.
+C1=$(newproj same-second); C2="$WORK/again/same-second"; mkdir -p "$C2"
+c1=$(SOURCE_DATE_EPOCH=1800000000 bash "$CP" init --project "$C1" 2>/dev/null)
+c2=$(SOURCE_DATE_EPOCH=1800000000 bash "$CP" init --project "$C2" 2>/dev/null); rc=$?
+[[ $rc -eq 0 && -f $c2 && $c1 != "$c2" && $c2 == *-same-second-context-state-2.md ]] \
+  && ok "a same-second init takes the next suffix" || bad "a same-second init takes the next suffix" "rc=$rc $c2"
+
 M=$(newproj migrate-repo); git -C "$M" init -q
 printf '# CONTEXT_STATE.md\n\n## Checkpoint 2026-01-01 00:00 UTC\n\nlegacy body\n' > "$M/CONTEXT_STATE.md"
 orig=$(sha256sum < "$M/CONTEXT_STATE.md"); git -C "$M" add CONTEXT_STATE.md; git -C "$M" commit -qm legacy

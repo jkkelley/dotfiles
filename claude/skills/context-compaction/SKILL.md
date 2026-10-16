@@ -13,6 +13,7 @@ version: 2.0.2
 - [When to invoke](#when-to-invoke)
 - [The shape of the file](#the-shape-of-the-file)
   - [The rule that makes the window work](#the-rule-that-makes-the-window-work)
+- [Where the file lives](#where-the-file-lives)
 - [Workflow](#workflow)
   - [1. Install, once per project](#1-install-once-per-project)
   - [2. Read before writing](#2-read-before-writing)
