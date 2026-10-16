@@ -4,15 +4,15 @@
   "slug": "work-order-sh-check-and-done-code-dir-dir-run-a-",
   "title": "work-order.sh check and done --code-dir DIR run a cross-repo ticket's checks in the checkout of its repo, and refuse code_dir_required without it",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:39:34+00:00",
   "parent": "WO-20261016-fb0c",
   "branch": "feat/1099-work-order-sh-check-and-done-code-dir-dir-run-a-",
-  "pr": null,
-  "closed": null,
+  "pr": 339,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design15 cut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -121,13 +121,17 @@ Order brief BR-20261016-infra-design15. f57d (merged #295 code path) gives a tic
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* check and done run a cross-repo ticket's checks in --code-dir, and refuse without it or with the wrong repo
+- [x] `AC-H1` *(human)* check and done run a cross-repo ticket's checks in --code-dir, and refuse without it or with the wrong repo
+  - observed `2026-10-16` check: bash claude/skills/work-order/testing/run-tests.sh exit 0 output: work-order test suite image: localhost/work-order-test:1 skill: /home/luna/.cache/wt-1099/claude/skills/work-order (read-only) scratch: /tmp/work-order-test.i6RaaW (removed on exit) 010-new-happy.sh ok new exits 0 on the documented example (exit 0) ok INDEX.md is generated ok INDEX lists the new ticket ok starts in draft ok renders the non-goals section ok records the non-goal ok records the human criterion ok frontmatter parses as JSON (exit 0) created /work/proj.SThgV5/work-orders/WO-20260805-f57b/WO-20260805-f57b-empty-cart-state.md (status: draft, evidence: human) ok same input and clock produce an identical ticket 010-new-happy: 9 checks, 0 failed 020-new-refuses.sh
   - check: `bash claude/skills/work-order/testing/run-tests.sh` exit 0 expect /420-code-dir-checks/
-- [ ] `AC-H2` *(human)* run_checks cds into code_dir when given
+- [x] `AC-H2` *(human)* run_checks cds into code_dir when given
+  - observed `2026-10-16` check: grep -c 'cd "${code_dir:-$project}"' claude/skills/work-order/scripts/work-order.sh exit 0 output: 1
   - check: `grep -c 'cd "${code_dir:-$project}"' claude/skills/work-order/scripts/work-order.sh` exit 0 expect /^1$/
-- [ ] `AC-H3` *(human)* rolodex pointers hold
+- [x] `AC-H3` *(human)* rolodex pointers hold
+  - observed `2026-10-16` check: make rolodex-check BASE=origin/main exit 0 output: python3 scripts/rolodex.py check --root . --base origin/main rolodex-check: 1 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H4` *(human)* the diff holds only the In files
+- [x] `AC-H4` *(human)* the diff holds only the In files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/skills/work-order/(scripts/work-order.sh|testing/SOP.md|testing/cases/420-code-dir-checks.sh))$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/skills/work-order/(scripts/work-order\.sh|testing/SOP\.md|testing/cases/420-code-dir-checks\.sh))$'` exit 1
 
 ## Test plan
