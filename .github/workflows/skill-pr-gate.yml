@@ -93,6 +93,9 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: make spec-check
 
+      # Wireframes in step with their design.md (brief BR-20261016-design-drift). Reads the tree only, no history.
+      - run: make design-drift
+
   # Design principles 101 item 23 (owner, 2026-10-16 UTC): logs, results and
   # screenshots never go in git; they live in the artifact store and the repo
   # points to them. This job is where a committed one is stopped. It has no
