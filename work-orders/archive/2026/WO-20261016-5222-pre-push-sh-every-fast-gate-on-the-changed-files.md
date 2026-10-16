@@ -4,15 +4,15 @@
   "slug": "pre-push-sh-every-fast-gate-on-the-changed-files",
   "title": "pre-push.sh: every fast gate on the changed files, in parallel, under 30 s; make pre-push, pre-push-install, pre-push-uninstall",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T08:28:09+00:00",
   "parent": "WO-20261016-ebe4",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/pre-push-sh-every-fast-gate-on-the-changed-files",
+  "pr": 251,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design6 cut for ORD-0814 P1 P2; design approvals ruled done, ORD-0550 O4",
@@ -168,21 +168,29 @@ e2e_pre_push.sh body, run in localhost/dotfiles-workflow-test:1 with the reposit
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the pre-push suite passes in podman
+- [x] `AC-H1` *(human)* the pre-push suite passes in podman
+  - observed `2026-10-16` check: make -f claude/workflow/pre-push/pre-push.mk pre-push-test exit 0 output: podman build -q -t localhost/dotfiles-workflow-test:1 -f /home/luna/.cache/wt-prepush/claude/workflow/pre-push/../tests/container/Containerfile /home/luna/.cache/wt-prepush/claude/workflow/pre-push/.. >/dev/null podman run --rm --network=none --userns=keep-id -v "/home/luna/.cache/wt-prepush:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c "shellcheck -x claude/workflow/pre-push/pre-push.sh claude/workflow/pre-push/tests/*.sh && bash claude/workflow/pre-push/tests/test_pre_push.sh" ok TP-1 red exits 1 ok TP-1 red names gate ok TP-1 red shows output ok TP-1 green exits 0 ok TP-1 green prints OK ok TP-1 env config ok TP-2 three sleeps exit 0 ok TP-2 three sleeps under 5s (took 2s) ok TP-3 exits 0 ok TP-3 needs skip ok TP-3 cmd never ran ok TP-3 127 skip ok TP-4 installed ok TP-4 nochange ok TP-4 hook is 8 lines ok TP-4 hook executable ok TP-4 removed ok TP-4 absent
   - check: `make -f claude/workflow/pre-push/pre-push.mk pre-push-test` exit 0 expect /pre-push: pass=[0-9]+ fail=0/
-- [ ] `AC-H2` *(human)* the real end-to-end push is refused on a tracked-ignored path and passes once it is untracked
+- [x] `AC-H2` *(human)* the real end-to-end push is refused on a tracked-ignored path and passes once it is untracked
+  - observed `2026-10-16` check: make -f claude/workflow/pre-push/pre-push.mk pre-push-e2e exit 0 output: podman build -q -t localhost/dotfiles-workflow-test:1 -f /home/luna/.cache/wt-prepush/claude/workflow/pre-push/../tests/container/Containerfile /home/luna/.cache/wt-prepush/claude/workflow/pre-push/.. >/dev/null podman run --rm --network=none --userns=keep-id -v "/home/luna/.cache/wt-prepush:/src:ro,Z" -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash /src/claude/workflow/pre-push/tests/e2e_pre_push.sh PREPUSH-HOOK-INSTALLED /tmp/c/.git/hooks/pre-push WARN bus unreachable, start of pre-push not published PREPUSH-PASS tracked-ignored-check 0s PREPUSH-PASS rolodex-check 0s PREPUSH-SKIP md-contents-check ENV-MISSING npx PREPUSH-PASS spec-check 0s PREPUSH-PASS a2a-lint 1s PREPUSH-PASS bump-resolve 0s PREPUSH-OK 6 gates 1s WARN bus unreachable, end of pre-push not published E2E-OK
   - check: `make -f claude/workflow/pre-push/pre-push.mk pre-push-e2e` exit 0 expect /E2E-OK/
-- [ ] `AC-H3` *(human)* on the host in the ticket worktree the real gates pass in under 30 s
+- [x] `AC-H3` *(human)* on the host in the ticket worktree the real gates pass in under 30 s
+  - observed `2026-10-16` check: bash -c s=$(date +%s); make -s -f claude/workflow/pre-push/pre-push.mk pre-push REPO=. || exit 1; d=$(( $(date +%s) - s )); echo dur=$d; [ "$d" -lt 30 ] exit 0 output: PREPUSH-PASS tracked-ignored-check 0s PREPUSH-PASS rolodex-check 0s PREPUSH-PASS md-contents-check 0s PREPUSH-PASS spec-check 0s PREPUSH-PASS a2a-lint 1s PREPUSH-PASS bump-resolve 0s PREPUSH-OK 6 gates 1s dur=1
   - check: `bash -c s=\$\(date\ +%s\)\;\ make\ -s\ -f\ claude/workflow/pre-push/pre-push.mk\ pre-push\ REPO=.\ \|\|\ exit\ 1\;\ d=\$\(\(\ \$\(date\ +%s\)\ -\ s\ \)\)\;\ echo\ dur=\$d\;\ \[\ \"\$d\"\ -lt\ 30\ \]` exit 0 expect /PREPUSH-OK/
-- [ ] `AC-H4` *(human)* install is idempotent and uninstall cleans up
+- [x] `AC-H4` *(human)* install is idempotent and uninstall cleans up
+  - observed `2026-10-16` check: bash -c make -s -f claude/workflow/pre-push/pre-push.mk pre-push-install REPO=. && make -s -f claude/workflow/pre-push/pre-push.mk pre-push-install REPO=. && make -s -f claude/workflow/pre-push/pre-push.mk pre-push-uninstall REPO=. exit 0 output: PREPUSH-HOOK-INSTALLED /home/luna/dotfiles/.git/hooks/pre-push PREPUSH-HOOK-NOCHANGE /home/luna/dotfiles/.git/hooks/pre-push PREPUSH-HOOK-REMOVED /home/luna/dotfiles/.git/hooks/pre-push
   - check: `bash -c make\ -s\ -f\ claude/workflow/pre-push/pre-push.mk\ pre-push-install\ REPO=.\ \&\&\ make\ -s\ -f\ claude/workflow/pre-push/pre-push.mk\ pre-push-install\ REPO=.\ \&\&\ make\ -s\ -f\ claude/workflow/pre-push/pre-push.mk\ pre-push-uninstall\ REPO=.` exit 0 expect /PREPUSH-HOOK-REMOVED/
-- [ ] `AC-H5` *(human)* the target refuses without REPO
+- [x] `AC-H5` *(human)* the target refuses without REPO
+  - observed `2026-10-16` check: make -f claude/workflow/pre-push/pre-push.mk pre-push exit 2 output: pre-push needs REPO= make: *** [claude/workflow/pre-push/pre-push.mk:9: pre-push] Error 2
   - check: `make -f claude/workflow/pre-push/pre-push.mk pre-push` exit 2 expect /pre-push needs REPO=/
-- [ ] `AC-H6` *(human)* the dotfiles gate list is the six gates of the order, in order
+- [x] `AC-H6` *(human)* the dotfiles gate list is the six gates of the order, in order
+  - observed `2026-10-16` check: jq -e '.repos["jkkelley/dotfiles"].gates | map(.name) == ["tracked-ignored-check","rolodex-check","md-contents-check","spec-check","a2a-lint","bump-resolve"]' claude/workflow/pre-push/pre-push.json exit 0 output: true
   - check: `jq -e '.repos["jkkelley/dotfiles"].gates | map(.name) == ["tracked-ignored-check","rolodex-check","md-contents-check","spec-check","a2a-lint","bump-resolve"]' claude/workflow/pre-push/pre-push.json` exit 0
-- [ ] `AC-H7` *(human)* every new script has a rolodex header
+- [x] `AC-H7` *(human)* every new script has a rolodex header
+  - observed `2026-10-16` check: make rolodex-check BASE=origin/main exit 0 output: python3 scripts/rolodex.py check --root . --base origin/main rolodex-check: 3 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H8` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H8` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` check: bash -c ! git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/|claude/workflow/pre-push/(pre-push\.(sh|json|mk)|tests/(test|e2e)_pre_push\.sh))$' exit 0 output:
   - check: `bash -c \!\ git\ diff\ --name-only\ origin/main...HEAD\ \|\ grep\ -vE\ \'\^\(work-orders/\|claude/workflow/pre-push/\(pre-push\\.\(sh\|json\|mk\)\|tests/\(test\|e2e\)_pre_push\\.sh\)\)\$\'` exit 0
 
 ## Test plan
