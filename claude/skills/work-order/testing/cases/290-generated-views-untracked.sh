@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# name: 290-generated-views-untracked.sh
+# purpose: prove INDEX.md and epic READMEs are untracked build outputs that every reader rebuilds on demand (WO-20261016-565d)
+# inputs: SKILL (skill dir), a drafted project from testing/assert.sh
+# outputs: ok/FAIL lines from assert.sh
+# writes-to: a temporary project under the test sandbox only
+# cleanup: the sandbox project is removed by the test harness
 # INDEX.md and the epic READMEs are untracked build outputs (WO-20261016-565d).
 # A fresh clone has neither, so every reader must rebuild them and the CI check
 # must validate without them.

@@ -28,6 +28,7 @@
 - [230-scratch-dir](#230-scratch-dir)
 - [240-test-plan-gate](#240-test-plan-gate)
 - [250-degrees-of-freedom](#250-degrees-of-freedom)
+- [290-generated-views-untracked](#290-generated-views-untracked)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
