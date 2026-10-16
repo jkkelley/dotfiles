@@ -7,7 +7,8 @@ here=$(cd "$(dirname "$0")" && pwd)
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
-# Stack: 1 <- main; 2 <- 1; 3 <- 2; 4 <- 1 ; 5 <- main ci-failed; 6 <- 5 (blocked); 7 draft; 8 <- gone (orphan); 9 pending.
+# Stack: 1 <- main; 2 <- 1; 3 <- 2; 4 <- 1 ; 5 <- main ci-failed; 6 <- 5 (blocked); 7 draft; 8 <- gone (orphan); 9 pending;
+# 10 cancelled run superseded by a green rerun (merges); 11 green run superseded by a red rerun (ci-failed).
 cat >"$tmp/prs.json" <<'JSON'
 [
  {"number":1,"title":"root","url":"u1","headRefName":"a","baseRefName":"main","isDraft":false,"mergeable":"MERGEABLE","statusCheckRollup":[]},
@@ -18,7 +19,9 @@ cat >"$tmp/prs.json" <<'JSON'
  {"number":6,"title":"under-red","url":"u6","headRefName":"f","baseRefName":"e","isDraft":false,"mergeable":"MERGEABLE","statusCheckRollup":[]},
  {"number":7,"title":"draft","url":"u7","headRefName":"g","baseRefName":"main","isDraft":true,"mergeable":"MERGEABLE","statusCheckRollup":[]},
  {"number":8,"title":"orphan","url":"u8","headRefName":"h","baseRefName":"gone","isDraft":false,"mergeable":"MERGEABLE","statusCheckRollup":[]},
- {"number":9,"title":"pending","url":"u9","headRefName":"i","baseRefName":"main","isDraft":false,"mergeable":"MERGEABLE","statusCheckRollup":[{"name":"t","status":"IN_PROGRESS","conclusion":null}]}
+ {"number":9,"title":"pending","url":"u9","headRefName":"i","baseRefName":"main","isDraft":false,"mergeable":"MERGEABLE","statusCheckRollup":[{"name":"t","status":"IN_PROGRESS","conclusion":null}]},
+ {"number":10,"title":"rerun","url":"u10","headRefName":"j","baseRefName":"main","isDraft":false,"mergeable":"MERGEABLE","statusCheckRollup":[{"name":"t","status":"COMPLETED","conclusion":"CANCELLED","startedAt":"2026-10-16T04:45:00Z"},{"name":"t","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-10-16T04:45:05Z"}]},
+ {"number":11,"title":"rerun-red","url":"u11","headRefName":"k","baseRefName":"main","isDraft":false,"mergeable":"MERGEABLE","statusCheckRollup":[{"name":"t","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-10-16T04:45:00Z"},{"name":"t","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-10-16T04:45:05Z"}]}
 ]
 JSON
 cat >"$tmp/gh" <<'STUB'
@@ -55,10 +58,10 @@ out=$(STUB_DIR=$tmp GH=$tmp/gh MERGE_TRAIN_SLEEP=0 bash "$here/../merge-train.sh
 [ "$out" = "$(cat "$tmp/r.json")" ] || fail "result file differs from stdout"
 
 order=$(grep -o 'pulls/[0-9]*/merge' "$tmp/calls" | tr -d 'a-z/' | paste -sd' ')
-# 4 is tried (conflict -> clone fails -> skipped); 3 before 2, both before 1.
-[ "$order" = "3 2 4 1" ] || fail "merge order: got '$order', want '3 2 4 1'"
+# 4 is tried (conflict -> clone fails -> skipped); 3 before 2, both before 1; 10 is its own root.
+[ "$order" = "3 2 4 1 10" ] || fail "merge order: got '$order', want '3 2 4 1 10'"
 [ "$(jq -r .method <<<"$out")" = squash ] || fail "method should follow repo settings (squash only)"
-[ "$(jq -c '[.merged[].number]' <<<"$out")" = "[3,2,1]" ] || fail "merged: $(jq -c '[.merged[].number]' <<<"$out")"
+[ "$(jq -c '[.merged[].number]' <<<"$out")" = "[3,2,1,10]" ] || fail "merged: $(jq -c '[.merged[].number]' <<<"$out")"
 grep -q 'DELETE repos/o/r/git/refs/heads/c' "$tmp/calls" || fail "merged head branch not cleaned up"
 
 reason() { jq -r --argjson n "$1" '.skipped[] | select(.number == $n) | .reason' <<<"$out"; }
@@ -68,6 +71,8 @@ reason() { jq -r --argjson n "$1" '.skipped[] | select(.number == $n) | .reason'
 [ "$(reason 7)" = draft ] || fail "#7 draft"
 [ "$(reason 8)" = orphan-base ] || fail "#8 orphan"
 [ "$(reason 9)" = ci-pending ] || fail "#9 pending"
+[ "$(reason 11)" = ci-failed ] || fail "#11 latest run red, got '$(reason 11)'"
+jq -e '[.merged[].number] | index(10)' <<<"$out" >/dev/null || fail "#10 cancelled run superseded by green rerun not merged"
 jq -e '.skipped[] | select(.number == 5) | .evidence[0] | .name == "lint" and (.log_tail | index("Error: lint failed"))' <<<"$out" >/dev/null \
   || fail "#5 evidence lacks check name and log lines"
 ! grep -q 'pulls/6/merge' "$tmp/calls" || fail "#6 merged under a skipped parent"
