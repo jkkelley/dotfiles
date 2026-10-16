@@ -4,13 +4,13 @@
   "slug": "test-timed-run-every-target-of-claude-workflow-m",
   "title": "Test - timed-run: every target of claude/workflow/Makefile runs through the timing wrapper",
   "type": "test",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:05:45+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
+  "branch": "feat/eb5f-test-timed-run-every-target-of-claude-workflow-m",
   "pr": null,
   "closed": null,
   "approval": {
@@ -66,8 +66,10 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+- [x] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
+  - observed `2026-10-16` TP-1: count 24, exit 0. TP-2: 'WARN bus unreachable' x2 and rc=0. Log: /home/luna/.local/state/zenith/log/2026/10/20261016-124500-wo-eb5f-timed-run-test.md
+- [x] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+  - observed `2026-10-16` /home/luna/.local/state/zenith/log/2026/10/20261016-124500-wo-eb5f-timed-run-test.md (frontmatter present)
 
 ## Test plan
 
