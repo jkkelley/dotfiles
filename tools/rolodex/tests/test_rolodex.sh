@@ -67,3 +67,28 @@ python3 -c "import json,sys; d=json.load(open('$tmp/out/s.json')); assert d['sch
 sed -n 3,4p "$tmp/out/S.md" | grep -q doctoc || fail "contents list not at the top"
 grep -q 'GOLDEN-RULES:START' "$tmp/out/S.md" || fail "golden rules block missing"
 pass "build writes only its two outputs, is idempotent, carries contents list and golden rules"
+
+# WO-20261016-88d3: headers with no FILE drafts exactly what check flags (same base, same file set), never others.
+g="$tmp/g"; mkdir -p "$g/scripts" "$g/bin"
+git -C "$g" init -q -b main; git -C "$g" config user.email t@example.com; git -C "$g" config user.name t
+printf '#!/usr/bin/env bash\necho old\n' > "$g/scripts/old.sh"
+git -C "$g" add -A; git -C "$g" commit -qm base
+git -C "$g" checkout -q -b f
+printf '#!/usr/bin/env bash\necho new\n' > "$g/scripts/new.sh"
+printf '#!/usr/bin/env bash\necho far\n' > "$g/bin/far.sh"
+git -C "$g" add -A; git -C "$g" commit -qm branch
+printf '#!/usr/bin/env bash\necho untracked\n' > "$g/scripts/untracked.sh"
+cp -r "$g" "$tmp/g2"
+cp "$g/scripts/old.sh" "$tmp/old.snap"
+BASE=main python3 "$R" headers --root "$g" --write >/dev/null
+cmp -s "$tmp/old.snap" "$g/scripts/old.sh" || fail "headers with no FILE rewrote a script check does not flag"
+for f in scripts/new.sh bin/far.sh scripts/untracked.sh; do
+  python3 "$R" check --root "$g" --base main "$f" >/dev/null || fail "$f was not drafted"
+done
+python3 "$R" check --root "$g" --base main >/dev/null || fail "check still flags files after headers"
+pass "headers WRITE with no FILE drafts exactly the files check flags"
+
+h2=$(python3 "$R" headers --root "$tmp/g2" --all | sed -n 's/^--- //p' | sort)
+c2=$(python3 "$R" check --root "$tmp/g2" --all 2>&1 | sed -n 's/^rolodex-check: \(.*\) lacks.*/\1/p' | sort || true)
+[ -n "$h2" ] && [ "$h2" = "$c2" ] || fail "headers --all [$h2] differs from check --all [$c2]"
+pass "headers --all drafts the same set check --all flags"
