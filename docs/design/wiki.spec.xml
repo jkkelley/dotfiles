@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="wiki" version="0.1.0" status="design" date="2026-10-16">
+  <contents>
+    <item n="1">meta - owner words, engine home, call form</item>
+    <item n="2">layout - engine files and wiki root files</item>
+    <item n="3">config - wiki.json keys and defaults</item>
+    <item n="4">formats - raw capture and processed page</item>
+    <item n="5">codes - status codes and exit codes</item>
+    <item n="6">verbs - intake, process, index, review, check</item>
+    <item n="7">fallbacks - tool and dependency fallbacks with switch codes</item>
+    <item n="8">gates - dev, UAT, stable</item>
+  </contents>
+
+  <meta>
+    <owner-words>MAKE SURE A KNOWLEDGE BASE WIKI OF YIELDPOINT AI IS BUILT AND USING DOC DESIGN FIRST AND PUT THAT SHIT IN THE ~/PROJECTS/YIELDPOINT/WIKI/&lt;ALL SUB DIRS HERE INTAKE|RAW|PROCESS|I'M JUST MAKING SHIT UP TO SHOW&gt;</owner-words>
+    <owner-words>good never examples</owner-words>
+    <owner-words>get everything centrally located for this yieldpoint stuff, i have a directory already in ~/projects</owner-words>
+    <ruling id="BR-20261016-yp-wiki">The YieldPoint wiki is ~/projects/yieldpoint-ai/wiki.</ruling>
+    <ruling id="ORD-0556 O1">The engine is a generic, config-driven dotfiles tool at claude/tools/wiki/; the YieldPoint wiki holds only config and content.</ruling>
+    <call>make -C ~/dotfiles wiki-&lt;verb&gt; WIKI=&lt;root&gt;</call>
+    <design>docs/design/wiki.md</design>
+    <line-node>WO-20261016-35de</line-node>
+    <tickets>WK0 WO-20261016-96c4, WK1 WO-20261016-b9ba, WK2 WO-20261016-168d, WK3 WO-20261016-b6a8, WK4 WO-20261016-0b9c, WK5 WO-20261016-6584, YW-C WO-20261016-2013</tickets>
+  </meta>
+
+  <layout>
+    <engine home="claude/tools/wiki/">
+      <file path="wiki.mk">included from the dotfiles root Makefile after the artifact include; WIKI is required by every verb, empty is a usage error exit 2; includes mk/*.mk; target wiki-test runs tests/test_*.py in the pinned python image</file>
+      <file path="mk/&lt;verb&gt;.mk">one per verb</file>
+      <file path="wikilib.py">stdlib only: utc_now, sha256_file, slug, read_frontmatter, write_frontmatter, load_config, atomic_write, secret_patterns</file>
+      <file path="wiki_&lt;verb&gt;.py">one script per verb</file>
+      <file path="tests/test_&lt;verb&gt;.py">one test file per verb</file>
+      <file path="secret-patterns.json">default patterns, overridable by &lt;WIKI&gt;/secret-patterns.json</file>
+      <file path="review.html.tmpl">review page template</file>
+    </engine>
+    <wiki-root>
+      <dir name="intake" key="intake_dir">sources waiting to be captured</dir>
+      <dir name="raw" key="raw_dir">one capture per source by content hash</dir>
+      <dir name="processed" key="processed_dir">cited pages</dir>
+      <dir name="index" key="index_dir">generated index</dir>
+      <dir key="review_dir">review pages</dir>
+      <file name="wiki.json">config</file>
+      <file name="pages.json">page definitions</file>
+      <file name="review.json">review entries</file>
+    </wiki-root>
+  </layout>
+
+  <config file="&lt;WIKI&gt;/wiki.json">
+    <key name="intake_dir" default="intake"/>
+    <key name="raw_dir" default="raw"/>
+    <key name="processed_dir" default="processed"/>
+    <key name="index_dir" default="index"/>
+    <key name="blob_limit_bytes" default="1048576"/>
+    <key name="max_page_lines" default="200"/>
+    <key name="review_dir" default="none"/>
+    <key name="artifact_new" default="make -s -C ~/dotfiles artifact-new">command that prints a store path; tests set a fake</key>
+    <pages file="&lt;WIKI&gt;/pages.json" shape='{"id","title","topic","sources":[raw names],"sections":[{"anchor","heading"}]}'/>
+    <review file="&lt;WIKI&gt;/review.json" shape='{"page","title","raw_source","assets":optional artifact key}'/>
+  </config>
+
+  <formats>
+    <raw path="raw/&lt;sha12&gt;-&lt;slug&gt;.md">
+      <frontmatter>source (~ for $HOME), captured_at (UTC Z), sha256, bytes, blob (artifact store path, only over the limit)</frontmatter>
+    </raw>
+    <processed path="processed/&lt;id&gt;.md">
+      <frontmatter>id, title, topic, sources (raw file names), updated</frontmatter>
+      <body>'# title'; '## Contents'; one '## &lt;a id="anchor"&gt;&lt;/a&gt;Heading' per section of pages.json; every section links ../raw/&lt;file&gt; at least once</body>
+    </processed>
+  </formats>
+
+  <codes>
+    <code id="WIKI-000" exit="0">ok</code>
+    <code id="WIKI-001" exit="0">captured</code>
+    <code id="WIKI-002" exit="0">already captured</code>
+    <code id="WIKI-003" exit="0">blob sent to the artifact store</code>
+    <code id="WIKI-010" exit="0">skeleton written</code>
+    <code id="WIKI-011" exit="0">page unchanged</code>
+    <code id="WIKI-020" exit="0">index written</code>
+    <code id="WIKI-030" exit="3">check failed</code>
+    <code id="WIKI-031" exit="3">no contents list</code>
+    <code id="WIKI-032" exit="3">broken link</code>
+    <code id="WIKI-033" exit="3">orphan raw</code>
+    <code id="WIKI-034" exit="3">uncited section</code>
+    <code id="WIKI-035" exit="3">page over size</code>
+    <code id="WIKI-036" exit="3">secret pattern</code>
+    <code id="WIKI-037" exit="3">TODO-WRITE left</code>
+    <code id="WIKI-040" exit="0">review page written</code>
+    <exit code="0">ok</exit>
+    <exit code="2">usage</exit>
+    <exit code="3">check failed</exit>
+    <exit code="4">io</exit>
+    <note>FB-001 and FB-004 are fallback switch codes of timed-run.sh --fallback (WO-20261016-d304), not wiki codes.</note>
+  </codes>
+
+  <verbs>
+    <verb name="intake" script="wiki_intake.py ROOT SRC..." make="wiki-intake WIKI= SRC=" ticket="WO-20261016-b9ba">
+      <inputs>SRC: files or directories; a directory recurses over *.md, *.xml, *.json sorted; empty SRC exits 2</inputs>
+      <outputs>raw/&lt;sha12&gt;-&lt;slug(basename)&gt;.md with frontmatter source, captured_at, sha256, bytes and the text; over blob_limit_bytes the bytes go to the path printed by artifact_new and the raw file holds frontmatter with blob: and no body</outputs>
+      <codes>WIKI-001 captured; WIKI-002 already captured (prints the path, writes nothing); WIKI-003 blob sent to the artifact store</codes>
+      <idempotency>sha256 decides: a second run adds nothing; a changed source adds one file</idempotency>
+      <fallback tool="make artifact-new" use="bash ~/dotfiles/claude/tools/artifact/artifact.sh new, same KEY NAME EXT" switch="timed-run.sh --fallback --fallback-code FB-004" test="fake artifact_new fails, the artifact.sh path is used"/>
+    </verb>
+    <verb name="process" script="wiki_process.py ROOT" make="wiki-process WIKI=" ticket="WO-20261016-168d">
+      <inputs>pages.json; raw captures</inputs>
+      <outputs>missing page: skeleton with each section body TODO-WRITE and one [raw: file](../raw/file) per source; present page: rewrite only frontmatter sources and updated, append missing sections, never touch section bodies</outputs>
+      <codes>WIKI-010 skeleton written; WIKI-011 page unchanged; a source missing from raw exits 3 with WIKI-034 (see the design, Gaps)</codes>
+      <idempotency>a rerun is byte identical; written prose survives</idempotency>
+      <fallback tool="podman pinned python image" use="rerun with --pull=never on the locally cached image of the same digest" switch="timed-run.sh --fallback --fallback-code FB-001" test="pull refused, the cached digest runs"/>
+    </verb>
+    <verb name="index" script="wiki_index.py ROOT" make="wiki-index WIKI=" ticket="WO-20261016-b6a8">
+      <inputs>processed/*.md</inputs>
+      <outputs>index/README.md: title, '## Contents', '## Pages' table (id link, title, section count), '## Topic map' (one '### topic', pages sorted by id), '## Backlinks' (per raw file sorted, citing pages)</outputs>
+      <codes>WIKI-020 index written</codes>
+      <idempotency>deterministic bytes; a rerun leaves the file unchanged</idempotency>
+      <fallback tool="podman pinned python image" use="rerun with --pull=never on the locally cached image of the same digest" switch="timed-run.sh --fallback --fallback-code FB-001" test="pull refused, the cached digest runs"/>
+    </verb>
+    <verb name="review" script="wiki_review.py ROOT" make="wiki-review WIKI=" ticket="WO-20261016-6584">
+      <inputs>review.json; the newest raw capture whose source equals raw_source; artifact-find output for assets</inputs>
+      <outputs>review_dir/&lt;page&gt;/design.md (the capture body) and index.html from review.html.tmpl (marked@12.0.2, footer 'generated by make wiki-review from raw/file sha256 sha12'); asset files copied from the store; files under review_dir/&lt;page&gt;/ the script did not write are tarred to the path printed by artifact-new KEY=backup, then removed, never deleted without the tar; atomic writes</outputs>
+      <codes>WIKI-040 review page written, one per page</codes>
+      <idempotency>a rerun is byte identical; a hand file is tarred once, then gone</idempotency>
+      <fallback tool="make artifact-new and artifact-find" use="bash ~/dotfiles/claude/tools/artifact/artifact.sh new, same KEY NAME EXT" switch="timed-run.sh --fallback --fallback-code FB-004" test="fake artifact_new fails, the artifact.sh path is used"/>
+      <fallback tool="podman pinned python image" use="rerun with --pull=never on the locally cached image of the same digest" switch="timed-run.sh --fallback --fallback-code FB-001" test="pull refused, the cached digest runs"/>
+    </verb>
+    <verb name="check" script="wiki_check.py ROOT" make="wiki-check WIKI=" ticket="WO-20261016-0b9c">
+      <inputs>processed/*.md and index/README.md; raw/ for secrets and orphans</inputs>
+      <outputs>one 'CODE path:line' per finding</outputs>
+      <codes>WIKI-031 first H2 is not Contents; WIKI-032 relative link target file or #anchor missing; WIKI-033 raw file cited by no page; WIKI-034 section without a ../raw/ link; WIKI-035 page over max_page_lines; WIKI-036 a line in raw/ or processed/ matching secret_patterns; WIKI-037 TODO-WRITE left; WIKI-030 check failed (summary); no finding prints WIKI-000</codes>
+      <idempotency>read-only; two runs print the same lines and exit the same</idempotency>
+      <fallback tool="podman pinned python image" use="rerun with --pull=never on the locally cached image of the same digest" switch="timed-run.sh --fallback --fallback-code FB-001" test="pull refused, the cached digest runs"/>
+    </verb>
+  </verbs>
+
+  <fallbacks>
+    <fallback tool="timed-run.sh --fallback" use="none needed: a file on main read locally; a missing file stops with exit 4"/>
+    <fallback tool="scripts/spec-check.sh and scripts/md-contents.sh" use="none needed: files on main read locally; a missing file stops with exit 4"/>
+    <fallback tool="git and gh" use="missing on the host: stop with ENV-MISSING; GitHub down: retry 3 times, then stop with A2A-003 and its output"/>
+  </fallbacks>
+
+  <gates>
+    <gate name="dev">podman sandbox, fixtures, fake artifact_new, only the tests the change touches</gate>
+    <gate name="uat">a copy of a wiki root with test content through all five verbs; acceptance criteria observed with evidence</gate>
+    <gate name="stable">the YieldPoint wiki at ~/projects/yieldpoint-ai/wiki; make wiki-check exits 0; rollback is git revert of the wiki repo commit</gate>
+  </gates>
+</spec>
