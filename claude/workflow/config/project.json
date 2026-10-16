@@ -18,7 +18,8 @@
         "free_label": "free",
         "rows": 3,
         "state_dir": "~/.local/state/zenith/herdr-grid",
-        "start_timeout_ms": 60000
+        "start_timeout_ms": 60000,
+        "architect_cmd": "claude --dangerously-skip-permissions --remote-control \"{line} architect\""
       }
     },
     "launchers": {

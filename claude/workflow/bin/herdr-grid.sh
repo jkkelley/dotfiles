@@ -15,6 +15,7 @@
 #   seat-down  <seat> [line]                close a finished seat's pane, reflow, close an emptied overflow tab
 #   line-clean <line>                       seat-down for every finished seat of the line
 #   line-status <line>                      one table: tab, slot, seat, agent, status. No model calls
+#   architect-up <line> [resume]           (re)start the architect in its pane with both flags; resume adds --continue
 #   line-adopt <line> <arch-pane> <seat=pane>...   migrate a live line into the grid without restarting any seat
 # env: WS (default $HERDR_WORKSPACE_ID), CWD (cwd for new panes), FORCE=1 (close an unfinished seat), DRY=1,
 #      GRID_STATE (default ~/.local/state/zenith/herdr-grid), GRID_RETRY_SLEEP (default 1)
@@ -42,6 +43,13 @@ gcfg() { [ -f "$WF_CONFIG" ] && jq -r ".workflow.herdr.grid.$1 // empty" "$WF_CO
 STATE="$(wf_expand "${GRID_STATE:-$(gcfg state_dir)}")"; [ -n "$STATE" ] || STATE="$HOME/.local/state/zenith/herdr-grid"
 FREE="${GRID_FREE_LABEL:-$(gcfg free_label)}"; FREE="${FREE:-free}"
 ROWS="${GRID_ROWS:-$(gcfg rows)}"; ROWS="${ROWS:-3}"
+# Owner, 2026-10-16 UTC: "make sure your seat always has bypass permissions on and that you always have /rc on too, i need
+# to interface with you away from desk". The architect starts with both flags, named for the line, so the Claude app shows
+# one session per line. Remote Control is the architect's alone; seats get bypass only. {line} is replaced by the line name.
+# The default is a variable of its own: its closing {line} brace would end a ${VAR:-default} expansion early.
+ARCH_DEFAULT='claude --dangerously-skip-permissions --remote-control "{line} architect"'
+ARCH_CMD="${ARCH_CMD:-$(gcfg architect_cmd)}"; ARCH_CMD="${ARCH_CMD:-$ARCH_DEFAULT}"
+SKIP_FLAG="--dangerously-skip-permissions"
 START_TIMEOUT_MS="${START_TIMEOUT_MS:-$(gcfg start_timeout_ms)}"; START_TIMEOUT_MS="${START_TIMEOUT_MS:-60000}"
 [ -n "$WS" ] || wf_die "no workspace: run inside a herdr pane or set WS="
 
@@ -139,7 +147,38 @@ cmd_line_up() {
   tab="$(jq -r '.result.tab.tab_id' <<<"$r")"; root="$(jq -r '.result.root_pane.pane_id' <<<"$r")"
   hj pane rename "$root" architect >/dev/null || return 1
   grid_build "$tab" "$root" 1 || return 1
+  start_architect "$line" "$root" || return 1
   log "line $line up: tab $tab, architect $root"
+}
+
+# start_architect <line> <pane> [resume]: runs ARCH_CMD in the architect pane. Every start path goes through here, so a
+# restart or resume cannot come back without both flags. Resume appends --continue (claude's own flag).
+start_architect() {
+  local line="$1" pane="$2" resume="${3:-}" cmd
+  cmd="${ARCH_CMD//\{line\}/$line}"
+  [ -z "$resume" ] || cmd="$cmd --continue"
+  hj pane run "$pane" "$cmd" >/dev/null || return 1
+}
+
+cmd_architect_up() {
+  local line="$1" resume="${2:-}" hit tab
+  tab="$(line_tabs "$line" | head -1 | cut -d' ' -f2)"
+  [ -n "$tab" ] || wf_die "line $line has no tab; run line-up first"
+  hit="$(tab_slots "$tab" | jq -r 'first(.[] | select(.label == "architect") | "\(.pane) \(.agent)") // empty')"
+  [ -n "$hit" ] || wf_die "no architect pane in $tab"
+  [ -z "${hit#* }" ] || wf_die "architect already runs an agent in ${hit%% *}; refusing to start a second"
+  start_architect "$line" "${hit%% *}" "$resume"
+}
+
+# seat_cmd <cmd>: a seat that starts claude always carries bypass permissions, and never Remote Control (architect only).
+seat_cmd() {
+  local cmd="$1"
+  case "$cmd" in *--remote-control*) log "seats never get --remote-control; it is the architect's alone"; return 1 ;; esac
+  case "$cmd" in *"$SKIP_FLAG"*) ;; *)
+    # first claude / claude.exe word, with or without a path or a leading "cd x &&" (the Windows browser seat has one)
+    cmd="$(sed -E "s#(^|[ /;&])(claude(\.exe)?)( |\$)#\1\2 $SKIP_FLAG\4#" <<<"$cmd")" ;;
+  esac
+  printf '%s' "$cmd"
 }
 
 # open_overflow <line> <n> [supply-pane...]: tab "<line> N" with 9 seat slots; prints the tab id.
@@ -203,6 +242,7 @@ cmd_claim() { # claim <line> <seat> [cmd]; prints the pane id
 
 cmd_seat_up() {
   local line="$1" seat="$2" cmd="${3:-}" pane
+  [ -z "$cmd" ] || cmd="$(seat_cmd "$cmd")" || return 1
   pane="$(cmd_claim "$line" "$seat")" || return 1
   if [ -n "$cmd" ]; then
     hj pane run "$pane" "$cmd" >/dev/null || return 1
@@ -344,6 +384,7 @@ main() {
     seat-down)   [ $# -ge 1 ] || wf_die "usage: seat-down <seat> [line]"; cmd_seat_down "$@" ;;
     line-clean)  [ $# -ge 1 ] || wf_die "usage: line-clean <line>"; cmd_line_clean "$@" ;;
     line-status) [ $# -ge 1 ] || wf_die "usage: line-status <line>"; cmd_line_status "$@" ;;
+    architect-up) [ $# -ge 1 ] || wf_die "usage: architect-up <line> [resume]"; cmd_architect_up "$@" ;;
     line-adopt)  [ $# -ge 2 ] || wf_die "usage: line-adopt <line> <arch-pane> <seat=pane>..."; cmd_line_adopt "$@" ;;
     *) sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2; return 2 ;;
   esac
