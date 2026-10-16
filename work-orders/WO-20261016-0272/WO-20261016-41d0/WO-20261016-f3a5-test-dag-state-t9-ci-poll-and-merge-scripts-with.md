@@ -4,14 +4,14 @@
   "slug": "test-dag-state-t9-ci-poll-and-merge-scripts-with",
   "title": "Test - dag-state T9 - CI poll and merge scripts with approval check",
   "type": "test",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:07:39+00:00",
   "parent": "WO-20261016-41d0",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/test-dag-state-t9-ci-poll-and-merge-scripts-with",
+  "pr": 267,
   "closed": null,
   "approval": {
     "via": "override",
@@ -63,8 +63,10 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+- [x] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
+  - observed `2026-10-16` TP-1 exit 0, 30 ok lines, last line pass=30 fail=0
+- [x] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+  - observed `2026-10-16` log written to /home/luna/.local/state/zenith/log/2026/10/20261016-091000-t9-test-run.md with frontmatter
 
 ## Test plan
 
