@@ -8,7 +8,7 @@ ROOT  := $(abspath $(CURDIR)/../..)
 RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:Z" -w /work/claude/workflow -e HOME=/tmp $(IMAGE)
 
 .DEFAULT_GOAL := help
-.PHONY: help image test schema lint herdr-first compaction chain failover test-plan ci-job
+.PHONY: help image test schema lint herdr-first compaction chain failover test-plan ci-job grid
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-10s %s\n", $$1, $$2}'
@@ -42,3 +42,27 @@ ci-job: image ## CI runs this suite: the gate's selector and the job that calls 
 
 test: schema lint herdr-first compaction chain failover test-plan ci-job ## Everything
 	@echo "ok  workflow: schema, lint, herdr-first, compaction, chain, failover, test-plan, ci-job"
+
+# ---- herdr 3x3 grid (docs/design/herdr-grid.md). Inputs are VAR=value; defaults live in config/project.json .workflow.herdr.grid
+need = $(if $($(1)),,$(error $(1)= is required))
+.PHONY: line-up seat-up seat-down line-clean line-status line-adopt grid
+line-up: ## make line-up LINE=<name>: tab "<name> 1", architect left, 2x3 seat slots
+	$(call need,LINE)
+	@bash bin/herdr-grid.sh line-up "$(LINE)"
+seat-up: ## make seat-up LINE= SEAT= [CMD=]: next free slot, labelled; new tab when full
+	$(call need,LINE)$(call need,SEAT)
+	@bash bin/herdr-grid.sh seat-up "$(LINE)" "$(SEAT)" "$(CMD)"
+seat-down: ## make seat-down SEAT= [LINE=] [FORCE=1]: close a finished seat, reflow
+	$(call need,SEAT)
+	@bash bin/herdr-grid.sh seat-down "$(SEAT)" "$(LINE)"
+line-clean: ## make line-clean LINE=: close every finished seat of the line
+	$(call need,LINE)
+	@bash bin/herdr-grid.sh line-clean "$(LINE)"
+line-status: ## make line-status LINE=: tab, slot, seat, agent, status
+	$(call need,LINE)
+	@bash bin/herdr-grid.sh line-status "$(LINE)"
+line-adopt: ## make line-adopt LINE= ARCH=<pane> SEATS="name=pane ...": migrate a live line, no restarts
+	$(call need,LINE)$(call need,ARCH)$(call need,SEATS)
+	@bash bin/herdr-grid.sh line-adopt "$(LINE)" "$(ARCH)" $(SEATS)
+grid: image ## The grid script against a stub herdr (relevant test only)
+	@$(RUN) bash tests/unit/test_herdr_grid.sh
