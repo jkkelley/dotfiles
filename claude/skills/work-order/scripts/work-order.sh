@@ -2621,21 +2621,32 @@ cmd_stale_merged() {
     tid=$(wo_field "$f" '.id'); ttitle=$(wo_field "$f" '.title')
     tpr=$(wo_field "$f" '.pr'); tbranch=$(wo_field "$f" '.branch')
     if [[ -n $tpr ]]; then
-      info=$(stale_gh pr view "$tpr" -R "$repo" --json state,mergeCommit,mergedAt,url) \
-        || ps_die "$PS_IO" "gh_failed" "gh pr view $tpr -R $repo failed 3 times"
+      # A pr that is a URL names its own repo (ORD-0921 E2): a business ticket
+      # whose PR lives in ypconsult-01-src must never be looked up in the
+      # current repo, where the same number is a different PR or none. A bare
+      # number carries no repo, so it uses --pr-repo or the project's repo.
+      local prref="$tpr" prrepo="$repo" prnum="$tpr"
+      if [[ $tpr =~ ^https://github\.com/([^/]+/[^/]+)/pull/([0-9]+) ]]; then
+        prrepo="${BASH_REMATCH[1]}"; prnum="${BASH_REMATCH[2]}"
+        info=$(stale_gh pr view "$tpr" --json state,mergeCommit,mergedAt,url) \
+          || ps_die "$PS_IO" "gh_failed" "gh pr view $tpr failed 3 times"
+      else
+        info=$(stale_gh pr view "$tpr" -R "$repo" --json state,mergeCommit,mergedAt,url) \
+          || ps_die "$PS_IO" "gh_failed" "gh pr view $tpr -R $repo failed 3 times"
+      fi
       [[ $(jq -r '.state // ""' <<<"$info") == MERGED ]] || continue
-      info=$(jq -c --arg n "$tpr" '{pr:($n|tonumber),merge_commit:(.mergeCommit.oid // ""),merged_at:(.mergedAt // ""),url:(.url // "")}' <<<"$info")
+      info=$(jq -c --arg n "$prnum" --arg r "$prrepo" '{pr:($n|tonumber),repo:$r,merge_commit:(.mergeCommit.oid // ""),merged_at:(.mergedAt // ""),url:(.url // "")}' <<<"$info")
     elif [[ -n $tbranch ]]; then
       info=$(stale_gh pr list -R "$repo" --head "$tbranch" --state merged \
                --json number,mergeCommit,mergedAt,url --limit 1) \
         || ps_die "$PS_IO" "gh_failed" "gh pr list -R $repo --head $tbranch failed 3 times"
       [[ $(jq -r 'length' <<<"$info") -gt 0 ]] || continue
-      info=$(jq -c '.[0] | {pr:.number,merge_commit:(.mergeCommit.oid // ""),merged_at:(.mergedAt // ""),url:(.url // "")}' <<<"$info")
+      info=$(jq -c --arg r "$repo" '.[0] | {pr:.number,repo:$r,merge_commit:(.mergeCommit.oid // ""),merged_at:(.mergedAt // ""),url:(.url // "")}' <<<"$info")
     else
       continue
     fi
-    rows=$(jq -c --arg id "$tid" --arg t "$ttitle" --arg s "$s" --arg r "$repo" --argjson i "$info" \
-      '. + [{id:$id,title:$t,status:$s,pr:$i.pr,repo:$r,merge_commit:$i.merge_commit,merged_at:$i.merged_at,url:$i.url}]' <<<"$rows")
+    rows=$(jq -c --arg id "$tid" --arg t "$ttitle" --arg s "$s" --argjson i "$info" \
+      '. + [{id:$id,title:$t,status:$s,pr:$i.pr,repo:$i.repo,merge_commit:$i.merge_commit,merged_at:$i.merged_at,url:$i.url}]' <<<"$rows")
   done < <(find "$root" -type f -name 'WO-*.md' | sort)
 
   if ((PS_JSON)); then
