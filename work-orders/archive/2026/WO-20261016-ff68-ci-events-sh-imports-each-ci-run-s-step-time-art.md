@@ -4,7 +4,7 @@
   "slug": "ci-events-sh-imports-each-ci-run-s-step-time-art",
   "title": "ci-events.sh imports each CI run's step-time-* artifacts to the bus, once per run",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-0272",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design3 cut for ORD-0715; design approvals ruled done, ORD-0550 O4",
@@ -24,7 +24,8 @@
     "WO-20261016-75b7",
     "WO-20261016-e832"
   ],
-  "blocks": []
+  "blocks": [],
+  "superseded_by": "WO-20261016-bd0e"
 }
 ---
 
@@ -127,4 +128,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: DESIGN-GAP from ci-time-import: named tests/test_ci_events.sh absent on main and unrun by timing-test; recut as WO-20261016-bd0e (BR-20261016-infra-design5)
+- superseded by: `WO-20261016-bd0e`
+
+No branch, no PR and no merge commit exist for this work order.
+
