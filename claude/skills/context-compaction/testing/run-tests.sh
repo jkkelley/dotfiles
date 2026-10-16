@@ -13,6 +13,8 @@ HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 SRC=$(cd "$HERE/.." && pwd)
 CP="$SRC/scripts/checkpoint.sh"
 WORK=${WORK:-/work}
+# Every file lands in a scratch artifact store; the project holds only the link.
+export ARTIFACT_ROOT="$WORK/store"
 PASS=0
 FAIL=0
 
@@ -207,7 +209,7 @@ done
 wait
 n=$(grep -c '^## Checkpoint ' "$P/CONTEXT_STATE.md")
 [[ $n -eq 5 ]] && ok "five concurrent writes produce five checkpoints" || bad "five concurrent writes produce five checkpoints" "got $n"
-[[ $(find "$P" -name '*.lockdir' -type d | wc -l) -eq 0 ]] \
+[[ $(find "$P" "$ARTIFACT_ROOT" -name '*.lockdir' -type d | wc -l) -eq 0 ]] \
   && ok "no lock directory is left behind" || bad "no lock directory is left behind" "leftover"
 
 # --- injection -------------------------------------------------------------
@@ -218,6 +220,64 @@ bash "$CP" new --project "$P" --body-file "$WORK/inj.md" >/dev/null 2>&1
 [[ ! -e /work/pwned ]] && ok "body content is not evaluated" || bad "body content is not evaluated" "substitution ran"
 grep -qF '$(touch /work/pwned)' "$P/CONTEXT_STATE.md" \
   && ok "body content is written literally" || bad "body content is written literally" "altered"
+
+# --- artifact store (Design principles 101 item 23) -------------------------
+# The claim: the repo never holds session state. init puts the file in the store
+# under context/ with frontmatter and an index link, the repo keeps a gitignored
+# link, and git status stays clean. migrate moves an existing tracked file out
+# byte for byte and leaves the link. A write through the link must not replace it.
+git config --global user.email t@example.com; git config --global user.name t
+git config --global init.defaultBranch main; git config --global --add safe.directory '*'
+G=$(newproj store-repo); git -C "$G" init -q; echo x > "$G/f"; git -C "$G" add f; git -C "$G" commit -qm init
+sp=$(bash "$CP" init --project "$G" 2>/dev/null)
+[[ $sp =~ ^$ARTIFACT_ROOT/context/[0-9]{4}/[0-9]{2}/[0-9]{8}-[0-9]{6}-store-repo-context-state\.md$ ]] \
+  && ok "init writes into the store under context/" || bad "init writes into the store under context/" "$sp"
+b=$(basename "$sp" .md); [[ ${#b} -lt 55 ]] && ok "store name is under 55 chars" || bad "store name is under 55 chars" "$b"
+[[ -L "$G/CONTEXT_STATE.md" && $(readlink -f "$G/CONTEXT_STATE.md") == "$sp" ]] \
+  && ok "the project holds a link, not the file" || bad "the project holds a link, not the file" "not a link"
+[[ $(sed -n 1p "$sp") == --- ]] && grep -q '^key: "context"$' "$sp" && grep -q '^repo: "store-repo"$' "$sp" \
+  && grep -q '^created: "[0-9-]*T[0-9:]*Z"$' "$sp" \
+  && ok "store file opens with artifact frontmatter" || bad "store file opens with artifact frontmatter" "$(head -3 "$sp")"
+ls "$ARTIFACT_ROOT"/repos/store-repo/context/*/*/"$b.md" >/dev/null 2>&1 \
+  && ok "repo index link exists in the store" || bad "repo index link exists in the store" "missing"
+git -C "$G" add .gitignore; git -C "$G" commit -qm ignore
+[[ -z $(git -C "$G" status --porcelain) ]] && ok "git status is clean with the link in place" \
+  || bad "git status is clean with the link in place" "$(git -C "$G" status --porcelain)"
+body "$WORK/s1.md" store1
+bash "$CP" new --project "$G" --body-file "$WORK/s1.md" >/dev/null 2>&1
+[[ -L "$G/CONTEXT_STATE.md" ]] && grep -q 'host: store1' "$sp" \
+  && ok "new writes through the link and keeps it" || bad "new writes through the link and keeps it" "link replaced"
+expect_exit 0 "verify reads through the link" bash "$CP" verify --project "$G"
+[[ $(bash "$CP" path --project "$G" 2>/dev/null) == "$sp" ]] && ok "path prints the store file" || bad "path prints the store file" "wrong"
+
+# Two inits of one repo in the same second (a reset seat, or parallel seats)
+# must both land, under distinct names, rather than the second dying on exit 4.
+C1=$(newproj same-second); C2="$WORK/again/same-second"; mkdir -p "$C2"
+c1=$(SOURCE_DATE_EPOCH=1800000000 bash "$CP" init --project "$C1" 2>/dev/null)
+c2=$(SOURCE_DATE_EPOCH=1800000000 bash "$CP" init --project "$C2" 2>/dev/null); rc=$?
+[[ $rc -eq 0 && -f $c2 && $c1 != "$c2" && $c2 == *-same-second-context-state-2.md ]] \
+  && ok "a same-second init takes the next suffix" || bad "a same-second init takes the next suffix" "rc=$rc $c2"
+
+M=$(newproj migrate-repo); git -C "$M" init -q
+printf '# CONTEXT_STATE.md\n\n## Checkpoint 2026-01-01 00:00 UTC\n\nlegacy body\n' > "$M/CONTEXT_STATE.md"
+orig=$(sha256sum < "$M/CONTEXT_STATE.md"); git -C "$M" add CONTEXT_STATE.md; git -C "$M" commit -qm legacy
+bash "$CP" new --project "$M" --body-file "$WORK/s1.md" 2>&1 >/dev/null | grep -q 'migrate' \
+  && ok "a legacy in-repo file warns to migrate" || bad "a legacy in-repo file warns to migrate" "no warning"
+git -C "$M" checkout -q -- CONTEXT_STATE.md
+mp=$(bash "$CP" migrate --project "$M" 2>/dev/null)
+[[ -L "$M/CONTEXT_STATE.md" && $(readlink -f "$M/CONTEXT_STATE.md") == "$mp" ]] \
+  && ok "migrate leaves the link" || bad "migrate leaves the link" "$mp"
+n=$(grep -n '^---$' "$mp" | sed -n 2p | cut -d: -f1)
+[[ $(tail -n +"$(( n + 1 ))" "$mp" | sha256sum) == "$orig" ]] \
+  && ok "migrate keeps the content byte for byte below the frontmatter" || bad "migrate keeps the content byte for byte" "differs"
+git -C "$M" add .gitignore; git -C "$M" commit -qm migrate
+[[ -z $(git -C "$M" status --porcelain) && -z $(git -C "$M" ls-files CONTEXT_STATE.md) ]] \
+  && ok "after migrate the file is untracked and status is clean" || bad "after migrate untracked and clean" "$(git -C "$M" status --porcelain)"
+expect_exit 0 "migrate is idempotent" bash "$CP" migrate --project "$M"
+expect_exit 6 "migrate with nothing to move is not found" bash "$CP" migrate --project "$(newproj empty-migrate)"
+R=$(newproj root-arg)
+rp=$(bash "$CP" init --root "$WORK/other-store" --project "$R" 2>/dev/null)
+[[ $rp == "$WORK/other-store/context/"* ]] && ok "--root overrides the store root" || bad "--root overrides the store root" "$rp"
 
 # --- misc ------------------------------------------------------------------
 expect_exit 2 "no subcommand is usage" bash "$CP"
