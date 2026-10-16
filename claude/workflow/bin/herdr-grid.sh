@@ -30,7 +30,7 @@
 #   geometry from `pane layout` is rediscovered every call and nothing is stored but the agent-seen marker).
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=workflow-lib.sh
+# shellcheck source=bin/workflow-lib.sh disable=SC1091
 . "$HERE/workflow-lib.sh"
 wf_need herdr; wf_need jq
 
@@ -277,7 +277,7 @@ cmd_line_clean() {
     [ -n "$n" ] || continue
     slots="$(seat_slots "$n" "$(tab_slots "$tab")")"
     while IFS=$'\t' read -r seat pane agent; do
-      [ -n "$seat" ] && [ "$seat" != "$FREE" ] || continue
+      if [ -z "$seat" ] || [ "$seat" = "$FREE" ]; then continue; fi
       finished "$line" "$seat" "$pane" "$agent" && { FORCE=1 cmd_seat_down "$seat" "$line" || rc=1; }
     done < <(jq -r '.[] | [.label, .pane, .agent] | @tsv' <<<"$slots")
   done < <(line_tabs "$line")

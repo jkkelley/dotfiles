@@ -9,6 +9,8 @@
 #   - line-clean leaving an emptied overflow tab open, or touching a seat of another line
 #   - a herdr failure that loops forever or passes silently instead of retrying 3 times and reporting
 # Hermetic: herdr is a stub on PATH. Fixtures live in $T/fx: panes.json, tabs.json, layout-<tab>.json, read-<pane>.txt.
+# A && ok || bad is the house check idiom here: ok only prints, so C cannot run after a true A (SC2015 is noise).
+# shellcheck disable=SC2015
 set -uo pipefail
 R="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
