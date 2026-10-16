@@ -4,14 +4,14 @@
   "slug": "timed-run-every-target-of-claude-workflow-mk-res",
   "title": "timed-run: every target of claude/workflow/mk/resources.mk runs through the timing wrapper",
   "type": "chore",
-  "status": "in-progress",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:05:55+00:00",
   "parent": "WO-20261016-af17",
   "branch": "feat/timed-run-every-target-of-claude-workflow-mk-res",
-  "pr": null,
+  "pr": 213,
   "closed": null,
   "approval": {
     "via": "override",
@@ -115,6 +115,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` AC-H1 evidence line says 5; the true count is 4 (grep -cF '$(TIMED)' -> 4, matches the PR body). evidence cannot be re-recorded (already evidenced).
 
 ## Outcome
 
