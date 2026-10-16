@@ -36,8 +36,16 @@
 #     classifier-denial). The approval file stays valid.
 #
 # Seat death before a token: a seat that is gone (herdr cannot find it) and wrote no result is started again, up to 3 starts in
-# all, each beginning with the ledger check; then RP-FAILED-SEAT. Not built here: the fresh seat whose only job is to clear a
-# box a dead seat left (design 14.4 "Partial text left in a box"); it needs its own brief and is raised with the result of B17b.
+# all, each beginning with the ledger check; then RP-FAILED-SEAT.
+#
+# A seat that died AFTER typing (its readback file exists) may have left text in the box. Design 14.4 "Partial text left in a
+# box": before anything else happens the controller starts a fresh CLEAR seat (templates/brief-linkedin-clear.md, build node
+# B17c) whose only job is to empty that one thread's box and prove it empty. It types nothing and clicks nothing. Up to 3 clear
+# seats; the first whose result says box_empty true with an empty box_text wins and the ledger gets RP-BOX-CLEARED, then the
+# original code follows as before (respawn or RP-FAILED-SEAT, or RP-UNPROVEN when a token had opened the gate). If 3 clear
+# seats cannot prove the box empty, ONE Bearings card (id RP-BOX-<id>, never duplicated) asks the owner to look at the thread,
+# the original code is written with box_state "unconfirmed", and no further send seat is started for it: a box nobody could
+# empty is not given a new seat that would type into it.
 #
 # The L6 pane contract and the real seat start (workflow-spawn.sh, then `herdr agent get` for the pane) are exercised only by
 # the first live send (B18); the suite drives a stub seat through SWEEP_SEAT_START and a stub herdr.
@@ -47,6 +55,8 @@
 #   SWEEP_LEDGER_FILE          where rows are written (default: the approval's own folder's ledger.jsonl); reads cover every folder
 #   SWEEP_OWNER_WORDS          default ~/.config/zenith/inbox-sweep/owner-words.md
 #   SWEEP_SEAT_START           command: <brief-file> <seat-name> <ticket-id>; prints the pane id. Default: workflow-spawn.sh
+#   SWEEP_CLEAR_SEAT_START     same contract, for the clear seat (B17c). Default: the same workflow-spawn.sh start
+#   SWEEP_CARDS_FILE           default ~/.bearings/inbox-sweep/questions.json; where the one "box not cleared" card is added
 #   SWEEP_SEND_POLL_SECONDS    wait between pane reads (default 5); SWEEP_SLEEP is the command that waits
 #   SWEEP_SEND_MAX_POLLS       pane reads per seat before giving up (default 4320 = 6 hours at 5 seconds)
 #   SWEEP_TODAY                yyyymmdd "today" for prune's ledger tier (default: today, UTC)
@@ -127,7 +137,7 @@ if [ "$cmd" = prune ]; then
       fi
       gone "$f"
     done < <(find "$folder" -maxdepth 1 -type f -name 'send-*.txt' -mtime +"$days")
-    while IFS= read -r f; do gone "$f"; done < <(find "$folder" -maxdepth 1 -type f \( -name 'readback-*' -o -name 'verified-*.token*' -o -name 'send-result-*.json*' -o -name 'brief-*.md' \) -mtime +"$days")
+    while IFS= read -r f; do gone "$f"; done < <(find "$folder" -maxdepth 1 -type f \( -name 'readback-*' -o -name 'verified-*.token*' -o -name 'send-result-*.json*' -o -name 'clear-result-*.json*' -o -name 'brief-*.md' \) -mtime +"$days")
     if [ -d "$folder/proof" ]; then
       while IFS= read -r f; do gone "$f"; done < <(find "$folder/proof" -type f -mtime +"$days")
     fi
@@ -247,6 +257,50 @@ confirm_line() { # <pane text>
 }
 awaiting_shown() { grep -qx 'RP-AWAITING-CONFIRM' <<<"$(sed 's/^[ \t]*//; s/[ \t\r]*$//' <<<"$1")" && grep -q "$sha" <<<"$1"; }
 
+# B17c: the fresh seat that only empties a box a dead send seat may have left text in. Returns 0 when a seat proved the box empty
+# (ledger RP-BOX-CLEARED), 1 when 3 seats could not (one owner card raised). The clear seat is judged by its result file alone.
+# The default start reuses the send workflow declaration (same browser link, same allowed tools) with the clear brief; like the
+# send start it meets a real herdr only in B18.
+CLEAR_RESULT="$FOLDER/clear-result-$id.json"
+CLEAR_SEAT="agent-reply-clear-$id"
+clear_start() { # <brief-file> <seat-name> <ticket>
+  if [ -n "${SWEEP_CLEAR_SEAT_START:-}" ]; then "$SWEEP_CLEAR_SEAT_START" "$@"; else default_seat_start "$@"; fi
+}
+raise_box_card() {
+  local cards="${SWEEP_CARDS_FILE:-$HOME/.bearings/inbox-sweep/questions.json}" card
+  mkdir -p "$(dirname "$cards")"
+  [ -f "$cards" ] || echo '{"title":"Inbox sweep","items":[]}' >"$cards"
+  card="$(jq -cn --arg id "RP-BOX-$id" --arg to "$to" --arg url "$url" '
+    {schema_version:1, id:$id,
+     about:("LinkedIn reply box not proven empty, " + $to + " (" + $url + ")"),
+     decide:"A send seat died after typing and 3 clear seats could not prove the message box empty in this thread. Nothing was sent and no new seat will type into it. Please open the thread and empty the box yourself, or tell me it is clean.",
+     options:[{label:"The box is empty now", then:"I record it and the reply can be decided again"},
+              {label:"Leave it", then:"The reply stays stopped"}], rec:0}')"
+  sweep_json_set "$cards" 'if (.items | map(.id) | index($c.id)) == null then .items += [$c + {asked:$at}] else . end' --argjson c "$card" --arg at "$(sweep_now)"
+}
+clear_box() {
+  local n=0 pane w
+  while [ "$n" -lt 3 ]; do
+    n=$((n + 1))
+    rm -f "$CLEAR_RESULT"
+    SEAT="$CLEAR_SEAT" REPLY_ID="$id" THREAD_URL="$url" RECIPIENT="$to" ATTEMPT="$n" DEADLINE_AT="$DEADLINE_AT" \
+      RESULT_PATH="$(wp "$CLEAR_RESULT")" OWNER_WORDS="$OWNER_WORDS" \
+      envsubst '${SEAT} ${REPLY_ID} ${THREAD_URL} ${RECIPIENT} ${ATTEMPT} ${DEADLINE_AT} ${RESULT_PATH} ${OWNER_WORDS}' \
+      <"$SWEEP/templates/brief-linkedin-clear.md" >"$FOLDER/brief-clear-$id.md"
+    if pane="$(clear_start "$FOLDER/brief-clear-$id.md" "$CLEAR_SEAT" "$id" | tail -n1)" && [ -n "$pane" ]; then
+      w=0
+      while [ ! -f "$CLEAR_RESULT" ] && [ "$w" -lt "$maxpolls" ]; do w=$((w + 1)); read_pane "$pane" >/dev/null || true; "$sleeper" "$poll"; done
+    fi
+    if [ -f "$CLEAR_RESULT" ] &&
+      [ "$(jq -r '[.schema_version == 1, .id == $i, .status == "RP-BOX-CLEARED", .box_empty == true, ((.box_text // "") == "")] | all' --arg i "$id" "$CLEAR_RESULT" 2>/dev/null)" = true ]; then
+      ledger RP-BOX-CLEARED "$(jq -cn --argjson n "$n" --arg seat "$CLEAR_SEAT" '{clear_start:$n, seat:$seat}')"
+      return 0
+    fi
+  done
+  raise_box_card
+  return 1
+}
+
 starts=0
 while :; do
   # --- L6: one fresh start
@@ -302,6 +356,10 @@ while :; do
     ledger RP-FAILED-SEAT '{"reason":"typed before the owner line"}'
     finish RP-FAILED-SEAT 1
   fi
+  box_extra='{}'
+  if [ ! -f "$RESULT" ] && [ "$died" = 1 ] && [ -f "$READBACK" ]; then   # B17c: the seat died after typing
+    clear_box || box_extra='{"box_state":"unconfirmed"}'
+  fi
   if [ ! -f "$RESULT" ]; then
     if [ "$final_mismatch" = 1 ]; then   # no result, so nobody proved the box empty
       ledger RP-TEXT-MISMATCH '{"box_state":"unconfirmed"}'
@@ -309,11 +367,11 @@ while :; do
     fi
     if [ "$confirmed" = 0 ] && [ "$died" = 0 ]; then finish RP-AWAITING-CONFIRM 5; fi   # the owner has not typed; the seat stays up
     if [ -f "$TOKEN" ]; then   # a token may have opened the gate: never resend, never respawn
-      ledger RP-UNPROVEN '{"reason":"seat ended after the token with no result"}'
+      ledger RP-UNPROVEN "$(jq -cn --argjson x "$box_extra" '{reason:"seat ended after the token with no result"} + $x')"
       finish RP-UNPROVEN 1
     fi
-    if [ "$starts" -lt 3 ] && [ "$died" = 1 ]; then continue; fi
-    ledger RP-FAILED-SEAT "$(jq -cn --argjson n "$starts" '{reason:"seat produced no result", starts:$n}')"
+    if [ "$starts" -lt 3 ] && [ "$died" = 1 ] && [ "$box_extra" = '{}' ]; then continue; fi
+    ledger RP-FAILED-SEAT "$(jq -cn --argjson n "$starts" --argjson x "$box_extra" '{reason:"seat produced no result", starts:$n} + $x')"
     finish RP-FAILED-SEAT 1
   fi
   break

@@ -7,5 +7,6 @@
 mkdir -p "$STUB_SEAT_DIR"
 cp "$1" "$STUB_SEAT_DIR/brief.md"
 printf 'start %s %s\n' "$2" "$3" >>"$STUB_SEAT_DIR/starts.log"
-rm -f "$STUB_SEAT_DIR/step"
+# A fresh seat has not seen the owner's line: the controller must wait for it again (design 14.4 respawn).
+rm -f "$STUB_SEAT_DIR/step" "$STUB_SEAT_DIR/died" "$STUB_SEAT_DIR/line-seen"
 printf 'wS:p9\n'

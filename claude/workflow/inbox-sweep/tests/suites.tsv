@@ -22,3 +22,4 @@ send-seat	templates/brief-linkedin-send.md,schemas/send-result.schema.json,tests
 lead	bin/lead-ledger.sh,bin/lead-qualify.sh,bin/sweep-lib.sh,nodes/S1.node.json,nodes/S2.node.json,tests/unit/test_lead.sh	bash tests/unit/test_lead.sh
 reply-send	bin/reply-send.sh,bin/reply-verify.sh,bin/sweep-lib.sh,templates/brief-linkedin-send.md,schemas/send-result.schema.json,tests/lib/,tests/unit/test_reply_send.sh	bash tests/unit/test_reply_send.sh
 followup	bin/lead-followup.sh,bin/reply-cards.sh,bin/sweep-lib.sh,templates/followup.txt,nodes/S6.node.json,tests/unit/test_followup.sh	bash tests/unit/test_followup.sh
+reply-send	bin/reply-send.sh,bin/reply-verify.sh,bin/sweep-lib.sh,templates/brief-linkedin-send.md,templates/brief-linkedin-clear.md,schemas/send-result.schema.json,nodes/L6.node.json,tests/lib/,tests/unit/test_reply_send.sh	bash tests/unit/test_reply_send.sh

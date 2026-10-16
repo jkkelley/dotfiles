@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "L6",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "script": "claude/workflow/inbox-sweep/bin/reply-send.sh",
   "input_schema": {
     "path": "<win-home>/inbox-triage-<yyyymmdd>/send-<id>.txt",
