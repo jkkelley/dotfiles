@@ -12,5 +12,5 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-5328` | draft | p1 | - | [Inbox sweep B12 - spike, can the extension be woken without the owner](WO-20261016-5328-inbox-sweep-b12-spike-can-the-extension-be-woken.md) |
 | `WO-20261016-b956` | ready | p1 | - | [Inbox sweep B5 - claude-win-chrome chain link in workflow-spawn.sh](WO-20261016-b956-inbox-sweep-b5-claude-win-chrome-chain-link-in-w.md) |
 | `WO-20261016-a865` | ready | p1 | - | [Inbox sweep B6 - sweep-watch.sh result bridge to record rows](WO-20261016-a865-inbox-sweep-b6-sweep-watch-sh-result-bridge-to-r.md) |
-| `WO-20261016-3aa8` | ready | p1 | - | [Inbox sweep B8 - sweep-collect.sh run summary](WO-20261016-3aa8-inbox-sweep-b8-sweep-collect-sh-run-summary.md) |
+| `WO-20261016-3aa8` | in-progress | p1 | - | [Inbox sweep B8 - sweep-collect.sh run summary](WO-20261016-3aa8-inbox-sweep-b8-sweep-collect-sh-run-summary.md) |
 | `WO-20261016-61ae` | ready | p1 | WO-20261016-b956 WO-20261016-a865 WO-20261016-3aa8 | [Inbox sweep B9 - sweep.sh controller, Makefile and README](WO-20261016-61ae-inbox-sweep-b9-sweep-sh-controller-makefile-and-.md) |

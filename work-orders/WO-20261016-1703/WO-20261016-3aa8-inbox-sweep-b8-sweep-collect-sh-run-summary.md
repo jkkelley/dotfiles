@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-b8-sweep-collect-sh-run-summary",
   "title": "Inbox sweep B8 - sweep-collect.sh run summary",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T01:19:13+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-b8-sweep-collect-sh-run-summary",
   "pr": null,
   "closed": null,
   "approval": {
@@ -66,8 +66,10 @@ A run must end in one summary.json and summary.md with a derived run code
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* each row of the spec's codes/run derive table has a fixture (test, 5 cases)
-- [ ] `AC-H2` *(human)* summary.md has a contents list and no em dash (test grep)
+- [x] `AC-H1` *(human)* each row of the spec's codes/run derive table has a fixture (test, 5 cases)
+  - observed `2026-10-16` test_collect.sh printed ok for derive 1 (3 cases: --controller-error, PF-NO-HERDR, PF-NO-OWNER-WORDS), derive 2 RUN-OK, derive 3 RUN-PARTIAL, derive 4 RUN-BLOCKED (BLOCKED-* and SKIPPED), derive 5 RUN-FAILED; make test-all ran 11 suites, collect ok
+- [x] `AC-H2` *(human)* summary.md has a contents list and no em dash (test grep)
+  - observed `2026-10-16` test_collect.sh printed ok: AC-H2 summary.md has no em dash though the result text had one; has a Contents heading listing each source; lint suite clean
 
 ## Test plan
 
