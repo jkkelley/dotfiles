@@ -1,5 +1,15 @@
 # Wiki engine
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Contents](#contents)
+- [What it is](#what-it-is)
+- [Call form](#call-form)
+- [Layout](#layout)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Contents
 
 - [What it is](#what-it-is)
