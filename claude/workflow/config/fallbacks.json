@@ -1,0 +1,58 @@
+{
+  "FB-001": {
+    "tool": "podman pinned image",
+    "primary": "podman run on the pinned image",
+    "fallback": "--pull=never on the cached digest",
+    "meaning": "pinned image pull failed; ran from the cached digest",
+    "who_acts": "nobody when rc 0, orchestrator when not"
+  },
+  "FB-002": {
+    "tool": "podman uv network sync",
+    "primary": "uv sync over the network",
+    "fallback": "--pull=never and uv sync --locked --offline",
+    "meaning": "network sync failed; ran offline from the lock",
+    "who_acts": "nobody when rc 0, orchestrator when not"
+  },
+  "FB-003": {
+    "tool": "gh",
+    "primary": "gh",
+    "fallback": "git push and park the PR step with a note",
+    "meaning": "gh failed; pushed with git, PR step parked",
+    "who_acts": "nobody when rc 0, orchestrator when not"
+  },
+  "FB-004": {
+    "tool": "make artifact-new",
+    "primary": "make artifact-new",
+    "fallback": "artifact.sh new",
+    "meaning": "make target failed; ran the wrapped script",
+    "who_acts": "nobody when rc 0, orchestrator when not"
+  },
+  "FB-005": {
+    "tool": "Figma get_screenshot",
+    "primary": "Figma get_screenshot",
+    "fallback": "Claude in Chrome screenshot",
+    "meaning": "Figma screenshot failed; took a browser screenshot",
+    "who_acts": "nobody when rc 0, orchestrator when not"
+  },
+  "FB-006": {
+    "tool": "Figma use_figma",
+    "primary": "Figma use_figma",
+    "fallback": "park with a note",
+    "meaning": "use_figma failed; step parked with a note",
+    "who_acts": "nobody when rc 0, orchestrator when not"
+  },
+  "FB-007": {
+    "tool": "herdr",
+    "primary": "herdr",
+    "fallback": "pgrep -af claude and /proc/<pid>/cwd",
+    "meaning": "herdr unreachable; read seats from the process table",
+    "who_acts": "nobody when rc 0, orchestrator when not"
+  },
+  "FB-008": {
+    "tool": "make target",
+    "primary": "make target",
+    "fallback": "the wrapped script directly",
+    "meaning": "make target failed; ran the script directly",
+    "who_acts": "nobody when rc 0, orchestrator when not"
+  }
+}
