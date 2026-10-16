@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "S3",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/templates/brief-linkedin.md",
+  "input_schema": {
+    "path": "<runs>/<run-id>/leads.jsonl",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/reply/drafts/<id>.txt",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Draft asks for or offers a call or a time",
+      "proof": "reviewer grep against the call wording in `owner-words.md`."
+    },
+    {
+      "box": "grep for YieldPoint in the draft is empty",
+      "proof": "`grep -ci yieldpoint` returns 0."
+    }
+  ],
+  "serial": null,
+  "parallel": "per conversation"
+}

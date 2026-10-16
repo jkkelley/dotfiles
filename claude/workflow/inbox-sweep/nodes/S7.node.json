@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "S7",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/lead-ledger.sh",
+  "input_schema": {
+    "path": "<runs>/<run-id>/leads.jsonl",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/leads.jsonl",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Booking comes to the owner as a card first",
+      "proof": "card with the time and any calendar event exists before `LD-CALL-BOOKED`."
+    },
+    {
+      "box": "The thread shows the agreed time",
+      "proof": "read-back text from the thread names the time."
+    }
+  ],
+  "serial": null,
+  "parallel": "per conversation",
+  "script_pending": true
+}

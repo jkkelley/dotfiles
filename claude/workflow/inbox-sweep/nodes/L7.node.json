@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "L7",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/templates/brief-linkedin-send.md",
+  "input_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/send-<id>.txt",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/readback-<id>.txt",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Thread found by URL and sender name",
+      "proof": "readback names the sender and the URL opened."
+    },
+    {
+      "box": "Last outbound message does not already equal the text",
+      "proof": "`RP-ALREADY-SENT` is raised and the node ends when it does."
+    },
+    {
+      "box": "Box emptied first, then typed from the file, never from memory",
+      "proof": "readback taken after typing; box empty before, recorded in the seat result."
+    }
+  ],
+  "serial": null,
+  "parallel": "per approved reply",
+  "script_pending": true
+}

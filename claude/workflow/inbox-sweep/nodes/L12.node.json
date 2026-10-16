@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "L12",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/sweep-clean.sh",
+  "input_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/ledger.jsonl",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/run.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "`CLEAN-OK` from the existing R7 check",
+      "proof": "`proof/R7-verdict.json` verdict."
+    },
+    {
+      "box": "Box confirmed empty or sent",
+      "proof": "seat result field recorded before the tab closed."
+    },
+    {
+      "box": "`make reply-prune` command recorded",
+      "proof": "command line present in `logs/clean.log`."
+    }
+  ],
+  "serial": null,
+  "parallel": "per approved reply"
+}

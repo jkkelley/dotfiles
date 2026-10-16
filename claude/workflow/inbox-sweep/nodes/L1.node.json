@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "L1",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/templates/brief-linkedin.md",
+  "input_schema": {
+    "path": "<runs>/<run-id>/results/linkedin.json",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/reply/linkedin.md",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Every unread thread appears in linkedin.md",
+      "proof": "count of thread blocks equals `counts.before.unread` in the seat result, compared by script."
+    },
+    {
+      "box": "Thread URL recorded for each draftable thread",
+      "proof": "`grep -c` of thread URL lines equals the draftable thread count."
+    }
+  ],
+  "serial": "One tab shows one page at a time; parallelism comes from more tabs, not from this node",
+  "parallel": "none"
+}

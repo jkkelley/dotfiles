@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "S1",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/lead-ledger.sh",
+  "input_schema": {
+    "path": "<runs>/<run-id>/reply/linkedin.md",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/leads.jsonl",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "One `LD-NEW` row per thread",
+      "proof": "`jq` count of rows per thread URL is 1."
+    },
+    {
+      "box": "No duplicate on rerun",
+      "proof": "row count unchanged after a second run."
+    }
+  ],
+  "serial": null,
+  "parallel": "per conversation",
+  "script_pending": true
+}

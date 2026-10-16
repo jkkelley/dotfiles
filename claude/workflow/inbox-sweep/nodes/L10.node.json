@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "L10",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/templates/brief-linkedin-send.md",
+  "input_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/send-result-<id>.json",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/proof/",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Read-back text equals the file",
+      "proof": "script compare exit 0."
+    },
+    {
+      "box": "Tab bar screenshot exists and is non-empty",
+      "proof": "`screen.ps1` output file size greater than zero."
+    },
+    {
+      "box": "Proof steps retry at most 3 times",
+      "proof": "attempt count in the result is 3 or fewer; proof steps only read."
+    }
+  ],
+  "serial": null,
+  "parallel": "per approved reply",
+  "script_pending": true
+}

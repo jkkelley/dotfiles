@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "S4",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/reply-cards.sh",
+  "input_schema": {
+    "path": "<runs>/<run-id>/reply/drafts/<id>.txt",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/reply/decisions.jsonl",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Same decision path as L3 to L6b, unchanged",
+      "proof": "the L3 to L6b checklists pass for this id."
+    },
+    {
+      "box": "The single intended wait",
+      "proof": "`RP-CONFIRMED` row exists before any send."
+    }
+  ],
+  "serial": "Reuses the owner confirm of L6b rather than adding a second wait; the decision must exist before S5",
+  "parallel": "per approved reply",
+  "script_pending": true
+}

@@ -4,6 +4,7 @@
 #   AC-H2 a script naming an undeclared node fails nodes-check
 #   AC-H3 a serial node with no reason fails bottleneck-check
 #   AC-H4 the design table and a declaration that disagree fail nodes-check
+# B20b: L1 to L12 (with L6b) and S1 to S7 declared; L6b is the single intended wait; script_pending is honoured.
 # Each negative case mutates a copy in a temp dir, so the failure is the planted one and the tree is never written.
 set -uo pipefail
 R="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -56,4 +57,26 @@ out="$(run node_check)"; check 1 "$?" "AC-H4 a design table edited away from its
 check yes "$(grep -q 'R1 declaration and design table disagree' <<<"$out" && echo yes)" "AC-H4 the failure names the node"
 fresh; jq '.checklist[0].proof="something else"' "$T/n/R7.node.json" >"$T/x" && mv "$T/x" "$T/n/R7.node.json"
 run node_check >/dev/null; check 1 "$?" "AC-H4 a declaration edited away from the table fails nodes-check"
+
+# B20b AC-H1: the reply and lead declarations
+fresh
+check 13 "$(find "$R/nodes" -name 'L*.node.json' | wc -l)" "B20b AC-H1 L1 to L12 and L6b each have a declaration"
+check 7 "$(find "$R/nodes" -name 'S?.node.json' | wc -l)" "B20b AC-H1 S1 to S7 each have a declaration"
+out="$(run node_check)"; rc=$?
+check 0 "$rc" "B20b AC-H1 every L and S declaration validates and names an existing or pending script"
+out="$(run node_bottleneck)"; rc=$?
+check 0 "$rc" "B20b AC-H1 bottleneck-check passes with the L and S nodes"
+check "intended wait: L6b" "$(grep '^intended wait:' <<<"$out")" "B20b AC-H1 bottleneck-check lists L6b as the single intended wait"
+check yes "$(grep -q '^L6b ' <<<"$out" && echo yes)" "B20b AC-H1 L6b has a row with its reason"
+fresh; jq '.serial |= "Intended wait: also this one"' "$T/n/L9.node.json" >"$T/x" && mv "$T/x" "$T/n/L9.node.json"
+out="$(run node_bottleneck)"; check 1 "$?" "B20b AC-H1 a second intended wait fails bottleneck-check"
+check yes "$(grep -q 'more than one node is marked' <<<"$out" && echo yes)" "B20b AC-H1 the failure names the nodes"
+fresh; jq 'del(.script_pending)' "$T/n/L3.node.json" >"$T/x" && mv "$T/x" "$T/n/L3.node.json"
+jq '.script="claude/workflow/inbox-sweep/bin/not-written-yet.sh"' "$T/n/L3.node.json" >"$T/x" && mv "$T/x" "$T/n/L3.node.json"
+out="$(run node_check)"; check 1 "$?" "B20b a missing script that is not marked pending fails nodes-check"
+fresh; jq '.id="L13"' "$T/n/L3.node.json" >"$T/x" && mv "$T/x" "$T/n/L3.node.json"
+run node_check >/dev/null; check 1 "$?" "B20b AC-H1 an id outside R1-R7, L1-L12, L6b, S1-S7 is refused"
+fresh; jq '.script_pending=true | .script="claude/workflow/inbox-sweep/bin/sweep-clean.sh"' "$T/n/R7.node.json" >"$T/x" && mv "$T/x" "$T/n/R7.node.json"
+out="$(run node_check)"; check 0 "$?" "B20b a pending flag on a script that exists passes"
+check yes "$(grep -q 'R7.node.json is script_pending but' <<<"$out" && echo yes)" "B20b and prints a note to drop the flag"
 finish

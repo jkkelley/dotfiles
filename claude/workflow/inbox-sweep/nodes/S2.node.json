@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "S2",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/lead-qualify.sh",
+  "input_schema": {
+    "path": "<runs>/<run-id>/leads.jsonl",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/leads.jsonl",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Rubric read from the owner's file, never inlined",
+      "proof": "grep for the rubric text in the script is empty; the file sha256 is in the row."
+    },
+    {
+      "box": "A reason recorded for every outcome",
+      "proof": "`jq` shows a non-empty `reason` on each `LD-QUALIFIED` and `LD-NOT-A-FIT` row."
+    },
+    {
+      "box": "A not-a-fit thread gets no draft and no card",
+      "proof": "no `drafts/<id>.txt` and no card for the id."
+    }
+  ],
+  "serial": null,
+  "parallel": "per conversation",
+  "script_pending": true
+}

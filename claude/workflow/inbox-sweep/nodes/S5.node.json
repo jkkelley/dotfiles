@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "S5",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/templates/brief-linkedin-send.md",
+  "input_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/send-<id>.txt",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/ledger.jsonl",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Same send path as L7 to L10, unchanged",
+      "proof": "the L7 to L10 checklists pass for this id."
+    },
+    {
+      "box": "Ledger links the send to the lead id",
+      "proof": "`jq` shows `lead_id` on the `RP-SENT` row."
+    }
+  ],
+  "serial": "Reuses the L7 to L10 send path and its ordering",
+  "parallel": "per approved reply",
+  "script_pending": true
+}
