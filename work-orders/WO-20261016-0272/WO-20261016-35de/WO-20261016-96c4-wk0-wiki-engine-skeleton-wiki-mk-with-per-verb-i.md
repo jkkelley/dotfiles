@@ -4,13 +4,13 @@
   "slug": "wk0-wiki-engine-skeleton-wiki-mk-with-per-verb-i",
   "title": "WK0: wiki engine skeleton - wiki.mk with per-verb includes, wikilib.py, default secret patterns",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:18:41+00:00",
   "parent": "WO-20261016-35de",
-  "branch": null,
+  "branch": "feat/wk0-wiki-engine-skeleton-wiki-mk-with-per-verb-i",
   "pr": null,
   "closed": null,
   "approval": {
@@ -119,15 +119,20 @@ Owner words, verbatim: "MAKE SURE A KNOWLEDGE BASE WIKI OF YIELDPOINT AI IS BUIL
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the unit tests pass in the pinned image
+- [x] `AC-H1` *(human)* the unit tests pass in the pinned image
+  - observed `2026-10-16` AC-H1 ran by script on feat/wk0-wiki-skeleton: passed with expected exit and output (unittest 10 tests OK; FALLBACK FB-001 wk0; make -n wiki-test shows podman; rolodex-check all headers; diff has only In files)
   - check: `podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py` exit 0 expect /^OK/
-- [ ] `AC-H2` *(human)* the FB-001 fallback path runs the cached digest
+- [x] `AC-H2` *(human)* the FB-001 fallback path runs the cached digest
+  - observed `2026-10-16` AC-H2 ran by script on feat/wk0-wiki-skeleton: passed with expected exit and output (unittest 10 tests OK; FALLBACK FB-001 wk0; make -n wiki-test shows podman; rolodex-check all headers; diff has only In files)
   - check: `env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk0 --fallback "podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_wikilib.py` exit 0 expect /FALLBACK FB-001/
-- [ ] `AC-H3` *(human)* wiki-test is included from the root Makefile and runs the pinned image
+- [x] `AC-H3` *(human)* wiki-test is included from the root Makefile and runs the pinned image
+  - observed `2026-10-16` AC-H3 ran by script on feat/wk0-wiki-skeleton: passed with expected exit and output (unittest 10 tests OK; FALLBACK FB-001 wk0; make -n wiki-test shows podman; rolodex-check all headers; diff has only In files)
   - check: `make -n wiki-test` exit 0 expect /podman/
-- [ ] `AC-H4` *(human)* every changed script has a rolodex header
+- [x] `AC-H4` *(human)* every changed script has a rolodex header
+  - observed `2026-10-16` AC-H4 ran by script on feat/wk0-wiki-skeleton: passed with expected exit and output (unittest 10 tests OK; FALLBACK FB-001 wk0; make -n wiki-test shows podman; rolodex-check all headers; diff has only In files)
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H5` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H5` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` AC-H5 ran by script on feat/wk0-wiki-skeleton: passed with expected exit and output (unittest 10 tests OK; FALLBACK FB-001 wk0; make -n wiki-test shows podman; rolodex-check all headers; diff has only In files)
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|Makefile|claude/tools/wiki/wiki\.mk|claude/tools/wiki/wikilib\.py|claude/tools/wiki/secret-patterns\.json|claude/tools/wiki/tests/test_wikilib\.py|claude/tools/wiki/README\.md)$'` exit 1
 
 ## Test plan
