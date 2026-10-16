@@ -8,7 +8,7 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-bb3b` | ready | p1 | - | [Inbox sweep B0 - test harness, stubs and make test selection](WO-20261016-bb3b-inbox-sweep-b0-test-harness-stubs-and-make-test-.md) |
+| `WO-20261016-bb3b` | in-progress | p1 | - | [Inbox sweep B0 - test harness, stubs and make test selection](WO-20261016-bb3b-inbox-sweep-b0-test-harness-stubs-and-make-test-.md) |
 | `WO-20261016-c8c8` | ready | p1 | WO-20261016-bb3b | [Inbox sweep B1 - result and config schemas and seat declarations](WO-20261016-c8c8-inbox-sweep-b1-result-and-config-schemas-and-sea.md) |
 | `WO-20261016-c78f` | ready | p1 | WO-20261016-bb3b | [Inbox sweep B10 - sweep-clean.sh clean and prune verbs](WO-20261016-c78f-inbox-sweep-b10-sweep-clean-sh-clean-and-prune-v.md) |
 | `WO-20261016-e2e8` | draft | p1 | WO-20261016-61ae | [Inbox sweep B11 - live end-to-end run](WO-20261016-e2e8-inbox-sweep-b11-live-end-to-end-run.md) |
