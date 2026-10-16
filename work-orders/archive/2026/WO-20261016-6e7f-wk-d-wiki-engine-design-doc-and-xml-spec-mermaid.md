@@ -4,15 +4,15 @@
   "slug": "wk-d-wiki-engine-design-doc-and-xml-spec-mermaid",
   "title": "WK-D: wiki engine design doc and XML spec - mermaid pipeline, status codes, GOOD/NEVER per rule",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:18:30+00:00",
   "parent": "WO-20261016-35de",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/wk-d-wiki-engine-design-doc-and-xml-spec-mermaid",
+  "pr": 285,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design10 cut for ORD-0830 RR-orch-14 and ORD-0921; design approvals ruled done, ORD-0550 O4",
@@ -120,19 +120,26 @@ Owner words, verbatim: "MAKE SURE A KNOWLEDGE BASE WIKI OF YIELDPOINT AI IS BUIL
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the spec is 1000 lines or less, parses and opens with contents
+- [x] `AC-H1` *(human)* the spec is 1000 lines or less, parses and opens with contents
+  - observed `2026-10-16` check: bash scripts/spec-check.sh docs/design/wiki.spec.xml exit 0 output: ok docs/design/wiki.spec.xml (145 lines)
   - check: `bash scripts/spec-check.sh docs/design/wiki.spec.xml` exit 0 expect /^ok/
-- [ ] `AC-H2` *(human)* the design opens with a contents list
+- [x] `AC-H2` *(human)* the design opens with a contents list
+  - observed `2026-10-16` check: bash scripts/md-contents.sh check docs/design/wiki.md exit 0 output: npm notice npm notice New major version of npm available! 10.9.9 -> 12.2.0 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0 npm notice To update run: npm install -g npm@12.2.0 npm notice md-contents: 1 file(s) ok
   - check: `bash scripts/md-contents.sh check docs/design/wiki.md` exit 0
-- [ ] `AC-H3` *(human)* Design principles 101 sits in the design once
+- [x] `AC-H3` *(human)* Design principles 101 sits in the design once
+  - observed `2026-10-16` check: grep -c '^## Design principles 101' docs/design/wiki.md exit 0 output: 1
   - check: `grep -c '^## Design principles 101' docs/design/wiki.md` exit 0 expect /^1$/
-- [ ] `AC-H4` *(human)* one line per principle 1 to 40
+- [x] `AC-H4` *(human)* one line per principle 1 to 40
+  - observed `2026-10-16` check: awk '/^## Design principles 101/{f=1;next} /^## /{f=0} f && /^[0-9]+. /' docs/design/wiki.md | wc -l exit 0 output: 40
   - check: `awk '/^## Design principles 101/{f=1;next} /^## /{f=0} f && /^[0-9]+\. /' docs/design/wiki.md | wc -l` exit 0 expect /^40$/
-- [ ] `AC-H5` *(human)* the 16 fixed status codes WIKI-000 to WIKI-040 are in the spec
+- [x] `AC-H5` *(human)* the 16 fixed status codes WIKI-000 to WIKI-040 are in the spec
+  - observed `2026-10-16` check: grep -oE 'WIKI-0[0-9]{2}' docs/design/wiki.spec.xml | sort -u | wc -l exit 0 output: 16
   - check: `grep -oE 'WIKI-0[0-9]{2}' docs/design/wiki.spec.xml | sort -u | wc -l` exit 0 expect /^16$/
-- [ ] `AC-H6` *(human)* every verb names its fallback
+- [x] `AC-H6` *(human)* every verb names its fallback
+  - observed `2026-10-16` check: grep -c '<fallback' docs/design/wiki.spec.xml exit 0 output: 10
   - check: `grep -c '<fallback' docs/design/wiki.spec.xml` exit 0 expect /^([5-9]|[1-9][0-9]+)$/
-- [ ] `AC-H7` *(human)* the diff holds only the two design files and work-orders files
+- [x] `AC-H7` *(human)* the diff holds only the two design files and work-orders files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|docs/design/wiki[.]md|docs/design/wiki[.]spec[.]xml)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|docs/design/wiki[.]md|docs/design/wiki[.]spec[.]xml)$'` exit 1
 
 ## Test plan
