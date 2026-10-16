@@ -136,6 +136,7 @@
     <code value="409" kind="merge.conflict" acts="worker"/>
     <code value="423" kind="blocked" acts="orchestrator"/>
     <code value="SLOW" kind="step.slow" acts="orchestrator files a bottleneck work order"/>
+    <code value="REGEN" kind="regen" acts="none; CI runs on the new head"/>
   </codes>
 
   <config file="claude/workflow/pr-flow/config/pr-flow.json">
