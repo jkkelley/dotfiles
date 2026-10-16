@@ -4,7 +4,7 @@
   "slug": "test-ord-0806-r3-business-tracked-ignored-check-",
   "title": "Test - ORD-0806 R3: business tracked-ignored-check passes clean, fails on a tracked ignored path, runs in the rendered CI",
   "type": "test",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-fb0c",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "biz-design1 cut for ORD-0806 R3; design approvals ruled done, ORD-0550 O4",
@@ -23,7 +23,8 @@
   "depends_on": [
     "WO-20261016-b211"
   ],
-  "blocks": []
+  "blocks": [],
+  "superseded_by": "WO-20261016-8cce"
 }
 ---
 
@@ -119,4 +120,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: DESIGN-GAP (seats/biz-7012.result.json): setup checked out business origin/chore/tracked-ignored-check, deleted when #77 merged; recut against business origin/main on the RR-orch-18 local-image form by infra-design8
+- superseded by: `WO-20261016-8cce`
+
+No branch, no PR and no merge commit exist for this work order.
+
