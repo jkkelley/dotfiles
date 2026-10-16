@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-b13-tab-bar-proof-with-screen-ps1-an",
   "title": "Inbox sweep B13 - tab bar proof with screen.ps1 and sweep-proof.sh",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T01:19:15+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-b13-tab-bar-proof-with-screen-ps1-an",
   "pr": null,
   "closed": null,
   "approval": {
@@ -66,9 +66,12 @@ A seat's own report is not proof a run cleaned up (F7); the screen is
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a stub powershell.exe capture failing 3 times gives CLEAN-NO-PROOF (test)
-- [ ] `AC-H2` *(human)* a verdict naming an orphan tab gives one CLEAN-ORPHAN-TAB card (test)
-- [ ] `AC-H3` *(human)* TABS-LEFT prompts the seat at most 3 times (calls.log count)
+- [x] `AC-H1` *(human)* a stub powershell.exe capture failing 3 times gives CLEAN-NO-PROOF (test)
+  - observed `2026-10-16` proof suite: ok verify prints CLEAN-NO-PROOF when the capture fails; capture tried exactly 3 times; no verdict read
+- [x] `AC-H2` *(human)* a verdict naming an orphan tab gives one CLEAN-ORPHAN-TAB card (test)
+  - observed `2026-10-16` proof suite: ok an orphan verdict writes exactly one card; rerunning verify adds no second card
+- [x] `AC-H3` *(human)* TABS-LEFT prompts the seat at most 3 times (calls.log count)
+  - observed `2026-10-16` proof suite: ok TABS-LEFT prompts the live browser seat exactly 3 times (calls.log count)
 
 ## Test plan
 

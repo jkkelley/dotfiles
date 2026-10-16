@@ -11,7 +11,7 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-c78f` | ready | p1 | - | [Inbox sweep B10 - sweep-clean.sh clean and prune verbs](WO-20261016-c78f-inbox-sweep-b10-sweep-clean-sh-clean-and-prune-v.md) |
 | `WO-20261016-e2e8` | draft | p1 | WO-20261016-61ae | [Inbox sweep B11 - live end-to-end run](WO-20261016-e2e8-inbox-sweep-b11-live-end-to-end-run.md) |
 | `WO-20261016-5328` | draft | p1 | - | [Inbox sweep B12 - spike, can the extension be woken without the owner](WO-20261016-5328-inbox-sweep-b12-spike-can-the-extension-be-woken.md) |
-| `WO-20261016-a99e` | ready | p1 | - | [Inbox sweep B13 - tab bar proof with screen.ps1 and sweep-proof.sh](WO-20261016-a99e-inbox-sweep-b13-tab-bar-proof-with-screen-ps1-an.md) |
+| `WO-20261016-a99e` | in-progress | p1 | - | [Inbox sweep B13 - tab bar proof with screen.ps1 and sweep-proof.sh](WO-20261016-a99e-inbox-sweep-b13-tab-bar-proof-with-screen-ps1-an.md) |
 | `WO-20261016-4376` | ready | p1 | - | [Inbox sweep B3 - sweep-init.sh run dir, run.json and rendered briefs](WO-20261016-4376-inbox-sweep-b3-sweep-init-sh-run-dir-run-json-an.md) |
 | `WO-20261016-f390` | ready | p1 | - | [Inbox sweep B4 - sweep-preflight.sh and the PF codes](WO-20261016-f390-inbox-sweep-b4-sweep-preflight-sh-and-the-pf-cod.md) |
 | `WO-20261016-b956` | ready | p1 | - | [Inbox sweep B5 - claude-win-chrome chain link in workflow-spawn.sh](WO-20261016-b956-inbox-sweep-b5-claude-win-chrome-chain-link-in-w.md) |
