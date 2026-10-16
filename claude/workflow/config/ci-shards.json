@@ -1,0 +1,22 @@
+{
+  "$comment": "claude/workflow CI shards (ORD-0715 C1, Design principles 101 items 1, 6, 17, 37). One shard per Make target of `make -C claude/workflow test`. tools/ci-select.sh reads this file: a changed path matching all_on selects every shard; else each shard whose paths match is selected; else a path matching ignore selects nothing; else a path under roots selects every shard (fail safe); paths outside roots select nothing. Globs are bash [[ == ]] patterns, where * also matches /. pr_target, when set, replaces target on pull_request and is passed BASE=origin/<base>. budget_s, timeout_s and retries feed bin/step-time.sh.",
+  "schema": "ci-shards/1",
+  "budget_s": 180,
+  "timeout_s": 360,
+  "retries": 1,
+  "roots": ["claude/workflow/*", "claude/skills/context-compaction/*", "claude/skills/work-order/*", ".github/workflows/skill-pr-gate.yml", ".github/workflows/workflow-suite.yml"],
+  "all_on": ["claude/workflow/Makefile", "claude/workflow/tests/container/*", "claude/workflow/config/project.json", "claude/workflow/bin/workflow-lib.sh"],
+  "ignore": ["claude/workflow/docs/*", "claude/workflow/runbooks/*", "claude/workflow/*.md"],
+  "shards": [
+    {"name": "schema", "dir": "claude/workflow", "target": "schema", "paths": ["claude/workflow/schemas/*", "claude/workflow/tools/validate-schema.sh", "claude/workflow/tests/unit/test_workflow_schemas.sh"]},
+    {"name": "lint", "dir": "claude/workflow", "target": "lint", "paths": ["claude/workflow/bin/*.sh", "claude/workflow/tools/*.sh", "claude/workflow/report/rail.sh", "claude/workflow/tests/unit/*.sh"]},
+    {"name": "herdr-first", "dir": "claude/workflow", "target": "herdr-first", "paths": ["claude/workflow/bin/*.sh", "claude/workflow/tools/*.sh", "claude/workflow/report/rail.sh", "claude/workflow/tests/unit/test_herdr_first.sh"]},
+    {"name": "compaction", "dir": "claude/workflow", "target": "compaction", "paths": ["claude/workflow/bin/after-compact.sh", "claude/workflow/bin/compact-now.sh", "claude/workflow/bin/compact-watch.sh", "claude/workflow/bin/session-arm.sh", "claude/workflow/bin/watch-ctl.sh", "claude/workflow/bin/workflow-watch.sh", "claude/skills/context-compaction/*", "claude/workflow/tests/unit/test_compaction.sh"]},
+    {"name": "chain", "dir": "claude/workflow", "target": "chain", "paths": ["claude/workflow/bin/seat-record.sh", "claude/workflow/bin/workflow-spawn.sh", "claude/workflow/schemas/workflows/*", "claude/workflow/tests/unit/test_model_chain.sh"]},
+    {"name": "failover", "dir": "claude/workflow", "target": "failover", "paths": ["claude/workflow/bin/seat-record.sh", "claude/workflow/bin/seat-watch.sh", "claude/workflow/bin/watch-ctl.sh", "claude/workflow/bin/workflow-watch.sh", "claude/workflow/tools/validate-schema.sh", "claude/workflow/schemas/workflows/*", "claude/skills/context-compaction/*", "claude/workflow/tests/unit/test_seat_watch.sh"]},
+    {"name": "test-plan", "dir": "claude/workflow", "target": "test-plan", "paths": ["claude/workflow/schemas/test-plan.schema.json", "claude/workflow/templates/test-plan.md", "claude/workflow/tools/validate-schema.sh", "claude/skills/work-order/*", "claude/workflow/tests/unit/test_test_plan.sh"]},
+    {"name": "step-time", "dir": "claude/workflow", "target": "step-time", "paths": ["claude/workflow/bin/step-time.sh", "claude/workflow/tests/unit/test_step_time.sh"]},
+    {"name": "ci-job", "dir": "claude/workflow", "target": "ci-job", "paths": ["claude/workflow/tools/ci-select.sh", "claude/workflow/tools/ci-time-pub.sh", "claude/workflow/config/ci-shards.json", ".github/workflows/skill-pr-gate.yml", ".github/workflows/workflow-suite.yml", "claude/workflow/tests/unit/test_ci_job.sh"]},
+    {"name": "inbox-sweep", "dir": "claude/workflow/inbox-sweep", "target": "test-all", "pr_target": "test", "paths": ["claude/workflow/inbox-sweep/*"]}
+  ]
+}
