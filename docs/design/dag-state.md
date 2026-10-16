@@ -50,6 +50,8 @@ Each line says how this design meets the principle, or why it does not apply.
 21. Merge, never park: `N9` merges by script as soon as CI is green and the design approval is on record, and the build is cut so no ticket waits on an unmerged one more than one deep.
 22. See it, isolate it, fix it, or hand it off: a failed node retries 3 times, then opens a fix ticket carrying the reproduction and the evidence, and the seat steps aside (`DG-HANDOFF`, section 9).
 23. Artifacts live outside the repo, linked like packages: run state, ledger, records, verify output and the archived state are never committed; every file a run writes outside the repository is created through `make artifact-new` (seat artifacts is building it) under `<key name>/YYYY/MM/YYYYMMDD-HHMMSS-<name under 55 chars>.<ext>` with frontmatter, and `state.json` stays the one fixed-name file because it is the live record, not an artifact (section 16).
+24. Smart checkpointing with compaction: `recover` gives a new seat its node bundle plus the last compaction-guard checkpoint, and `workflow-spawn.sh` already starts seats with the guard, so the DAG adds no checkpoint mechanism of its own.
+25. No AWS spend beyond SSM and a justified S3 bucket: this design provisions no AWS resource at all; state is local files under `state_dir`, the scripts run on the owner's machine and in CI, and if the DAG later runs as a service it runs on the owner Kubernetes cluster, built by Jenkins and deployed by Argo CD from git.
 
 ## 2. Goal
 
