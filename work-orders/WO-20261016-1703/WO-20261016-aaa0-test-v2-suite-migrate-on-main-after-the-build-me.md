@@ -4,13 +4,13 @@
   "slug": "test-v2-suite-migrate-on-main-after-the-build-me",
   "title": "Test V2 - suite migrate on main after the build merges",
   "type": "test",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:55+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/test-v2-suite-migrate-on-main-after-the-build-me",
   "pr": null,
   "closed": null,
   "approval": {
@@ -61,7 +61,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+- [x] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+  - observed `2026-10-16` TP-1 command run on main ffe1b50 in localhost/dotfiles-workflow-test:1: output 'ok migrate' / 'ran 1 suite', exit=0; captured at ~/.local/state/zenith/artifacts/test-evidence/2026/10/20261016-TV2-migrate-suite.txt. Note: suite prints no per-case summary line and test_migrate.sh has no summary case; separate run of bin/migrate.sh migrate over tests/fixtures/migrations/summary/v1.json gave MIG-OK -> summary.v2.json, schema_version 2, exit 0.
 
 ## Test plan
 
