@@ -25,7 +25,7 @@ batch="$(sed -n 's/^Batch id: //p' "$b" | head -n1)"
 count="$(grep -c '^Reply id: ' "$b")"
 field() { awk -v n="$1" -v key="$2" 'index($0, "Reply id: ") == 1 { c++ } c == n && index($0, key ": ") == 1 { print substr($0, length(key) + 3); exit }' "$b"; }
 cur=$(($(cat "$D/cur" 2>/dev/null || echo 0) + 1))   # the reply being worked, 1-based
-modes=(${STUB_SEAT_MODES:-${STUB_SEAT_MODE:-ok}})
+read -r -a modes <<<"${STUB_SEAT_MODES:-${STUB_SEAT_MODE:-ok}}"   # SC2206, WO-20261016-4409
 mode_of() { local m="${modes[$(($1 - 1))]:-${modes[${#modes[@]}-1]}}"; echo "$m"; }
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 log() { echo "$*" >>"$D/seat.log"; }
