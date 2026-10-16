@@ -13,13 +13,22 @@
       "workspace_label": "dotfiles",
       "agent_kind": "claude",
       "start_timeout_ms": 60000,
-      "prompt_timeout_ms": 120000
+      "prompt_timeout_ms": 120000,
+      "grid": {
+        "free_label": "free",
+        "rows": 3,
+        "state_dir": "~/.local/state/zenith/herdr-grid",
+        "start_timeout_ms": 60000
+      }
     },
     "launchers": {
       "claude.exe": {
         "$comment": "Link claude-win-chrome (docs/design/inbox-sweep.spec.xml launchers). Flags for Windows Claude Code, so the declaration names only the bare launcher. win_home is empty on purpose: the spawner asks Windows for it, and WIN_HOME or a value here overrides.",
         "win_home": "",
-        "args": ["--chrome", "--dangerously-skip-permissions"]
+        "args": [
+          "--chrome",
+          "--dangerously-skip-permissions"
+        ]
       }
     },
     "principal_pane": "claude-main",

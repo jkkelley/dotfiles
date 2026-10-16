@@ -16,6 +16,7 @@ R="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 S="$R/bin/reply-send.sh"
 stubs_install "$T/bin"
+export SWEEP_CLEAR_SEAT_START="$R/tests/lib/stub-clear-start.sh"
 export SWEEP_SLEEP=true SWEEP_SEND_MAX_POLLS=30 SWEEP_SEAT_START="$R/tests/lib/stub-reply-start.sh" STUB_SEAT_STEP="$R/tests/lib/stub-reply-seat.sh"
 printf 'owner words, 2026-10-16\n' >"$T/owner-words.md"; export SWEEP_OWNER_WORDS="$T/owner-words.md"
 URL=https://www.linkedin.com/messaging/thread/2-EXAMPLE/
@@ -25,7 +26,8 @@ TEXT=$'Hi Sam,\n\nhappy to talk Thursday.\nBest, J'
 fresh() {
   rm -rf "$T/w" "$T/seat" "$TEST_OUT"; mkdir -p "$T/w/inbox-triage-20261017" "$T/seat" "$TEST_OUT"; : >"$TEST_OUT/calls.log"
   F="$T/w/inbox-triage-20261017"; export SWEEP_TRIAGE_ROOT="$T/w" STUB_SEAT_DIR="$T/seat" STUB_LEDGER="$F/ledger.jsonl"
-  unset STUB_OWNER_LINE STUB_OWNER_AT STUB_SEAT_MODE STUB_HERDR_AGENT_GONE
+  export SWEEP_CARDS_FILE="$T/bearings/questions.json"; rm -rf "$T/bearings"
+  unset STUB_OWNER_LINE STUB_OWNER_AT STUB_SEAT_MODE STUB_HERDR_AGENT_GONE STUB_CLEAR_MODE STUB_CLEAR_OK_AT
   printf '%s' "$TEXT" >"$F/send-m1.txt"; A="$(readlink -f "$F/send-m1.txt")"; SHA="$(sha256sum "$A" | cut -d' ' -f1)"
   jq -cn --arg p "$A" --arg s "$SHA" --arg u "$URL" '{schema_version:1, id:"m1", card:"c1", code:"RP-APPROVED", thread_key:$u, thread_url:$u, to:"Sam Example", revision:1, path:$p, sha256:$s}' >"$F/approvals.jsonl"
   jq -cn --arg s "$SHA" '{schema_version:1, code:"RP-READY", id:"m1", sha256:$s}' >"$F/ledger.jsonl"
@@ -149,6 +151,56 @@ check 3 "$(grep -c '^start ' "$T/seat/starts.log")" "and exactly 3 starts"
 fresh; export STUB_OWNER_LINE="send m1" STUB_SEAT_MODE=badresult; send
 check "m1 RP-FAILED-SEAT" "$out" "a result that never validates ends RP-FAILED-SEAT"
 check 2 "$(grep -c 'agent prompt' "$TEST_OUT/calls.log")" "and the seat is asked to rewrite it twice (3 tries in all)"
+
+# B17c: a seat that dies after typing leaves the box to a fresh clear seat. AC-H1..H3.
+clears() { [ -f "$T/seat/clear-starts.log" ] && grep -c '^start ' "$T/seat/clear-starts.log" || echo 0; }
+cards() { jq -r '[.items[].id] | join(",")' "$SWEEP_CARDS_FILE" 2>/dev/null || true; }
+# AC-H1: a token was issued, then the seat died with no result: one clear seat, RP-BOX-CLEARED, then the original RP-UNPROVEN
+fresh; export STUB_OWNER_LINE="send m1" STUB_SEAT_MODE=die-token STUB_HERDR_AGENT_GONE=1; send
+check "m1 RP-UNPROVEN" "$out" "AC-H1: a seat that died after the token still ends with its original code"
+check 1 "$(clears)" "AC-H1: one clear seat is started for the dead seat"
+check "RP-READY RP-SENDING RP-AWAITING-CONFIRM RP-CONFIRMED RP-BOX-CLEARED RP-UNPROVEN" "$(codes)" "AC-H1: the ledger gets RP-BOX-CLEARED, then the original code"
+check 0 "$(slog '^clicked')" "AC-H1: and nothing is clicked by anyone"
+check "" "$(cards)" "AC-H1: no owner card when the box was proven empty"
+check 1 "$(jq -r 'select(.code == "RP-BOX-CLEARED") | .schema_version' "$F/ledger.jsonl")" "AC-H1: the RP-BOX-CLEARED row has an integer schema_version"
+# a seat that died with wrong text in the box and no token: cleared each time, respawned, finally RP-FAILED-SEAT
+fresh; export STUB_OWNER_LINE="send m1" STUB_SEAT_MODE=die STUB_HERDR_AGENT_GONE=1; send
+check "m1 RP-FAILED-SEAT" "$out" "AC-H1: three deaths after typing still end RP-FAILED-SEAT"
+check 3 "$(clears)" "AC-H1: one clear seat per death"
+check "RP-READY RP-SENDING RP-AWAITING-CONFIRM RP-CONFIRMED RP-BOX-CLEARED RP-SENDING RP-AWAITING-CONFIRM RP-CONFIRMED RP-BOX-CLEARED RP-SENDING RP-AWAITING-CONFIRM RP-CONFIRMED RP-BOX-CLEARED RP-FAILED-SEAT" "$(codes)" "AC-H1: each death is cleared before the next seat starts"
+# a seat that dies before typing has no box to clear
+fresh; export STUB_HERDR_AGENT_GONE=1; (unset STUB_SEAT_STEP; send)
+check 0 "$(clears)" "AC-H1: a seat that died before it typed starts no clear seat"
+# AC-H2: the clear brief
+cb="$T/seat/clear-brief-1.md"
+fresh; export STUB_OWNER_LINE="send m1" STUB_SEAT_MODE=die-token STUB_HERDR_AGENT_GONE=1; send
+check 1 "$(grep -c "^Thread URL: $URL\$" "$cb")" "AC-H2: the clear brief names one thread URL"
+check 1 "$(grep -c '^Thread URL: ' "$cb")" "AC-H2: and only one"
+check 0 "$(grep -ci '^Approval file:\|^Approved sha256:\|^Token' "$cb")" "AC-H2: and no approval file, hash or token to send from"
+check yes "$(grep -q '^This seat types nothing into LinkedIn\.$' "$cb" && echo yes)" "AC-H2: the clear brief forbids typing"
+check yes "$(grep -q '^This seat never clicks Send' "$cb" && echo yes)" "AC-H2: and clicking Send"
+check yes "$(grep -q 'The box must read back empty' "$cb" && echo yes)" "AC-H2: and requires an empty read-back"
+# shellcheck disable=SC2016 # a literal ${ is what is searched for
+check 0 "$(grep -c '\${' "$cb")" "AC-H2: no placeholder is left unfilled in the clear brief"
+check 0 "$(grep -c $'\xe2\x80\x94' "$cb")" "AC-H2: no em dash in the clear brief"
+# AC-H3: three clear seats cannot prove the box empty: one owner card, original code, no new send seat
+fresh; export STUB_OWNER_LINE="send m1" STUB_SEAT_MODE=die STUB_HERDR_AGENT_GONE=1 STUB_CLEAR_MODE=dirty; send
+check "m1 RP-FAILED-SEAT" "$out" "AC-H3: an uncleared box ends with the original code"
+check 3 "$(clears)" "AC-H3: three clear seats were tried, no more"
+check "RP-BOX-m1" "$(cards)" "AC-H3: exactly one owner card is raised"
+check 1 "$(grep -c '^start ' "$T/seat/starts.log")" "AC-H3: no new send seat is started into a box nobody could empty"
+check 0 "$(count RP-BOX-CLEARED)" "AC-H3: and RP-BOX-CLEARED is never recorded"
+check unconfirmed "$(jq -r 'select(.code == "RP-FAILED-SEAT") | .box_state' "$F/ledger.jsonl")" "AC-H3: the final row says the box state is unconfirmed"
+export STUB_CLEAR_MODE=none; fresh; export STUB_OWNER_LINE="send m1" STUB_SEAT_MODE=die STUB_HERDR_AGENT_GONE=1 STUB_CLEAR_MODE=none; send
+check "RP-BOX-m1" "$(cards)" "AC-H3: a clear seat that writes no result counts as a failed try"
+rm -f "$T/bearings/x"; send
+check 1 "$(jq '.items | length' "$SWEEP_CARDS_FILE")" "AC-H3: a rerun never duplicates the card"
+# the second clear seat can succeed after a first that could not
+fresh; export STUB_OWNER_LINE="send m1" STUB_SEAT_MODE=die-token STUB_HERDR_AGENT_GONE=1 STUB_CLEAR_MODE=dirty STUB_CLEAR_OK_AT=2; send
+check 2 "$(clears)" "AC-H3: a first clear seat that fails is followed by a second"
+check 1 "$(count RP-BOX-CLEARED)" "AC-H3: the second one proving the box empty gives RP-BOX-CLEARED"
+check "" "$(cards)" "AC-H3: and no card"
+unset STUB_CLEAR_MODE STUB_CLEAR_OK_AT
 
 # status
 fresh; out="$(bash "$S" status)"
