@@ -66,6 +66,14 @@
       "publishes": "$KV.TIMING.<line>.<kind>.<node>.<run>, line.<line>.timing.SLOW"
     },
     {
+      "name": "pr-flow",
+      "owner": "merge-port",
+      "slot": "3.3",
+      "interval": 0,
+      "command": "make -C ${repo} pr-flow-consume",
+      "down": "make -C ${repo} pr-flow-consume-stop"
+    },
+    {
       "name": "pane-look",
       "owner": "stuck-watch",
       "slot": "3.3",
