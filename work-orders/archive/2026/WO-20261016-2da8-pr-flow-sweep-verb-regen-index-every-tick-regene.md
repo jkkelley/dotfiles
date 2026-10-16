@@ -4,15 +4,15 @@
   "slug": "pr-flow-sweep-verb-regen-index-every-tick-regene",
   "title": "pr-flow sweep verb regen-index: every tick regenerates index-only conflicts through regen-conflicts.sh, posts REGEN, make pr-regen-index",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T07:33:12+00:00",
   "parent": "WO-20261016-ebe4",
   "branch": "feat/pr-flow-sweep-verb-regen-index-every-tick-regene",
-  "pr": null,
-  "closed": null,
+  "pr": 231,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design4 cut for ORD-0726 S1; design approvals ruled done, ORD-0550 O4",
@@ -88,12 +88,18 @@ ORD-0726 S1 (orchestrator brief BR-20261016-infra-design4): "merge loop (pr-flow
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow pr-flow-test CASES="regen-index consume records"` exits 0 and prints ok for all three, no line matching /^FAIL/ (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* `make -C claude/workflow pr-flow-lint` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H3` *(human)* `make -C claude/workflow pr-regen-index; echo rc=$?` prints 'pr-regen-index needs REPO=' and 'rc=2' (proof: output pasted by work-order.sh evidence)
-- [ ] `AC-H4` *(human)* `python3 -c 'import xml.dom.minidom,sys; xml.dom.minidom.parse(sys.argv[1])' claude/workflow/docs/pr-process/pr-process.spec.xml && grep -c 'value="REGEN"' claude/workflow/docs/pr-process/pr-process.spec.xml` exits 0 and prints 1 (proof: output pasted by work-order.sh evidence)
-- [ ] `AC-H5` *(human)* `make rolodex-check BASE=origin/main` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H6` *(human)* `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/|claude/workflow/(pr-flow/(bin/pr-flow-consume.sh|pr-flow.mk|schemas/pr-flow-record.schema.json|tests/(regen-index|records).test.sh)|docs/pr-process/pr-process.(md|spec.xml)))$'` exits 1 and prints nothing: only In files plus generated work-orders/ close-out files
+- [x] `AC-H1` *(human)* `make -C claude/workflow pr-flow-test CASES="regen-index consume records"` exits 0 and prints ok for all three, no line matching /^FAIL/ (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make -C claude/workflow pr-flow-test CASES="regen-index consume records" exit 0: ok regen-index, ok consume, ok records, no FAIL line
+- [x] `AC-H2` *(human)* `make -C claude/workflow pr-flow-lint` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make -C claude/workflow pr-flow-lint exit 0
+- [x] `AC-H3` *(human)* `make -C claude/workflow pr-regen-index; echo rc=$?` prints 'pr-regen-index needs REPO=' and 'rc=2' (proof: output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make -C claude/workflow pr-regen-index printed 'pr-regen-index needs REPO=' and rc=2
+- [x] `AC-H4` *(human)* `python3 -c 'import xml.dom.minidom,sys; xml.dom.minidom.parse(sys.argv[1])' claude/workflow/docs/pr-process/pr-process.spec.xml && grep -c 'value="REGEN"' claude/workflow/docs/pr-process/pr-process.spec.xml` exits 0 and prints 1 (proof: output pasted by work-order.sh evidence)
+  - observed `2026-10-16` spec.xml parses (minidom exit 0); grep -c 'value="REGEN"' printed 1
+- [x] `AC-H5` *(human)* `make rolodex-check BASE=origin/main` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make rolodex-check BASE=origin/main exit 0: 1 script(s) checked, all have headers
+- [x] `AC-H6` *(human)* `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/|claude/workflow/(pr-flow/(bin/pr-flow-consume.sh|pr-flow.mk|schemas/pr-flow-record.schema.json|tests/(regen-index|records).test.sh)|docs/pr-process/pr-process.(md|spec.xml)))$'` exits 1 and prints nothing: only In files plus generated work-orders/ close-out files
+  - observed `2026-10-16` git diff --name-only origin/main...HEAD filtered by the In list printed nothing, grep exit 1
 
 ## Test plan
 
