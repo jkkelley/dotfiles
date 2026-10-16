@@ -48,8 +48,8 @@ refuses "a result that skips a brief AC is rejected against its brief" result-ch
 
 # status code map: every code a seat or the orchestrator may set has its row (A2A-004 is Design principles 101 item 31, PERM-MISSING is item 36)
 M="$R/templates/a2a/README.md"
-miss=""; for c in A2A-001 A2A-002 A2A-003 A2A-004 PERM-MISSING; do grep -q "^| $c |" "$M" || miss="$miss $c"; done
-[ -z "$miss" ] && ok "the status code map lists A2A-001 to A2A-004 and PERM-MISSING" || bad "the status code map lists A2A-001 to A2A-004 and PERM-MISSING (missing:$miss)"
+miss=""; for c in A2A-001 A2A-002 A2A-003 A2A-004 PERM-MISSING DESIGN-GAP; do grep -q "^| $c |" "$M" || miss="$miss $c"; done
+[ -z "$miss" ] && ok "the status code map lists A2A-001 to A2A-004, PERM-MISSING and DESIGN-GAP" || bad "the status code map lists A2A-001 to A2A-004 and PERM-MISSING (missing:$miss)"
 jq '.status_code = "A2A-004"' "$T/brief.json" > "$T/b5.json"
 passes  "a brief carrying A2A-004 is valid" check "$T/b5.json"
 
@@ -79,5 +79,20 @@ refuses "brief new refuses an AC with a bad proof_kind" new --ac 'AC1|s|vibes|p'
 if make -s -C "$R" -f a2a.mk brief-check FILE="$T/brief.json" >/dev/null 2>&1; then ok "AC4 brief-check exits 0 on a valid brief"; else bad "AC4 brief-check exits 0 on a valid brief"; fi
 if make -s -C "$R" -f a2a.mk brief-check FILE="$T/b1.json" >/dev/null 2>&1; then bad "AC4 brief-check exits non-zero on an invalid brief"; else ok "AC4 brief-check exits non-zero on an invalid brief"; fi
 if make -s -C "$R" -f a2a.mk brief-check FILE="$T/prose.txt" >/dev/null 2>&1; then bad "AC4 brief-check exits non-zero on a prose brief"; else ok "AC4 brief-check exits non-zero on a prose brief"; fi
+
+# BUILD=1: a build seat starts only from a ready work order (ORD-0548). Fixture work-order project lives in $T.
+WOS="$R/../skills/work-order/scripts/work-order.sh"
+P="$T/wo"; mkdir -p "$P"; git -C "$P" init -q 2>/dev/null
+mkid() { bash "$WOS" new --project "$P" --title "$1" --type feature --problem p --out o --in 'touches: a.txt' --ac 'it works' --top-level --json 2>/dev/null | jq -r .id; }
+DRAFT="$(mkid draft-one)"; READY="$(mkid ready-one)"
+bash "$WOS" approve --project "$P" --id "$READY" --no-lavish --reason "test fixture" >/dev/null 2>&1
+jq --arg w "$READY" '.work_order = $w' "$T/brief.json" > "$T/bw-ready.json"
+jq --arg w "$DRAFT" '.work_order = $w' "$T/brief.json" > "$T/bw-draft.json"
+"$B" check "$T/brief.json" --build --wo-project "$P" >/dev/null 2>"$T/e1"; rc=$?
+[ "$rc" = 3 ] && grep -q '^DESIGN-GAP' "$T/e1" && ok "brief-check --build refuses a brief with no work_order (exit 3, DESIGN-GAP)" || bad "brief-check --build refuses a brief with no work_order (exit 3, DESIGN-GAP) rc=$rc"
+"$B" check "$T/bw-draft.json" --build --wo-project "$P" >/dev/null 2>"$T/e2"; rc=$?
+[ "$rc" = 3 ] && grep -q 'not ready' "$T/e2" && ok "brief-check --build refuses a draft work order" || bad "brief-check --build refuses a draft work order rc=$rc"
+"$B" check "$T/bw-ready.json" --build --wo-project "$P" >/dev/null 2>&1 && ok "brief-check --build accepts a ready work order" || bad "brief-check --build accepts a ready work order"
+make -s -C "$R" -f a2a.mk brief-check FILE="$T/brief.json" >/dev/null 2>&1 && ok "brief-check without BUILD still passes a brief with no work_order" || bad "brief-check without BUILD still passes a brief with no work_order"
 printf '%s checks\n' "$n"
 exit $fail
