@@ -4,15 +4,15 @@
   "slug": "wk3-wiki-index-wiki-generates-index-readme-md-wi",
   "title": "WK3: wiki-index WIKI= generates index/README.md with contents, topic map and backlinks",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:19:12+00:00",
   "parent": "WO-20261016-35de",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/b6a8-wk3-wiki-index-wiki-generates-index-readme-md-wi",
+  "pr": 341,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "design seat infra-design12 cut from wiki.spec.xml (PR 285), ORD-0830 RR-orch-14; design approvals ruled done, ORD-0550 O4; owner surface is Bearings, lavish prohibited for Claude seats",
@@ -119,17 +119,23 @@ Owner words, verbatim: "MAKE SURE A KNOWLEDGE BASE WIKI OF YIELDPOINT AI IS BUIL
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the unit tests pass in the pinned image
+- [x] `AC-H1` *(human)* the unit tests pass in the pinned image
+  - observed `2026-10-16` check: podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_index.py exit 0 output: test_backlinks_per_raw_sorted (claude.tools.wiki.tests.test_index.IndexTest.test_backlinks_per_raw_sorted) ... ok test_custom_dirs_from_config (claude.tools.wiki.tests.test_index.IndexTest.test_custom_dirs_from_config) ... ok test_missing_processed_dir_is_io (claude.tools.wiki.tests.test_index.IndexTest.test_missing_processed_dir_is_io) ... ok test_no_args_and_empty_root_are_usage (claude.tools.wiki.tests.test_index.IndexTest.test_no_args_and_empty_root_are_usage) ... ok test_rerun_is_byte_identical_and_untouched (claude.tools.wiki.tests.test_index.IndexTest.test_rerun_is_byte_identical_and_untouched) ... ok test_topic_map_groups_and_sorts (claude.tools.wiki.tests.test_index.IndexTest.test_topic_map_groups_and_sorts) ... ok test_writes_index_and_code (claude.tools.wiki.tests.test_index.IndexTest.test_writes_index_and_code) ... ok ---------------------------------------------------------------------- Ran 7 tests in 0.374s OK
   - check: `podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_index.py` exit 0 expect /^OK/
-- [ ] `AC-H2` *(human)* the FB-001 fallback path runs the cached digest
+- [x] `AC-H2` *(human)* the FB-001 fallback path runs the cached digest
+  - observed `2026-10-16` check: env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk3 --fallback "podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_index.py" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_index.py exit 0 output: test_backlinks_per_raw_sorted (claude.tools.wiki.tests.test_index.IndexTest.test_backlinks_per_raw_sorted) ... ok test_custom_dirs_from_config (claude.tools.wiki.tests.test_index.IndexTest.test_custom_dirs_from_config) ... ok test_missing_processed_dir_is_io (claude.tools.wiki.tests.test_index.IndexTest.test_missing_processed_dir_is_io) ... ok test_no_args_and_empty_root_are_usage (claude.tools.wiki.tests.test_index.IndexTest.test_no_args_and_empty_root_are_usage) ... ok test_rerun_is_byte_identical_and_untouched (claude.tools.wiki.tests.test_index.IndexTest.test_rerun_is_byte_identical_and_untouched) ... ok test_topic_map_groups_and_sorts (claude.tools.wiki.tests.test_index.IndexTest.test_topic_map_groups_and_sorts) ... ok test_writes_index_and_code (claude.tools.wiki.tests.test_index.IndexTest.test_writes_index_and_code) ... ok ---------------------------------------------------------------------- Ran 7 tests in 0.384s OK FALLBACK FB-001 wk3
   - check: `env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk3 --fallback "podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_index.py" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_index.py` exit 0 expect /FALLBACK FB-001/
-- [ ] `AC-H3` *(human)* the make target wraps the verb script
+- [x] `AC-H3` *(human)* the make target wraps the verb script
+  - observed `2026-10-16` check: make -n wiki-index WIKI=/tmp/wk SRC=/tmp/src exit 0 output: if [ -z "/tmp/wk" ]; then echo "usage: WIKI=<root> is required" >&2; exit 2; fi python3 claude/tools/wiki/wiki_index.py "/tmp/wk"
   - check: `make -n wiki-index WIKI=/tmp/wk SRC=/tmp/src` exit 0 expect /wiki_index\.py/
-- [ ] `AC-H4` *(human)* an empty WIKI is a usage error
+- [x] `AC-H4` *(human)* an empty WIKI is a usage error
+  - observed `2026-10-16` check: make -s wiki-index WIKI= SRC=/tmp/src exit 2 output: usage: WIKI=<root> is required make: *** [claude/tools/wiki/mk/index.mk:6: wiki-index] Error 2
   - check: `make -s wiki-index WIKI= SRC=/tmp/src` exit 2 expect /WIKI/
-- [ ] `AC-H5` *(human)* every changed script has a rolodex header
+- [x] `AC-H5` *(human)* every changed script has a rolodex header
+  - observed `2026-10-16` check: make rolodex-check BASE=origin/main exit 0 output: python3 scripts/rolodex.py check --root . --base origin/main rolodex-check: 2 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H6` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H6` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/tools/wiki/wiki_index.py|claude/tools/wiki/mk/index.mk|claude/tools/wiki/tests/test_index.py)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/tools/wiki/wiki_index\.py|claude/tools/wiki/mk/index\.mk|claude/tools/wiki/tests/test_index\.py)$'` exit 1
 
 ## Test plan
