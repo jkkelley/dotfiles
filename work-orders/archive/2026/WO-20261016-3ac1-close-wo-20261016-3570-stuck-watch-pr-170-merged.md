@@ -4,15 +4,15 @@
   "slug": "close-wo-20261016-3570-stuck-watch-pr-170-merged",
   "title": "Close WO-20261016-3570 (stuck-watch, PR 170 merged): start, submit, evidence from the dev gate, done",
   "type": "chore",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:30:48+00:00",
   "parent": "WO-20261016-0272",
   "branch": "feat/close-wo-20261016-3570-stuck-watch-pr-170-merged",
-  "pr": null,
-  "closed": null,
+  "pr": 293,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design10 cut for ORD-0830 RR-orch-14 and ORD-0921; design approvals ruled done, ORD-0550 O4",
@@ -98,9 +98,11 @@ Evidence map, fixed: AC-H1 to AC-H4 of 3570 are the cases tagged (AC1) idle STK-
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* WO-20261016-3570 is done and archived
+- [x] `AC-H1` *(human)* WO-20261016-3570 is done and archived
+  - observed `2026-10-16` check: bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-3570 --json | jq -r .status exit 0 output: done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-3570 --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H2` *(human)* the diff holds only work-orders files
+- [x] `AC-H2` *(human)* the diff holds only work-orders files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan
