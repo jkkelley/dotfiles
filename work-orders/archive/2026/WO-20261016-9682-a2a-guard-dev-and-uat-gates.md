@@ -4,15 +4,15 @@
   "slug": "a2a-guard-dev-and-uat-gates",
   "title": "a2a-guard dev and UAT gates",
   "type": "test",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:19:52+00:00",
   "parent": "WO-20261016-916d",
   "branch": "feat/a2a-guard-dev-and-uat-gates",
-  "pr": null,
-  "closed": null,
+  "pr": 175,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat: owner rule bars Lavish for Claude runtimes; brief BR-20261016-a2a-guard from the architect is the approval",
@@ -62,7 +62,8 @@ AC1-AC4 need scripted proof
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case in the plan passes
+- [x] `AC-H1` *(human)* every case in the plan passes
+  - observed `2026-10-16` dev gate: ok a2a-guard dev gate (all 22 cases); UAT gate: ok a2a-guard UAT gate (AC1)
 
 ## Test plan
 

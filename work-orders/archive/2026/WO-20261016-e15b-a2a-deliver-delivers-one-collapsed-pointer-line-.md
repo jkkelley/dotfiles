@@ -4,15 +4,15 @@
   "slug": "a2a-deliver-delivers-one-collapsed-pointer-line-",
   "title": "a2a-deliver delivers one collapsed pointer line to an idle seat with an empty input line",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:19:48+00:00",
   "parent": "WO-20261016-916d",
   "branch": "feat/a2a-deliver-delivers-one-collapsed-pointer-line-",
-  "pr": null,
-  "closed": null,
+  "pr": 175,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat: owner rule bars Lavish for Claude runtimes; brief BR-20261016-a2a-guard from the architect is the approval",
@@ -63,7 +63,8 @@ P1
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a working seat gets nothing; an idle one gets exactly one line
+- [x] `AC-H1` *(human)* a working seat gets nothing; an idle one gets exactly one line
+  - observed `2026-10-16` make a2a-uat 2026-10-16T05:26Z: before agent_status=working, 2x A2A-HELD; after agent_status=idle, A2A-DELIVERED count=2, received.txt 1 line with both pointers; evidence ~/.local/state/zenith/log/2026/10/20261016-052639-a2a-guard-uat.log; dev: ok busy seat: nothing typed; ok idle seat: exactly one prompt carrying both pointers
 
 ## Test plan
 

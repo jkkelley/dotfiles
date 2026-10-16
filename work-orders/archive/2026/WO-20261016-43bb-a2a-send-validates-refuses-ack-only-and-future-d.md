@@ -4,15 +4,15 @@
   "slug": "a2a-send-validates-refuses-ack-only-and-future-d",
   "title": "a2a-send validates, refuses ack-only and future-dated orders, names by artifact store, enqueues",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:19:46+00:00",
   "parent": "WO-20261016-916d",
   "branch": "feat/a2a-send-validates-refuses-ack-only-and-future-d",
-  "pr": null,
-  "closed": null,
+  "pr": 175,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat: owner rule bars Lavish for Claude runtimes; brief BR-20261016-a2a-guard from the architect is the approval",
@@ -61,8 +61,10 @@ P1 P3
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* ack-only exits 3 A2A-ACK-REFUSED
-- [ ] `AC-H2` *(human)* two sends in one second get two paths
+- [x] `AC-H1` *(human)* ack-only exits 3 A2A-ACK-REFUSED
+  - observed `2026-10-16` make a2a-guard-test: ok AC2 ack-only order refused with A2A-ACK-REFUSED (exit 3); ok an AC that asks for an ack is refused (exit 3)
+- [x] `AC-H2` *(human)* two sends in one second get two paths
+  - observed `2026-10-16` make a2a-guard-test: ok AC3 two sends in one second, two distinct artifact paths (xargs -P2, same YYYYMMDD-HHMMSS prefix, different random tails)
 
 ## Test plan
 
