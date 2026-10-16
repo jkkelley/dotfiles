@@ -4,15 +4,15 @@
   "slug": "seat-up-refuses-a-build-seat-whose-brief-has-no-",
   "title": "seat-up refuses a build seat whose brief has no ready work order (DESIGN-GAP)",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:04:32+00:00",
   "parent": "WO-20261016-4b6c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/ec34-seat-up-refuses-a-build-seat-whose-brief-has-no-",
+  "pr": 355,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -76,9 +76,12 @@ ORD-0548 O1/O4: new build seats start only on a ready work order id, and the spa
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow grid` exits 0 and prints `ok seat-up BUILD=1 with a brief that names no ready work order exits 3 with DESIGN-GAP and claims no slot` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* the same run prints `ok seat-up without BUILD starts as before` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the three files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `make -C claude/workflow grid` exits 0 and prints `ok seat-up BUILD=1 with a brief that names no ready work order exits 3 with DESIGN-GAP and claims no slot` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -C claude/workflow grid exit 0; printed: ok seat-up BUILD=1 with a brief that names no ready work order exits 3 with DESIGN-GAP and claims no slot
+- [x] `AC-H2` *(human)* the same run prints `ok seat-up without BUILD starts as before` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -C claude/workflow grid exit 0; printed: ok seat-up without BUILD starts as before
+- [x] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the three files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` git diff --name-only origin/main HEAD (committed branch; ticket file is rewritten only by work-order.sh) lists: claude/workflow/bin/herdr-grid.sh claude/workflow/tests/unit/test_herdr_grid.sh docs/design/herdr-grid.md
 
 ## Test plan
 
