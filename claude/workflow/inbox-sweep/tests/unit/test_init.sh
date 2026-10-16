@@ -67,7 +67,7 @@ check "$(sha256sum "$F/owner-words.md" | cut -d' ' -f1)" "$(jq -r .owner_words_s
 check yes "$(jq -r '[.seats[].deadline_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$")] | all | if . then "yes" else "no" end' "$run/run.json")" "every seat deadline is a UTC timestamp"
 check true "$(jq -r '(.seats[0].deadline_at | fromdate) - (.started_at | fromdate) | . >= 2390 and . <= 2410' "$run/run.json")" "the seat deadline is 40 minutes after the start"
 check "true" "$(grep -q 'Mark read: true' "$run/briefs/gmail.md" && echo true)" "mark_read true from the config reaches the brief"
-check 3 "$(wc -l <"$run/checklist.jsonl")" "three checklist rows are recorded"
+check 3 "$(cat "$run"/checklist/*.jsonl | wc -l)" "three checklist rows are recorded"
 check yes "$(grep -q 'equals seats 4' "$run/logs/init.log" && echo yes)" "logs/init.log records the owner-words count against the seat count"
 
 # B20b AC-H2: the run pins the node declarations. A later edit to nodes/ must not reach this run.
