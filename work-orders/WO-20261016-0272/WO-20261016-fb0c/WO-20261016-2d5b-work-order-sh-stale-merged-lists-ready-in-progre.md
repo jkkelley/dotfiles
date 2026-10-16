@@ -173,6 +173,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-16` ORD-0921 E1: the AC-H3 evidence entry (criterion 3, 'check exit 0') is VOID: it was recorded before its check ran, and the check later exited 1 (bash -c '! git diff --name-only origin/main...HEAD | grep -vE ...' printed the ticket file path, rc=1, 2026-10-16). AC-H3 stays unticked-in-truth until its check passes; not re-evidenced.
 - `2026-10-16` DESIGN-GAP: AC-H3 check regex ends the work-orders/ alternative with $, so no work-orders path can match; the check exits 1 on the required ticket file. Evidence for criterion 3 is that the diff holds only the two In files plus the ticket file; the check itself needs a trailing .* after work-orders/.
 
 ## Outcome
