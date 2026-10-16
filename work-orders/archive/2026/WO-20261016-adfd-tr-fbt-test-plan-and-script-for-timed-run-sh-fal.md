@@ -4,15 +4,15 @@
   "slug": "tr-fbt-test-plan-and-script-for-timed-run-sh-fal",
   "title": "TR-FBt: test plan and script for timed-run.sh --fallback",
   "type": "test",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:18:12+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/tr-fbt-test-plan-and-script-for-timed-run-sh-fal",
+  "pr": 233,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -62,7 +62,8 @@ Test sibling of TR-FB. The tester runs exactly this plan from ~/dotfiles on the 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* Every case passes: each case's command exits as its expected line says. Proof: the evidence log path on this ticket
+- [x] `AC-H1` *(human)* Every case passes: each case's command exits as its expected line says. Proof: the evidence log path on this ticket
+  - observed `2026-10-16` TP-1 8/8 pass exit 0; TP-2 FALLBACK FB-001 tp exit 0; TP-3 21/21 exit 0; TP-4 exit 0. Evidence log: /home/luna/.local/state/zenith/log/2026/10/20261016-080529-tr-fb-test.log
 
 ## Test plan
 

@@ -6,6 +6,7 @@
     "image_tag": "docker.io/library/nats:2.15.1-alpine",
     "box_image": "docker.io/natsio/nats-box@sha256:d2f04223f40e016f77922a8115d34b0cd5fad2ec10b19b39316ae92d07f3d295",
     "box_tag": "docker.io/natsio/nats-box, nats CLI 0.5.0, digest taken 2026-10-16",
+    "bind": "127.0.0.1",
     "port": 4222,
     "monitor_port": 8222,
     "store": "~/.local/state/zenith/state/nats",
