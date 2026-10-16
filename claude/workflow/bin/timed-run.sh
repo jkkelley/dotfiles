@@ -7,10 +7,14 @@
 # writes-to: NATS line.<line>.event.node.* and .timing.TIMEOUT, the bottlenecks work-order project
 # cleanup: none (one-shot)
 #
-# usage: timed-run.sh --node N [--kind K] [--line L] [--budget S] [--timeout S] [--retries R] -- cmd [args...]
+# usage: timed-run.sh --node N [--kind K] [--line L] [--budget S] [--timeout S] [--retries R]
+#          [--fallback CMD --fallback-code FB-NNN] -- cmd [args...]
 #   per attempt: line.<L>.event.node.start, the command under `timeout`, then .end {rc, duration_s, budget_s} or
 #   .timeout. Every attempt timed out -> line.<L>.timing.TIMEOUT and a bottleneck work order, exit 124. Otherwise the
 #   command's exit code. An end over budget prints "SLOW <node>"; node-timing.sh is the one place that publishes SLOW.
+#   --fallback: when the primary exits non-zero, or every attempt timed out, CMD (bash -c) runs once under the same timeout,
+#   line.<L>.event.node.fallback {code, primary_rc, rc} is published, "FALLBACK <CODE> <node>" goes to stderr, and the exit
+#   code is CMD's. FORCE_FALLBACK=1 skips the primary (the test path). Codes: config/fallbacks.json.
 # Make: make timed-run NODE= KIND= BUDGET= TIMEOUT= LINE= CMD='...'. Defaults: config/time-budgets.json; LINE from $LINE or "all".
 #
 # Owner, 2026-10-16 UTC (item 37): "every node, seat, job, CI run and merge emits start and end on the bus by script".
@@ -18,19 +22,37 @@
 # What broke: nothing yet; the rejected alternative. Both coding SLOW would file two work orders for one slow run.
 # Why this fix: only this wrapper knows a run was killed, so TIMEOUT is its job; every end event carries budget_s, so
 #   the consumer can judge SLOW for wrapped and unwrapped producers alike. Cost: SLOW appears when node-timing consumes.
+#
+# BREADCRUMB - the fallback switch lives in this wrapper (ORD-0558 O1, owner item 28: "Have fallbacks too").
+# What broke: nothing yet; no dotfiles tool switched to a fallback (grep fallback over scripts/, claude/workflow/bin, claude/tools).
+# Why this fix: every Make target already runs through this wrapper, so one flag pair gives all of them a scripted,
+#   coded, bus-visible switch. Rejected alternative: a second wrapper script, which every caller would have to learn.
+# Cost: one more branch in the hot path; without --fallback the path is unchanged.
 set -uo pipefail
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 # shellcheck source=timing/lib.sh disable=SC1091
 . "$HERE/../timing/lib.sh"
-NODE=""; KIND="make"; L="${LINE:-all}"; BUDGET=""; TIMEOUT=""; RETRIES=""
+NODE=""; KIND="make"; L="${LINE:-all}"; BUDGET=""; TIMEOUT=""; RETRIES=""; FB_CMD=""; FB_CODE=""
 while [ $# -gt 0 ]; do case "$1" in
   --node) NODE="$2"; shift 2 ;; --kind) KIND="$2"; shift 2 ;; --line) L="$2"; shift 2 ;; --budget) BUDGET="$2"; shift 2 ;;
-  --timeout) TIMEOUT="$2"; shift 2 ;; --retries) RETRIES="$2"; shift 2 ;; --) shift; break ;;
+  --timeout) TIMEOUT="$2"; shift 2 ;; --retries) RETRIES="$2"; shift 2 ;;
+  --fallback) FB_CMD="$2"; shift 2 ;; --fallback-code) FB_CODE="$2"; shift 2 ;; --) shift; break ;;
   -h|--help) sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; *) echo "timed-run: unknown argument $1" >&2; exit 2 ;; esac; done
 if [ -z "$NODE" ] || [ $# -eq 0 ]; then echo "timed-run: --node and a command after -- are required" >&2; exit 2; fi
+if [ -n "$FB_CMD" ] && ! [[ "$FB_CODE" =~ ^FB-[0-9]{3}$ ]]; then echo "timed-run: --fallback needs --fallback-code matching FB-NNN" >&2; exit 2; fi
+if [ -z "$FB_CMD" ] && [ -n "$FB_CODE" ]; then echo "timed-run: --fallback-code needs --fallback" >&2; exit 2; fi
 BUDGET="${BUDGET:-$(tm_limit budget_s "$KIND" "$NODE")}"; TIMEOUT="${TIMEOUT:-$(tm_limit timeout_s "$KIND" "$NODE")}"
 RETRIES="${RETRIES:-$(tm_cfg .retries)}"
 RUN="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+# run_fallback <primary_rc>: CMD once under the same timeout, event, FALLBACK line, exit with its code.
+run_fallback() {
+  local prc="$1" frc
+  timeout --kill-after=10 "$TIMEOUT" bash -c "$FB_CMD"; frc=$?
+  tm_event "$L" "$NODE" "$KIND" "$RUN" fallback "$(jq -nc --arg c "$FB_CODE" --argjson p "$prc" --argjson r "$frc" '{code:$c,primary_rc:$p,rc:$r}')"
+  echo "FALLBACK $FB_CODE $NODE" >&2
+  exit "$frc"
+}
+[ -n "$FB_CMD" ] && [ "${FORCE_FALLBACK:-}" = 1 ] && run_fallback null
 for a in $(seq 1 "$RETRIES"); do
   tm_event "$L" "$NODE" "$KIND" "$RUN" start "$(jq -nc --argjson a "$a" --argjson b "$BUDGET" --argjson t "$TIMEOUT" '{attempt:$a,budget_s:$b,timeout_s:$t}')"
   t0="$(date -u +%s)"; timeout --kill-after=10 "$TIMEOUT" "$@"; rc=$?; d=$(( $(date -u +%s) - t0 ))
@@ -40,10 +62,12 @@ for a in $(seq 1 "$RETRIES"); do
   fi
   tm_event "$L" "$NODE" "$KIND" "$RUN" end "$(jq -nc --argjson a "$a" --argjson r "$rc" --argjson d "$d" --argjson b "$BUDGET" '{attempt:$a,rc:$r,duration_s:$d,budget_s:$b}')"
   [ "$d" -gt "$BUDGET" ] && echo "SLOW $NODE ${d}s over budget ${BUDGET}s" >&2
+  [ "$rc" != 0 ] && [ -n "$FB_CMD" ] && run_fallback "$rc"
   exit "$rc"
 done
 ev="$(jq -nc --arg n "$NODE" --arg k "$KIND" --arg l "$L" --arg r "$RUN" --argjson t "$TIMEOUT" --argjson a "$RETRIES" --arg c "$*" \
   '{node:$n,kind:$k,line:$l,run_id:$r,timeout_s:$t,attempts:$a,command:$c}')"
 tm_code "$L" TIMEOUT "$ev"
 echo "TIMEOUT $NODE after $RETRIES attempts; work order: $(tm_wo "$NODE" TIMEOUT "$ev")" >&2
+[ -n "$FB_CMD" ] && run_fallback 124
 exit 124
