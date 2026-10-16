@@ -9,6 +9,7 @@
 #
 #   pr-flow-consume.sh sweep            one pass
 #   pr-flow-consume.sh loop [--interval 60]   a pass every interval, for the pr-flow pane of the monitoring tab (Rule 18: never &)
+#   pr-flow-consume.sh regen-index      only the regen verb (env REPO, PR, DRY), what the sweep runs first on every tick
 #
 # Records (pr-process.md section 9), each keyed so it is posted once (rule R3):
 #   pr.opened 100  first sight of a head                    key 100/<slug>/<pr>/<head>
@@ -17,6 +18,7 @@
 #                  the fix work order for the worker lane (N3): the worker's consumer pulls line.<line>.event.ci.failed
 #   merged 200     a merged PR seen in the last 20          key 200/<slug>/<pr> (the same key merge.sh uses); note: merged_at <UTC>
 #                  and seconds from the last check to the merge, the AC2 number
+#   regen REGEN    a PR conflicting only on regen.paths was merged with its base, regenerated and pushed  key REGEN/<slug>/<pr>/<new head>
 # Backstop (node N4): a PR whose ci.passed was posted more than backstop_s seconds ago and is still open goes to merge.sh --pr.
 # Every repository pass runs under step-time.sh (node sweep), so a slow pass posts SLOW (rule R7).
 #
@@ -24,6 +26,12 @@
 #   (127.0.0.1) and the seats' gh login is the identity whose pushes start CI, which regen needs; a 60 s poll of three repositories is
 #   six gh calls a minute. Rejected: posting records from the merge-on-green Action, which cannot reach the local bus. Cost: records
 #   lag GitHub by up to one interval; the AC2 timing therefore reads GitHub's own timestamps, not the record times.
+#
+# BREADCRUMB 2026-10-16 - BR-20261016-infra-design4, ORD-0726 S1. What broke: regen results reached only stdout, so no consumer saw a
+#   regen and the line stalled on index-only conflicts unseen (finding F20; dotfiles 159, 161, 162, 180, 187). Why a verb on the sweep:
+#   item 30, a need is met by a verb on an existing tool; regen-conflicts.sh is the regen-merge.sh port. Rejected: a second script
+#   copied from regen-merge.sh. Cost: one gh pr view per regenerated PR. WO-20261016-565d empties regen.paths, which makes this a no-op
+#   by config, no code change.
 set -uo pipefail
 HERE=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
 GH=${GH:-gh}; RS="$HERE/records.sh"; ST="$HERE/../../bin/step-time.sh"
@@ -37,16 +45,33 @@ post() { # post SLUG LINE KIND CODE KEY PR SHA TICKET NOTE
 }
 ticket_of() { local re=$1 t=$2 b=$3 n=$4; if [[ $t =~ $re ]] || [[ $b =~ $re ]]; then echo "${BASH_REMATCH[1]}"; else echo "PR-$n"; fi; }
 
+regen_index() { # regen_index SLUG: regenerate index-only conflicts through regen-conflicts.sh and post REGEN once per new head
+  local slug=$1 cfg line re clone out l n head pr title body t sel=(--all)
+  cfg=$("$HERE/pr-flow-config.sh" "$slug") || return 0
+  line=$(jq -r .line <<<"$cfg"); re=$(jq -r .ticket_re <<<"$cfg"); clone=$(jq -r .clone <<<"$cfg")
+  export PR_FLOW_RECORDS; PR_FLOW_RECORDS=$(jq -r .records <<<"$cfg")
+  [ -n "$(jq -r .regen.paths <<<"$cfg")" ] && { [ -d "$clone/.git" ] || [ -f "$clone/.git" ]; } || return 0
+  [ -z "${PR:-}" ] || sel=(--pr "$PR")
+  out=$(PR_FLOW_REGEN_PATHS=$(jq -r .regen.paths <<<"$cfg") PR_FLOW_REGEN_CMD=$(jq -r .regen.cmd <<<"$cfg") GH_REPO=$slug \
+    "$HERE/regen-conflicts.sh" --repo "$clone" "${sel[@]}" ${DRY:+--dry-run} 2>&1 | grep -v ' clean: ') || true
+  while IFS= read -r l; do
+    if [[ $l =~ ^PR\ ([0-9]+)\ regenerated:\ (.*)$ ]]; then
+      n=${BASH_REMATCH[1]}; pr=$("$GH" pr view "$n" -R "$slug" --json headRefOid,title,body) || continue
+      head=$(jq -r .headRefOid <<<"$pr"); title=$(jq -r .title <<<"$pr"); body=$(jq -r '.body // ""' <<<"$pr"); t=$(ticket_of "$re" "$title" "$body" "$n")
+      "$RS" seen --key "REGEN/$slug/$n/$head" || post "$slug" "$line" regen REGEN "REGEN/$slug/$n/$head" "$n" "$head" "$t" "regenerated: ${BASH_REMATCH[2]}"
+    elif [[ $l == *' real-conflict: '* ]]; then echo "$slug $l"
+    elif [ -n "$l" ]; then echo "$l"; fi
+  done <<<"$out"
+  return 0
+}
+
 repo_pass() { # repo_pass SLUG: one pass over one repository
   local slug=$1 cfg line re req clone prs row t n head title body checks failed last merged
   cfg=$("$HERE/pr-flow-config.sh" "$slug") || return 2
   line=$(jq -r .line <<<"$cfg"); re=$(jq -r .ticket_re <<<"$cfg"); req=$(jq -r .required_check <<<"$cfg"); clone=$(jq -r .clone <<<"$cfg")
   export PR_FLOW_RECORDS; PR_FLOW_RECORDS=$(jq -r .records <<<"$cfg")
   # generated-file conflicts first: CI does not run on a PR GitHub cannot merge
-  if [ -n "$(jq -r .regen.paths <<<"$cfg")" ] && { [ -d "$clone/.git" ] || [ -f "$clone/.git" ]; }; then
-    PR_FLOW_REGEN_PATHS=$(jq -r .regen.paths <<<"$cfg") PR_FLOW_REGEN_CMD=$(jq -r .regen.cmd <<<"$cfg") GH_REPO=$slug \
-      "$HERE/regen-conflicts.sh" --repo "$clone" --all | grep -v ' clean: ' || true
-  fi
+  regen_index "$slug"
   prs=$("$GH" pr list -R "$slug" --state open --limit 100 --json number,headRefOid,title,body) || { echo "$slug io: gh pr list"; return 4; }
   while IFS= read -r row; do
     n=$(jq -r .number <<<"$row"); head=$(jq -r .headRefOid <<<"$row"); title=$(jq -r .title <<<"$row"); body=$(jq -r '.body // ""' <<<"$row")
@@ -95,6 +120,7 @@ sweep() {
 }
 
 case $VERB in
+  regen-index) for slug in ${REPO:-$("$HERE/pr-flow-config.sh" --list)}; do regen_index "$slug"; done ;;
   sweep) sweep ;;
   loop) while :; do sweep; sleep "$INTERVAL"; done ;;
   *) sed -n '10,11p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;

@@ -30,6 +30,8 @@ out=$("$RS" post --kind merge.conflict --code 409 --pr 7 --sha abc1234 --key "40
 "$RS" seen --key "409/o/r/7/def"; [ $? = 1 ] && ok "seen: new key" || no "seen new"
 
 rc=0; "$RS" post --kind bogus --code 200 "${base[@]}" >/dev/null 2>&1 || rc=$?; [ $rc = 3 ] && ok "unknown kind fails the schema, exit 3" || no "kind rc=$rc"
+rc=0; "$RS" post --kind regen --code REGEN --pr 7 --sha abc1234 --repo o/r "${base[@]}" >/dev/null 2>&1 || rc=$?; [ $rc = 0 ] && ok "kind regen code REGEN is valid" || no "regen rc=$rc"
+rc=0; "$RS" post --kind regen --code NOPE "${base[@]}" >/dev/null 2>&1 || rc=$?; [ $rc = 3 ] && ok "kind regen code NOPE fails the schema" || no "NOPE rc=$rc"
 rc=0; "$RS" post --kind merged --code 200 --sha 'zz' "${base[@]}" >/dev/null 2>&1 || rc=$?; [ $rc = 3 ] && ok "bad sha fails the schema" || no "sha rc=$rc"
 rc=0; "$RS" post --kind merged --code 200 --note "$(printf 'x%.0s' {1..241})" "${base[@]}" >/dev/null 2>&1 || rc=$?; [ $rc = 3 ] && ok "note over 240 fails" || no "note rc=$rc"
 rc=0; "$RS" post --kind merged --code 200 --line test >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] && ok "missing ticket is usage, exit 2" || no "usage rc=$rc"
