@@ -134,6 +134,22 @@
             }
           }
         },
+        "launchers": {
+          "type": "object",
+          "description": "Per-launcher settings for chain links whose launcher is not the kind's own binary. Today only claude.exe (link claude-win-chrome, docs/design/inbox-sweep.spec.xml launchers).",
+          "additionalProperties": false,
+          "properties": {
+            "claude.exe": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "$comment": { "type": "string" },
+                "win_home": { "type": "string", "description": "WSL path of the Windows home (/mnt/c/Users/<name>). Empty means ask Windows through cmd.exe and wslpath; WIN_HOME overrides." },
+                "args": { "type": "array", "items": { "type": "string" }, "description": "Flags passed to claude.exe before the tool restrictions. Never a WSL path." }
+              }
+            }
+          }
+        },
         "principal_pane": {
           "type": "string",
           "pattern": "^[A-Za-z0-9._-]+$",

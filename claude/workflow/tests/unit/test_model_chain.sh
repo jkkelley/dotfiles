@@ -84,5 +84,22 @@ has   "a single-form declaration keeps its model mapping" "--model claude-opus-5
 out="$(spawn orchestration-build orch-builder --link 1)"; rc=$?
 if [ "$rc" -ne 0 ]; then ok "a single-form declaration has only link 0"; else bad "a single-form declaration has only link 0" "$out"; fi
 
+# ---- claude-win-chrome (inbox sweep B5): Windows Claude Code, started from a directory under the Windows home
+#   - WSL `claude --chrome` never connects (F1), so the launcher must be <win-home>/.local/bin/claude.exe with --chrome
+#   - started from a WSL path it cannot find its settings, so the pane cd's under <win-home> first
+#   - a WSL path handed to claude.exe as an argument is meaningless to Windows
+jq --arg h "/mnt/c/Users/testuser" '.workflow.launchers["claude.exe"].win_home=$h' "$T/config.json" > "$T/config-win.json"
+out="$(WORKFLOW_CONFIG="$T/config-win.json" spawn inbox-sweep-proton --pane wT:p1)"
+has   "win-chrome: the launcher is claude.exe under the Windows home with --chrome" "/mnt/c/Users/testuser/.local/bin/claude.exe\\ --chrome\\ --dangerously-skip-permissions\\ --model\\ sonnet" "$out"
+has   "win-chrome: the pane cd's to a directory under the Windows home first" "DRY: herdr pane run wT:p1 cd\\ /mnt/c/Users/testuser\\ \\&\\&\\ /mnt/c/Users/testuser/.local/bin/claude.exe" "$out"
+has   "win-chrome: reports on the artifact surface" 'RAIL_SURFACE=artifact\ RAIL_SEAT=smoke' "$out"
+hasnt "win-chrome: never started by herdr agent start" "agent start" "$out"
+out="$(WORKFLOW_CONFIG="$T/config-win.json" WF_LINK_CWD=/mnt/c/Users/testuser/runs/r1 spawn inbox-sweep-proton --pane wT:p1)"
+has   "win-chrome: WF_LINK_CWD under the Windows home is the cwd" "cd\\ /mnt/c/Users/testuser/runs/r1\\ \\&\\&" "$out"
+out="$(WORKFLOW_CONFIG="$T/config-win.json" WF_LINK_CWD=/home/luna/run spawn inbox-sweep-proton --pane wT:p1)"; rc=$?
+if [ "$rc" -ne 0 ] && grep -q 'is not under the Windows home' <<<"$out"; then ok "win-chrome: a WSL cwd is refused"; else bad "win-chrome: a WSL cwd is refused" "rc=$rc" "$out"; fi
+out="$(unset WIN_HOME; spawn inbox-sweep-proton --pane wT:p1)"; rc=$?
+if [ "$rc" -ne 0 ] && grep -q 'Windows home is unknown' <<<"$out"; then ok "win-chrome: an unknown Windows home refuses"; else bad "win-chrome: an unknown Windows home refuses" "rc=$rc" "$out"; fi
+
 [ "$fail" = 0 ] && echo "ok  model-chain: $n checks" || echo "FAIL model-chain: see above ($n checks)"
 exit "$fail"

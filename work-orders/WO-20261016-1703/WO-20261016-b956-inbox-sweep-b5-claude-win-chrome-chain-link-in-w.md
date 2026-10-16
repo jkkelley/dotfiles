@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-b5-claude-win-chrome-chain-link-in-w",
   "title": "Inbox sweep B5 - claude-win-chrome chain link in workflow-spawn.sh",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T01:19:11+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-b5-claude-win-chrome-chain-link-in-w",
   "pr": null,
   "closed": null,
   "approval": {
@@ -66,8 +66,10 @@ Browser seats must start as Windows claude.exe --chrome, which the spawner canno
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* --dry-run prints claude.exe --chrome with a cwd under the resolved Windows home (test_model_chain.sh case)
-- [ ] `AC-H2` *(human)* make -C claude/workflow chain is green
+- [x] `AC-H1` *(human)* --dry-run prints claude.exe --chrome with a cwd under the resolved Windows home (test_model_chain.sh case)
+  - observed `2026-10-16` test_model_chain.sh: ok win-chrome launcher is /mnt/c/Users/testuser/.local/bin/claude.exe --chrome ... and pane cd under Windows home first (34 checks)
+- [x] `AC-H2` *(human)* make -C claude/workflow chain is green
+  - observed `2026-10-16` make -C claude/workflow chain: ok model-chain: 34 checks; lint and schema also green
 
 ## Test plan
 
