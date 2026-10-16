@@ -83,7 +83,7 @@ if make -s -C "$R" -f a2a.mk brief-check FILE="$T/prose.txt" >/dev/null 2>&1; th
 # BUILD=1: a build seat starts only from a ready work order (ORD-0548). Fixture work-order project lives in $T.
 WOS="$R/../skills/work-order/scripts/work-order.sh"
 P="$T/wo"; mkdir -p "$P"; git -C "$P" init -q 2>/dev/null
-mkid() { bash "$WOS" new --project "$P" --title "$1" --type feature --problem p --out o --in 'touches: a.txt' --ac 'it works' --top-level --json 2>/dev/null | jq -r .id; }
+mkid() { bash "$WOS" new --project "$P" --title "$1" --type feature --problem p --out o --in 'touches: a.txt' --ac 'it works' --ac-check true --ac-exit 0 --owner-words fixture --context fixture --top-level --json 2>/dev/null | jq -r .id; }
 DRAFT="$(mkid draft-one)"; READY="$(mkid ready-one)"
 bash "$WOS" approve --project "$P" --id "$READY" --no-lavish --reason "test fixture" >/dev/null 2>&1
 jq --arg w "$READY" '.work_order = $w' "$T/brief.json" > "$T/bw-ready.json"
@@ -93,6 +93,18 @@ jq --arg w "$DRAFT" '.work_order = $w' "$T/brief.json" > "$T/bw-draft.json"
 "$B" check "$T/bw-draft.json" --build --wo-project "$P" >/dev/null 2>"$T/e2"; rc=$?
 [ "$rc" = 3 ] && grep -q 'not ready' "$T/e2" && ok "brief-check --build refuses a draft work order" || bad "brief-check --build refuses a draft work order rc=$rc"
 "$B" check "$T/bw-ready.json" --build --wo-project "$P" >/dev/null 2>&1 && ok "brief-check --build accepts a ready work order" || bad "brief-check --build accepts a ready work order"
+# WO-20261016-7838: facts.worktree must not be a primary clone.
+mkdir -p "$T/clone"; git -C "$T/clone" init -q
+git -C "$T/clone" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m init
+git -C "$T/clone" worktree add -q -b wt-case "$T/linked" 2>/dev/null
+jq --arg d "$T/clone" '.facts.worktree = $d' "$T/bw-ready.json" > "$T/bw-primary.json"
+jq --arg d "$T/linked" '.facts.worktree = $d' "$T/bw-ready.json" > "$T/bw-linked.json"
+jq --arg d "$T/not-yet" '.facts.worktree = $d' "$T/bw-ready.json" > "$T/bw-absent.json"
+"$B" check "$T/bw-primary.json" --build --wo-project "$P" >/dev/null 2>"$T/e3"; rc=$?
+[ "$rc" = 3 ] && grep -q 'is a primary clone' "$T/e3" && ok "worktree case a: primary clone refused (exit 3)" || bad "worktree case a: primary clone refused rc=$rc"
+"$B" check "$T/bw-linked.json" --build --wo-project "$P" >/dev/null 2>&1 && ok "worktree case b: linked worktree accepted" || bad "worktree case b: linked worktree accepted"
+"$B" check "$T/bw-absent.json" --build --wo-project "$P" >/dev/null 2>&1 && ok "worktree case c: absent path accepted" || bad "worktree case c: absent path accepted"
+"$B" check "$R/templates/a2a/brief.json" >/dev/null 2>&1 && ok "worktree case d: template brief.json validates" || bad "worktree case d: template brief.json validates"
 make -s -C "$R" -f a2a.mk brief-check FILE="$T/brief.json" >/dev/null 2>&1 && ok "brief-check without BUILD still passes a brief with no work_order" || bad "brief-check without BUILD still passes a brief with no work_order"
 printf '%s checks\n' "$n"
 exit $fail

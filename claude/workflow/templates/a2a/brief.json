@@ -8,7 +8,7 @@
   "from": {"name": "architect", "role": null},
   "to": {"name": "seat-name", "role": null},
   "subject": "one line: what this seat builds",
-  "facts": {"worktree": "<path>", "branch": "<branch>", "reuse": []},
+  "facts": {"worktree": "<path>", "branch": "<branch>", "worktree_rule": "work only in facts.worktree, a git worktree of your own; never run work-order.sh start, git checkout or git switch in a primary clone such as ~/dotfiles", "reuse": []},
   "actions": ["first step the seat takes"],
   "reply": {"required": true, "format": "result JSON valid against zenith.a2a.result.v1 written to output.result_file"},
   "refs": [],

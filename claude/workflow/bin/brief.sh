@@ -57,6 +57,16 @@ check_build() { # <brief> <work-order project dir, may be empty>
     printf 'DESIGN-GAP %s not found\n' "$wo" >&2; exit 3
   fi
   [ "$st" = ready ] || { printf 'DESIGN-GAP %s is %s, not ready\n' "$wo" "$st" >&2; exit 3; }
+  # WO-20261016-7838: WO-20261016-efb2 was started inside the ~/dotfiles primary clone because a brief named it as the worktree;
+  # every seat calling ~/dotfiles tools then ran stale code. A primary clone has git-dir == git-common-dir, a linked worktree does not.
+  # A path that does not exist yet passes: the seat creates it. Rejected alternative: matching the literal ~/dotfiles path, which misses other clones.
+  local wt gd cd
+  wt="$(jq -r '.facts.worktree // empty' "$1")"
+  if [ -n "$wt" ] && [ -d "$wt" ] && gd="$(git -C "$wt" rev-parse --git-dir 2>/dev/null)" && cd="$(git -C "$wt" rev-parse --git-common-dir 2>/dev/null)"; then
+    if [ "$(cd "$wt" && realpath "$gd")" = "$(cd "$wt" && realpath "$cd")" ]; then
+      printf 'DESIGN-GAP BRIEF facts.worktree %s is a primary clone; a build seat works only in its own git worktree\n' "$wt" >&2; exit 3
+    fi
+  fi
 }
 
 cmd_result_check() {
