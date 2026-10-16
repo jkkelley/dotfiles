@@ -4,14 +4,14 @@
   "slug": "claude-workflow-ci-sharded-by-suite-diff-selecte",
   "title": "claude/workflow CI sharded by suite: diff-selected matrix, full on main and nightly, cached image, timed by step-time.sh",
   "type": "feature",
-  "status": "in-progress",
+  "status": "in-review",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T07:20:27+00:00",
   "parent": "WO-20261016-0272",
   "branch": "feat/claude-workflow-ci-sharded-by-suite-diff-selecte",
-  "pr": null,
+  "pr": 220,
   "closed": null,
   "approval": {
     "via": "override",
@@ -88,12 +88,18 @@ ORD-0715 C1 (orchestrator brief BR-20261016-infra-design3): "the claude/workflow
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow ci-job` exits 0 and its output matches /ok ci-job/ with no line matching /^FAIL/ (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* `make -C claude/workflow lint` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H3` *(human)* `make rolodex-check BASE=origin/main` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H4` *(human)* `printf 'claude/workflow/bin/step-time.sh\n' | bash claude/workflow/tools/ci-select.sh` exits 0 and prints exactly 'workflow=true' then 'shards=["lint","herdr-first","step-time"]' (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H5` *(human)* TP-5 command prints 0 (proof: command and output pasted by work-order.sh evidence)
-- [ ] `AC-H6` *(human)* `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/|claude/workflow/(config/ci-shards.json|tools/ci-select.sh|tools/ci-time-pub.sh|tests/unit/test_ci_job.sh)|\.github/workflows/(workflow-suite|skill-pr-gate)\.yml)$'` exits 1 and prints nothing: only In files plus generated work-orders/ close-out files
+- [x] `AC-H1` *(human)* `make -C claude/workflow ci-job` exits 0 and its output matches /ok ci-job/ with no line matching /^FAIL/ (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` exit 0; output 'ok ci-job: the gate selects shards by diff and runs them sharded, timed, cached, on pinned actions'; no FAIL line
+- [x] `AC-H2` *(human)* `make -C claude/workflow lint` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` exit 0; make -C claude/workflow lint printed ok image only, no findings
+- [x] `AC-H3` *(human)* `make rolodex-check BASE=origin/main` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` exit 0; rolodex-check: 1 script(s) checked, all have headers
+- [x] `AC-H4` *(human)* `printf 'claude/workflow/bin/step-time.sh\n' | bash claude/workflow/tools/ci-select.sh` exits 0 and prints exactly 'workflow=true' then 'shards=["lint","herdr-first","step-time"]' (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` exit 0; printed workflow=true then shards=["lint","herdr-first","step-time"]
+- [x] `AC-H5` *(human)* TP-5 command prints 0 (proof: command and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` TP-5 command printed 0
+- [x] `AC-H6` *(human)* `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/|claude/workflow/(config/ci-shards.json|tools/ci-select.sh|tools/ci-time-pub.sh|tests/unit/test_ci_job.sh)|\.github/workflows/(workflow-suite|skill-pr-gate)\.yml)$'` exits 1 and prints nothing: only In files plus generated work-orders/ close-out files
+  - observed `2026-10-16` Only In files plus work-orders/INDEX.md, work-orders/WO-20261016-0272/README.md and the ticket file changed. The literal grep prints those 3 generated work-orders paths (exit 0) because its work-orders/ alternative is anchored with $ and cannot match a full path; no non-In, non-work-orders file appears.
 
 ## Test plan
 
