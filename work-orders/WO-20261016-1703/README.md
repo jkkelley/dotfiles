@@ -21,7 +21,6 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-870d` | ready | p1 | WO-20261016-002d | [Inbox sweep V3 - integer schema_version for R7-verdict.json with its migration](WO-20261016-870d-inbox-sweep-v3-integer-schema-version-for-r7-ver.md) |
 | `WO-20261016-ab00` | ready | p1 | WO-20261016-c606 | [Test B17d - suite reply-send on main after the build merges](WO-20261016-ab00-test-b17d-suite-reply-send-on-main-after-the-bui.md) |
 | `WO-20261016-8aed` | ready | p1 | WO-20261016-6242 | [Test B21c - suite reply-ledger on main after the build merges](WO-20261016-8aed-test-b21c-suite-reply-ledger-on-main-after-the-b.md) |
-| `WO-20261016-fc28` | ready | p1 | - | [Test B21d - suite lead on main after the build merges](WO-20261016-fc28-test-b21d-suite-lead-on-main-after-the-build-mer.md) |
 | `WO-20261016-cbb4` | ready | p1 | WO-20261016-5b59 | [Test B21e - suite cards on main after the build merges](WO-20261016-cbb4-test-b21e-suite-cards-on-main-after-the-build-me.md) |
 | `WO-20261016-bd17` | ready | p1 | WO-20261016-824b | [Test B21f1 - suite lib on main after the build merges](WO-20261016-bd17-test-b21f1-suite-lib-on-main-after-the-build-mer.md) |
 | `WO-20261016-4794` | ready | p1 | WO-20261016-002d | [Test B21f2 - suite controller on main after the build merges](WO-20261016-4794-test-b21f2-suite-controller-on-main-after-the-bu.md) |

@@ -4,15 +4,15 @@
   "slug": "test-b21d-suite-lead-on-main-after-the-build-mer",
   "title": "Test B21d - suite lead on main after the build merges",
   "type": "test",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:23+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/test-b21d-suite-lead-on-main-after-the-build-mer",
+  "pr": 164,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Architect rulings R3 and R4, 2026-10-16T04:25Z, recorded in design 18 (PR 153); Claude seats never use lavish",
@@ -61,7 +61,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+- [x] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+  - observed `2026-10-16` TP-1 on main 84c60d8: podman run localhost/dotfiles-workflow-test:1 bash tests/run.sh --suite lead -> output 'ok lead' / 'ran 1 suite', exit 0; single-writer case ok. Full output: /home/luna/.local/state/zenith/inbox-triage/20261015/seats/20261016-050413-t21d-lead-suite-evidence.md
 
 ## Test plan
 
