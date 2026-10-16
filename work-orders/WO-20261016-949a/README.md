@@ -8,4 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-04d3` | ready | p1 | - | [make spec-check gates XML specs in the fast PR check](WO-20261016-04d3-make-spec-check-gates-xml-specs-in-the-fast-pr-c.md) |
+| `WO-20261016-04d3` | in-progress | p1 | - | [make spec-check gates XML specs in the fast PR check](WO-20261016-04d3-make-spec-check-gates-xml-specs-in-the-fast-pr-c.md) |
