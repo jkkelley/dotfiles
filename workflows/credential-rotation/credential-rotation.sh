@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: credential-rotation.sh
+# purpose: the driver for workflows/credential-rotation.md.
+# inputs: --context --days --dry-run --help --id --name; env AWS_BIN CREDENTIAL_MANIFEST KUBECTL_BIN KUBE_CONTEXT NOW_EPOCH
+# outputs: stdout, exit code
+# writes-to: a mktemp scratch path
+# cleanup: removes its own temp files on exit
 #
 # credential-rotation.sh - the driver for workflows/credential-rotation.md.
 #

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: skill-sync.sh
+# purpose: installs the skills a project declares, and nothing else.
+# inputs: --boot --help --max-time --plan; env SELF_DIR SKILL_SYNC_CHILD SKILL_SYNC_LOCK_WAIT SKILL_SYNC_NOW TMPDIR
+# outputs: stdout, exit code
+# writes-to: a mktemp scratch path
+# cleanup: removes its own temp files on exit
 #
 # skill-sync.sh - installs the skills a project declares, and nothing else.
 #

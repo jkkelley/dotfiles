@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: run-tests.sh
+# purpose: the only entry point for the repo-local tools in tools/.
+# inputs: --entrypoint --help --major --minor --network --patch; env IN_TOOLS_CONTAINER TMPDIR TOOLS_TEST_IMAGE WORK
+# outputs: stdout, exit code
+# writes-to: $DOCS/alpha.md, $DOCS/beta.md, $DOCS/gamma.md, a mktemp scratch path
+# cleanup: removes its own temp files on exit
 #
 # run-tests.sh - the only entry point for the repo-local tools in tools/.
 #

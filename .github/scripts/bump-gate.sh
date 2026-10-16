@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: bump-gate.sh
+# purpose: the reading half of .github/workflows/skill-pr-gate.yml.
+# inputs: --base --body-file --entrypoint --help --network --parse
+# outputs: stdout, exit code
+# writes-to: a mktemp scratch path
+# cleanup: removes its own temp files on exit
 #
 # bump-gate.sh - the reading half of .github/workflows/skill-pr-gate.yml.
 #

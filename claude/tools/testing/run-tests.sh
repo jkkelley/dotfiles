@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: run-tests.sh
+# purpose: the only entry point for the tools in claude/tools/.
+# inputs: --arg --bare --boot --cached --config --delete; env CLAUDE_TOOLS_TEST_IMAGE IN_CLAUDE_TOOLS_CONTAINER TMPDIR WORK
+# outputs: stdout, exit code
+# writes-to: $POOL1/debris.txt, $PROJ/.claude/cache/skills-receipt.json, $PROJ/.claude/skills/$1/SKILL.md, a mktemp scratch path
+# cleanup: removes its own temp files on exit
 #
 # run-tests.sh - the only entry point for the tools in claude/tools/.
 #

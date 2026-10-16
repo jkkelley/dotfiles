@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: live-check.sh
+# purpose: runs the driver's read-only subcommands against the real AWS
+# inputs: --client --context --entrypoint --network --raw --rm; env AWS_PROFILE CREDROT_LIVE_IMAGE IN_CREDROT_LIVE KUBE_CONTEXT
+# outputs: stdout, exit code
+# writes-to: nothing (read-only)
+# cleanup: removes its own temp files on exit
 #
 # live-check.sh - runs the driver's read-only subcommands against the real AWS
 # account and the real cluster, from inside a container.

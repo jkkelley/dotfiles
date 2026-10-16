@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: md-contents.sh
+# purpose: every Markdown file opens with a contents list.
+# inputs: md-contents.sh write|check [--all] [PATH...]   (default: changed .md files vs BASE, else repo root)
+# outputs: stdout, exit code
+# writes-to: $HOME/.local/state/zenith/backup, a mktemp scratch path
+# cleanup: removes its own temp files on exit
 # md-contents.sh - every Markdown file opens with a contents list.
 # Owner order 2026-10-16 UTC: "EVERY .md file starts with content lists at the top".
 # Usage: md-contents.sh write|check [--all] [PATH...]   (default: changed .md files vs BASE, else repo root)

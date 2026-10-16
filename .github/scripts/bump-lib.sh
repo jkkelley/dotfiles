@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: bump-lib.sh
+# purpose: the resolution the two halves of the pipeline share.
+# inputs: --git-dir --name-only --repo --show-toplevel; env REPO
+# outputs: stdout
+# writes-to: nothing (read-only)
+# cleanup: none needed
 #
 # bump-lib.sh - the resolution the two halves of the pipeline share.
 #

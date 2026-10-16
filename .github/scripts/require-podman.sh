@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: require-podman.sh
+# purpose: assert the runner has Podman, and say something useful
+# inputs: --userns --version
+# outputs: stdout, exit code
+# writes-to: nothing (read-only)
+# cleanup: none needed
 #
 # require-podman.sh - assert the runner has Podman, and say something useful
 # when it does not.

@@ -1,0 +1,10 @@
+# rolodex-owners.tsv - curated rows for scripts/rolodex.py: path<TAB>written by<TAB>cleanup.
+# A script header with writes-to: and cleanup: beats a row here; a row here covers what no script header names yet.
+# Add a row when SYSTEM_ROLODEX.md shows "unknown" for a folder you know.
+~/.local/state/zenith	dotfiles scripts (backups, golden-rules runs) and the inbox-triage line	old runs and backups pruned by hand until a prune target exists
+~/.local/state/compaction-guard	compaction-guard (hooks, sensor, checkpoints)	compaction-guard prunes its own events ledger
+~/.local/state/dotfiles	dotfiles execution rail and work-order tooling	rm the run directories after the PR merges
+~/.local/state/herdr	herdr	herdr owns it
+~/.config/zenith	owner config read by herdr-enter, time policy and yieldpoint tooling	none, config not output
+/mnt/c/Users/jkkel/claude-chrome-profile	rejected debug Chrome profile (agents never use it)	owner may delete
+/mnt/c/Users/jkkel/.claude	Windows Claude Code (settings.json, chrome native host)	none, Claude Code owns it

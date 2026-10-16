@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: skill-onboard.sh
+# purpose: bring a project that already exists onto the skills sync.
+# inputs: --base --body --branch --cached --delete-branch --detach; env TMPDIR
+# outputs: stdout, exit code
+# writes-to: a mktemp scratch path, git branches and PRs
+# cleanup: removes its own temp files on exit
 #
 # skill-onboard.sh - bring a project that already exists onto the skills sync.
 #

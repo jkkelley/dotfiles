@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: test_merge_train.sh
+# purpose: Why: the train must merge children before their parent (or the parent lands on main without them), must never merge
+# inputs: --arg --argjson --base --dry --head --jq
+# outputs: stdout, exit code
+# writes-to: a mktemp scratch path
+# cleanup: removes its own temp files on exit
 # Why: the train must merge children before their parent (or the parent lands on main without them), must never merge
 # a child under a parent it will skip (the code would be stranded on a dead branch), and every skip must carry
 # evidence (Design principles 101 item 7). A stub gh records the merge calls so the order itself is asserted.

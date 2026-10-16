@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: run-tests.sh
+# purpose: the only entry point for .github/scripts/.
+# inputs: --base --before --body-file --entrypoint --format --help; env GATE_TEST_IMAGE IN_GATE_CONTAINER TMPDIR WORK
+# outputs: stdout, exit code
+# writes-to: $P/claude/skills/alpha/SKILL.md, $P/claude/skills/beta/SKILL.md, $P/claude/skills/delta/SKILL.md, a mktemp scratch path, git branches and PRs
+# cleanup: removes its own temp files on exit
 #
 # run-tests.sh - the only entry point for .github/scripts/.
 #
