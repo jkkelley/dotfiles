@@ -21,7 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261016-1099"
+    "WO-20261016-1099",
+    "WO-20261016-a1ca"
   ],
   "blocks": [
     "WO-20261016-03ef"
@@ -155,6 +156,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` infra-design20 F55: closed by WO-20261016-a1ca; depends_on a1ca keeps it out of next. Do not start it from next.
 
 ## Outcome
 
