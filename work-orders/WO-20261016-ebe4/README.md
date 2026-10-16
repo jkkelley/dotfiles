@@ -8,4 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-adae` | draft | p2 | - | [PR process design and XML spec with mermaid DAG](WO-20261016-adae-pr-process-design-and-xml-spec-with-mermaid-dag.md) |
+| `WO-20261016-adae` | ready | p2 | - | [PR process design and XML spec with mermaid DAG](WO-20261016-adae-pr-process-design-and-xml-spec-with-mermaid-dag.md) |

@@ -4,7 +4,7 @@
   "slug": "pr-process-design-and-xml-spec-with-mermaid-dag",
   "title": "PR process design and XML spec with mermaid DAG",
   "type": "chore",
-  "status": "draft",
+  "status": "ready",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "Claude seat: Lavish is prohibited for Claude runtimes (~/.claude/CLAUDE.md owner interaction surface); brief BR-20261016-merge-port v2 from the architect is the approval",
+    "at": "2026-10-16"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
