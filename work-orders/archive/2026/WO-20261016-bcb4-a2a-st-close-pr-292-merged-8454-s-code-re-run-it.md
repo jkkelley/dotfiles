@@ -4,15 +4,15 @@
   "slug": "a2a-st-close-pr-292-merged-8454-s-code-re-run-it",
   "title": "A2A-ST close: PR 292 merged 8454's code; re-run its checks with AC-H2 on a JSONL state row, move 8454's edges here and cancel 8454 as superseded",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:28:14+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/a2a-st-close-pr-292-merged-8454-s-code-re-run-it",
+  "pr": 313,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design14 cut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -21,7 +21,11 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [],
+  "blocks": [
+    "WO-20261016-48af",
+    "WO-20261016-9821",
+    "WO-20261016-7838"
+  ],
   "ac_checks": [
     {
       "index": 1,
@@ -114,13 +118,18 @@ Precondition: PR 300 (infra-design13) is merged, because it adds 8454 blocks WO-
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* 8454's unit cases still pass on main
+- [x] `AC-H1` *(human)* 8454's unit cases still pass on main
+  - observed `2026-10-16` check: podman run --rm --network=none --userns=keep-id -v $PWD:/work:Z -w /work/claude/workflow -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash tests/unit/test_a2a_state.sh exit 0 output: ok 3-row valid file passes ok status finished fails ok non-UTC at fails ok done with empty proof fails ok brief with output.state_file passes check
   - check: `podman run --rm --network=none --userns=keep-id -v $PWD:/work:Z -w /work/claude/workflow -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash tests/unit/test_a2a_state.sh` exit 0 expect /^ok/
-- [ ] `AC-H2` *(human)* a JSONL state row in the schema's shape passes state-check
+- [x] `AC-H2` *(human)* a JSONL state row in the schema's shape passes state-check
+  - observed `2026-10-16` check: bash -c 'f=$(mktemp); printf "%s
+" "{"step":"read","status":"done","at":"2026-10-16T05:00:00Z","proof":"brief read"}" "{"step":"AC1","status":"started","at":"2026-10-16T05:01:00Z","proof":""}" > "$f"; bash claude/workflow/bin/brief.sh state-check "$f"; rc=$?; rm -f "$f"; exit $rc' exit 0 output: ok /tmp/tmp.6qWsKJVmDF 2 row(s)
   - check: `bash -c 'f=$(mktemp); printf "%s\n" "{\"step\":\"read\",\"status\":\"done\",\"at\":\"2026-10-16T05:00:00Z\",\"proof\":\"brief read\"}" "{\"step\":\"AC1\",\"status\":\"started\",\"at\":\"2026-10-16T05:01:00Z\",\"proof\":\"\"}" > "$f"; bash claude/workflow/bin/brief.sh state-check "$f"; rc=$?; rm -f "$f"; exit $rc'` exit 0 expect /^ok/
-- [ ] `AC-H3` *(human)* 8454 is cancelled and superseded by this ticket
+- [x] `AC-H3` *(human)* 8454 is cancelled and superseded by this ticket
+  - observed `2026-10-16` check: bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-8454 --json | jq -r '.status' exit 0 output: cancelled
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-8454 --json | jq -r '.status'` exit 0 expect /^cancelled$/
-- [ ] `AC-H4` *(human)* the diff holds only generated work-orders files
+- [x] `AC-H4` *(human)* the diff holds only generated work-orders files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan

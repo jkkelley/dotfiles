@@ -4,7 +4,7 @@
   "slug": "a2a-st-seat-state-file-spec-seat-state-schema-js",
   "title": "A2A-ST: seat state file spec - seat-state.schema.json, output.state_file in the brief, brief.sh state-check",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-0272",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design12 cut for ORD-0830 RR-orch-14; design approvals ruled done, ORD-0550 O4",
@@ -25,11 +25,7 @@
     "WO-20261016-8c8c",
     "WO-20261016-23b5"
   ],
-  "blocks": [
-    "WO-20261016-48af",
-    "WO-20261016-9821",
-    "WO-20261016-7838"
-  ],
+  "blocks": [],
   "ac_checks": [
     {
       "index": 1,
@@ -58,7 +54,8 @@
   ],
   "provides": [
     "path:claude/workflow/tests/unit/test_a2a_state.sh"
-  ]
+  ],
+  "superseded_by": "WO-20261016-bcb4"
 }
 ---
 
@@ -145,4 +142,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: code merged in PR 292; AC-H2 named a pre-schema state file; checks re-run under WO-20261016-bcb4
+- superseded by: `WO-20261016-bcb4`
+
+No branch, no PR and no merge commit exist for this work order.
+
