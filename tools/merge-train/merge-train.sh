@@ -88,12 +88,17 @@ prs=$(gh_retry pr list -R "$REPO" --state open --limit 500 \
   --json number,title,url,headRefName,baseRefName,isDraft,mergeable,statusCheckRollup) || die "cannot list PRs: $LAST_ERR"
 
 # One record per PR with its CI verdict from the start snapshot.
+# A check re-run on the same head leaves its older run in the rollup. Seen live on #152, 2026-10-16 UTC: editing the PR
+# title re-triggered "bump intent", concurrency cancelled the older run, and the CANCELLED entry beside the newer
+# SUCCESS made the train skip a green PR as ci-failed. Only the latest run per check name counts (by start time).
+# Rejected: ignoring CANCELLED outright, which would merge a PR whose only run of a check was cancelled.
 plan=$(jq --arg dflt "$DEFAULT" '
+  def latest: group_by(.name // .context) | map(max_by(.startedAt // .createdAt // .completedAt // ""));
   def bad: (.conclusion // .state // "") as $c | ["FAILURE","CANCELLED","TIMED_OUT","ACTION_REQUIRED","STARTUP_FAILURE","ERROR"] | index($c);
   def pending: ((.status // "COMPLETED") != "COMPLETED") or ((.state // "") == "PENDING" or (.state // "") == "EXPECTED");
   [.[] | {number, title, url, head: .headRefName, base: .baseRefName, draft: .isDraft,
-          failed: [.statusCheckRollup[]? | select(bad) | {name: (.name // .context), url: (.detailsUrl // .targetUrl // "")}],
-          pending: [.statusCheckRollup[]? | select(pending) | (.name // .context)]}]
+          failed: [(.statusCheckRollup // []) | latest | .[] | select(bad) | {name: (.name // .context), url: (.detailsUrl // .targetUrl // "")}],
+          pending: [(.statusCheckRollup // []) | latest | .[] | select(pending) | (.name // .context)]}]
   | (map({key: .head, value: .number}) | from_entries) as $byhead
   | map(. + {parent: (if .base == $dflt then null else $byhead[.base] end)})' <<<"$prs")
 
