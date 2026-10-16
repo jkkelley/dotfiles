@@ -20,7 +20,7 @@ wo approve --project "$d" --id "$id" --no-lavish --reason "test" >/dev/null
 git -C "$d" add -A && git -C "$d" commit -qm "approve"
 wo start --project "$d" --id "$id" >/dev/null
 branch=$(git -C "$d" rev-parse --abbrev-ref HEAD)
-assert_eq "feat/cart-empty" "$branch" "start created the branch from the slug"
+assert_eq "feat/${id##*-}-cart-empty" "$branch" "start created the branch from the id hex and slug"
 
 wo submit --project "$d" --id "$id" --pr 7 >/dev/null
 git -C "$d" add -A && git -C "$d" commit -qm "work"
