@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-b21e-sweep-cards-sh-owns-questions-j",
   "title": "Inbox sweep B21e - sweep-cards.sh owns questions.json with an add verb",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:29+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-b21e-sweep-cards-sh-owns-questions-j",
   "pr": null,
   "closed": null,
   "approval": {
@@ -66,9 +66,12 @@ Ruling R3: questions.json is written by sweep-cards.sh, reply-cards.sh, sweep-pr
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* grep shows questions.json written only by sweep-cards.sh (test)
-- [ ] `AC-H2` *(human)* sweep-cards.sh add is idempotent by card id: a rerun adds no duplicate (test)
-- [ ] `AC-H3` *(human)* the three callers use sweep-cards.sh add and their suites stay green
+- [x] `AC-H1` *(human)* grep shows questions.json written only by sweep-cards.sh (test)
+  - observed `2026-10-16` test_cards.sh: grep -lE of writes to $CARDS/$cards across bin/*.sh yields only 'sweep-cards.sh '; make -C claude/workflow/inbox-sweep test: ok cards, 9 suites, 0 failed
+- [x] `AC-H2` *(human)* sweep-cards.sh add is idempotent by card id: a rerun adds no duplicate (test)
+  - observed `2026-10-16` test_cards.sh: add on same id twice prints 'added 1' then 'added 0'; existing card about unchanged; array with duplicate ids adds once; all checks ok
+- [x] `AC-H3` *(human)* the three callers use sweep-cards.sh add and their suites stay green
+  - observed `2026-10-16` reply-cards.sh, sweep-proof.sh, reply-send.sh call 'sweep-cards.sh add'; suites proof, reply-cards, reply-send, followup, seats, cards all ok in make test (9 suites, 0 failed)
 
 ## Test plan
 

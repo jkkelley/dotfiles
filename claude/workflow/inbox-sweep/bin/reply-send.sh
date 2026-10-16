@@ -360,15 +360,14 @@ clear_start() { # <brief-file> <seat-name> <ticket>
 }
 raise_box_card() {
   local cards="${SWEEP_CARDS_FILE:-$HOME/.bearings/inbox-sweep/questions.json}" card
-  mkdir -p "$(dirname "$cards")"
-  [ -f "$cards" ] || echo '{"title":"Inbox sweep","items":[]}' >"$cards"
   card="$(jq -cn --arg id "RP-BOX-$id" --arg to "$to" --arg url "$url" '
     {schema_version:1, id:$id,
      about:("LinkedIn reply box not proven empty, " + $to + " (" + $url + ")"),
      decide:"A send seat died after typing and 3 clear seats could not prove the message box empty in this thread. Nothing was sent and no new seat will type into it. Please open the thread and empty the box yourself, or tell me it is clean.",
      options:[{label:"The box is empty now", then:"I record it and the reply can be decided again"},
               {label:"Leave it", then:"The reply stays stopped"}], rec:0}')"
-  sweep_json_set "$cards" 'if (.items | map(.id) | index($c.id)) == null then .items += [$c + {asked:$at}] else . end' --argjson c "$card" --arg at "$(sweep_now)"
+  # sweep-cards.sh owns questions.json (B21e); add merges by id.
+  printf '%s' "$card" | SWEEP_CARDS_FILE="$cards" bash "$SWEEP/bin/sweep-cards.sh" add >/dev/null
 }
 clear_box() {
   local n=0 cpane w
