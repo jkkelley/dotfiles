@@ -4,7 +4,7 @@
   "slug": "port-merge-on-green-yml-to-ypli-01-src-and-ypcon",
   "title": "Port merge-on-green.yml to ypli-01-src and ypconsult-01-src",
   "type": "chore",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-fb0c",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -21,7 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": []
+  "blocks": [],
+  "superseded_by": "WO-20261016-054b"
 }
 ---
 
@@ -90,4 +91,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: DESIGN-GAP: verbatim copy of dotfiles' own merge-on-green.yml is inert in ypli and regresses ypconsult; ypconsult already ported (PR 55); recut to render via pr-flow-ci-render.sh
+- superseded by: `WO-20261016-054b`
+
+No branch, no PR and no merge commit exist for this work order.
+
