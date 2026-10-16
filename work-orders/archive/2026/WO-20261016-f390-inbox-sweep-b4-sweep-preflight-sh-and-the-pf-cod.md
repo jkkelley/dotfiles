@@ -4,15 +4,15 @@
   "slug": "inbox-sweep-b4-sweep-preflight-sh-and-the-pf-cod",
   "title": "Inbox sweep B4 - sweep-preflight.sh and the PF codes",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T01:19:10+00:00",
   "parent": "WO-20261016-1703",
   "branch": "feat/inbox-sweep-b4-sweep-preflight-sh-and-the-pf-cod",
-  "pr": null,
-  "closed": null,
+  "pr": 112,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner approved the design on Bearings card D-04, 2026-10-16 UTC; Claude seats never use lavish (global owner rule)",
@@ -66,8 +66,10 @@ A run must know before starting seats whether herdr, the config and the Chrome e
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* each PF-* code has a fixture test with the stubs
-- [ ] `AC-H2` *(human)* a stub probe returning [] is tried exactly 3 times then gives PF-NO-BROWSER (calls.log count)
+- [x] `AC-H1` *(human)* each PF-* code has a fixture test with the stubs
+  - observed `2026-10-16` test_preflight.sh printed ok lines for PF-OK, PF-NO-HERDR, PF-NO-CLAUDE-EXE, PF-NO-CHROME, PF-NO-BROWSER, each with stubs; make test-all: ran 7 suites, 0 failed
+- [x] `AC-H2` *(human)* a stub probe returning [] is tried exactly 3 times then gives PF-NO-BROWSER (calls.log count)
+  - observed `2026-10-16` ok PF-NO-BROWSER: the probe was called exactly 3 times (calls.log); attempts recorded as 3
 
 ## Test plan
 
