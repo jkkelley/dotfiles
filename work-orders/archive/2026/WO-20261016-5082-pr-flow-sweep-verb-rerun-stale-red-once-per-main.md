@@ -4,15 +4,15 @@
   "slug": "pr-flow-sweep-verb-rerun-stale-red-once-per-main",
   "title": "pr-flow sweep verb rerun-stale-red: once per main sha, refresh open PRs whose red run predates main, post RERUN, make pr-rerun-stale-red",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T07:33:17+00:00",
   "parent": "WO-20261016-ebe4",
   "branch": "feat/pr-flow-sweep-verb-rerun-stale-red-once-per-main",
-  "pr": null,
-  "closed": null,
+  "pr": 242,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design4 cut for ORD-0726 S1; design approvals ruled done, ORD-0550 O4",
@@ -105,7 +105,8 @@ ORD-0726 S1 (orchestrator brief BR-20261016-infra-design4): "rerun-stale-red (wh
   - observed `2026-10-16` spec.xml parses (minidom exit 0); grep -c value="RERUN" printed 1
 - [x] `AC-H6` *(human)* `make rolodex-check BASE=origin/main` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
   - observed `2026-10-16` make rolodex-check BASE=origin/main exit 0: 1 script(s) checked, all have headers
-- [ ] `AC-H7` *(human)* `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/|claude/workflow/(pr-flow/(bin/pr-flow-consume.sh|pr-flow.mk|config/pr-flow.json|schemas/pr-flow-record.schema.json|tests/(rerun-stale-red|records).test.sh)|docs/pr-process/pr-process.(md|spec.xml)))$'` exits 1 and prints nothing: only In files plus generated work-orders/ close-out files
+- [x] `AC-H7` *(human)* `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/|claude/workflow/(pr-flow/(bin/pr-flow-consume.sh|pr-flow.mk|config/pr-flow.json|schemas/pr-flow-record.schema.json|tests/(rerun-stale-red|records).test.sh)|docs/pr-process/pr-process.(md|spec.xml)))$'` exits 1 and prints nothing: only In files plus generated work-orders/ close-out files
+  - observed `2026-10-16` diff name-only grep -v printed nothing, exit 1: only In files plus work-orders/
 
 ## Test plan
 
@@ -169,6 +170,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` AC-H7 evidence line is inaccurate: the pattern ends in $ after the work-orders/ alternative, so the grep prints the ticket file path (rc 0), not nothing. Every other changed file is an In file. The AC pattern needs work-orders/.* ; hand back to infra-design.
 
 ## Outcome
 
