@@ -72,7 +72,7 @@ trap 'rm -rf "$SCRATCH"' EXIT
 ledger_add() { # <code> <draft id> <card id> [path] [sha256]
   jq -cn --arg at "$(sweep_now)" --arg code "$1" --arg id "$2" --arg card "$3" --arg run "$run" --arg path "${4-}" --arg sha "${5-}" \
     '{schema_version:1, at:$at, code:$code, id:$id, card:$card, run_id:$run}
-     + (if $path != "" then {path:$path, sha256:$sha} else {} end)' >>"$LEDGER"
+     + (if $path != "" then {path:$path, sha256:$sha} else {} end)' | bash "$HERE/reply-ledger.sh" append --file "$LEDGER"
 }
 drafted_field() { jq -rs --arg id "$1" --arg f "$2" '[.[] | select(.code == "RP-DRAFTED" and .id == $id) | .[$f] // empty] | last // empty' "$LEDGER" 2>/dev/null || true; }
 # Every approvals.jsonl in every triage folder: the thread's earlier texts may have been approved on another day.
