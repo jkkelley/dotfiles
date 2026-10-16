@@ -1,0 +1,533 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "inbox-sweep.result.schema.json",
+  "title": "Inbox sweep seat result",
+  "description": "One seat's result record for one inbox sweep run. Written by the seat to <run dir>/results/<seat>.json, validated by sweep-watch.sh before it counts as done. Status codes are defined in docs/design/inbox-sweep.md section 6.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "seat",
+    "source",
+    "account",
+    "status",
+    "started_at",
+    "finished_at",
+    "attempts",
+    "counts",
+    "items",
+    "drafts",
+    "owner_decisions",
+    "mutations",
+    "errors",
+    "tab_closed"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}Z$"
+    },
+    "seat": {
+      "type": "string",
+      "pattern": "^(gmail|linkedin|proton-[a-z0-9-]{1,32})$"
+    },
+    "source": {
+      "enum": [
+        "gmail",
+        "proton",
+        "linkedin"
+      ]
+    },
+    "account": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 254,
+      "description": "The account label from config.json; never a password or token."
+    },
+    "status": {
+      "enum": [
+        "OK",
+        "PARTIAL",
+        "BLOCKED-NO-BROWSER",
+        "BLOCKED-SIGNED-OUT",
+        "BLOCKED-CHALLENGE",
+        "BLOCKED-CONNECTOR",
+        "REFUSED",
+        "TIMEOUT",
+        "FAILED-SEAT",
+        "FAILED-SCHEMA",
+        "SKIPPED"
+      ]
+    },
+    "started_at": {
+      "$ref": "#/$defs/utc"
+    },
+    "finished_at": {
+      "$ref": "#/$defs/utc"
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "before",
+        "after",
+        "processed",
+        "important",
+        "bulk"
+      ],
+      "properties": {
+        "before": {
+          "$ref": "#/$defs/count"
+        },
+        "after": {
+          "$ref": "#/$defs/count"
+        },
+        "processed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 500
+        },
+        "important": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bulk": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "received_at",
+          "from",
+          "subject",
+          "gist",
+          "kind",
+          "flag",
+          "action_taken"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "received_at": {
+            "$ref": "#/$defs/utc"
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subject": {
+            "type": "string"
+          },
+          "gist": {
+            "type": "string",
+            "maxLength": 400
+          },
+          "kind": {
+            "enum": [
+              "human",
+              "important",
+              "bulk",
+              "conversation",
+              "invitation",
+              "notification"
+            ]
+          },
+          "flag": {
+            "enum": [
+              "none",
+              "owner-should-look",
+              "time-sensitive"
+            ]
+          },
+          "action_taken": {
+            "enum": [
+              "none",
+              "marked-read"
+            ]
+          }
+        }
+      }
+    },
+    "drafts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "conversation",
+          "to",
+          "draft_text",
+          "why"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^D[0-9]{1,3}$"
+          },
+          "conversation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1
+          },
+          "draft_text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 3000
+          },
+          "why": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "owner_decisions": {
+      "type": "array",
+      "description": "Mapped one to one onto Getting My Bearings cards by sweep-cards.sh.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "about",
+          "decide",
+          "options",
+          "rec"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^Q[0-9]{1,3}$"
+          },
+          "about": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decide": {
+            "type": "string",
+            "minLength": 1
+          },
+          "options": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "label",
+                "then"
+              ],
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "then": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "rec": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          }
+        }
+      }
+    },
+    "mutations": {
+      "type": "array",
+      "description": "Every change the seat made to the mailbox. Marking read is the only change a sweep may make; anything else fails validation.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "action",
+          "count"
+        ],
+        "properties": {
+          "action": {
+            "const": "marked-read"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "at",
+          "attempt",
+          "step",
+          "message"
+        ],
+        "properties": {
+          "at": {
+            "$ref": "#/$defs/utc"
+          },
+          "attempt": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "step": {
+            "type": "string",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "tab_closed": {
+      "type": "boolean",
+      "description": "The seat's own claim. Not proof: R7 checks the tab bar by screenshot. Gmail seats report true."
+    },
+    "notes": {
+      "type": "string"
+    },
+    "tab_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Browser seats only. Records rule tab-anchor: the blank anchor tab created by tabs_context_mcp with createIfEmpty holds the seat's tab group, so it is reused as the first working tab and closed last.",
+      "required": [
+        "anchor_reused",
+        "tabs_opened",
+        "closed_anchor_last"
+      ],
+      "properties": {
+        "anchor_reused": {
+          "type": "boolean"
+        },
+        "tabs_opened": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "closed_anchor_last": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "pattern": "^(BLOCKED-|FAILED-|TIMEOUT|REFUSED|PARTIAL)"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "errors": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "OK"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "counts": {
+            "properties": {
+              "before": {
+                "required": [
+                  "unread"
+                ],
+                "properties": {
+                  "unread": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "after": {
+                "required": [
+                  "unread",
+                  "verified_at"
+                ],
+                "properties": {
+                  "unread": {
+                    "const": 0
+                  },
+                  "verified_at": {
+                    "$ref": "#/$defs/utc"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "not": {
+              "const": "linkedin"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "drafts": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "gmail"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "seat": {
+            "const": "gmail"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "proton"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "seat": {
+            "pattern": "^proton-"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "linkedin"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "seat": {
+            "const": "linkedin"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "enum": [
+              "proton",
+              "linkedin"
+            ]
+          },
+          "status": {
+            "enum": [
+              "OK",
+              "PARTIAL"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "tab_group"
+        ],
+        "properties": {
+          "tab_group": {
+            "properties": {
+              "anchor_reused": {
+                "const": true
+              },
+              "closed_anchor_last": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "utc": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "count": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unread"
+      ],
+      "properties": {
+        "unread": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "null when the mailbox was never reached"
+        },
+        "verified_at": {
+          "$ref": "#/$defs/utc"
+        }
+      }
+    }
+  }
+}
