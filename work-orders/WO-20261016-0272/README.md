@@ -22,10 +22,14 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-824e` | ready | p1 | - | [Line build L1 - design-drift check](WO-20261016-824e-line-build-l1-design-drift-check.md) |
 | `WO-20261016-f69a` | ready | p1 | WO-20261016-fb0c | [Line build L1 - pr-index and pr-sweep](WO-20261016-f69a/WO-20261016-f69a-line-build-l1-pr-index-and-pr-sweep.md) |
 | `WO-20261016-4b96` | ready | p1 | WO-20261016-4b6c | [Line build L1 - yp-home move](WO-20261016-4b96-line-build-l1-yp-home-move.md) |
-| `WO-20261016-35de` | ready | p1 | WO-20261016-4b96 | [Line build L2 - yp-wiki and wiki-review](WO-20261016-35de-line-build-l2-yp-wiki-and-wiki-review.md) |
-| `WO-20261016-a8eb` | ready | p1 | WO-20261016-824e WO-20261016-35de | [Line build L2 - yp-wire-rev2](WO-20261016-a8eb-line-build-l2-yp-wire-rev2.md) |
+| `WO-20261016-35de` | ready | p1 | WO-20261016-4b96 WO-20261016-d304 | [Line build L2 - yp-wiki and wiki-review](WO-20261016-35de/WO-20261016-35de-line-build-l2-yp-wiki-and-wiki-review.md) |
+| `WO-20261016-a8eb` | ready | p1 | WO-20261016-824e WO-20261016-35de WO-20261016-d304 | [Line build L2 - yp-wire-rev2](WO-20261016-a8eb-line-build-l2-yp-wire-rev2.md) |
 | `WO-20261016-a65c` | ready | p1 | WO-20261016-2e9f | [Line build L3 - sweep-build replies](WO-20261016-a65c-line-build-l3-sweep-build-replies.md) |
-| `WO-20261016-2e9f` | ready | p1 | WO-20261016-a8eb WO-20261016-e9d4 | [Line build L3 - yp-line content engine: lint, preview, jitter, humanize](WO-20261016-2e9f-line-build-l3-yp-line-content-engine-lint-previe.md) |
+| `WO-20261016-2e9f` | ready | p1 | WO-20261016-a8eb WO-20261016-e9d4 WO-20261016-d304 WO-20261016-474f | [Line build L3 - yp-line content engine: lint, preview, jitter, humanize](WO-20261016-2e9f-line-build-l3-yp-line-content-engine-lint-previe.md) |
+| `WO-20261016-474f` | draft | p1 | WO-20261016-d304 | [MK-INC: make mk-include REPO= DIR= installs one marked -include line for per-node make files, with mk-include-check](WO-20261016-474f-mk-inc-make-mk-include-repo-dir-installs-one-mar.md) |
+| `WO-20261016-fa5f` | draft | p1 | WO-20261016-474f | [MK-INCt: test plan and script for scripts/mk-include.sh](WO-20261016-fa5f-mk-inct-test-plan-and-script-for-scripts-mk-incl.md) |
+| `WO-20261016-d304` | ready | p1 | - | [TR-FB: timed-run.sh --fallback CMD --fallback-code FB-NNN, the one scripted fallback switch, with the FB code catalog](WO-20261016-d304-tr-fb-timed-run-sh-fallback-cmd-fallback-code-fb.md) |
+| `WO-20261016-adfd` | ready | p1 | WO-20261016-d304 | [TR-FBt: test plan and script for timed-run.sh --fallback](WO-20261016-adfd-tr-fbt-test-plan-and-script-for-timed-run-sh-fal.md) |
 | `WO-20261016-253b` | ready | p1 | WO-20261016-6630 | [Test - generated-lint: CI fails a PR that adds a file marked auto-generated to the tracked tree](WO-20261016-253b-test-generated-lint-ci-fails-a-pr-that-adds-a-fi.md) |
 | `WO-20261016-fa85` | ready | p1 | WO-20261016-2ffe | [Test - make pr-regen-index REPO= BRANCHES=: regen-merge.sh ported as the index-regen fallback](WO-20261016-fa85-test-make-pr-regen-index-repo-branches-regen-mer.md) |
 | `WO-20261016-de15` | ready | p1 | WO-20261016-1c04 | [Test - make wo-untrack-generated REPO=: untrack the generated work-order views, plan before apply](WO-20261016-de15-test-make-wo-untrack-generated-repo-untrack-the-.md) |
