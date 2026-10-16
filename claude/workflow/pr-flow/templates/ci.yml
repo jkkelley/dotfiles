@@ -14,6 +14,12 @@
 # lints changed files and selects tests by path; push to main runs the full-suite targets, sharded as listed; a
 # cache keyed on the lock files; and ci-ok, which needs every job and passes when each passed or was skipped, so a
 # PR whose jobs all skip still gets one green check (F4: ticket-only PRs had no check at all).
+#
+# Why workflow_dispatch (PF-D1): a merge made by merge-on-green with GITHUB_TOKEN starts no push workflow on main
+# (GitHub recursion guard), so main never got its full suite after a merge. merge-on-green DISPATCH starts this file
+# instead. The `before` input exists because merge-on-green always passes -f before=<base sha>, and an undeclared
+# input fails the dispatch. Rejected: a PAT or GitHub App token for the merge, a stored credential and a vault
+# dependency for one trigger. Cost: the full suite runs once per merge, as push did.
 name: ci
 
 on:
@@ -21,6 +27,13 @@ on:
     types: [opened, synchronize, reopened]
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      before:
+        description: 'base branch sha before the merge, set by merge-on-green'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -37,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: ${{ fromJSON(github.event_name == 'push' && '@@MAIN_TARGETS@@' || '@@PR_TARGETS@@') }}
+        target: ${{ fromJSON(github.event_name == 'pull_request' && '@@PR_TARGETS@@' || '@@MAIN_TARGETS@@') }}
     env:
       BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
     steps:
