@@ -4,13 +4,13 @@
   "slug": "close-wo-20261016-3570-stuck-watch-pr-170-merged",
   "title": "Close WO-20261016-3570 (stuck-watch, PR 170 merged): start, submit, evidence from the dev gate, done",
   "type": "chore",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:30:48+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
+  "branch": "feat/close-wo-20261016-3570-stuck-watch-pr-170-merged",
   "pr": null,
   "closed": null,
   "approval": {
@@ -115,6 +115,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` infra-design12 (BR-20261016-infra-design12, DESIGN-GAP WO-20261016-3570 close-out): PR 282 already ran start and submit on WO-20261016-3570, which is in-review with pr 170. Step 1 of In is satisfied: do NOT run start or submit for WO-20261016-3570 (start would refuse: illegal transition). Run step 2 (TP-1, TP-2, evidence --index 1..5 from the (AC1)..(AC4) ok lines of make -C claude/workflow stuck-watch-test and the gh line of TP-2) and step 3 unchanged. The stuck-watch suite uses a stub ntfy (item 35): no check notifies the owner. amend refuses a ready ticket, so this note is the amendment; not cancelled per the brief.
 
 ## Outcome
 

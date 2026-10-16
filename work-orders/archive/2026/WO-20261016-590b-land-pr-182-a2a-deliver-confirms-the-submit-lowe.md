@@ -4,15 +4,15 @@
   "slug": "land-pr-182-a2a-deliver-confirms-the-submit-lowe",
   "title": "Land PR 182: a2a-deliver confirms the submit, lowercase enter retried once",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:04:43+00:00",
   "parent": "WO-20261016-e9d4",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/land-pr-182-a2a-deliver-confirms-the-submit-lowe",
+  "pr": 182,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -75,9 +75,12 @@ ORD-0615 O2, evidence 06:12Z: orchestrator input sat unsubmitted after Enter twi
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow a2a-guard-test` exits 0 and prints the A2A-DELIVERED-RETRIED case as ok (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `git log --oneline origin/main..origin/fix/a2a-send-confirm-submit` lists 06eff91's change rebased, one commit (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* `gh pr view 182 --json mergeable -q .mergeable` prints MERGEABLE (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `make -C claude/workflow a2a-guard-test` exits 0 and prints the A2A-DELIVERED-RETRIED case as ok (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -C claude/workflow a2a-guard-test on origin/main 2b57f8f: exit 0; 'ok box not emptied: one lowercase enter, A2A-DELIVERED-RETRIED'; 'ok a2a-guard dev gate'
+- [x] `AC-H2` *(human)* `git log --oneline origin/main..origin/fix/a2a-send-confirm-submit` lists 06eff91's change rebased, one commit (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` recut check (merged state, infra-design12): 6c8854b fix(a2a-guard): a2a-deliver confirms submission, retries lowercase enter once (#182)
+- [x] `AC-H3` *(human)* `gh pr view 182 --json mergeable -q .mergeable` prints MERGEABLE (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` recut check (merged state, infra-design12): MERGED 6c8854bc55bde8e54692fdf59c36c57d1e0f1095
 
 ## Test plan
 
@@ -118,6 +121,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` DESIGN-GAP: AC-H2 check 'git log --oneline origin/main..origin/fix/a2a-send-confirm-submit' prints 06eff91 unrebased (branch predates main, PR 182 was squash-merged as 6c8854b), not a rebased commit. AC-H3 check 'gh pr view 182 --json mergeable -q .mergeable' prints UNKNOWN, not MERGEABLE, because the PR is MERGED. AC-H1 passed.
 
 ## Outcome
 

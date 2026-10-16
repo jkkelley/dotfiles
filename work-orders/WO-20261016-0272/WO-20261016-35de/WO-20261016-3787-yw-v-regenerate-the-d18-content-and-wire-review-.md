@@ -88,6 +88,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-16` DESIGN-GAP (infra-design12): stays draft. The code repo ~/projects/yieldpoint-ai/wiki does not exist yet, and approve resolves step and AC tools in this dotfiles project until WO-20261016-e297 (approve --code-dir) and WO-20261016-f57d (ticket repo field) merge, so In cannot name repo files with a scope AC that approve can check. Also AC-H1/AC-H2 read http://localhost:45610, a server the spec does not name and Out excludes starting; review_dir is not fixed by wiki.spec.xml (default none): the checks need a file path under review_dir instead
 - `2026-10-16` DRAFT until tool WO-20261016-d304 - TR-FB (timed-run.sh --fallback) is on main (ORD-0555 O1); then approve --no-lavish --reason "architect ruled design approvals done, ORD-0550 O4"
 
 ## Outcome

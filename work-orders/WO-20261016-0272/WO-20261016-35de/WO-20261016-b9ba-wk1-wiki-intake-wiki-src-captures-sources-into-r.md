@@ -4,7 +4,7 @@
   "slug": "wk1-wiki-intake-wiki-src-captures-sources-into-r",
   "title": "WK1: wiki-intake WIKI= SRC= captures sources into raw by content hash, idempotent, blobs to the artifact store",
   "type": "feature",
-  "status": "draft",
+  "status": "ready",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "design seat infra-design12 cut from wiki.spec.xml (PR 285), ORD-0830 RR-orch-14; design approvals ruled done, ORD-0550 O4; owner surface is Bearings, lavish prohibited for Claude seats",
+    "at": "2026-10-16"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [
@@ -25,6 +29,47 @@
     "WO-20261016-168d",
     "WO-20261016-6584",
     "WO-20261016-2013"
+  ],
+  "ac_checks": [
+    {
+      "index": 1,
+      "command": "podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py",
+      "exit": 0,
+      "expect": "^OK"
+    },
+    {
+      "index": 2,
+      "command": "env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk1 --fallback \"podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py\" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py",
+      "exit": 0,
+      "expect": "FALLBACK FB-001"
+    },
+    {
+      "index": 3,
+      "command": "make -n wiki-intake WIKI=/tmp/wk SRC=/tmp/src",
+      "exit": 0,
+      "expect": "wiki_intake\\.py"
+    },
+    {
+      "index": 4,
+      "command": "make -s wiki-intake WIKI= SRC=/tmp/src",
+      "exit": 2,
+      "expect": "WIKI"
+    },
+    {
+      "index": 5,
+      "command": "make rolodex-check BASE=origin/main",
+      "exit": 0,
+      "expect": null
+    },
+    {
+      "index": 6,
+      "command": "git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/tools/wiki/wiki_intake\\.py|claude/tools/wiki/mk/intake\\.mk|claude/tools/wiki/tests/test_intake\\.py)$'",
+      "exit": 1,
+      "expect": null
+    }
+  ],
+  "provides": [
+    "make:wiki-intake"
   ]
 }
 ---
@@ -51,16 +96,24 @@ Owner words, verbatim: "MAKE SURE A KNOWLEDGE BASE WIKI OF YIELDPOINT AI IS BUIL
 
 **In**
 
-- claude/tools/wiki/wiki_intake.py ROOT SRC...: a directory recurses over *.md, *.xml, *.json sorted; sha256 each; target raw/<sha[:12]>-<slug(basename)>.md; a raw file already carrying that sha256 prints `WIKI-002 <path>` and writes nothing; else frontmatter source, captured_at, sha256, bytes and the text (WIKI-001); over blob_limit_bytes the bytes go to the path printed by `make -s -C ~/dotfiles artifact-new KEY=context NAME=wiki-<sha12> EXT=<ext>` (the command is <WIKI>/wiki.json artifact_new, so tests set a fake) and the raw file holds frontmatter with blob: and no body (WIKI-003)
-- claude/tools/wiki/mk/intake.mk: `wiki-intake: ; python3 $(WIKI_DIR)wiki_intake.py $(WIKI) $(SRC)`, exit 2 when SRC is empty
-- claude/tools/wiki/tests/test_intake.py: second run adds nothing; changed source adds one; 2 MB fixture goes to the fake artifact command; no body left in raw
-- Tool: podman with a digest-pinned image (python image pinned above). Fallback: rerun with --pull=never on the locally cached image of the same digest. Switch: timed-run.sh --fallback ... --fallback-code FB-001 (status code FB-001; switch from WO-20261016-d304 - TR-FB: timed-run.sh --fallback CMD --fallback-code FB-NNN, the one scripted fallback switch, with the FB code catalog)
-- Tool: make -C ~/dotfiles artifact-new (make artifact-new on main). Fallback: bash ~/dotfiles/claude/tools/artifact/artifact.sh new with the same KEY NAME EXT. Switch: timed-run.sh --fallback ... --fallback-code FB-004 (status code FB-004; switch from WO-20261016-d304 - TR-FB: timed-run.sh --fallback CMD --fallback-code FB-NNN, the one scripted fallback switch, with the FB code catalog)
+- touches: claude/tools/wiki/wiki_intake.py
+- touches: claude/tools/wiki/mk/intake.mk
+- touches: claude/tools/wiki/tests/test_intake.py
+- touches (generated, written only by work-order.sh start/submit/done, never by hand or git add): this ticket file and its archive path
+- exact behaviour: docs/design/wiki.spec.xml and docs/design/wiki.md (PR 285); the Problem section of this ticket carries the same contract verbatim
+- step: branch from origin/main in your own worktree after every depends_on ticket is merged; write exactly the files above
+- step: run `podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py` then the AC checks only; CI runs the rest
+- step: commit 'feat(wiki): wiki-intake captures sources into raw by content hash (WO-20261016-b9ba)'; no Bump trailer (no file under claude/skills changes); push, open the PR, write the result, leave
+- tool: cmd:podman with docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 (python:3.12-slim at pin time 2026-10-16) - fallback: registry pull refused: rerun with --pull=never on the locally cached image of the same digest; switch: timed-run.sh --fallback ... --fallback-code FB-001 (WO-20261016-d304); fallback test: the FB-001 AC below
+- tool: cmd:git, cmd:gh, cmd:make - fallback: missing on the host: stop with ENV-MISSING naming it; gh or GitHub down: retry 3 times, then stop with A2A-003 and its output
+- tool: make:Makefile:artifact-new (on main) - fallback: bash claude/tools/artifact/artifact.sh new with the same KEY NAME EXT; switch: timed-run.sh --fallback ... --fallback-code FB-004 (WO-20261016-d304)
+- tool: script:claude/workflow/bin/timed-run.sh and make:Makefile:rolodex-check - on main; fallback: missing: stop with DESIGN-GAP naming it
 
 **Out - non-goals**
 
-- Any other verb
-- Any wiki content
+- work-orders/INDEX.md and epic READMEs by hand or by git add
+- waiting on CI or merging: push, open the PR, write the result, leave
+- any file not named under In: stop with DESIGN-GAP
 
 ## Degrees of freedom
 
@@ -68,13 +121,23 @@ Owner words, verbatim: "MAKE SURE A KNOWLEDGE BASE WIKI OF YIELDPOINT AI IS BUIL
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `podman run --rm --network=none -v ~/dotfiles:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py` -> exit 0, output ends `OK`. Proof: command output
-- [ ] `AC-H2` *(human)* `FORCE_FALLBACK=1 bash ~/dotfiles/claude/workflow/bin/timed-run.sh --node wk1 --fallback "podman run --rm --pull=never --network=none -v ~/dotfiles:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py" --fallback-code FB-001 -- podman run --rm --network=none -v ~/dotfiles:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py` -> exit 0, stderr contains `FALLBACK FB-001`. Proof: command output
+- [ ] `AC-H1` *(human)* the unit tests pass in the pinned image
+  - check: `podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py` exit 0 expect /^OK/
+- [ ] `AC-H2` *(human)* the FB-001 fallback path runs the cached digest
+  - check: `env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk1 --fallback "podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py` exit 0 expect /FALLBACK FB-001/
+- [ ] `AC-H3` *(human)* the make target wraps the verb script
+  - check: `make -n wiki-intake WIKI=/tmp/wk SRC=/tmp/src` exit 0 expect /wiki_intake\.py/
+- [ ] `AC-H4` *(human)* an empty WIKI is a usage error
+  - check: `make -s wiki-intake WIKI= SRC=/tmp/src` exit 2 expect /WIKI/
+- [ ] `AC-H5` *(human)* every changed script has a rolodex header
+  - check: `make rolodex-check BASE=origin/main` exit 0
+- [ ] `AC-H6` *(human)* the diff holds only In files and generated work-orders files
+  - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/tools/wiki/wiki_intake\.py|claude/tools/wiki/mk/intake\.mk|claude/tools/wiki/tests/test_intake\.py)$'` exit 1
 
 ## Test plan
 
 ```sh
-podman run --rm --network=none -v ~/dotfiles:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py
+{"scope":"claude/tools/wiki intake","cases":[{"id":"TP-1","intent":"the unit tests of claude/tools/wiki intake prove the spec contract; a broken one corrupts every wiki that calls it","command":"podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py","expected":"exit 0; the last line is OK"},{"id":"TP-2","intent":"fallback path (owner item 28): registry pull refused, the cached digest runs through the FB-001 switch","command":"env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk1-t --fallback \"podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py\" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_intake.py","expected":"exit 0; output contains FALLBACK FB-001"}],"isolation":{"runtime":"podman","image":"docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9"},"out_of_scope":["lint and the full suite: CI runs them"]}
 ```
 
 ## Assumptions

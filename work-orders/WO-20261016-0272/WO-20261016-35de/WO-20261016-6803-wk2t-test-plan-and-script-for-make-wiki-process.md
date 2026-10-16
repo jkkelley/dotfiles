@@ -4,7 +4,7 @@
   "slug": "wk2t-test-plan-and-script-for-make-wiki-process",
   "title": "WK2t: test plan and script for make wiki-process",
   "type": "test",
-  "status": "draft",
+  "status": "ready",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -13,13 +13,37 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "design seat infra-design12 cut from wiki.spec.xml (PR 285), ORD-0830 RR-orch-14; design approvals ruled done, ORD-0550 O4; owner surface is Bearings, lavish prohibited for Claude seats",
+    "at": "2026-10-16"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [
     "WO-20261016-168d"
   ],
-  "blocks": []
+  "blocks": [],
+  "ac_checks": [
+    {
+      "index": 1,
+      "command": "podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py",
+      "exit": 0,
+      "expect": "^OK"
+    },
+    {
+      "index": 2,
+      "command": "env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk2-t --fallback \"podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py\" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py",
+      "exit": 0,
+      "expect": "FALLBACK FB-001"
+    },
+    {
+      "index": 3,
+      "command": "git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'",
+      "exit": 1,
+      "expect": null
+    }
+  ]
 }
 ---
 
@@ -45,12 +69,22 @@ Test sibling of WK2. The tester runs exactly this plan from ~/dotfiles on the WK
 
 **In**
 
-- Run every case below from ~/dotfiles
-- Evidence: the output of every case, written to the path printed by `make -s -C ~/dotfiles artifact-new KEY=log NAME=wk2-test EXT=log` (fallback FB-004: `bash ~/dotfiles/claude/tools/artifact/artifact.sh new` with the same KEY NAME EXT)
+- touches: none outside work-orders; this is a --type test run of the merged WO-20261016-168d code on origin/main
+- touches (generated, written only by work-order.sh start/submit/evidence/done, never by hand or git add): this ticket file and its archive path
+- step: worktree at origin/main after WO-20261016-168d merged; run TP-1 and TP-2 exactly, from the worktree root
+- step: write every case output to the path printed by `make -s artifact-new KEY=log NAME=wk2-test EXT=log`; evidence each AC with work-order.sh evidence --observed and that path
+- step: a red case: work-order.sh note on WO-20261016-168d with its output and stop with DESIGN-GAP; never edit a file
+- tool: cmd:podman with docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 (python:3.12-slim at pin time 2026-10-16) - fallback: registry pull refused: rerun with --pull=never on the locally cached image of the same digest; switch: timed-run.sh --fallback ... --fallback-code FB-001 (WO-20261016-d304); fallback test: the FB-001 AC below
+- tool: cmd:git, cmd:gh, cmd:make - fallback: missing on the host: stop with ENV-MISSING naming it; gh or GitHub down: retry 3 times, then stop with A2A-003 and its output
+- tool: make:Makefile:artifact-new (on main) - fallback: bash claude/tools/artifact/artifact.sh new with the same KEY NAME EXT; switch: timed-run.sh --fallback ... --fallback-code FB-004 (WO-20261016-d304)
+- tool: script:claude/workflow/bin/timed-run.sh - on main; fallback: missing: stop with DESIGN-GAP naming it
 
 **Out - non-goals**
 
-- Editing any file; a failing case is a note on the build ticket with its output
+- editing any file; a failing case is a note on WO-20261016-168d with its output
+- work-orders/INDEX.md and epic READMEs by hand or by git add
+- waiting on CI or merging: push, open the PR, write the result, leave
+- any file not named under In: stop with DESIGN-GAP
 
 ## Degrees of freedom
 
@@ -58,35 +92,18 @@ Test sibling of WK2. The tester runs exactly this plan from ~/dotfiles on the WK
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* Every case passes: each case's command exits as its expected line says. Proof: the evidence log path on this ticket
+- [ ] `AC-H1` *(human)* TP-1 the unit tests pass in the pinned image
+  - check: `podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py` exit 0 expect /^OK/
+- [ ] `AC-H2` *(human)* TP-2 the FB-001 fallback path runs the cached digest
+  - check: `env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk2-t --fallback "podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py` exit 0 expect /FALLBACK FB-001/
+- [ ] `AC-H3` *(human)* the diff holds only generated work-orders files
+  - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan
 
-_Test plan from claude/workflow/templates/test-plan.md, shaped by claude/workflow/schemas/test-plan.schema.json. The tester runs exactly these cases and nothing else._
-
-**Scope under test**
-
-make wiki-process
-
-**Cases**
-
-- `TP-1`
-  - intent: wiki-process is part of the YieldPoint wiki's AC chain (BR-20261016-yp-wiki AC2-AC4)
-  - command: `podman run --rm --network=none -v ~/dotfiles:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py`
-  - expected: exit 0, OK
-- `TP-2`
-  - intent: fallback path: registry unreachable, the cached digest runs
-  - command: `FORCE_FALLBACK=1 bash ~/dotfiles/claude/workflow/bin/timed-run.sh --node wk2-t --fallback "podman run --rm --pull=never --network=none -v ~/dotfiles:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py" --fallback-code FB-001 -- podman run --rm --network=none -v ~/dotfiles:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py`
-  - expected: exit 0, stderr contains FALLBACK FB-001
-
-**Isolation**
-
-- runtime: podman
-- image: `docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9` (python:3.12-slim at pin time 2026-10-16)
-
-**Out of scope - CI covers**
-
-- lint and the full suite run in CI
+```sh
+{"scope":"claude/tools/wiki process","cases":[{"id":"TP-1","intent":"the unit tests of claude/tools/wiki process prove the spec contract; a broken one corrupts every wiki that calls it","command":"podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py","expected":"exit 0; the last line is OK"},{"id":"TP-2","intent":"fallback path (owner item 28): registry pull refused, the cached digest runs through the FB-001 switch","command":"env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk2-t --fallback \"podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py\" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py","expected":"exit 0; output contains FALLBACK FB-001"}],"isolation":{"runtime":"podman","image":"docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9"},"out_of_scope":["lint and the full suite: CI runs them"]}
+```
 
 ## Assumptions
 

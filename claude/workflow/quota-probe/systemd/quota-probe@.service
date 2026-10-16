@@ -1,0 +1,7 @@
+# quota-probe@.service - one probe pass for the config entry %i. Rendered by `make install NAME=` (@DIR@ replaced).
+[Unit]
+Description=quota-probe %i: probe a rate-limited tool once
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash @DIR@/quota-probe.sh --name %i

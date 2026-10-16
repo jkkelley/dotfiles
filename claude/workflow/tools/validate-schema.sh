@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
 # Thin wrapper over python-jsonschema. No bespoke validator: the wheel exists.
 # Usage: validate-schema.sh <schema.json> <instance.json>
+#
+# WO-20261016-f052 (ORD-0921 E3). What broke: the old inline Draft202012Validator(schema) had no
+# registry, so node.schema.json's {"$ref": "bundle.schema.json"} raised RefResolutionError under
+# --network=none for every node file. Why it mattered: no gate has a network, so no DAG node file
+# could be validated. Fix: schema_registry.py resolves $ref from a local store of the repo's
+# *.schema.json files keyed by $id. Rejected: inlining bundle into node.schema.json - every future
+# $ref would repeat the gap. Cost: one glob of claude/workflow per call.
 set -euo pipefail
 [ $# -eq 2 ] || { echo "usage: validate-schema.sh <schema> <instance>" >&2; exit 2; }
-python3 -c '
-import json, sys
-from jsonschema import Draft202012Validator
-schema = json.load(open(sys.argv[1]))
-inst   = json.load(open(sys.argv[2]))
-errs = sorted(Draft202012Validator(schema).iter_errors(inst), key=lambda e: e.path)
-for e in errs:
-    loc = "/".join(str(p) for p in e.path) or "(root)"
-    print(f"  {loc}: {e.message}", file=sys.stderr)
-sys.exit(1 if errs else 0)
-' "$1" "$2"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+python3 "$HERE/schema_registry.py" "$1" "$2"

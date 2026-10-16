@@ -4,15 +4,15 @@
   "slug": "close-wo-20261016-6e8e-treehouse-seats-pr-174-me",
   "title": "Close WO-20261016-6e8e (treehouse seats, PR 174 merged): start, submit, evidence, done",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:30:54+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/close-wo-20261016-6e8e-treehouse-seats-pr-174-me",
+  "pr": 283,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design10 cut for ORD-0830 RR-orch-14 and ORD-0921; design approvals ruled done, ORD-0550 O4",
@@ -91,9 +91,11 @@ Order ORD-0830 RR-orch-14 (brief BR-20261016-infra-design10, item STALE-READY); 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* WO-20261016-6e8e is done and archived
+- [x] `AC-H1` *(human)* WO-20261016-6e8e is done and archived
+  - observed `2026-10-16` done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-6e8e --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H2` *(human)* the diff holds only work-orders files
+- [x] `AC-H2` *(human)* the diff holds only work-orders files
+  - observed `2026-10-16` only work-orders files; grep exit 1
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan
