@@ -4,7 +4,7 @@
 #
 #   sweep.sh start --seats all|gmail|proton|linkedin   create the run, hand it to a labeled herdr pane, return at once
 #   sweep.sh run --run <run-id>                        the run itself; foreground of the sweep-ctl pane (Rule 18)
-#   sweep.sh status [--run <run-id>]                   run.json summary, latest run by default; reads no pane
+#   sweep.sh status [--run <run-id>]                   run, controller and seat records, latest run by default; reads no pane
 #   sweep.sh clean [--run <run-id>]                    sweep-clean.sh clean
 #   sweep.sh prune --days <n>                          sweep-clean.sh prune
 #   sweep.sh test --changed | --all | --suite <name>   the Podman suites, through the Makefile
@@ -24,9 +24,19 @@
 #   Rejected: a run.json field for the error, which collect and this script would have to agree on out of band.
 # Cost: summary.json is written twice; the first copy lives for the length of one proof capture.
 #
-# BREADCRUMB - run.json .status is set by this script before clean, not by clean.
-# sweep-clean.sh refuses a run whose status is RUN-RUNNING (it would pull tabs out from under live seats), and init writes
-# RUN-RUNNING. Something has to move it; the controller is the only script that knows the run is over.
+# BREADCRUMB - run.json is written once, by sweep-init.sh; this script writes controller.json (WO-20261016-002d, ruling R3).
+# What broke: this script, sweep-watch.sh and sweep-clean.sh each rewrote run.json after init (status, finished_at, pane, seat
+#   status, cleaned_at), so a record with four writers could not be migrated or diffed against what init declared.
+# Why this fix: run.json keeps what init declared and never changes. The run's status, finished_at and each seat's pane are
+#   in <run>/controller.json, written only here; a seat's status is in <run>/seats/<seat>.status.json, written by the watcher
+#   (and here only for the SKIPPED or FAILED-SEAT result this script synthesizes before any watcher sees the seat).
+#   A missing controller.json reads as RUN-RUNNING and a missing seat record as the status run.json declared, which is init's.
+#   Rejected: one shared "state" file, which is run.json's four writers again under another name.
+# Cost: a reader that wants the live state opens three files, not one; sweep-collect.sh, sweep-clean.sh and sweep-proof.sh do.
+#
+# BREADCRUMB - the run status in controller.json is set by this script before clean, not by clean.
+# sweep-clean.sh refuses a run whose status is RUN-RUNNING (it would pull tabs out from under live seats), and the controller
+# starts at RUN-RUNNING. Something has to move it; the controller is the only script that knows the run is over.
 #
 # BREADCRUMB - `start` returns before the run does, and the run lives in a pane, never in a background job.
 # Rule 18: invisible work reads as nothing happening. `start` creates the `inbox-sweep` tab, renames its pane `sweep-ctl`,
@@ -104,7 +114,9 @@ cmd_run() {
   export SWEEP_RUN_DIR
   local RUN="$SWEEP_RUN_DIR"
   [ -f "$RUN/run.json" ] || { echo "sweep.sh: no run.json in $RUN" >&2; exit 2; }
-  mkdir -p "$RUN/logs"
+  mkdir -p "$RUN/logs" "$RUN/seats"
+  # Created once; a rerun of `run` on the same dir keeps what it recorded.
+  [ -f "$RUN/controller.json" ] || jq -n --arg r "$run" '{schema_version:1, run_id:$r, status:"RUN-RUNNING", finished_at:null, panes:{}}' >"$RUN/controller.json"
   local LOG="$RUN/logs/controller.log"
   log() { printf '%s %s\n' "$(sweep_now)" "$*" >>"$LOG"; }
   local spawn="${SWEEP_SPAWN:-$SWEEP/../bin/workflow-spawn.sh}"
@@ -129,7 +141,8 @@ cmd_run() {
        items:[], drafts:[], owner_decisions:[], mutations:[],
        errors:(if $st == "SKIPPED" then [] else [{at:$t, attempt:1, step:"controller", message:$msg}] end),
        tab_closed:true}' >"$RUN/results/$seat.json.tmp" && mv "$RUN/results/$seat.json.tmp" "$RUN/results/$seat.json"
-    sweep_json_set "$RUN/run.json" '(.seats[] | select(.seat==$s)) |= (.status=$st)' --arg s "$seat" --arg st "$st"
+    jq -n --arg s "$seat" --arg st "$st" '{schema_version:1, seat:$s, status:$st}' >"$RUN/seats/$seat.status.json.tmp" \
+      && mv "$RUN/seats/$seat.status.json.tmp" "$RUN/seats/$seat.status.json"
     log "$seat $st: $msg"
   }
 
@@ -166,7 +179,7 @@ cmd_run() {
       if WORKFLOW_CONFIG="$RUN/seats/project.json" sweep_retry 3 "spawn-$seat" "$spawn" "inbox-sweep-$source" "$seat" --brief-file "$RUN/briefs/$seat.md" --ticket "IS-$run" >>"$LOG" 2>&1; then
         # workflow-spawn.sh keeps no pane on stdout the controller can rely on; its seat-link file names the pane.
         pane="$(jq -rs --arg t "IS-$run" --arg s "$seat" 'map(select(.ticket == $t and .seat == $s)) | first | .pane // empty' "$seats_dir"/*/seat-link 2>/dev/null)"
-        sweep_json_set "$RUN/run.json" '(.seats[] | select(.seat==$s)) |= (.pane = (if $p == "" then null else $p end))' --arg s "$seat" --arg p "$pane" || true
+        sweep_json_set "$RUN/controller.json" '.panes[$s] = (if $p == "" then null else $p end)' --arg s "$seat" --arg p "$pane" || true
         sweep_check R3 "seat started in agent-sweep-$seat" "seat-link in $seats_dir, pane ${pane:-unknown}" || true
       else
         synth "$seat" FAILED-SEAT "workflow-spawn.sh failed after 3 tries"
@@ -183,7 +196,7 @@ cmd_run() {
   finish() { # <collect args...> sets run.json status and finished_at from summary.json
     local st
     st="$(bash "$HERE/sweep-collect.sh" --run "$run" "$@" 2>>"$LOG")" || { log "collect failed"; return 1; }
-    sweep_json_set "$RUN/run.json" '.status = $st | .finished_at = $at' --arg st "$st" --arg at "$(sweep_now)" || return 1
+    sweep_json_set "$RUN/controller.json" '.status = $st | .finished_at = $at' --arg st "$st" --arg at "$(sweep_now)" || return 1
     log "run status $st"
   }
   finish ${ce[@]+"${ce[@]}"} || ctl_error=1
@@ -196,7 +209,7 @@ cmd_run() {
   bash "$HERE/sweep-clean.sh" clean --run "$run" >>"$LOG" 2>&1 || log "clean exited non-zero"
 
   local final
-  final="$(jq -r .status "$RUN/run.json")"
+  final="$(jq -r .status "$RUN/controller.json")"
   label_pane "$final"
   printf '%s\n%s\n' "$final" "$RUN/summary.md"
   [ "$prc" -eq 3 ] && exit 3
@@ -211,12 +224,22 @@ cmd_status() {
     run="$(basename "$(readlink "$(latest_link)")")"
   fi
   [[ $run =~ $STAMP_RE ]] || usage
-  local f
-  f="$(runs_root)/$run/run.json"
+  local d f c seat st rows=""
+  d="$(runs_root)/$run"
+  f="$d/run.json"
   [ -f "$f" ] || { echo "sweep.sh: no run.json for $run" >&2; exit 2; }
-  jq -r '"run \(.run_id) \(.status)\nstarted \(.started_at) finished \(.finished_at // "n/a")",
-         (.seats[] | "  \(.seat) \(.status) deadline \(.deadline_at)"),
-         "seats \(.seats | length), final \([.seats[] | select(.status != "RUN-RUNNING")] | length), running \([.seats[] | select(.status == "RUN-RUNNING")] | length)"' "$f"
+  c='{}'
+  [ -f "$d/controller.json" ] && c="$(cat "$d/controller.json")"
+  # The seat's live status is its record; run.json holds only what init declared (RUN-RUNNING).
+  while IFS= read -r seat; do
+    st="$(jq -r '.status // empty' "$d/seats/$seat.status.json" 2>/dev/null)"
+    rows+="$seat"$'\t'"${st:-RUN-RUNNING}"$'\n'
+  done < <(jq -r '.seats[].seat' "$f")
+  jq -r --argjson c "$c" --rawfile rows <(printf '%s' "$rows") '
+    ($rows | split("\n") | map(select(length > 0) | split("\t") | {key: .[0], value: .[1]}) | from_entries) as $st
+    | "run \(.run_id) \($c.status // "RUN-RUNNING")\nstarted \(.started_at) finished \($c.finished_at // "n/a")",
+      (.seats[] | "  \(.seat) \($st[.seat]) deadline \(.deadline_at)"),
+      "seats \(.seats | length), final \([.seats[] | select($st[.seat] != "RUN-RUNNING")] | length), running \([.seats[] | select($st[.seat] == "RUN-RUNNING")] | length)"' "$f"
 }
 
 # ---- test: the Makefile owns the Podman call, so a plain `make` and this verb can never disagree ---------------------

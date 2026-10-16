@@ -68,6 +68,7 @@ fresh() { # fresh <name>: a clean sandbox for one scenario
 }
 calls() { grep -c -e "$1" "$TEST_OUT/calls.log" || true; }
 field() { jq -r "$1" "$SWEEP_RUNS_ROOT"/*/run.json; }
+ctl() { jq -r "$1" "$SWEEP_RUNS_ROOT"/*/controller.json; }
 
 # AC-H3 and the start path
 fresh start
@@ -81,15 +82,19 @@ check 1 "$(calls "^herdr tab create .*--label inbox-sweep")" "start creates one 
 check 1 "$(calls "^herdr pane rename wS:p9 sweep-ctl$")" "start renames the new tab's pane sweep-ctl"
 check 1 "$(calls "^herdr pane run wS:p9 bash .*sweep.sh run --run $rid$")" "start hands the run to the sweep-ctl pane"
 check 0 "$(calls '^spawn ')" "start spawns no seat itself"
-check RUN-RUNNING "$(field .status)" "the run is RUN-RUNNING until the pane's run ends"
+check RUN-RUNNING "$(field .status)" "run.json declares RUN-RUNNING at init"
+check no "$([ -e "$SWEEP_RUNS_ROOT/$rid/controller.json" ] && echo yes || echo no)" "start writes no controller.json; the run does"
 
 # AC-H1: a full stubbed run reaches RUN-OK
 fresh full
 rid="$(bash "$S" start --seats all)"
+sha_init="$(sha256sum "$SWEEP_RUNS_ROOT/$rid/run.json" | cut -d' ' -f1)"
 out="$(HERDR_PANE_ID=wS:p9 timeout 30 bash "$S" run --run "$rid")"; rc=$?
 check 0 "$rc" "run exits 0"
 check RUN-OK "$(jq -r .status "$SWEEP_RUNS_ROOT/$rid/summary.json")" "AC-H1: a full stubbed run reaches RUN-OK in summary.json"
-check RUN-OK "$(field .status)" "run.json carries RUN-OK"
+check RUN-OK "$(ctl .status)" "AC-H2: controller.json carries RUN-OK"
+check "$sha_init" "$(sha256sum "$SWEEP_RUNS_ROOT/$rid/run.json" | cut -d' ' -f1)" "AC-H1: run.json is byte-identical at the end of a stubbed full run"
+check "OK OK OK OK" "$(jq -r '.status' "$SWEEP_RUNS_ROOT/$rid"/seats/*.status.json | paste -sd' ')" "AC-H2: each seat's status is in seats/<seat>.status.json"
 check "RUN-OK
 $SWEEP_RUNS_ROOT/$rid/summary.md" "$out" "run prints the status and the summary.md path"
 check 4 "$(calls '^spawn inbox-sweep-')" "one spawn per enabled seat (gmail, two proton, linkedin)"
@@ -97,9 +102,9 @@ check 1 "$(calls '^spawn inbox-sweep-gmail gmail .*--ticket IS-'"$rid"'$')" "the
 check 2 "$(calls '^powershell.exe ')" "tab bar captured twice, baseline and verify"
 check yes "$([ "$(grep -n 'powershell.exe' "$TEST_OUT/calls.log" | head -1 | cut -d: -f1)" -lt "$(grep -n '^spawn ' "$TEST_OUT/calls.log" | head -1 | cut -d: -f1)" ] && echo yes)" "the baseline is captured before the first seat starts"
 check CLEAN-OK "$(jq -r .code "$SWEEP_RUNS_ROOT/$rid/proof/R7-verdict.json")" "R7 verdict is CLEAN-OK"
-check yes "$(field .cleaned_at | grep -qv null && echo yes)" "clean ran: cleaned_at is set"
+check yes "$(jq -r '.cleaned_at | test("Z$") | if . then "yes" else "no" end' "$SWEEP_RUNS_ROOT/$rid/clean.json")" "AC-H2: clean ran: cleaned_at is set in clean.json"
 check no "$([ -d "$SWEEP_RUNS_ROOT/$rid/briefs" ] && echo yes || echo no)" "clean removed the briefs"
-check "wS:gmail" "$(field '.seats[] | select(.seat=="gmail") | .pane')" "the pane comes from the seat-link the spawner wrote"
+check "wS:gmail" "$(ctl '.panes.gmail')" "AC-H2: the pane, from the seat-link the spawner wrote, is in controller.json"
 check 1 "$(calls "^herdr pane rename wS:p9 sweep-ctl $rid RUN-OK$")" "the pane ends labeled sweep-ctl <run-id> RUN-OK"
 check 4 "$(wc -l <"$TEST_OUT/records.jsonl")" "the watcher wrote one record row per seat"
 check 0 "$(jq '[.mutations[]?.action] - ["marked-read"] | length' "$SWEEP_RUNS_ROOT/$rid"/results/*.json | grep -vc '^0$')" "no result carries a mutation other than marked-read"

@@ -3,7 +3,7 @@
 # sweep-clean.sh - R7 of the inbox sweep: take a finished run down, and expire old runs.
 #
 #   sweep-clean.sh clean [--run <run-id>]   close this run's agent-sweep-* tabs, remove its briefs and seat dirs,
-#                                           set run.json .cleaned_at. No --run: the latest run; with no run dirs
+#                                           write clean.json .cleaned_at. No --run: the latest run; with no run dirs
 #                                           at all, removes the test output dir instead.
 #   sweep-clean.sh prune --days <n>         remove run dirs older than n days (by the UTC stamp in the run id),
 #                                           a dangling latest link, and record rows of those runs.
@@ -52,7 +52,8 @@ cmd_clean() {
   [[ $run =~ $STAMP_RE ]] || { echo "sweep-clean: bad run id '$run'" >&2; exit 2; }
   local dir="$root/$run"
   [ -f "$dir/run.json" ] || { echo "sweep-clean: no run.json in $dir" >&2; exit 2; }
-  if [ "$(jq -r '.status // empty' "$dir/run.json")" = RUN-RUNNING ]; then
+  # Status lives in controller.json (WO-20261016-002d, ruling R3); no controller.json means the run never started: RUN-RUNNING.
+  if [ "$(jq -r '.status // "RUN-RUNNING"' "$dir/controller.json" 2>/dev/null || echo RUN-RUNNING)" = RUN-RUNNING ]; then
     echo "sweep-clean: run $run is RUN-RUNNING; refusing to clean" >&2
     exit 3
   fi
@@ -92,7 +93,8 @@ cmd_clean() {
   for d in "${dirs[@]}"; do rm -rf "$d"; done
   # cleaned_at is set only when every tab closed: a run with a stuck tab must not read as cleaned.
   if [ "$bad" = 0 ]; then
-    sweep_json_set "$dir/run.json" '.cleaned_at = $at' --arg at "$(sweep_now)"
+    # clean.json is this script's own record; run.json is written once by init and is not touched (ruling R3).
+    jq -n --arg r "$run" --arg at "$(sweep_now)" '{schema_version:1, run_id:$r, cleaned_at:$at}' >"$dir/clean.json.tmp" && mv "$dir/clean.json.tmp" "$dir/clean.json"
     echo "cleaned $run"
   else
     echo "sweep-clean: run $run partly cleaned; see $log" >&2

@@ -27,8 +27,8 @@
 #   * "controller error" has no run.json field in the spec, so the controller passes --controller-error. Rejected
 #     alternative: inventing a run.json field the controller and this script would have to agree on out of band.
 #
-# Every seat in run.json .seats is accounted for. A seat with no readable result file takes the status run.json holds
-# for it when that is a seat code (SKIPPED is written there by sweep.sh with no result file), else FAILED-SEAT: a
+# Every seat in run.json .seats is accounted for. A seat with no readable result file takes the status in its
+# seats/<seat>.status.json (run.json's declaration when none) when that is a seat code (SKIPPED, written by sweep.sh), else FAILED-SEAT: a
 # seat that left nothing behind failed, and a summary that dropped it would count the run as better than it was.
 # Text copied from a result is stripped of em dashes, so summary.md can never carry one (owner rule).
 #
@@ -71,7 +71,9 @@ while IFS= read -r seat_row; do
       before:(.counts.before.unread // null), after:(.counts.after.unread // null), processed:(.counts.processed // 0),
       flagged:([.items[]? | select(.flag != "none")] | length), items:(.items // [])}' "$file")"
   else
-    st="$(jq -r '.status // empty' <<<"$seat_row")"
+    # The seat's status is its record (seats/<seat>.status.json); run.json holds only init's declaration (WO-20261016-002d).
+  st="$(jq -r '.status // empty' "$RUN/seats/$seat.status.json" 2>/dev/null || true)"
+  [ -n "$st" ] || st="$(jq -r '.status // empty' <<<"$seat_row")"
     is_seat_code "$st" || st=FAILED-SEAT
     rec="$(jq -cn --arg seat "$seat" --arg src "$source_name" --arg acc "$account" --arg st "$st" \
       '{seat:$seat, source:$src, account:$acc, status:$st, before:null, after:null, processed:0, flagged:0, items:[]}')"
