@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 # monitors.sh - a line's monitoring tab: one labelled 3x3 tab, every monitor declared in config/monitors.json at its slot.
+# name: monitors.sh
+# purpose: build the "<line> monitor" herdr tab and run every monitor of config/monitors.json in its slot
+# inputs: config/monitors.json, LINE, WS, environment for ${NAME} substitution
+# outputs: one status line per monitor
+# writes-to: herdr panes and tabs only
+# cleanup: make monitors-down LINE=
 #
 # usage: monitors.sh up <line> | down <line> | status <line> | grid <tab-label>
 #   up      build tab "<line> monitor" if absent and start every declared monitor not already running in its slot

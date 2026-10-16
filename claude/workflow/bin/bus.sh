@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 # bus.sh - the line's event bus: one NATS JetStream server in podman, one stream, durable pull consumers.
+# name: bus.sh
+# purpose: the line event bus - NATS JetStream in podman, stream LINE, durable pull consumers, tail
+# inputs: config/line-watch.json (LW_BUS), subcommand args, BUS_NATS
+# outputs: status lines, fetched payloads, published events
+# writes-to: podman container zenith-nats, JetStream store ~/.local/state/zenith/state/nats
+# cleanup: make bus-down (keep store) or make bus-clean (delete store)
 #
 # usage: bus.sh up | logs | down | status | clean | pub <subject> <json> | next <consumer> | ack <ack-subject> | pull <consumer>
 #   up      start the server (127.0.0.1 only, restart always, health check) and ensure the stream and every consumer
