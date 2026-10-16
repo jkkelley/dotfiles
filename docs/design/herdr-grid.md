@@ -185,3 +185,12 @@ NEVER: pick a slot by pane position instead of its `free` label.
 
 Pane ids are preserved because every move happens inside one workspace.
 No seat process is restarted, so no seat loses its context.
+
+## Architect and seat flags
+
+Owner, 2026-10-16 UTC: "make sure your seat always has bypass permissions on and that you always have /rc on too, i need to interface with you away from desk".
+`line-up` starts the architect with `claude --dangerously-skip-permissions --remote-control "<line> architect"`, set by `.workflow.herdr.grid.architect_cmd` or `ARCH_CMD=`.
+`architect-up LINE= [RESUME=1]` restarts it through the same function, so a restart or resume keeps both flags and adds `--continue` on resume.
+It refuses when the pane already runs an agent.
+`seat-up` adds `--dangerously-skip-permissions` to any claude or claude.exe seat command that lacks it, and refuses a seat command with `--remote-control`, so the owner sees one session per line.
+Not verified: the installed `claude --help` does not list `--remote-control`; the flag is used as the owner specified it.

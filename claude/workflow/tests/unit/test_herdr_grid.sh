@@ -61,6 +61,27 @@ has   "line-up labels the architect"            'pane rename wT:p101 architect'
 has   "left column keeps 1/3, then middle keeps 1/2" '--direction right --ratio 0.3333'
 has   "rows split into equal thirds"            '--direction down --ratio 0.3333'
 
+has   "line-up starts the architect with both flags, named for the line" 'pane run wT:p101 claude --dangerously-skip-permissions --remote-control "L architect"'
+hasnt "and the command has no stray text after the name" 'architect"}'
+
+# ---- architect-up: restart and resume keep both flags; never a second agent in the pane
+mk_tab1 free free free free free free
+jq '(.result.panes[]|select(.label=="architect")|.agent)=null' "$T/fx/panes.json" > "$T/fx/p2" && mv "$T/fx/p2" "$T/fx/panes.json"
+: > "$T/log"; $G architect-up L resume >/dev/null 2>&1
+has   "resume keeps both flags and adds --continue" '--remote-control "L architect" --continue'
+mk_tab1 free free free free free free
+: > "$T/log"; $G architect-up L >/dev/null 2>&1; rc=$?
+[ "$rc" != 0 ] && hasnt "a live architect is never started twice" 'pane run' || bad "live architect refused"
+
+# ---- seats: bypass always, Remote Control never
+mk_tab1 free free free free free free
+: > "$T/log"; $G seat-up L s1 "claude --model sonnet" >/dev/null 2>&1
+has   "a plain claude seat gets bypass added"   'pane run wT:p1 claude --dangerously-skip-permissions --model sonnet'
+: > "$T/log"; $G seat-up L s2 "cd /mnt/c/x && /mnt/c/u/claude.exe --chrome" >/dev/null 2>&1
+has   "the Windows browser seat gets bypass after the cd" 'claude.exe --dangerously-skip-permissions --chrome'
+: > "$T/log"; $G seat-up L s3 "claude --dangerously-skip-permissions --remote-control x" >/dev/null 2>&1; rc=$?
+[ "$rc" != 0 ] && hasnt "a seat asking for Remote Control is refused before a slot is taken" 'pane rename' || bad "seat RC refused"
+
 # ---- seat-up: slot order, no double claim, overflow
 mk_tab1 free free free free free free
 : > "$T/log"; $G seat-up L alpha >/dev/null 2>&1
