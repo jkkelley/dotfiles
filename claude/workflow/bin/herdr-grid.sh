@@ -55,6 +55,7 @@ ARCH_DEFAULT='claude --dangerously-skip-permissions --remote-control "{line} arc
 ARCH_CMD="${ARCH_CMD:-$(gcfg architect_cmd)}"; ARCH_CMD="${ARCH_CMD:-$ARCH_DEFAULT}"
 SKIP_FLAG="--dangerously-skip-permissions"
 START_TIMEOUT_MS="${START_TIMEOUT_MS:-$(gcfg start_timeout_ms)}"; START_TIMEOUT_MS="${START_TIMEOUT_MS:-60000}"
+SEAT_TMP_ROOT="$(wf_expand "${GRID_SEAT_TMP:-$(gcfg seat_tmp_dir)}")"; [ -n "$SEAT_TMP_ROOT" ] || SEAT_TMP_ROOT="$HOME/.cache/zenith/seat-tmp"
 [ -n "$WS" ] || wf_die "no workspace: run inside a herdr pane or set WS="
 
 keep_of() { awk -v k="$1" 'BEGIN{printf "%.4f", 1/k}'; }
@@ -77,6 +78,14 @@ hj() {
 }
 
 state_file() { printf '%s/%s/%s.agent-seen' "$STATE" "$1" "$2"; }
+
+# Breadcrumb 2026-10-16 (WO-20261016-a36a, ORD-1150 T1): seats started by seat-up inherited the pane's TMPDIR, usually none, so
+# every seat on the line shared /tmp (mktemp, work-order.sh code_tree, podman builds, pytest), collided on names and left files
+# no seat owned, so cleanup after a finished seat could not find them. Each seat now gets <seat_tmp_dir>/<line>/<seat>, exported
+# by seat-up and removed by seat-down. Done in seat-up because it is the one start path (herdr-bus.mk calls it too); per-seat
+# env files were rejected since a seat started by herdr-bus.mk would miss them. Cost: one mkdir per seat start; a Windows
+# claude.exe seat ignores a Linux TMPDIR, which is harmless.
+seat_tmp() { printf '%s/%s/%s' "$SEAT_TMP_ROOT" "$1" "$2"; }
 
 # ---- discovery: every id is rediscovered from herdr on every call ---------------------------------------------
 # line_tabs <line>: "<n> <tab_id>" ascending, tabs labelled exactly "<line> <n>".
@@ -260,6 +269,11 @@ cmd_claim() { # claim <line> <seat> [cmd]; prints the pane id
 cmd_seat_up() {
   local line="$1" seat="$2" cmd="${3:-}" pane
   [ -z "$cmd" ] || cmd="$(seat_cmd "$cmd")" || return 1
+  if [ -n "$cmd" ]; then
+    local tmp; tmp="$(seat_tmp "$line" "$seat")"
+    mkdir -p "$tmp" || { log "seat $seat: cannot create TMPDIR $tmp"; return 1; }
+    cmd="export TMPDIR=$(printf %q "$tmp") && $cmd"
+  fi
   pane="$(cmd_claim "$line" "$seat")" || return 1
   if [ -n "$cmd" ]; then
     hj pane run "$pane" "$cmd" >/dev/null || return 1
@@ -378,6 +392,7 @@ cmd_seat_down() {
   hj pane close "$pane" >/dev/null || return 1
   close_watchers "$pane"
   rm -f "$(state_file "$l" "$seat")"
+  rm -rf "$(seat_tmp "$l" "$seat")"
   return_slot "$seat" || rc=1
   reflow "$tab" "$n" && close_if_empty "$tab" "$n"
   log "seat $seat down"

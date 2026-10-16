@@ -79,7 +79,7 @@ mk_tab1 free free free free free free
 # ---- seats: bypass always, Remote Control never
 mk_tab1 free free free free free free
 : > "$T/log"; $G seat-up L s1 "claude --model sonnet" >/dev/null 2>&1
-has   "a plain claude seat gets bypass added"   'pane run wT:p1 claude --dangerously-skip-permissions --model sonnet'
+has   "a plain claude seat gets bypass added"   '&& claude --dangerously-skip-permissions --model sonnet'
 : > "$T/log"; $G seat-up L s2 "cd /mnt/c/x && /mnt/c/u/claude.exe --chrome" >/dev/null 2>&1
 has   "the Windows browser seat gets bypass after the cd" 'claude.exe --dangerously-skip-permissions --chrome'
 : > "$T/log"; $G seat-up L s3 "claude --dangerously-skip-permissions --remote-control x" >/dev/null 2>&1; rc=$?
@@ -243,5 +243,18 @@ rm -f "$T/fx/th-dirty"
 : > "$T/log"; FORCE=1 WF_REPO="$T/repo" $G seat-down c L >/dev/null 2>&1
 hasnt "a seat with no lease triggers no return"           'treehouse return'
 rm -f "$T/bin/treehouse"
+
+# ---- seat-up exports a per-seat TMPDIR the seat can write; seat-down removes it (WO-20261016-a36a, ORD-1150 T1)
+export GRID_SEAT_TMP="$T/seat-tmp"
+mk_tab1 free free free free free free
+: > "$T/log"; $G seat-up L tq "bash -c 'test -w \"\$TMPDIR\" && echo TMPOK=\$TMPDIR'" >/dev/null 2>&1
+has "seat-up passes TMPDIR to the seat" 'export TMPDIR='
+runcmd="$(grep -F 'pane run ' "$T/log" | head -1 | sed 's/^pane run [^ ]* //')"
+out="$(bash -c "$runcmd" 2>&1)"
+[ "$out" = "TMPOK=$T/seat-tmp/L/tq" ] && [ -d "$T/seat-tmp/L/tq" ] && ok "seat-up exports TMPDIR and the seat can write it" || bad "seat-up exports TMPDIR and the seat can write it" "out=$out"
+mk_tab1 tq free free free free free
+FORCE=1 $G seat-down tq L >/dev/null 2>&1
+[ ! -e "$T/seat-tmp/L/tq" ] && ok "seat-down removes the seat TMPDIR" || bad "seat-down removes the seat TMPDIR"
+unset GRID_SEAT_TMP
 
 [ "$fail" = 0 ] && echo "ok  herdr-grid" || { echo "FAIL herdr-grid"; exit 1; }
