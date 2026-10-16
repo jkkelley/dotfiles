@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dag.invalid/ledger.schema.json",
+  "title": "DAG ledger row",
+  "description": "One JSON object per line in <run>/ledger.jsonl. Append-only history of every plan, apply, drift and recover; the state file says where the run is, the ledger says how it got there.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "at", "verb", "code", "run_id", "serial"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "at": { "type": "string" },
+    "verb": { "enum": ["init", "plan", "apply", "drift", "recover", "migrate", "unlock"] },
+    "code": { "type": "string", "pattern": "^(DG|DR)-[A-Z-]+$" },
+    "run_id": { "type": "string" },
+    "serial": { "type": "integer", "minimum": 0 },
+    "node": { "type": ["string", "null"] },
+    "detail": { "type": "string" }
+  }
+}

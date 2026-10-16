@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dag.invalid/bundle.schema.json",
+  "title": "Node bundle",
+  "description": "Everything a node needs, declared in the node file. A node whose bundle names a missing file is not ready to run: plan reports DG-BUNDLE-MISSING.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["checklist_doc", "runbook", "playbook", "docs"],
+  "properties": {
+    "checklist_doc": { "type": "string", "minLength": 1, "description": "Repo path of the checklist document, or the node file itself." },
+    "runbook": { "type": "string", "pattern": "^claude/workflow/runbooks/RB-.+\\.md$", "description": "What a seat does when this node fails." },
+    "playbook": { "type": "string", "minLength": 1, "description": "The happy path, step by step, for the seat or script on this node." },
+    "docs": { "type": "array", "items": { "type": "string" }, "description": "Every other document the node reads: schemas, specs, skills." }
+  }
+}

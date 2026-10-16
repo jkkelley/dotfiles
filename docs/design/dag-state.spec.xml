@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DAG state - core spec: verbs, codes, state rules, make, config.
+  Design: docs/design/dag-state.md. Companion: dag-state-nodes.spec.xml (nodes, bundles, migration, tickets).
+  Schemas: claude/workflow/dag/schemas/{state,node,bundle,ledger}.schema.json. Every time is UTC.
+
+  Contents
+    1. meta     - owner order, status
+    2. rules    - the rules every script obeys, each with GOOD and NEVER
+    3. state    - state file fields and write rules
+    4. verbs    - plan, apply, drift, recover: inputs, outputs, exit codes
+    5. codes    - status code map with who acts
+    6. config   - dag.json fields
+    7. make     - targets and their script calls
+-->
+<spec id="dag-state" version="0.1.0" status="design" date="2026-10-16">
+  <meta>
+    <owner-order at="2026-10-16" tz="UTC">worktrees and feature branches with the whole process DAG when getting work so it follows a deterministic path with clear checklist runbooks playbooks documents everything that node needs is there and graceful recovery, always, doc design first with those mermaid and build to spec and keep the idea of terraform in mind, the state file is the source of truth, so should the DAG doc design architecture</owner-order>
+    <tool-choice>jq state file under a mkdir lock; Terraform not used because no provider exists for tickets, leases or seats and the graph is under 15 nodes</tool-choice>
+  </meta>
+
+  <rules>
+    <rule id="R1" name="state-is-truth">
+      <text>The run state file is the source of truth. Scripts read it before acting and write it after, through dag-lib.sh only.</text>
+      <good>A resumed seat reads state.json and continues on the node recorded there.</good>
+      <never>A script that decides where the run is from a seat's memory or a chat message.</never>
+    </rule>
+    <rule id="R2" name="atomic-write">
+      <text>Write a temp file in the same directory, validate it against the schema, rename it over the old file, all under the run lock.</text>
+      <good>A crash mid-write leaves the old valid file.</good>
+      <never>An in-place edit that can leave half a file.</never>
+    </rule>
+    <rule id="R3" name="serial">
+      <text>Every write increments serial; a writer whose serial is behind aborts with DG-STATE-STALE and re-reads.</text>
+      <good>Two siblings finish together; both proofs land after a re-read.</good>
+      <never>A last-writer-wins overwrite that drops a proof.</never>
+    </rule>
+    <rule id="R4" name="retry-bound">
+      <text>A node retries at most 3 times with its declared waits, then DG-FAILED and DG-HANDOFF. A non-idempotent node never retries blindly.</text>
+      <good>A flaky CI job passes on attempt 3 and the ledger shows the two failures.</good>
+      <never>An unbounded loop, or a silent failure that leaves the run looking healthy.</never>
+    </rule>
+    <rule id="R5" name="inputs-by-config">
+      <text>Every script takes inputs from dag.json and arguments; every Make target passes VAR=value.</text>
+      <good>make dag-plan RUN=dagrun-20261016T041500Z-t1</good>
+      <never>A path or run id typed into a script body.</never>
+    </rule>
+    <rule id="R6" name="drift-reports-values">
+      <text>Drift prints each mismatch with the state value and the world value, and never repairs.</text>
+      <good>DR-WORKTREE state=ab12 world=cd34</good>
+      <never>A drift line with no values.</never>
+    </rule>
+    <rule id="R7" name="merge-never-park">
+      <text>N9 merges as soon as N8 is green and the design approval is on record. Build tickets are cut so no ticket waits on an unmerged one more than one deep.</text>
+      <good>CI turns green and dag-merge.sh merges within one poll.</good>
+      <never>A green PR left open to batch with the next one.</never>
+    </rule>
+    <rule id="R8" name="handoff-with-evidence">
+      <text>When a node is DG-FAILED, apply files a fix ticket carrying the reproduction command and its output, then the seat steps aside. A bug without a reproduction is not reported.</text>
+      <good>Ticket body holds the failing command, its exit code and last 40 log lines.</good>
+      <never>A ticket that says "N5 is flaky" with nothing attached.</never>
+    </rule>
+    <rule id="R9" name="worktree-per-run">
+      <text>Every run owns one worktree and one feature branch, opened in N2 and removed in N10. Nothing commits to the base branch.</text>
+      <good>Two runs on two tickets work at once in two worktrees.</good>
+      <never>Two runs sharing one checkout.</never>
+    </rule>
+  </rules>
+
+  <state schema="claude/workflow/dag/schemas/state.schema.json">
+    <path>&lt;state_dir&gt;/runs/&lt;run-id&gt;/state.json</path>
+    <files>
+      <file name="state.json" role="source of truth"/>
+      <file name="nodes.lock/" role="pinned node declarations for this run"/>
+      <file name="ledger.jsonl" role="append-only history" schema="claude/workflow/dag/schemas/ledger.schema.json"/>
+      <file name="records/" role="node input and output records"/>
+      <file name="verify.json" role="N5 result"/>
+      <file name="lock/" role="run lock, a directory made with mkdir"/>
+    </files>
+    <run-id pattern="dagrun-YYYYMMDDTHHMMSSZ-slug"/>
+    <field name="serial" type="int">incremented on every write</field>
+    <field name="lineage" type="string">fixed at init, detects a copied state file</field>
+    <field name="design" type="object">id, version, sha256 of nodes.lock</field>
+    <field name="ticket" type="object">id and full title</field>
+    <field name="worktree" type="object">path, branch, slot</field>
+    <field name="pr" type="object|null">number, url</field>
+    <field name="nodes" type="map">per node: status, version, attempts, input, input_sha256, output, output_sha256, error_code, started_at, ended_at, proofs</field>
+  </state>
+
+  <verbs>
+    <verb name="plan" script="claude/workflow/dag/bin/dag-plan.sh" writes="ledger row only">
+      <input>RUN, config</input>
+      <output>plan on stdout: node, class, what it will run</output>
+      <classes>DG-READY DG-PENDING DG-STALE DG-BLOCKED</classes>
+      <exit code="0">plan printed</exit>
+      <exit code="2">bad usage</exit>
+      <exit code="3">DG-SCHEMA on state or node</exit>
+    </verb>
+    <verb name="apply" script="claude/workflow/dag/bin/dag-apply.sh" writes="state, records, ledger">
+      <input>RUN, JOBS, config</input>
+      <output>state updated; one ledger row per node run</output>
+      <steps>
+        <step>take run lock</step>
+        <step>recompute the ready set</step>
+        <step>set up to JOBS ready nodes DG-RUNNING</step>
+        <step>run each node script; on success write output, hashes, proofs, DG-DONE</step>
+        <step>on failure retry per the node, then DG-FAILED and DG-HANDOFF</step>
+        <step>release lock</step>
+      </steps>
+      <exit code="0">ready set ran, no failure</exit>
+      <exit code="1">a node ended DG-FAILED</exit>
+      <exit code="5">DG-LOCK-HELD</exit>
+    </verb>
+    <verb name="drift" script="claude/workflow/dag/bin/dag-drift.sh" writes="ledger row only">
+      <input>RUN, config</input>
+      <output>one DR line per mismatch with state and world values</output>
+      <checks>design worktree lease ticket pr ci output</checks>
+      <exit code="0">no drift</exit>
+      <exit code="1">drift found</exit>
+    </verb>
+    <verb name="recover" script="claude/workflow/dag/bin/dag-recover.sh" writes="state, ledger">
+      <input>RUN, config</input>
+      <steps>
+        <step>check the lock; a stale lock whose holder is gone is cleared with an unlock ledger row</step>
+        <step>a node left DG-RUNNING with no live seat becomes DG-READY if idempotent, else DG-BLOCKED with a drift report</step>
+        <step>run plan then apply</step>
+        <step>for a dead build seat: seat-watch resume or hot swap; new seat gets the node bundle and the last checkpoint</step>
+      </steps>
+      <exit code="0">run resumed</exit>
+      <exit code="1">still blocked, reason printed</exit>
+    </verb>
+  </verbs>
+
+  <codes>
+    <code id="DG-PENDING" level="node" who="the system">Waiting on a dependency</code>
+    <code id="DG-READY" level="node" who="apply">Dependencies done, input and bundle present</code>
+    <code id="DG-RUNNING" level="node" who="node seat or script">Script or seat is on it</code>
+    <code id="DG-DONE" level="node" who="nobody">Output exists and every box has a proof</code>
+    <code id="DG-FAILED" level="node" who="apply">Retries exhausted; handoff opened</code>
+    <code id="DG-BLOCKED" level="node" who="orchestrator">Dependency failed or bundle file missing</code>
+    <code id="DG-SKIPPED" level="node" who="nobody">Declared not needed</code>
+    <code id="DG-STALE" level="node" who="plan">Done but pinned version or input hash moved</code>
+    <code id="DG-HANDOFF" level="run" who="orchestrator">Fix ticket filed with reproduction; seat stepped aside</code>
+    <code id="DG-COMPLETE" level="run" who="nobody">N10 done, state archived</code>
+    <code id="DG-BUNDLE-MISSING" level="plan" who="ticket owner">A bundle document does not exist</code>
+    <code id="DG-STATE-STALE" level="write" who="writer">Serial moved under the writer</code>
+    <code id="DG-LOCK-HELD" level="write" who="writer">Another writer holds the lock</code>
+    <code id="DG-LOCK-STALE" level="write" who="recover">Lock older than lock_stale_seconds</code>
+    <code id="DG-SCHEMA" level="write" who="script owner">A record failed its schema</code>
+    <code id="DG-APPROVAL-MISSING" level="N9" who="orchestrator">No design approval on record; merge refused</code>
+    <code id="DR-DESIGN" level="drift" who="migrate or plan">Pinned hash differs from the design now</code>
+    <code id="DR-WORKTREE" level="drift" who="recover">Worktree path or branch differs</code>
+    <code id="DR-LEASE" level="drift" who="recover">Lease differs from state</code>
+    <code id="DR-TICKET" level="drift" who="recover">Ticket status differs from the node</code>
+    <code id="DR-PR" level="drift" who="recover">PR state differs</code>
+    <code id="DR-CI" level="drift" who="plan">CI result differs</code>
+    <code id="DR-OUTPUT" level="drift" who="plan">Output hash differs</code>
+  </codes>
+
+  <config file="claude/workflow/dag/config/dag.json">
+    <field name="state_dir" type="string">root of runs/, outside the repository</field>
+    <field name="jobs" type="int">parallel ready nodes in apply</field>
+    <field name="retry_waits_seconds" type="int[]">default waits, at most 3</field>
+    <field name="lock_stale_seconds" type="int">age at which a lock is reported stale</field>
+    <field name="ci_poll_seconds" type="int">N8 poll interval</field>
+    <field name="ci_timeout_seconds" type="int">N8 give-up time, then DG-FAILED</field>
+    <field name="required_checks" type="string[]">gate job names N8 must see green</field>
+    <field name="approval_dir" type="string">where N9 looks for the recorded design approval</field>
+    <field name="base_branch" type="string">branch worktrees fork from</field>
+  </config>
+
+  <make include="claude/workflow/dag/dag.mk" from="claude/workflow/Makefile">
+    <target name="dag-take" args="TICKET" script="dag-take.sh"/>
+    <target name="dag-plan" args="RUN" script="dag-plan.sh"/>
+    <target name="dag-apply" args="RUN JOBS" script="dag-apply.sh"/>
+    <target name="dag-drift" args="RUN" script="dag-drift.sh"/>
+    <target name="dag-recover" args="RUN" script="dag-recover.sh"/>
+    <target name="dag-migrate" args="RUN" script="dag-migrate.sh"/>
+    <target name="dag-migrate-rollback" args="RUN TO" script="dag-migrate.sh rollback"/>
+    <target name="dag-status" args="RUN" script="dag-lib.sh status"/>
+    <target name="dag-check" args="" script="dag-check.sh"/>
+    <target name="dag-clean" args="OLDER_THAN" script="dag-check.sh clean"/>
+    <target name="dag-test" args="SUITE" script="podman, pinned workflow test image"/>
+  </make>
+</spec>
