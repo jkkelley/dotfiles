@@ -33,6 +33,8 @@
 18. Schemas with defined AC: the result is JSON with `acceptance_criteria [{id, statement, proof_kind, proof}]`; switches to `result.schema.json` when it merges.
 19. Small tickets, disjoint files: files touched are declared (`claude/tools/ctx-guard/*`, `Makefile`, `docs/ctx-guard.md`, `container-sandbox/references/hook-dedupe.md`); `workflow-spawn.sh` belongs to seat herdr-grid and is not edited here (architect ruling); order follows the DAG.
 20. Worktree, branch, DAG walk: this ticket ran in its own worktree `~/.cache/wt-dotfiles-ctx-guard` on `feat/ctx-guard-seats`; each node has a checklist and recovery step (Node checklists and recovery), the state file is the truth.
+21. Merge, no stacks: one PR deep; it merges once CI is green (merge-train runs the script).
+22. Bugs: seen, reproduced, fixed small, or ticketed with repro and evidence and handed on. The one bug found here (literal `~/` in the chained status-line check) was reproduced by the failing install and fixed in the same PR.
 
 ## DAG
 
