@@ -4,14 +4,14 @@
   "slug": "pr-flow-sweep-verb-autofix-red-prs-with-a-tracke",
   "title": "pr-flow sweep verb autofix: red PRs with a tracked-ignored path or a stale contents list get the mechanical fix pushed, post AUTOFIX, make pr-autofix",
   "type": "feature",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T08:28:38+00:00",
   "parent": "WO-20261016-ebe4",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/pr-flow-sweep-verb-autofix-red-prs-with-a-tracke",
+  "pr": 270,
   "closed": null,
   "approval": {
     "via": "override",
@@ -160,19 +160,26 @@ pr-process.md section 9 row, exactly, after the RERUN row: | AUTOFIX | `ci.autof
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* autofix and every sweep case beside it pass
+- [x] `AC-H1` *(human)* autofix and every sweep case beside it pass
+  - observed `2026-10-16` check: make -C claude/workflow pr-flow-test CASES="autofix consume regen-index rerun-stale-red records" exit 0 output: make: Entering directory '/home/luna/.cache/wt-pr-autofix/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 ok autofix ok consume ok regen-index ok rerun-stale-red ok records make: Leaving directory '/home/luna/.cache/wt-pr-autofix/claude/workflow'
   - check: `make -C claude/workflow pr-flow-test CASES="autofix consume regen-index rerun-stale-red records"` exit 0 expect /ok autofix/
-- [ ] `AC-H2` *(human)* pr-flow scripts stay shellcheck clean
+- [x] `AC-H2` *(human)* pr-flow scripts stay shellcheck clean
+  - observed `2026-10-16` check: make -C claude/workflow pr-flow-lint exit 0 output: make: Entering directory '/home/luna/.cache/wt-pr-autofix/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 make: Leaving directory '/home/luna/.cache/wt-pr-autofix/claude/workflow'
   - check: `make -C claude/workflow pr-flow-lint` exit 0
-- [ ] `AC-H3` *(human)* the target refuses without REPO
+- [x] `AC-H3` *(human)* the target refuses without REPO
+  - observed `2026-10-16` check: make -C claude/workflow pr-autofix exit 2 output: make: Entering directory '/home/luna/.cache/wt-pr-autofix/claude/workflow' pr-autofix needs REPO= make: *** [pr-flow/pr-flow.mk:48: pr-autofix] Error 2 make: Leaving directory '/home/luna/.cache/wt-pr-autofix/claude/workflow'
   - check: `make -C claude/workflow pr-autofix` exit 2 expect /pr-autofix needs REPO=/
-- [ ] `AC-H4` *(human)* autofix is on by default in config
+- [x] `AC-H4` *(human)* autofix is on by default in config
+  - observed `2026-10-16` check: jq -r .defaults.autofix.mode claude/workflow/pr-flow/config/pr-flow.json exit 0 output: on
   - check: `jq -r .defaults.autofix.mode claude/workflow/pr-flow/config/pr-flow.json` exit 0 expect /^on$/
-- [ ] `AC-H5` *(human)* the spec parses and carries the AUTOFIX code once
+- [x] `AC-H5` *(human)* the spec parses and carries the AUTOFIX code once
+  - observed `2026-10-16` check: bash -c python3 -c 'import xml.dom.minidom,sys; xml.dom.minidom.parse(sys.argv[1])' claude/workflow/docs/pr-process/pr-process.spec.xml && grep -c 'value="AUTOFIX"' claude/workflow/docs/pr-process/pr-process.spec.xml exit 0 output: 1
   - check: `bash -c python3\ -c\ \'import\ xml.dom.minidom\,sys\;\ xml.dom.minidom.parse\(sys.argv\[1\]\)\'\ claude/workflow/docs/pr-process/pr-process.spec.xml\ \&\&\ grep\ -c\ \'value=\"AUTOFIX\"\'\ claude/workflow/docs/pr-process/pr-process.spec.xml` exit 0 expect /^1$/
-- [ ] `AC-H6` *(human)* every new script has a rolodex header
+- [x] `AC-H6` *(human)* every new script has a rolodex header
+  - observed `2026-10-16` check: make rolodex-check BASE=origin/main exit 0 output: python3 scripts/rolodex.py check --root . --base origin/main rolodex-check: 1 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H7` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H7` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` check: bash -c ! git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/|claude/workflow/(pr-flow/(bin/pr-flow-consume\.sh|pr-flow\.mk|config/pr-flow\.json|schemas/pr-flow-record\.schema\.json|tests/(autofix|records)\.test\.sh)|docs/pr-process/pr-process\.(md|spec\.xml)))$' exit 0 output:
   - check: `bash -c \!\ git\ diff\ --name-only\ origin/main...HEAD\ \|\ grep\ -vE\ \'\^\(work-orders/\|claude/workflow/\(pr-flow/\(bin/pr-flow-consume\\.sh\|pr-flow\\.mk\|config/pr-flow\\.json\|schemas/pr-flow-record\\.schema\\.json\|tests/\(autofix\|records\)\\.test\\.sh\)\|docs/pr-process/pr-process\\.\(md\|spec\\.xml\)\)\)\$\'` exit 0
 
 ## Test plan
