@@ -4,15 +4,15 @@
   "slug": "pr-flow-merge-sh-ported-from-coq-with-its-three-",
   "title": "pr-flow merge.sh ported from coq with its three test files (T5)",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:39:10+00:00",
   "parent": "WO-20261016-ebe4",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/pr-flow-merge-sh-ported-from-coq-with-its-three-",
+  "pr": 190,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat; design PR 169 merged under ORD-0550 is the approval",
@@ -66,8 +66,10 @@ Build ticket from claude/workflow/docs/pr-process/pr-process.md section 13; file
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the named test cases pass in podman
-- [ ] `AC-H2` *(human)* files touched equal the Scope list
+- [x] `AC-H1` *(human)* the named test cases pass in podman
+  - observed `2026-10-16` merge.test.sh 27/27, merge-hold.test.sh 9/9, merge-cleanup.test.sh 10/10 in localhost/dotfiles-workflow-test:1 --network=none
+- [x] `AC-H2` *(human)* files touched equal the Scope list
+  - observed `2026-10-16` files: pr-flow/bin/merge.sh, tests/merge.test.sh, merge-hold.test.sh, merge-cleanup.test.sh, plus tests/lib-merge.sh (shared fixture)
 
 ## Test plan
 
