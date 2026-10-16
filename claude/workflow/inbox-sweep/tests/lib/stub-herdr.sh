@@ -11,12 +11,17 @@
 # Answers, driven by environment:
 #   STUB_HERDR_FAIL=1  every call exits 1 (the PF-NO-HERDR case)
 #   `workspace list`, `pane list`, `agent get`, `tab list` return small fixed JSON shaped like the real CLI's `.result`.
+#   STUB_SEAT_STEP=<script>  `pane read` runs `bash <script>` and prints its stdout: a send seat that advances one step per read
+#                      (tests/lib/stub-reply-seat.sh), so a test needs no second process and the order is deterministic.
+#   STUB_HERDR_AGENT_GONE=1  `agent get` exits 1 (the seat is gone) while every other call answers as usual.
 #   Everything else exits 0 silently.
 : "${TEST_OUT:?stub-herdr: TEST_OUT must be set}"
 args="$*"
 printf 'herdr %s\n' "${args//$'\n'/\\n}" >>"$TEST_OUT/calls.log"
 [ "${STUB_HERDR_FAIL:-0}" = 1 ] && exit 1
+[ "${STUB_HERDR_AGENT_GONE:-0}" = 1 ] && [ "${1:-} ${2:-}" = "agent get" ] && exit 1
 case "${1:-} ${2:-}" in
+  "pane read") [ -n "${STUB_SEAT_STEP:-}" ] && bash "$STUB_SEAT_STEP" ;;
   "workspace list") printf '{"result":{"workspaces":[{"workspace_id":"wS","label":"dotfiles"}]}}\n' ;;
   "tab list") printf '{"result":{"tabs":[{"tab_id":"wS:t1","label":"orchestrator"}]}}\n' ;;
   "pane list") printf '{"result":{"panes":[{"pane_id":"wS:p1","label":"claude-main","tab_id":"wS:t1"}]}}\n' ;;

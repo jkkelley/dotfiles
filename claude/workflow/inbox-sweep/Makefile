@@ -13,7 +13,7 @@ ROOT  := $(abspath $(CURDIR)/../../..)
 RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:ro,Z" -w /work/claude/workflow/inbox-sweep -e HOME=/tmp
 
 .DEFAULT_GOAL := help
-.PHONY: help image test test-all herdr-first spec-lint nodes-check bottleneck-check migrate migrate-rollback
+.PHONY: help image test test-all herdr-first spec-lint nodes-check bottleneck-check migrate migrate-rollback reply-status reply-send reply-prune
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-12s %s\n", $$1, $$2}'
@@ -50,3 +50,15 @@ migrate-rollback: ## Pin NODE back to TO, RECORD back to schema version SV, set 
 	@test -n "$(NODE)" && test -n "$(TO)" && test -n "$(RECORD)" && test -n "$(SV)" && test -n "$(DIR)" \
 	  || { echo "usage: make migrate-rollback NODE=<id> TO=<semver> RECORD=<name> SV=<schema version> DIR=<records dir>" >&2; exit 2; }
 	@bash bin/migrate.sh rollback "$(NODE)" "$(TO)" "$(RECORD)" "$(SV)" "$(DIR)"
+
+# The reply targets are operational too: they read and write the owner's approval folders and start a real send seat, so they run
+# on the host. Their tests run in Podman via `make test`. reply-send takes ONE approval file; there is no "send everything".
+reply-status: ## List approved replies with their latest ledger code (DAY=yyyymmdd to narrow)
+	@bash bin/reply-send.sh status $(if $(DAY),--day $(DAY))
+
+reply-send: ## Start the send seat for one approved file: make reply-send APPROVAL=<send-*.txt>
+	@test -n "$(APPROVAL)" || { echo "usage: make reply-send APPROVAL=<send-*.txt>" >&2; exit 2; }
+	@bash bin/reply-send.sh send --approval "$(APPROVAL)"
+
+reply-prune: ## Delete reply files past their age (DAYS=14; ledgers keep 90 days); DRY=1 only lists
+	@bash bin/reply-send.sh prune --days $(or $(DAYS),14) $(if $(DRY),--dry-run)
