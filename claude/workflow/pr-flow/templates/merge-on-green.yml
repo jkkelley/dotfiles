@@ -12,7 +12,7 @@
 #   - the open PR whose head is this run's head_sha, and only that head (--match-head-commit), so a green run on an
 #     older head never merges a newer one;
 #   - mergeable not CONFLICTING (coq choice 2; ypconsult-01-src #34 was listed would-merge while conflicting);
-#   - every check run on the head completed, none failed, and REQUIRED_CHECK among them passed (ypconsult-01-src
+#   - no workflow run on the head unfinished (a queued run has no check run yet), every check run on the head completed, none failed, and REQUIRED_CHECK among them passed (ypconsult-01-src
 #     #37 merged with zero checks). A pending check holds: the workflow that finishes last fires this again.
 #
 # Cost: a merge made with GITHUB_TOKEN starts no push workflow on main (GitHub's recursion guard). Every workflow
@@ -72,6 +72,11 @@ jobs:
           checks="$(retry gh api "repos/$REPO/commits/$HEAD_SHA/check-runs?per_page=100" \
             --jq '[.check_runs[] | {n: .name, s: .status, c: (.conclusion // "")}]')" \
             || { say 423 "blocked: gh failed 3 times reading checks"; exit 1; }
+          # A queued workflow has no check run yet, so a check-run read alone can miss it: read the runs as well.
+          runs="$(retry gh api "repos/$REPO/actions/runs?head_sha=$HEAD_SHA&per_page=100" \
+            --jq '[.workflow_runs[] | select(.status != "completed") | .name] | join(",")')" \
+            || { say 423 "blocked: gh failed 3 times reading workflow runs"; exit 1; }
+          [ -z "$runs" ] || { say 3 "held: running $runs"; exit 0; }
           pending="$(jq -r '[.[] | select(.s != "completed") | .n] | join(",")' <<<"$checks")"
           [ -z "$pending" ] || { say 3 "held: pending $pending"; exit 0; }
           failed="$(jq -r '[.[] | select(.c | IN("success", "skipped", "neutral") | not) | .n] | join(",")' <<<"$checks")"

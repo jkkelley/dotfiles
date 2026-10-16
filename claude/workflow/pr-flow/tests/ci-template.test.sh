@@ -46,6 +46,7 @@ case "$*" in
   "pr view 7 -R o/r --json headRefOid,mergeable,state,baseRefName"*) echo "${F_HEAD:-$HEAD_SHA} ${F_MERGEABLE:-MERGEABLE} ${F_STATE:-OPEN} ${F_BASE:-main}" ;;
   "api repos/o/r/git/ref/heads/"*) echo b4f0re ;;
   "api repos/o/r/commits/$HEAD_SHA/check-runs"*) echo "${F_CHECKS}" ;;
+  "api repos/o/r/actions/runs?head_sha=$HEAD_SHA"*) echo "${F_RUNS:-}" ;;
   "pr merge"*) [ "${F_MERGE_FAIL:-}" = 1 ] && exit 1; exit 0 ;;
   "pr view 7 -R o/r --json state"*) echo "${F_AFTER:-OPEN}" ;;
   "workflow run"*) exit 0 ;;
@@ -70,6 +71,7 @@ run "already merged posts nothing"                    no  '^0 '                 
 run "pending check holds"                             no  '^3 .*pending lint'       F_CHECKS='[{"n":"ci-ok","s":"completed","c":"success"},{"n":"lint","s":"in_progress","c":""}]'
 run "failed check holds"                              no  '^3 .*failed lint'        F_CHECKS='[{"n":"ci-ok","s":"completed","c":"success"},{"n":"lint","s":"completed","c":"failure"}]'
 run "zero checks holds (F3)"                          no  '^3 .*required check'     F_CHECKS='[]'
+run "queued workflow run holds"                       no  '^3 .*running skill PR gate' F_RUNS="skill PR gate"
 run "required check missing holds"                    no  '^3 .*required check'     F_CHECKS='[{"n":"lint","s":"completed","c":"success"}]'
 run "lost merge race reads already-merged"            yes '^0 .*already-merged'       F_MERGE_FAIL=1 F_AFTER=MERGED
 DISPATCH="skill-publish.yml" run "dispatch after merge" yes '^200 '
