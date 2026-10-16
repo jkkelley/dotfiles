@@ -13,12 +13,12 @@
 
 ## Design principles 101
 
-1. Speed is king: the PR runs `make ctx-guard-test` (relevant only) in CI selection; the full suite ran once before the PR.
+1. Speed is king: the PR runs `make ctx-guard-test` (relevant only) in CI selection; CI runs lint and the full suite.
 2. Parallelism: the dedupe proof and the spawner change were built by parallel subagents.
 3. Make and scripts: every action is a `make ctx-guard-*` target over `ctx-guard.sh`.
 4. Portable, reused: wraps the existing compaction-guard, no new guard; one `.mk` any repo includes.
 5. Small scope, proven: one wrapper, one spawner hook, dedupe proven in Podman with the real `claude`.
-6. Tests where they count: ctx-guard test and spawner test only, then full suite once.
+6. Tests where they count: ctx-guard test and spawner test only; CI runs lint and the full suite.
 7. Specs: the XML spec below is far under 1000 lines.
 8. DAG first: the DAG below is the source; the build follows it.
 9. Migrations: install and uninstall are idempotent and backed up; see Migration and updates.
