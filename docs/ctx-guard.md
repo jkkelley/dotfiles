@@ -5,6 +5,7 @@
 - [Design principles 101](#design-principles-101)
 - [DAG](#dag)
 - [Spec](#spec)
+- [Node checklists and recovery](#node-checklists-and-recovery)
 - [Use](#use)
 - [Migration and updates](#migration-and-updates)
 - [Live sessions](#live-sessions)
@@ -31,6 +32,7 @@
 17. Config and arguments: inputs come from `CTX_GUARD_*` variables, a conf file or arguments, passed as `make VAR=value`; nothing hard-coded.
 18. Schemas with defined AC: the result is JSON with `acceptance_criteria [{id, statement, proof_kind, proof}]`; switches to `result.schema.json` when it merges.
 19. Small tickets, disjoint files: files touched are declared (`claude/tools/ctx-guard/*`, `Makefile`, `docs/ctx-guard.md`, `claude/workflow/bin/workflow-spawn.sh`, `claude/workflow/Makefile`, `claude/workflow/tests/unit/test_spawn_ctx_bind.sh`, `container-sandbox/references/hook-dedupe.md`); the two parallel subagents touched disjoint sets, no collision; order follows the DAG.
+20. Worktree, branch, DAG walk: this ticket ran in its own worktree `~/.cache/wt-dotfiles-ctx-guard` on `feat/ctx-guard-seats`; each node has a checklist and recovery step (Node checklists and recovery), the state file is the truth.
 
 ## DAG
 
@@ -59,6 +61,15 @@ graph TD
   <node id="watch" input="make ctx-guard-watch" output="one herdr pane ctx-watch, no model calls"/>
 </spec>
 ```
+
+## Node checklists and recovery
+
+The state file is the source of truth: `compaction-guard doctor` and `~/.local/state/compaction-guard/events` say which node completed.
+Each node is idempotent, so recovery is re-running the target from where it stopped.
+
+- install: [ ] backup written, [ ] install exit 0 within 3 tries, [ ] doctor hooks and tap true. Recover: `make ctx-guard-install`. Runbook: this file, Use.
+- bind: [ ] binding for the pane exists, [ ] name and role set. Recover: `compaction-guard bind --session <id> --name <n> --role <r>`.
+- watch: [ ] pane labeled, [ ] no model calls. Recover: `make ctx-guard-watch`.
 
 ## Use
 
