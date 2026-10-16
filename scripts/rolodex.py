@@ -12,7 +12,7 @@
 # compaction-guard header convention (name, purpose, inputs, outputs, called-by), so nothing here is a new format.
 #
 # Usage: rolodex.py build   [--config F] [--out-md F] [--out-json F] [--no-redact]
-#        rolodex.py headers [--write] [--root DIR] [FILE...]   (draft headers into scripts that lack one)
+#        rolodex.py headers [--write] [--all] [--base REF] [--root DIR] [FILE...]   (draft headers into scripts that lack one)
 #        rolodex.py check   [--all] [--base REF] [--root DIR] [FILE...]   (fail a script with no header)
 # Exit codes: 0 ok, 1 headerless script found, 2 usage.
 import argparse
@@ -182,23 +182,25 @@ def tracked_scripts(root):
     return [f for f in files if not skipped(f) and is_script(Path(root) / f)]
 
 
-def header_roots_scripts(root, conf):
-    roots = conf.get("header_root", [])
-    out = []
-    for f in tracked_scripts(root):
-        if any(f == r or f.startswith(r.rstrip("/") + "/") for r in roots):
-            out.append(f)
-    return out
+def changed_scripts(root, base):
+    files = git(root, "diff", "--name-only", "--diff-filter=A", f"{base}...HEAD") or []
+    files += git(root, "ls-files", "--others", "--exclude-standard") or []
+    return [f for f in files if not skipped(f) and (root / f).is_file() and is_script(root / f)]
 
 
 def load_conf(args_config=None):
     return read_conf(args_config or REPO / "config" / "rolodex.conf")
 
 
+# Breadcrumb, WO-20261016-88d3. What broke: headers with no FILE drafted every script under the header_root dirs of
+# config/rolodex.conf, while check flags the diff set (added vs base, plus untracked), so the hint check prints
+# ("make rolodex-headers WRITE=1") rewrote old scripts the PR never touched and missed a flagged script outside those dirs.
+# Why this fix: one function, changed_scripts, feeds both commands, and both read the same --base default (env BASE, which
+# GNU make exports from a command-line BASE=x), so they cannot drift. Rejected: keeping header_root as the default, it is the bug.
+# Cost: the header_root lines in config/rolodex.conf are now unread; their removal is held by WO-20261016-6cff.
 def cmd_headers(a):
     root = Path(a.root).resolve()
-    conf = load_conf(a.config)
-    files = a.files or header_roots_scripts(root, conf)
+    files = a.files or (tracked_scripts(root) if a.all else changed_scripts(root, a.base))
     todo = [f for f in files if not has_header(root / f)]
     for f in todo:
         if a.write:
@@ -220,9 +222,7 @@ def cmd_check(a):
     elif a.all:
         files = tracked_scripts(root)
     else:
-        files = git(root, "diff", "--name-only", "--diff-filter=A", f"{a.base}...HEAD") or []
-        files += git(root, "ls-files", "--others", "--exclude-standard") or []
-        files = [f for f in files if not skipped(f) and (root / f).is_file() and is_script(root / f)]
+        files = changed_scripts(root, a.base)
     bad = [f for f in files if not has_header(root / f)]
     for f in bad:
         missing = [k for k in KEYS if k not in header_of(root / f)]
@@ -525,12 +525,14 @@ def main():
     h = sub.add_parser("headers")
     h.add_argument("--config", dest="config")
     h.add_argument("--write", action="store_true")
+    h.add_argument("--all", action="store_true")
+    h.add_argument("--base", default=os.environ.get("BASE") or "origin/main")
     h.add_argument("--root", default=str(REPO))
     h.add_argument("files", nargs="*")
     c = sub.add_parser("check")
     c.add_argument("--config", dest="config")
     c.add_argument("--all", action="store_true")
-    c.add_argument("--base", default="origin/main")
+    c.add_argument("--base", default=os.environ.get("BASE") or "origin/main")
     c.add_argument("--root", default=str(REPO))
     c.add_argument("files", nargs="*")
     a = ap.parse_args()

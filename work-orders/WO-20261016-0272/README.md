@@ -42,4 +42,4 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-6e76` | ready | p1 | WO-20261016-6ef4 | [Test - work-order skill: owner words, context, scripted AC checks, check verb, approve resolves tools](WO-20261016-6e76-test-work-order-skill-owner-words-context-script.md) |
 | `WO-20261016-ff68` | ready | p1 | WO-20261016-75b7 WO-20261016-e832 | [ci-events.sh imports each CI run's step-time-* artifacts to the bus, once per run](WO-20261016-ff68-ci-events-sh-imports-each-ci-run-s-step-time-art.md) |
 | `WO-20261016-6630` | ready | p1 | WO-20261016-2ffe | [generated-lint: CI fails a PR that adds a file marked auto-generated to the tracked tree](WO-20261016-6630-generated-lint-ci-fails-a-pr-that-adds-a-file-ma.md) |
-| `WO-20261016-88d3` | ready | p1 | - | [rolodex headers with no FILE drafts exactly the files check flags: same base, same file set](WO-20261016-88d3-rolodex-headers-with-no-file-drafts-exactly-the-.md) |
+| `WO-20261016-88d3` | in-progress | p1 | - | [rolodex headers with no FILE drafts exactly the files check flags: same base, same file set](WO-20261016-88d3-rolodex-headers-with-no-file-drafts-exactly-the-.md) |
