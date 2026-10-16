@@ -4,15 +4,15 @@
   "slug": "timed-run-every-target-of-claude-workflow-a2a-mk",
   "title": "timed-run: every target of claude/workflow/a2a.mk runs through the timing wrapper",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:06:08+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/timed-run-every-target-of-claude-workflow-a2a-mk",
+  "pr": 229,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -72,9 +72,12 @@ Item 37 amended, owner 2026-10-16 UTC: "time out everything logically, you'll ID
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `grep -c '$(TIMED)' claude/workflow/a2a.mk` equals the number of wrapped targets listed in the PR body (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `make -n` of every wrapped target of claude/workflow/a2a.mk prints `timed-run.sh --node <target> --kind make` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* with the bus down (no NATS on the port) a wrapped target exits with its own exit code and prints only a WARN line (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `grep -c '$(TIMED)' claude/workflow/a2a.mk` equals the number of wrapped targets listed in the PR body (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` grep -cF '$(TIMED)' claude/workflow/a2a.mk -> exit 0, prints 5; PR body lists 5 wrapped targets
+- [x] `AC-H2` *(human)* `make -n` of every wrapped target of claude/workflow/a2a.mk prints `timed-run.sh --node <target> --kind make` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -n of brief-new, brief-check, result-check, brief-migrate, a2a-test -> exit 0, each prints 'timed-run.sh --node <target> --kind make'
+- [x] `AC-H3` *(human)* with the bus down (no NATS on the port) a wrapped target exits with its own exit code and prints only a WARN line (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` podman, SW_NATS_URL=127.0.0.1:1, make -f a2a.mk brief-check FILE=/nonexistent -> only 'WARN bus unreachable' lines added, step's own failure kept (brief.sh rc1, make rc2); timed-run -- true -> rc=0
 
 ## Test plan
 
