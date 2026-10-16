@@ -1,0 +1,18 @@
+{
+  "state_dir": "~/.local/state/zenith/quota-probe",
+  "subject_prefix": "line.all.event.quota",
+  "probes": {
+    "figma": {
+      "command": "claude -p --model haiku --max-turns 3 --allowedTools mcp__claude_ai_Figma__whoami 'Call the Figma whoami tool exactly once. Then print exactly one line: FIGMA-OK if it returned a user, FIGMA-LIMIT if its result mentions a tool call limit, FIGMA-ERR otherwise.'",
+      "ok_regex": "FIGMA-OK",
+      "out_regex": "FIGMA-LIMIT|tool call limit",
+      "timeout_s": 120,
+      "resumes": [
+        "business WO-20261016-3158",
+        "business WO-20261016-c588",
+        "business WO-20261016-a7bf",
+        "business WO-20261016-1ef4"
+      ]
+    }
+  }
+}
