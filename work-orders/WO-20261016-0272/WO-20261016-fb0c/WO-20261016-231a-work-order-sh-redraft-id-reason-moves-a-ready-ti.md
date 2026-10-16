@@ -23,7 +23,9 @@
   "depends_on": [
     "WO-20261016-5320"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261016-138a"
+  ],
   "ac_checks": [
     {
       "index": 1,
