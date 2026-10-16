@@ -4,15 +4,15 @@
   "slug": "gitops-changed-sh-repo-repo-dir-base-diff-select",
   "title": "gitops-changed.sh REPO= REPO_DIR= BASE=: diff-selected yaml, manifests, chart dirs, kustomize dirs and the deploy flag for a GitOps repo, from config/gitops-ci.json",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T11:49:11+00:00",
   "parent": "WO-20261016-770f",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/b7ee-gitops-changed-sh-repo-repo-dir-base-diff-select",
+  "pr": 345,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design19 cut ORD-1128 K1 and ORD-1140 S3 (brief BR-20261016-infra-design19); design approvals ruled done, ORD-0550 O4; Claude seats never use lavish (global owner rule)",
@@ -137,17 +137,28 @@ Classification, per changed path f (repo-relative), in this order. yaml: f match
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the usage prints
+- [x] `AC-H1` *(human)* the usage prints
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/gitops-ci/bin/gitops-changed.sh --help' exit 0 output: usage: gitops-changed.sh --repo OWNER/NAME --repo-dir DIR [--base REF] [--config FILE] empty or absent --base lists every tracked file (push-to-main full run)
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/gitops-ci/bin/gitops-changed.sh --help'` exit 0 expect /gitops-changed\.sh/
-- [ ] `AC-H2` *(human)* the config carries the four pinned images and the homelab-gitops entry
+- [x] `AC-H2` *(human)* the config carries the four pinned images and the homelab-gitops entry
+  - observed `2026-10-16` check: jq -e '.defaults.images.kubeconform and .defaults.images.helm and .defaults.images.kustomize and .defaults.images.yamllint and .repos["jkkelley/homelab-gitops"].deploy_re' claude/workflow/gitops-ci/config/gitops-ci.json exit 0 output: true
   - check: `jq -e '.defaults.images.kubeconform and .defaults.images.helm and .defaults.images.kustomize and .defaults.images.yamllint and .repos["jkkelley/homelab-gitops"].deploy_re' claude/workflow/gitops-ci/config/gitops-ci.json` exit 0
-- [ ] `AC-H3` *(human)* a fixture diff classifies into overlays, charts, manifests, yaml and deploy exactly
+- [x] `AC-H3` *(human)* a fixture diff classifies into overlays, charts, manifests, yaml and deploy exactly
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && git -C $d init -q && mkdir -p $d/apps/a/base $d/helm/c/templates $d/argocd-apps && printf "kind: Kustomization
+" > $d/apps/a/base/kustomization.yaml && printf "name: c
+" > $d/helm/c/Chart.yaml && git -C $d add -A && git -C $d -c user.email=t@example.com -c user.name=t commit -qm b && printf "x: 1
+" > $d/apps/a/base/d.yaml && printf "y: 1
+" > $d/helm/c/templates/s.yaml && printf "kind: ConfigMap
+" > $d/argocd-apps/x.yaml && git -C $d add -A && git -C $d -c user.email=t@example.com -c user.name=t commit -qm c && bash claude/workflow/gitops-ci/bin/gitops-changed.sh --repo jkkelley/homelab-gitops --repo-dir $d --base HEAD~1 | jq -c "[.overlays,.charts,.manifests,.yaml,.deploy]"' exit 0 output: [["apps/a/base"],["helm/c"],["argocd-apps/x.yaml"],["apps/a/base/d.yaml","argocd-apps/x.yaml"],true]
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && git -C $d init -q && mkdir -p $d/apps/a/base $d/helm/c/templates $d/argocd-apps && printf "kind: Kustomization\n" > $d/apps/a/base/kustomization.yaml && printf "name: c\n" > $d/helm/c/Chart.yaml && git -C $d add -A && git -C $d -c user.email=t@example.com -c user.name=t commit -qm b && printf "x: 1\n" > $d/apps/a/base/d.yaml && printf "y: 1\n" > $d/helm/c/templates/s.yaml && printf "kind: ConfigMap\n" > $d/argocd-apps/x.yaml && git -C $d add -A && git -C $d -c user.email=t@example.com -c user.name=t commit -qm c && bash claude/workflow/gitops-ci/bin/gitops-changed.sh --repo jkkelley/homelab-gitops --repo-dir $d --base HEAD~1 | jq -c "[.overlays,.charts,.manifests,.yaml,.deploy]"'` exit 0 expect /^\[\["apps/a/base"\],\["helm/c"\],\["argocd-apps/x\.yaml"\],\["apps/a/base/d\.yaml","argocd-apps/x\.yaml"\],true\]$/
-- [ ] `AC-H4` *(human)* an unknown repo is refused with exit 2
+- [x] `AC-H4` *(human)* an unknown repo is refused with exit 2
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/gitops-ci/bin/gitops-changed.sh --repo no/such --repo-dir . --base HEAD' exit 2 output: gitops-changed: unknown repo no/such
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/gitops-ci/bin/gitops-changed.sh --repo no/such --repo-dir . --base HEAD'` exit 2
-- [ ] `AC-H5` *(human)* shellcheck passes
+- [x] `AC-H5` *(human)* shellcheck passes
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'shellcheck -x claude/workflow/gitops-ci/bin/gitops-changed.sh' exit 0 output:
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'shellcheck -x claude/workflow/gitops-ci/bin/gitops-changed.sh'` exit 0
-- [ ] `AC-H6` *(human)* the diff holds only the In files
+- [x] `AC-H6` *(human)* the diff holds only the In files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/gitops-ci/bin/gitops-changed.sh|claude/workflow/gitops-ci/config/gitops-ci.json)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/gitops-ci/bin/gitops-changed\.sh|claude/workflow/gitops-ci/config/gitops-ci\.json)$'` exit 1
 
 ## Test plan

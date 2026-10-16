@@ -1,0 +1,38 @@
+{
+  "$comment": "gitops-ci per GitOps repository (dotfiles claude/workflow/gitops-ci, ORD-1128 K1). defaults are merged under repos[slug] with jq .defaults * .repos[slug]; a new repo is one entry. images are pinned by digest (Rule 15), tags in the _tag keys.",
+  "defaults": {
+    "deploy_re": "^(apps|argocd-apps|bootstrap|helm|charts|clusters)/",
+    "yaml_re": "\\.ya?ml$",
+    "yaml_exclude_re": "(^|/)templates/",
+    "manifest_re": "\\.ya?ml$",
+    "manifest_exclude_re": "(^|/)(values[^/]*|Chart|kustomization)\\.ya?ml$|^\\.github/",
+    "app_depth": 2,
+    "kubernetes_version": "1.32.13",
+    "schema_locations": [
+      "default",
+      "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
+    ],
+    "yamllint_config": "{extends: relaxed, rules: {line-length: disable}}",
+    "evidence": {
+      "ticket_re": "WO-[0-9]{8}-[0-9a-f]{4}",
+      "dev_re": "^Gate-Dev: GATE-PASS dev .+",
+      "uat_re": "^Gate-UAT: GATE-PASS uat .+"
+    },
+    "images": {
+      "yamllint": "docker.io/cytopia/yamllint@sha256:1bf8270a671a2e5f2fea8ac2e80164d627e0c5fa083759862bbde80628f942b2",
+      "yamllint_tag": "cytopia/yamllint:1.26",
+      "kubeconform": "ghcr.io/yannh/kubeconform@sha256:0925177fb05b44ce18574076141b5c3d83235e1904d3f952182ac99ddc45762c",
+      "kubeconform_tag": "yannh/kubeconform:v0.6.7",
+      "helm": "docker.io/alpine/helm@sha256:0572e0413de2c21ce4904864ecf075ec3ddc093deb436e2e35bd3ed65a83a5b2",
+      "helm_tag": "alpine/helm:3.16.2",
+      "kustomize": "registry.k8s.io/kustomize/kustomize@sha256:6dd0a67e2a8634a5d1aabd9c5e888ff220663e979b55bc17fe4b3a845718bb10",
+      "kustomize_tag": "kustomize/kustomize:v5.4.3"
+    }
+  },
+  "repos": {
+    "jkkelley/homelab-gitops": {
+      "deploy_re": "^(apps|argocd-apps|bootstrap|helm)/",
+      "manifest_re": "^(apps|argocd-apps|bootstrap)/.*\\.ya?ml$"
+    }
+  }
+}
