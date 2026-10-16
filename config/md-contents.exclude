@@ -1,0 +1,10 @@
+# Globs (bash extglob, matched against repo-relative path) that never get a contents list.
+# Each line says why. Fix these at their source, never in place.
+CHANGELOG.md
+*/CHANGELOG.md
+# Written by hydration.sh (hydration-prompt skill); "Do not hand-edit".
+HYDRATION.md
+# Written by work-order.sh (INDEX.md, tickets, archive); formats are validated by that script.
+work-orders/*
+# Vendored skill copies installed by skill-sync; fixed in dotfiles claude/skills only.
+*/skills/synced/*

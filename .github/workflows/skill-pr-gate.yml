@@ -98,6 +98,24 @@ jobs:
           bash claude/skills/skill-registry/scripts/skill-version.sh verify \
             --structure --base "$BASE"
 
+  # Owner order 2026-10-16 UTC: every Markdown file opens with a contents list.
+  # No fast lint job existed, so this is it. Changed files only (BASE below);
+  # `make md-contents-check ALL=1` checks everything. Fix with `make md-contents`.
+  md-contents:
+    name: markdown contents lists
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: podman
+        run: bash .github/scripts/require-podman.sh
+
+      - env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: make md-contents-check
+
   detect:
     name: what has to run
     runs-on: ubuntu-24.04

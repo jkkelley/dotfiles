@@ -359,6 +359,12 @@ predictable:
 
 ---
 
+## Markdown contents lists (every project)
+
+Every `.md` file opens with a contents list, generated and never typed.
+Copy `scripts/md-contents.sh`, `config/md-contents.exclude` and the `md-contents*` targets from `~/dotfiles/Makefile`.
+Run `make md-contents` to write the lists, and add `make md-contents-check` to the fast lint job.
+
 ## Template provenance (delete after first fill-in)
 
 This file was copied from `~/dotfiles/CLAUDE_TEMPLATE.md`. The dotfiles repo is **public**

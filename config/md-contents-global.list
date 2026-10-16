@@ -1,0 +1,12 @@
+# Global Markdown files that live outside any git repo. One path per line, ~ allowed.
+# Symlinks are resolved so each real file is written once.
+# `scripts/md-contents.sh discover` prints untracked global .md files not listed here.
+~/AGENTS.md
+~/OPINIONS.md
+~/.deepseek/instructions.md
+~/.claude/hooks/SESSIONSTART-MATCHERS.md
+~/.config/gemini/README.md
+~/aws/README.md
+~/tmp-yieldpoint/infra-overview.md
+~/gitlab-project/README.md
+~/gitlab-project/docs/architecture.md
