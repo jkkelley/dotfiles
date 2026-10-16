@@ -4,15 +4,15 @@
   "slug": "merge-train-counts-only-the-latest-run-of-each-c",
   "title": "merge-train counts only the latest run of each check",
   "type": "bug",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:53:22+00:00",
   "parent": "WO-20261016-949a",
   "branch": "feat/merge-train-counts-only-the-latest-run-of-each-c",
-  "pr": null,
-  "closed": null,
+  "pr": 156,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "owner: i approved of everything (brief BR-20261016-spec-check)",
@@ -61,8 +61,10 @@ make merge-train skipped green #152 as ci-failed: a superseded CANCELLED bump in
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a cancelled run superseded by a green rerun merges; a green run superseded by a red rerun stays ci-failed
-- [ ] `AC-H2` *(human)* evidence: repro command and output written by claude/tools/artifact/artifact.sh new --key log to the artifact store
+- [x] `AC-H1` *(human)* a cancelled run superseded by a green rerun merges; a green run superseded by a red rerun stays ci-failed
+  - observed `2026-10-16` #10 merges, #11 ci-failed; old code fails: /home/luna/.local/state/zenith/log/2026/10/20261016-045324-merge-train-superseded.txt
+- [x] `AC-H2` *(human)* evidence: repro command and output written by claude/tools/artifact/artifact.sh new --key log to the artifact store
+  - observed `2026-10-16` evidence: /home/luna/.local/state/zenith/log/2026/10/20261016-045324-merge-train-superseded.txt
 
 ## Test plan
 
