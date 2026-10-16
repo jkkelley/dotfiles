@@ -4,15 +4,15 @@
   "slug": "pr-process-design-and-xml-spec-with-mermaid-dag",
   "title": "PR process design and XML spec with mermaid DAG",
   "type": "chore",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:17:27+00:00",
   "parent": "WO-20261016-ebe4",
   "branch": "feat/pr-process-design-and-xml-spec-with-mermaid-dag",
-  "pr": null,
-  "closed": null,
+  "pr": 169,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat: Lavish is prohibited for Claude runtimes (~/.claude/CLAUDE.md owner interaction surface); brief BR-20261016-merge-port v2 from the architect is the approval",
@@ -60,9 +60,12 @@ no design maps coq's PR process to a generic dotfiles flow with no review gate, 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* spec-check passes on pr-process.spec.xml
-- [ ] `AC-H2` *(human)* every coq step maps to a ported file in section 7
-- [ ] `AC-H3` *(human)* median step times taken from coq records
+- [x] `AC-H1` *(human)* spec-check passes on pr-process.spec.xml
+  - observed `2026-10-16` podman spec-check.sh: ok claude/workflow/docs/pr-process/pr-process.spec.xml (186 lines)
+- [x] `AC-H2` *(human)* every coq step maps to a ported file in section 7
+  - observed `2026-10-16` pr-process.md section 7 maps create, test, fix, gate, merge, trigger, conflict, cleanup, verify, records, timing, tests and stacks to files under claude/workflow/pr-flow/; spec nodes N1-N6 carry coq and ported elements
+- [x] `AC-H3` *(human)* median step times taken from coq records
+  - observed `2026-10-16` jq medians over 380 coq gate records, 60 tickets in ~/.local/state/coq/coq-jev-herdr-plugin/records: open-test 1534 s, test-review 345 s, last gate-merged 475 s, open-merged 2145 s
 
 ## Test plan
 

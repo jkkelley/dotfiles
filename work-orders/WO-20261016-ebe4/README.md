@@ -6,6 +6,5 @@ This ticket: [One PR process for every repository, ported from coq](WO-20261016-
 
 One level down only. A child of a child is listed in its own directory, not here.
 
-| ID | status | pri | waiting on | title |
-|---|---|---|---|---|
-| `WO-20261016-adae` | in-progress | p2 | - | [PR process design and XML spec with mermaid DAG](WO-20261016-adae-pr-process-design-and-xml-spec-with-mermaid-dag.md) |
+_No children yet. This ticket sits at the top level, so it holds the directory
+on its own until work is filed underneath it._
