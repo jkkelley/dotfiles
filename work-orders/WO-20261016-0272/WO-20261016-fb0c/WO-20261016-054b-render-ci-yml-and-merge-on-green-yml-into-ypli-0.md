@@ -4,13 +4,13 @@
   "slug": "render-ci-yml-and-merge-on-green-yml-into-ypli-0",
   "title": "Render ci.yml and merge-on-green.yml into ypli-01-src; ypconsult-01-src already ported",
   "type": "chore",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:46:33+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
+  "branch": "feat/render-ci-yml-and-merge-on-green-yml-into-ypli-0",
   "pr": null,
   "closed": null,
   "approval": {
@@ -78,10 +78,14 @@ ORD-0553 R8: "private repos (ypli PR 14, ypconsult PR 54) refuse auto-merge: the
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `gh api repos/jkkelley/ypconsult-01-src/contents/.github/workflows/merge-on-green.yml -q .content | base64 -d | diff - <(bash claude/workflow/pr-flow/bin/pr-flow-ci-render.sh --template merge-on-green)` exits 0 and prints nothing (ypconsult already ported; proof pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* `gh pr list -R jkkelley/ypli-01-src --head chore/merge-on-green --json number -q length` exits 0 and its output matches /^1$/ (proof pasted by work-order.sh evidence)
-- [ ] `AC-H3` *(human)* `gh pr view chore/merge-on-green -R jkkelley/ypli-01-src --json files -q '[.files[].path]|sort|join(",")'` exits 0 and its output matches /^\.github\/workflows\/ci\.yml,\.github\/workflows\/merge-on-green\.yml$/ (proof pasted by work-order.sh evidence)
-- [ ] `AC-H4` *(human)* `gh api 'repos/jkkelley/ypli-01-src/contents/.github/workflows/ci.yml?ref=chore/merge-on-green' -q .content | base64 -d | diff - <(bash claude/workflow/pr-flow/bin/pr-flow-ci-render.sh --template ci --set PR_TARGETS='["lint","typecheck","test","validate"]' --set MAIN_TARGETS='["lint-all","typecheck-all","test-all","validate"]' --set SETUP=setup --set CACHE_PATHS='~/.cache/uv')` exits 0 and prints nothing (proof pasted by work-order.sh evidence)
+- [x] `AC-H1` *(human)* `gh api repos/jkkelley/ypconsult-01-src/contents/.github/workflows/merge-on-green.yml -q .content | base64 -d | diff - <(bash claude/workflow/pr-flow/bin/pr-flow-ci-render.sh --template merge-on-green)` exits 0 and prints nothing (ypconsult already ported; proof pasted by work-order.sh evidence)
+  - observed `2026-10-16` diff exit 0, no output (2026-10-16)
+- [x] `AC-H2` *(human)* `gh pr list -R jkkelley/ypli-01-src --head chore/merge-on-green --json number -q length` exits 0 and its output matches /^1$/ (proof pasted by work-order.sh evidence)
+  - observed `2026-10-16` output 1 (PR jkkelley/ypli-01-src#20)
+- [x] `AC-H3` *(human)* `gh pr view chore/merge-on-green -R jkkelley/ypli-01-src --json files -q '[.files[].path]|sort|join(",")'` exits 0 and its output matches /^\.github\/workflows\/ci\.yml,\.github\/workflows\/merge-on-green\.yml$/ (proof pasted by work-order.sh evidence)
+  - observed `2026-10-16` .github/workflows/ci.yml,.github/workflows/merge-on-green.yml
+- [x] `AC-H4` *(human)* `gh api 'repos/jkkelley/ypli-01-src/contents/.github/workflows/ci.yml?ref=chore/merge-on-green' -q .content | base64 -d | diff - <(bash claude/workflow/pr-flow/bin/pr-flow-ci-render.sh --template ci --set PR_TARGETS='["lint","typecheck","test","validate"]' --set MAIN_TARGETS='["lint-all","typecheck-all","test-all","validate"]' --set SETUP=setup --set CACHE_PATHS='~/.cache/uv')` exits 0 and prints nothing (proof pasted by work-order.sh evidence)
+  - observed `2026-10-16` diff exit 0, no output
 
 ## Test plan
 
