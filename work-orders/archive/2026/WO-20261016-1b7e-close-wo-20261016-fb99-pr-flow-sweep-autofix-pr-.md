@@ -4,7 +4,7 @@
   "slug": "close-wo-20261016-fb99-pr-flow-sweep-autofix-pr-",
   "title": "Close WO-20261016-fb99 (pr-flow sweep autofix, PR 270 merged): re-run its checks under this ticket, move its edges here and cancel fb99 as superseded",
   "type": "chore",
-  "status": "in-progress",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-ebe4",
   "branch": "feat/close-wo-20261016-fb99-pr-flow-sweep-autofix-pr-",
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design15 cut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -21,9 +21,7 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [
-    "WO-20261016-acbe"
-  ],
+  "blocks": [],
   "ac_checks": [
     {
       "index": 1,
@@ -83,7 +81,8 @@
   "provides": [],
   "labels": [
     "line:inbox-triage"
-  ]
+  ],
+  "superseded_by": "WO-20261016-aa46"
 }
 ---
 
@@ -191,4 +190,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: its fb99 close-out landed in PR 317; done refused ac_check_failed 7 (check 7 regex contradicts check 9); checks re-run under WO-20261016-aa46 without 7
+- superseded by: `WO-20261016-aa46`
+
+No branch, no PR and no merge commit exist for this work order.
+

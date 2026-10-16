@@ -4,15 +4,15 @@
   "slug": "close-wo-20261016-1b7e-fb99-close-out-pr-317-mer",
   "title": "Close WO-20261016-1b7e (fb99 close-out, PR 317 merged, done refused ac_check_failed 7): re-run checks 1-6 and 8 under this ticket without the contradicting check 7, move its acbe edge here and cancel 1b7e as superseded",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T11:12:04+00:00",
   "parent": "WO-20261016-ebe4",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/aa46-close-wo-20261016-1b7e-fb99-close-out-pr-317-mer",
+  "pr": 337,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design17 cut for ORD-1053 / ORD-0830 RR-orch-14; design approvals ruled done, ORD-0550 O4; Lavish prohibited for Claude seats (global rule)",
@@ -21,7 +21,9 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [],
+  "blocks": [
+    "WO-20261016-acbe"
+  ],
   "ac_checks": [
     {
       "index": 1,
@@ -143,23 +145,32 @@ Order brief BR-20261016-infra-design17, ORD-0830 RR-orch-14; pattern WO-20261016
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* WO-20261016-fb99 check 1 passes on main (copied from WO-20261016-1b7e check 1)
+- [x] `AC-H1` *(human)* WO-20261016-fb99 check 1 passes on main (copied from WO-20261016-1b7e check 1)
+  - observed `2026-10-16` check: make -C claude/workflow pr-flow-test CASES="autofix consume regen-index rerun-stale-red records" exit 0 output: make: Entering directory '/home/luna/.cache/wt-aa46/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 ok autofix ok consume ok regen-index ok rerun-stale-red ok records make: Leaving directory '/home/luna/.cache/wt-aa46/claude/workflow'
   - check: `make -C claude/workflow pr-flow-test CASES="autofix consume regen-index rerun-stale-red records"` exit 0 expect /ok autofix/
-- [ ] `AC-H2` *(human)* WO-20261016-fb99 check 2 passes on main (copied from WO-20261016-1b7e check 2)
+- [x] `AC-H2` *(human)* WO-20261016-fb99 check 2 passes on main (copied from WO-20261016-1b7e check 2)
+  - observed `2026-10-16` check: make -C claude/workflow pr-flow-lint exit 0 output: make: Entering directory '/home/luna/.cache/wt-aa46/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 make: Leaving directory '/home/luna/.cache/wt-aa46/claude/workflow'
   - check: `make -C claude/workflow pr-flow-lint` exit 0
-- [ ] `AC-H3` *(human)* WO-20261016-fb99 check 3 passes on main (copied from WO-20261016-1b7e check 3)
+- [x] `AC-H3` *(human)* WO-20261016-fb99 check 3 passes on main (copied from WO-20261016-1b7e check 3)
+  - observed `2026-10-16` check: make -C claude/workflow pr-autofix exit 2 output: make: Entering directory '/home/luna/.cache/wt-aa46/claude/workflow' pr-autofix needs REPO= make: *** [pr-flow/pr-flow.mk:48: pr-autofix] Error 2 make: Leaving directory '/home/luna/.cache/wt-aa46/claude/workflow'
   - check: `make -C claude/workflow pr-autofix` exit 2 expect /pr-autofix needs REPO=/
-- [ ] `AC-H4` *(human)* WO-20261016-fb99 check 4 passes on main (copied from WO-20261016-1b7e check 4)
+- [x] `AC-H4` *(human)* WO-20261016-fb99 check 4 passes on main (copied from WO-20261016-1b7e check 4)
+  - observed `2026-10-16` check: jq -r .defaults.autofix.mode claude/workflow/pr-flow/config/pr-flow.json exit 0 output: on
   - check: `jq -r .defaults.autofix.mode claude/workflow/pr-flow/config/pr-flow.json` exit 0 expect /^on$/
-- [ ] `AC-H5` *(human)* WO-20261016-fb99 check 5 passes on main (copied from WO-20261016-1b7e check 5)
+- [x] `AC-H5` *(human)* WO-20261016-fb99 check 5 passes on main (copied from WO-20261016-1b7e check 5)
+  - observed `2026-10-16` check: bash -c python3 -c 'import xml.dom.minidom,sys; xml.dom.minidom.parse(sys.argv[1])' claude/workflow/docs/pr-process/pr-process.spec.xml && grep -c 'value="AUTOFIX"' claude/workflow/docs/pr-process/pr-process.spec.xml exit 0 output: 1
   - check: `bash -c python3\ -c\ \'import\ xml.dom.minidom\,sys\;\ xml.dom.minidom.parse\(sys.argv\[1\]\)\'\ claude/workflow/docs/pr-process/pr-process.spec.xml\ \&\&\ grep\ -c\ \'value=\"AUTOFIX\"\'\ claude/workflow/docs/pr-process/pr-process.spec.xml` exit 0 expect /^1$/
-- [ ] `AC-H6` *(human)* WO-20261016-fb99 check 6 passes on main (copied from WO-20261016-1b7e check 6)
+- [x] `AC-H6` *(human)* WO-20261016-fb99 check 6 passes on main (copied from WO-20261016-1b7e check 6)
+  - observed `2026-10-16` check: make rolodex-check BASE=origin/main exit 0 output: python3 scripts/rolodex.py check --root . --base origin/main rolodex-check: 0 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H7` *(human)* WO-20261016-fb99 is cancelled and superseded
+- [x] `AC-H7` *(human)* WO-20261016-fb99 is cancelled and superseded
+  - observed `2026-10-16` check: bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-fb99 --json | jq -r '.status + " " + (.superseded_by // "-")' exit 0 output: cancelled WO-20261016-1b7e
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-fb99 --json | jq -r '.status + " " + (.superseded_by // "-")'` exit 0 expect /^cancelled WO-/
-- [ ] `AC-H8` *(human)* WO-20261016-1b7e is cancelled and superseded by this ticket
+- [x] `AC-H8` *(human)* WO-20261016-1b7e is cancelled and superseded by this ticket
+  - observed `2026-10-16` check: bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-1b7e --json | jq -r '.status + " " + (.superseded_by // "-")' exit 0 output: cancelled WO-20261016-aa46
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-1b7e --json | jq -r '.status + " " + (.superseded_by // "-")'` exit 0 expect /^cancelled WO-/
-- [ ] `AC-H9` *(human)* the diff holds only generated work-orders files
+- [x] `AC-H9` *(human)* the diff holds only generated work-orders files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan
