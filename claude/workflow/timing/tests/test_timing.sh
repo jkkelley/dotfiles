@@ -94,7 +94,28 @@ case_report() {
   grep -q '^| a | make | 2 | 200 | 300 | 120 | 1 |' "$C/out" && ok "report: durations against budgets per node" || no "report: durations" "$(cat "$C/out")"
 }
 
-CASES="${CASE:-timeout start-end slow fast report}"
+# ci-events: a stub gh returns fixture JSON; the stub bus records what is published; TM_CI_STATE keeps state inside the temp dir
+case_ci_events() {
+  setup
+  printf '#!/usr/bin/env bash\ncat "$STUB/runs.json"\n' > "$C/bin/gh"; chmod +x "$C/bin/gh"
+  export GH_BIN="$C/bin/gh" TM_CI_STATE="$C/state/ci-events.json" CI_EVENTS_RETRY_SLEEP=0
+  run='{"databaseId":77,"name":"ci","status":"%s","conclusion":%s,"createdAt":"2026-10-16T01:00:00Z","updatedAt":"2026-10-16T01:%s:00Z","headBranch":"feat/x"}'
+  # shellcheck disable=SC2059 # run is a printf template
+  printf "[$run]" queued null 00 > "$C/runs.json"
+  bash "$WF/timing/ci-events.sh" --once >/dev/null 2>"$C/err"
+  [ "$(grep -c '^line.all.event.node.start .*"node":"ci-dotfiles-77".*"workflow":"ci"' "$C/bus.log")" = 1 ] && ok "a new run publishes ci start once" || no "ci start" "$(cat "$C/bus.log" "$C/err")"
+  # shellcheck disable=SC2059
+  printf "[$run]" completed '"success"' 07 > "$C/runs.json"
+  bash "$WF/timing/ci-events.sh" --once >/dev/null 2>>"$C/err"
+  [ "$(grep -c '^line.all.event.node.end .*"rc":0,"duration_s":420,"budget_s":600' "$C/bus.log")" = 1 ] && ok "a completed run publishes ci end with duration_s once" || no "ci end" "$(cat "$C/bus.log" "$C/err")"
+  [ "$(grep -c '.event.node.start ' "$C/bus.log")" = 1 ] && ok "the start is not published again by the end poll" || no "ci start repeated" "$(cat "$C/bus.log")"
+  before="$(wc -l < "$C/bus.log")"
+  bash "$WF/timing/ci-events.sh" --once >/dev/null 2>>"$C/err"
+  [ "$(wc -l < "$C/bus.log")" = "$before" ] && ok "ci-events is idempotent" || no "ci-events second poll published" "$(cat "$C/bus.log")"
+  unset GH_BIN TM_CI_STATE CI_EVENTS_RETRY_SLEEP
+}
+
+CASES="${CASE:-timeout start-end slow fast report ci-events}"
 for c in $CASES; do fn="case_${c//-/_}"; if declare -F "$fn" >/dev/null; then "$fn"; else no "unknown case $c"; fi; done
 echo "pass=$PASS fail=$FAIL"
 [ "$FAIL" = 0 ]
