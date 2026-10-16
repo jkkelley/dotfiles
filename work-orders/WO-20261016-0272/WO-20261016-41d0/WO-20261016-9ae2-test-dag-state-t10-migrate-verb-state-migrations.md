@@ -4,13 +4,13 @@
   "slug": "test-dag-state-t10-migrate-verb-state-migrations",
   "title": "Test - dag-state T10 - Migrate verb, state migrations, fixtures",
   "type": "test",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:07:47+00:00",
   "parent": "WO-20261016-41d0",
-  "branch": null,
+  "branch": "feat/9ae2-test-dag-state-t10-migrate-verb-state-migrations",
   "pr": null,
   "closed": null,
   "approval": {
@@ -66,8 +66,10 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+- [x] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
+  - observed `2026-10-16` TP-1 ran in podman localhost/dotfiles-workflow-test:1: exit 0, 51 cases ok, last line 'pass=51 fail=0'. Full output in /home/luna/.local/state/zenith/log/2026/10/20261016-124131-9ae2-dag-migrate-test.md
+- [x] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+  - observed `2026-10-16` path: /home/luna/.local/state/zenith/log/2026/10/20261016-124131-9ae2-dag-migrate-test.md (written by claude/tools/artifact/artifact.sh new --key log, frontmatter present)
 
 ## Test plan
 
