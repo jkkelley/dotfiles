@@ -12,6 +12,8 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-5328` | draft | p1 | - | [Inbox sweep B12 - spike, can the extension be woken without the owner](WO-20261016-5328-inbox-sweep-b12-spike-can-the-extension-be-woken.md) |
 | `WO-20261016-80aa` | draft | p1 | - | [Inbox sweep B18 - live first LinkedIn send](WO-20261016-80aa-inbox-sweep-b18-live-first-linkedin-send.md) |
 | `WO-20261016-002d` | ready | p1 | - | [Inbox sweep B21f2 - run.json written once by sweep-init.sh; controller, seat status and clean get their own records](WO-20261016-002d-inbox-sweep-b21f2-run-json-written-once-by-sweep.md) |
+| `WO-20261016-667d` | draft | p1 | - | [Inbox sweep B24 - replies and follow-ups send through the shared ypli jitter scheduler](WO-20261016-667d-inbox-sweep-b24-replies-and-follow-ups-send-thro.md) |
+| `WO-20261016-93d3` | draft | p1 | WO-20261016-667d | [Inbox sweep B25 - reply and follow-up drafts pass the shared ypli style lint and preview](WO-20261016-93d3-inbox-sweep-b25-reply-and-follow-up-drafts-pass-.md) |
 | `WO-20261016-5f8d` | ready | p1 | WO-20261016-002d | [Inbox sweep V1 - integer schema_version for run.json with its migration](WO-20261016-5f8d-inbox-sweep-v1-integer-schema-version-for-run-js.md) |
 | `WO-20261016-67ab` | ready | p1 | WO-20261016-002d | [Inbox sweep V2 - integer schema_version for summary.json with its migration](WO-20261016-67ab-inbox-sweep-v2-integer-schema-version-for-summar.md) |
 | `WO-20261016-870d` | ready | p1 | WO-20261016-002d | [Inbox sweep V3 - integer schema_version for R7-verdict.json with its migration](WO-20261016-870d-inbox-sweep-v3-integer-schema-version-for-r7-ver.md) |
@@ -21,3 +23,5 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-56c1` | ready | p1 | WO-20261016-5f8d | [Test V1 - suite migrate on main after the build merges](WO-20261016-56c1-test-v1-suite-migrate-on-main-after-the-build-me.md) |
 | `WO-20261016-aaa0` | ready | p1 | WO-20261016-67ab | [Test V2 - suite migrate on main after the build merges](WO-20261016-aaa0-test-v2-suite-migrate-on-main-after-the-build-me.md) |
 | `WO-20261016-657b` | ready | p1 | WO-20261016-870d | [Test V3 - suite migrate on main after the build merges](WO-20261016-657b-test-v3-suite-migrate-on-main-after-the-build-me.md) |
+| `WO-20261016-c065` | draft | p2 | WO-20261016-667d | [Test B24 - suite reply-jitter on main after the build merges](WO-20261016-c065-test-b24-suite-reply-jitter-on-main-after-the-bu.md) |
+| `WO-20261016-dc6b` | draft | p2 | WO-20261016-93d3 | [Test B25 - suite reply-look on main after the build merges](WO-20261016-dc6b-test-b25-suite-reply-look-on-main-after-the-buil.md) |
