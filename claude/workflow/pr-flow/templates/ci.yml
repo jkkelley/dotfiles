@@ -1,0 +1,73 @@
+# purpose: the smart PR gate - changed-file lint and path-selected tests on a PR, the full suite sharded on main,
+# all through the repository's own Makefile, and one always-run ci-ok check for the merge to read
+#
+# Rendered by claude/workflow/pr-flow/bin/pr-flow-ci-render.sh from the dotfiles template; edit the template, never
+# the copy in a repository. Design: claude/workflow/docs/pr-process/pr-process.md section 8.
+#
+# Shape kept from ypconsult-01-src ci.yml (run 38849995571, 4 parallel jobs, 35 s): the Makefile is the front door,
+# so CI and a seat's local loop cannot disagree about what lint or the suite means; runs-on is a dated label, never
+# ubuntu-latest; actions are pinned by SHA. No `branches:` filter, because stacked PRs target ticket branches and
+# each needs a verdict. No `edited`, because a description edit does not change the tree and, with
+# cancel-in-progress, cancelled and restarted runs on identical code (dotfiles lost 26 of 60 gate runs, #138).
+#
+# What is added (owner, 2026-10-16 UTC: "testing and linting smartly"): PR targets receive BASE_REF so the Makefile
+# lints changed files and selects tests by path; push to main runs the full-suite targets, sharded as listed; a
+# cache keyed on the lock files; and ci-ok, which needs every job and passes when each passed or was skipped, so a
+# PR whose jobs all skip still gets one green check (F4: ticket-only PRs had no check at all).
+name: ci
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: make ${{ matrix.target }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(github.event_name == 'push' && '@@MAIN_TARGETS@@' || '@@PR_TARGETS@@') }}
+    env:
+      BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: @@CACHE_PATHS@@
+          key: ci-${{ runner.os }}-${{ hashFiles(@@CACHE_KEYS@@) }}
+          restore-keys: ci-${{ runner.os }}-
+
+      - name: make setup
+        if: "'@@SETUP@@' != ''"
+        run: make @@SETUP@@
+
+      - name: make ${{ matrix.target }}
+        run: make ${{ matrix.target }} ${BASE_REF:+BASE_REF=$BASE_REF}
+
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: [check]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: every job passed or skipped
+        env:
+          RESULT: ${{ needs.check.result }}
+        run: |
+          echo "check: $RESULT"
+          case "$RESULT" in success|skipped) ;; *) exit 1 ;; esac
