@@ -4,15 +4,15 @@
   "slug": "wk5-wiki-review-wiki-renders-review-pages-from-r",
   "title": "WK5: wiki-review WIKI= renders review pages from raw captures and archives hand copies",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:19:32+00:00",
   "parent": "WO-20261016-35de",
   "branch": "feat/wk5-wiki-review-wiki-renders-review-pages-from-r",
-  "pr": null,
-  "closed": null,
+  "pr": 305,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "design seat infra-design12 cut from wiki.spec.xml (PR 285), ORD-0830 RR-orch-14; design approvals ruled done, ORD-0550 O4; owner surface is Bearings, lavish prohibited for Claude seats",
@@ -121,17 +121,23 @@ Owner words, verbatim: "MAKE SURE A KNOWLEDGE BASE WIKI OF YIELDPOINT AI IS BUIL
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the unit tests pass in the pinned image
+- [x] `AC-H1` *(human)* the unit tests pass in the pinned image
+  - observed `2026-10-16` ran the check in the pinned image: Ran 8 tests, exit 0, last line OK
   - check: `podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_review.py` exit 0 expect /^OK/
-- [ ] `AC-H2` *(human)* the FB-001 fallback path runs the cached digest
+- [x] `AC-H2` *(human)* the FB-001 fallback path runs the cached digest
+  - observed `2026-10-16` ran with FORCE_FALLBACK=1: exit 0, output holds 'FALLBACK FB-001 wk5' and the tests end OK on the --pull=never run
   - check: `env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk5 --fallback "podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_review.py" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_review.py` exit 0 expect /FALLBACK FB-001/
-- [ ] `AC-H3` *(human)* the make target wraps the verb script
+- [x] `AC-H3` *(human)* the make target wraps the verb script
+  - observed `2026-10-16` make -n wiki-review WIKI=/tmp/wk SRC=/tmp/src: exit 0, prints python3 claude/tools/wiki/wiki_review.py "/tmp/wk"
   - check: `make -n wiki-review WIKI=/tmp/wk SRC=/tmp/src` exit 0 expect /wiki_review\.py/
-- [ ] `AC-H4` *(human)* an empty WIKI is a usage error
+- [x] `AC-H4` *(human)* an empty WIKI is a usage error
+  - observed `2026-10-16` make -s wiki-review WIKI= SRC=/tmp/src: exit 2, stderr 'usage: WIKI=<root> is required'
   - check: `make -s wiki-review WIKI= SRC=/tmp/src` exit 2 expect /WIKI/
-- [ ] `AC-H5` *(human)* every changed script has a rolodex header
+- [x] `AC-H5` *(human)* every changed script has a rolodex header
+  - observed `2026-10-16` make rolodex-check BASE=origin/main: exit 0, '2 script(s) checked, all have headers'
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H6` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H6` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` git diff --name-only origin/main...HEAD piped through the grep -v: no output, grep exit 1
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/tools/wiki/wiki_review\.py|claude/tools/wiki/review\.html\.tmpl|claude/tools/wiki/mk/review\.mk|claude/tools/wiki/tests/test_review\.py)$'` exit 1
 
 ## Test plan
