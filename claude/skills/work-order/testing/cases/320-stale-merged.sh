@@ -83,6 +83,27 @@ capture js4 wo stale-merged --project "$d" --pr-repo acme/shop --json
 assert_eq '[]' "$js4" "no findings prints []"
 run 0 "no findings still exits 0" wo stale-merged --project "$d" --pr-repo acme/shop
 
+# ORD-0921 E2: a pr that is a URL names its own repo. The same number in the
+# current repo is OPEN, so a lookup there would miss the merge (business PR 68).
+d2=$(git_project)
+x=$(wo new --project "$d2" --title "cross repo pr" --type chore --problem P --out X --top-level --ac "w" 2>/dev/null | tail -1)
+fx=$(find "$d2/work-orders" -name "$x-*.md" | head -1)
+sed -i -E 's|^  "status": ".*",|  "status": "in-review",|; s|^  "pr": .*,|  "pr": "https://github.com/acme/other/pull/68",|' "$fx"
+git -C "$d2" add -A && git -C "$d2" commit -qm fixtures
+cat >"$stub/gh" <<'STUB'
+#!/usr/bin/env bash
+case "$*" in
+  "repo view"*) echo "acme/shop" ;;
+  "pr view https://github.com/acme/other/pull/68 "*) echo '{"state":"MERGED","mergeCommit":{"oid":"abcdef0123456789"},"mergedAt":"2026-10-15T04:00:00Z","url":"https://github.com/acme/other/pull/68"}' ;;
+  *"pr view 68 "*) echo '{"state":"OPEN"}' ;;
+  *) echo '{}' ;;
+esac
+STUB
+capture js5 wo stale-merged --project "$d2" --json
+assert_eq "$x" "$(jq -r '.[0].id' <<<"$js5")" "URL pr resolves in its own repo and is listed"
+assert_eq "acme/other" "$(jq -r '.[0].repo' <<<"$js5")" "row repo comes from the PR URL"
+assert_eq 68 "$(jq -r '.[0].pr' <<<"$js5")" "row pr is the number from the URL"
+
 # gh down: 3 tries then exit 4
 printf '#!/usr/bin/env bash\nexit 1\n' >"$stub/gh"
 run 4 "gh failing exits 4 gh_failed" wo stale-merged --project "$d" --pr-repo acme/shop
