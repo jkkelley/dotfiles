@@ -51,6 +51,8 @@ assert_wired() {
     jq -e '.global_hooks == true and .statusline_tap == true' <<<"$d" >/dev/null || { echo "doctor: $d" >&2; return 1; }
     local next; next=$(cat "$STATE/statusline.next" 2>/dev/null)
     # The host's old status line must still be chained, unless it never had one.
+    # statusline.next stores the host command verbatim, so a leading ~ is literal (seen 2026-10-16: ~/.claude/statusline.sh).
+    next="${next/#\~/$HOME}"
     [ -z "$next" ] || [ -e "${next%% *}" ] || command -v "${next%% *}" >/dev/null || { echo "chained status line missing: $next" >&2; return 1; }
   else
     jq -e '[.hooks[]?[]?.hooks[]?.command] | any(test("compaction-guard hook"))' "$SETTINGS" >/dev/null &&
@@ -70,7 +72,8 @@ case "$cmd" in
     mode_args "$@"; backup
     retry3 "$CG" uninstall "${TARGET_ARGS[@]}" >/dev/null || die "uninstall failed after 3 tries"
     echo "ok  ctx-guard uninstalled (${TARGET_ARGS[*]})" ;;
-  status) "$CG" doctor; "$CG" status ;;
+  status) # token efficient: doctor plus the 10 fullest sessions, not all of the hundreds on disk
+    "$CG" doctor; "$CG" status | jq -cs 'sort_by(-.pct)[:10][] | {session:.session[0:8],name,pct,phase}' ;;
   check)  "$CG" check ;;
   watch)  # one labeled herdr pane, no model calls; alerts on HIGH only (Rule 18: never a background job)
     if [ "${HERDR_ENV:-}" = 1 ] && [ -z "${CTX_WATCH_INPANE:-}" ]; then
