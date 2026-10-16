@@ -16,3 +16,5 @@ __pycache__/
 
 # artifact store link (claude/tools/artifact): the repo points, the store holds
 /.artifacts
+/work-orders/INDEX.md
+/work-orders/**/README.md

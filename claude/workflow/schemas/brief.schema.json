@@ -16,6 +16,7 @@
     "from": {"type": "object", "required": ["name", "role"], "properties": {"name": {"type": "string", "minLength": 1}, "role": {"type": ["string", "null"]}}},
     "to": {"type": "object", "required": ["name"], "properties": {"name": {"type": "string", "minLength": 1}, "role": {"type": ["string", "null"]}, "pane": {"type": ["string", "null"]}, "session": {"type": ["string", "null"]}}},
     "subject": {"type": "string", "minLength": 1},
+    "work_order": {"type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$", "description": "Ready work order a build seat starts from; brief-check BUILD=1 refuses a brief without one."},
     "facts": {"type": "object", "description": "Inventory, never narrative: owner words, rules, worktree, branch, reuse list."},
     "actions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "description": "What the receiver does, in order."},
     "reply": {"type": "object", "required": ["required", "format"], "properties": {"required": {"type": "boolean"}, "format": {"type": "string"}, "example": {"type": "string"}}},

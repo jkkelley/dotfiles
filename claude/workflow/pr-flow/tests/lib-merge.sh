@@ -4,7 +4,7 @@
 # outputs: functions fixture_up, pr_set, run_merge, ok, no, eq, done_tests
 # writes-to: a mktemp directory
 # cleanup: the mktemp directory is removed on exit by the caller's trap
-# shellcheck shell=bash disable=SC2015
+# shellcheck shell=bash disable=SC2015,SC2034 # H1, OUT and RC are read by the sourcing test
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 mkdir -p "$W/bin" "$W/gh" "$W/state"
 export PATH="$W/bin:$PATH" GH_FAKE_DIR="$W/gh" PR_FLOW_STATE="$W/state" PR_FLOW_PUB="$W/bin/pub" PR_FLOW_LINE=test \
