@@ -10,4 +10,4 @@ One level down only. A child of a child is listed in its own directory, not here
 |---|---|---|---|---|
 | `WO-20261016-5597` | ready | p2 | - | [Deadman tests: stale heartbeat, bus down, fresh](WO-20261016-5597-deadman-tests-stale-heartbeat-bus-down-fresh.md) |
 | `WO-20261016-218b` | ready | p2 | - | [Stuck-audit test: rows from a stream dump](WO-20261016-218b-stuck-audit-test-rows-from-a-stream-dump.md) |
-| `WO-20261016-c840` | ready | p2 | - | [Stuck-watch tick tests: idle, done-unmerged, dedupe, no-leak](WO-20261016-c840-stuck-watch-tick-tests-idle-done-unmerged-dedupe.md) |
+| `WO-20261016-c840` | in-progress | p2 | - | [Stuck-watch tick tests: idle, done-unmerged, dedupe, no-leak](WO-20261016-c840-stuck-watch-tick-tests-idle-done-unmerged-dedupe.md) |
