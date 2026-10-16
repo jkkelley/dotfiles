@@ -26,5 +26,5 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-599f` | ready | p1 | - | [timed-run: every target of claude/workflow/Makefile runs through the timing wrapper](WO-20261016-599f-timed-run-every-target-of-claude-workflow-makefi.md) |
 | `WO-20261016-39e6` | ready | p1 | WO-20261016-590b | [timed-run: every target of claude/workflow/a2a-guard/a2a-guard.mk runs through the timing wrapper](WO-20261016-39e6-timed-run-every-target-of-claude-workflow-a2a-gu.md) |
 | `WO-20261016-23b5` | ready | p1 | - | [timed-run: every target of claude/workflow/a2a.mk runs through the timing wrapper](WO-20261016-23b5-timed-run-every-target-of-claude-workflow-a2a-mk.md) |
-| `WO-20261016-7e9f` | ready | p1 | - | [timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper](WO-20261016-7e9f-timed-run-every-target-of-claude-workflow-mk-lin.md) |
+| `WO-20261016-7e9f` | in-review | p1 | - | [timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper](WO-20261016-7e9f-timed-run-every-target-of-claude-workflow-mk-lin.md) |
 | `WO-20261016-7ca5` | ready | p1 | - | [timed-run: every target of claude/workflow/mk/resources.mk runs through the timing wrapper](WO-20261016-7ca5-timed-run-every-target-of-claude-workflow-mk-res.md) |
