@@ -72,7 +72,11 @@ check FAILED-SEAT "$(jq -r '.seats[] | select(.seat=="proton-first") | .status' 
 check SKIPPED "$(jq -r '.seats[] | select(.seat=="linkedin") | .status' "$SWEEP_RUN_DIR/summary.json")" "a seat with no result keeps the SKIPPED code run.json holds"
 check "1 1 0 0" "$(jq -r '.seats[] | select(.seat=="gmail") | "\(.before) \(.processed) \(.after) \(.flagged)"' "$SWEEP_RUN_DIR/summary.json")" "OK seat carries before, processed, after, flagged"
 check "6" "$(jq -r '.seats[0] | keys | length' "$SWEEP_RUN_DIR/summary.json")" "a seat row has exactly seat, status, before, after, processed, flagged"
-check 1.0.0 "$(jq -r .schema_version "$SWEEP_RUN_DIR/summary.json")" "summary.json carries schema_version"
+check 2 "$(jq -r .schema_version "$SWEEP_RUN_DIR/summary.json")" "summary.json carries schema_version"
+check integer "$(jq -r '.schema_version | type | if . == "number" then "integer" else . end' "$SWEEP_RUN_DIR/summary.json")" "AC-H1 schema_version is an integer"
+check 0 "$(python3 -I -c 'import json,sys
+from jsonschema import Draft202012Validator as V
+sys.exit(1 if list(V(json.load(open(sys.argv[1]))).iter_errors(json.load(open(sys.argv[2])))) else 0)' "$R/schemas/records/summary.v2.schema.json" "$SWEEP_RUN_DIR/summary.json"; echo $?)" "AC-H1 summary.v2.schema.json validates the output"
 check yes "$(jq -r '.finished_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$") | if . then "yes" else "no" end' "$SWEEP_RUN_DIR/summary.json")" "finished_at is UTC"
 check 2 "$(jq -s 'map(select(.node=="R5")) | length' "$SWEEP_RUN_DIR/checklist/R5.jsonl")" "two R5 checklist rows, in checklist/R5.jsonl"
 

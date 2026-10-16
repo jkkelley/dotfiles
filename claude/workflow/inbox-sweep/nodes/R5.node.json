@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "R5",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "script": "claude/workflow/inbox-sweep/bin/sweep-collect.sh",
   "input_schema": {
     "path": "<runs>/<run-id>/results/",
@@ -9,7 +9,7 @@
   },
   "output_schema": {
     "path": "<runs>/<run-id>/summary.json",
-    "schema_version": 1
+    "schema_version": 2
   },
   "checklist": [
     {

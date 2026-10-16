@@ -211,7 +211,6 @@ A merge made with `GITHUB_TOKEN` starts no new workflow run (GitHub documents th
 | 3    | `held`           | CI pending, no `ci-ok` check, head moved, or the hold is on | nobody; the next record re-fires N4        |
 | 409  | `merge.conflict` | branch no longer merges; once per head                      | worker                                     |
 | REGEN | `regen` | PR conflicting only on generated files merged with its base, regenerated, pushed; once per new head | nobody; CI runs on the new head |
-| RERUN | `ci.rerun` | a red whose failing checks started before the base head; base merged into head (or failed jobs rerun); once per base sha | nobody; CI runs on the new head |
 | 423  | `blocked`        | gh failed 3 times, the hold is on, or cleanup not done      | orchestrator                               |
 | SLOW | `step.slow`      | a node over its budget                                      | orchestrator files a bottleneck work order |
 
@@ -220,7 +219,6 @@ A merge made with `GITHUB_TOKEN` starts no new workflow run (GitHub documents th
 `claude/workflow/pr-flow/config/pr-flow.json`, one entry per repository: `repo`, `line`, `merge` (`action`, the default, or `sweep`), `records` (`dir` or `bus`), `records_dir`, `ticket_re`, `required_check` (default `ci-ok`), `ignore_paths`, `cleanup.slots`, `hold_file`, `budgets` per node.
 Every key is overridable by `VAR=value` on the Make target.
 An empty `regen.paths` turns the regen-index verb off.
-`stale_red.mode` sets the rerun-stale-red verb: `update-branch` (default, merges the base into the head so a new merge ref is tested), `rerun` (`gh run rerun --failed`, same merge ref, for flakes) or `off`.
 
 | Repository       | `merge`    | Why                                                   |
 | ---------------- | ---------- | ----------------------------------------------------- |
