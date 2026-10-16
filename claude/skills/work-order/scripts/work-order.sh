@@ -64,6 +64,7 @@ Usage:
   work-order.sh resync  [--project DIR] --id WO-... [--json]
   work-order.sh show    [--project DIR] --id WO-... [--json]
   work-order.sh list    [--project DIR] [--status S] [--json]
+  work-order.sh stale-merged [--project DIR] [--pr-repo OWNER/NAME] [--json]
 
 Lifecycle:
   draft --approve--> ready --start--> in-progress --submit--> in-review
@@ -234,7 +235,7 @@ case ${1-} in --help | -h) usage; exit "$PS_OK" ;; esac
 command="$1"; shift
 
 title=""; type=""; problem=""; test_plan=""; test_plan_file=""; priority="p2"
-id=""; pr=""; reason=""; status_filter=""; from_figma=""; frames_glob="*"
+id=""; pr=""; reason=""; status_filter=""; from_figma=""; frames_glob="*"; pr_repo=""
 parent=""; text=""; answer=""; observed=""; index=""; match=""; superseded_by=""
 no_lavish=0; dry_run=0; detach=0; check=0; top_level=0
 declare -a in_items=() out_items=() ac_items=() freedom_items=() surfaces=() assumptions=() questions=()
@@ -293,6 +294,7 @@ while (($#)); do
     --pr) pr="${2-}"; shift 2 ;;
     --reason) reason="${2-}"; shift 2 ;;
     --status) status_filter="${2-}"; shift 2 ;;
+    --pr-repo) pr_repo="${2-}"; shift 2 ;;
     --no-lavish) no_lavish=1; shift ;;
     --dry-run) dry_run=1; shift ;;
     --help | -h) usage; exit "$PS_OK" ;;
@@ -2584,6 +2586,65 @@ cmd_repair() {
   fi
 }
 
+# stale-merged - ORD-0848 Y3.
+# What broke: a ticket whose PR merged without close-out stays open and the line
+# reads it as work. WO-20261016-c770 (S02c), WO-20261016-eb12 (S02d) and
+# WO-20261016-f58e (S02e) sit in-review in business while ypconsult-01-src PRs
+# 52, 51 and 53 are MERGED; no verb found them.
+# Why this fix: a verb on the existing tool (item 30), not a script under
+# claude/workflow. It asks gh, as cleanup does, and writes nothing: it scans the
+# files directly rather than through ensure_views, so no view is regenerated.
+# Cost: one gh call per open ticket per run.
+stale_gh() {
+  # stale_gh <args...> - gh run in the project, 3 attempts, stdout on success.
+  local n out
+  for n in 1 2 3; do
+    if out=$(cd -- "$project" && gh "$@" 2>/dev/null); then printf '%s' "$out"; return 0; fi
+  done
+  return 1
+}
+
+cmd_stale_merged() {
+  wo_require_jq; wo_require_gh
+  [[ -d $root ]] || ps_die "$PS_NOTFOUND" "no_work_orders" "no $WO_DIR_NAME/ in $project"
+  local repo="$pr_repo" f s
+  if [[ -z $repo ]]; then
+    repo=$(stale_gh repo view --json nameWithOwner -q .nameWithOwner) \
+      || ps_die "$PS_IO" "gh_failed" "gh repo view failed 3 times"
+  fi
+  local rows='[]'
+  while IFS= read -r f; do
+    wo_is_archived "$f" && continue
+    s=$(wo_field "$f" '.status')
+    case $s in ready | in-progress | in-review) ;; *) continue ;; esac
+    local tid ttitle tpr tbranch info=""
+    tid=$(wo_field "$f" '.id'); ttitle=$(wo_field "$f" '.title')
+    tpr=$(wo_field "$f" '.pr'); tbranch=$(wo_field "$f" '.branch')
+    if [[ -n $tpr ]]; then
+      info=$(stale_gh pr view "$tpr" -R "$repo" --json state,mergeCommit,mergedAt,url) \
+        || ps_die "$PS_IO" "gh_failed" "gh pr view $tpr -R $repo failed 3 times"
+      [[ $(jq -r '.state // ""' <<<"$info") == MERGED ]] || continue
+      info=$(jq -c --arg n "$tpr" '{pr:($n|tonumber),merge_commit:(.mergeCommit.oid // ""),merged_at:(.mergedAt // ""),url:(.url // "")}' <<<"$info")
+    elif [[ -n $tbranch ]]; then
+      info=$(stale_gh pr list -R "$repo" --head "$tbranch" --state merged \
+               --json number,mergeCommit,mergedAt,url --limit 1) \
+        || ps_die "$PS_IO" "gh_failed" "gh pr list -R $repo --head $tbranch failed 3 times"
+      [[ $(jq -r 'length' <<<"$info") -gt 0 ]] || continue
+      info=$(jq -c '.[0] | {pr:.number,merge_commit:(.mergeCommit.oid // ""),merged_at:(.mergedAt // ""),url:(.url // "")}' <<<"$info")
+    else
+      continue
+    fi
+    rows=$(jq -c --arg id "$tid" --arg t "$ttitle" --arg s "$s" --arg r "$repo" --argjson i "$info" \
+      '. + [{id:$id,title:$t,status:$s,pr:$i.pr,repo:$r,merge_commit:$i.merge_commit,merged_at:$i.merged_at,url:$i.url}]' <<<"$rows")
+  done < <(find "$root" -type f -name 'WO-*.md' | sort)
+
+  if ((PS_JSON)); then
+    printf '%s\n' "$rows"
+  else
+    jq -r '.[] | "READY-MERGED \(.id) \(.status) pr=\(.pr) merge=\(.merge_commit[0:12]) \(.title)"' <<<"$rows"
+  fi
+}
+
 emit_ok() {
   if ((PS_JSON)); then
     printf '{"ok":true,"id":"%s","status":"%s","file":%s}\n' "$1" "$2" "$(ps_json_string "$3")"
@@ -2616,9 +2677,10 @@ case $command in
   resync) cmd_resync ;;
   show) cmd_show ;;
   list) cmd_list ;;
+  stale-merged) cmd_stale_merged ;;
   # Every verb the case above dispatches appears here, because this string is the
   # only listing an agent that guessed wrong ever sees. `evidence` and `reflow`
   # were missing from it for as long as they have existed.
   *) ps_die "$PS_USAGE" "unknown_command" \
-       "unknown command: $command (new|amend|link|note|resolve|evidence|check|approve|start|submit|done|cleanup|cancel|reopen|verify|resync|show|list|next|tree|reindex|reflow|repair)" ;;
+       "unknown command: $command (new|amend|link|note|resolve|evidence|check|approve|start|submit|done|cleanup|cancel|reopen|verify|resync|show|list|stale-merged|next|tree|reindex|reflow|repair)" ;;
 esac
