@@ -10,7 +10,7 @@
 # This workflow is where that intent is checked, while there is still a human
 # looking at the pull request.
 #
-#   validate   the Bump: trailers hold up, every changed skill resolves to a
+#   validate   (skill-pr-intent.yml) the Bump: trailers hold up, every changed skill resolves to a
 #              level, no version: or registry.json was hand-edited, and the
 #              resolution table is printed so the outcome is readable before the
 #              merge button rather than after it
@@ -33,14 +33,28 @@
 # digest already, and that is the part that governs what the tests run against.
 name: skill PR gate
 
-# edited is not padding. The Bump: trailer and the conventional title both live
-# in the pull request itself, not in a file, so a verdict reached before someone
-# fixed a typo in the description is a verdict about text that no longer exists.
-# The default set stops at opened, synchronize and reopened, and would leave a
-# green check standing over a description that had since been rewritten.
+# edited is deliberately absent, and lives in skill-pr-intent.yml instead.
+#
+# What broke: this trigger list carried edited, and the concurrency group below
+# cancels in progress, so every rewrite of a pull request description cancelled
+# the suites already running for the same commit and restarted them from zero.
+# Measured 2026-10-16 UTC over the last 60 gate runs: 26 cancelled, and 11 head
+# SHAs ran twice - the second run being a description edit on unchanged code.
+# PR 134 ran the gate 19 times on 10 commits in 12 minutes, 16 cancelled.
+#
+# Why this fix: only the bump intent reads the description. The suites read the
+# tree, and the tree does not change on an edit. So the description check moved
+# to its own workflow with its own concurrency group, where an edit re-runs the
+# one job that reads the text and leaves the suites alone. Rejected: skipping
+# the suites by `if:` on an edit, because a skipped run of the same check names
+# replaces the earlier verdict on the pull request and would hide a red suite.
+#
+# What it costs: retargeting a pull request onto main is also an edited event,
+# and no longer re-runs the suites here. Push a commit, or close and reopen, to
+# run them against the new base. Record: BR-20261016-bottlenecks.
 on:
   pull_request:
-    types: [opened, synchronize, reopened, edited]
+    types: [opened, synchronize, reopened]
     branches: [main]
 
 # The gate reads. Nothing below needs more than this, and a token that cannot
@@ -53,51 +67,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
-    name: bump intent
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-
-      # The title and body are written to files rather than interpolated into
-      # the shell. A pull request description is attacker-controlled text and
-      # ${{ }} pastes it into the script before bash ever sees a quote.
-      - name: the pull request description, as the squash commit will carry it
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
-        run: |
-          set -euo pipefail
-          printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title.txt"
-          printf '%s\n' "$PR_BODY"  > "$RUNNER_TEMP/pr-body.txt"
-
-      - name: resolve every changed skill to a level
-        env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set -euo pipefail
-          bash .github/scripts/bump-gate.sh resolve \
-            --base "$BASE" \
-            --title-file "$RUNNER_TEMP/pr-title.txt" \
-            --body-file  "$RUNNER_TEMP/pr-body.txt" \
-            | tee -a "$GITHUB_STEP_SUMMARY"
-
-      # verify --structure is the split that exists for exactly this call site.
-      # It asserts every skill is versioned, that every requires: resolves, and
-      # that this branch edited neither a version: line nor registry.json -
-      # those are CI's files now. Plain verify cannot run here: a branch that
-      # edits a skill moves its content hash while correctly leaving the
-      # registry alone, and plain verify calls that drift.
-      - name: no hand-edited version, no hand-edited registry
-        env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set -euo pipefail
-          bash claude/skills/skill-registry/scripts/skill-version.sh verify \
-            --structure --base "$BASE"
-
   # Owner order 2026-10-16 UTC: every Markdown file opens with a contents list.
   # No fast lint job existed, so this is it. Changed files only (BASE below);
   # `make md-contents-check ALL=1` checks everything. Fix with `make md-contents`.

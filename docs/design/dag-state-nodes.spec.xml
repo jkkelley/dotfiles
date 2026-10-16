@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DAG state - nodes spec: intake nodes, bundles, migration, build tickets.
+  Design: docs/design/dag-state.md. Companion: dag-state.spec.xml. Node schema: claude/workflow/dag/schemas/node.schema.json.
+
+  Contents
+    1. dag        - the intake DAG edges
+    2. nodes      - N1 to N10: input, output, script, retry, checklist
+    3. bundles    - per-node runbook, playbook, docs
+    4. migration  - how a running DAG moves to a new design version
+    5. tickets    - build tickets with disjoint file sets
+-->
+<spec id="dag-state-nodes" version="0.1.0" status="design" date="2026-10-16">
+  <dag id="intake">
+    <edge from="N1" to="N2"/><edge from="N2" to="N3"/><edge from="N3" to="N4"/>
+    <edge from="N4" to="N5"/><edge from="N5" to="N6"/><edge from="N6" to="N7"/>
+    <edge from="N7" to="N8"/><edge from="N8" to="N9"/><edge from="N9" to="N10"/>
+    <fanout node="N4">build nodes B1..Bn from the ticket, parallel when their touches are disjoint</fanout>
+    <handoff from="N5" on="fail x3"/><handoff from="N8" on="red x3"/>
+  </dag>
+
+  <nodes>
+    <node id="N1" name="claim" after="" parallel="per ticket" retry="3" idempotent="true">
+      <input>ticket id, dag.json</input><output>state.json, nodes.lock/, run lock</output>
+      <script>claude/workflow/dag/bin/dag-take.sh</script>
+      <serial>The run dir must exist before any node</serial>
+      <check box="State validates against state.schema.json" proof="validator exit 0 in ledger row init"/>
+      <check box="Design hash pinned" proof="design.sha256 equals sha256 of nodes.lock/"/>
+      <check box="Ticket title recorded in full" proof="ticket.title non-empty in state.json"/>
+    </node>
+    <node id="N2" name="worktree-branch" after="N1" parallel="per ticket" retry="3" idempotent="true">
+      <input>state.json</input><output>worktree path, branch, lease in state</output>
+      <script>claude/workflow/dag/bin/dag-take.sh</script>
+      <serial>Every later node works inside this worktree</serial>
+      <check box="Lease held" proof="slot.sh status shows the holder"/>
+      <check box="Branch is a new feature branch off base_branch" proof="git rev-parse --abbrev-ref HEAD in the worktree equals state branch"/>
+    </node>
+    <node id="N3" name="start-ticket" after="N2" parallel="per ticket" retry="3" idempotent="true">
+      <input>worktree</input><output>ticket in-progress</output>
+      <script>claude/workflow/dag/bin/dag-take.sh</script>
+      <serial>None</serial>
+      <check box="Ticket status in-progress" proof="work-order.sh show --json status field"/>
+    </node>
+    <node id="N4" name="build" after="N3" parallel="per file-set" retry="3" idempotent="true">
+      <input>ticket, bundle docs</input><output>commits on the branch</output>
+      <script>claude/workflow/bin/workflow-spawn.sh</script>
+      <serial>None</serial>
+      <check box="Every acceptance criterion has a proof" proof="proof row per criterion in state.json"/>
+      <check box="Commits touch only the declared files" proof="git diff --name-only against touches"/>
+    </node>
+    <node id="N5" name="verify" after="N4" parallel="none" retry="3" idempotent="true">
+      <input>branch diff</input><output>verify.json</output>
+      <script>claude/workflow/tools/ci-select.sh</script>
+      <serial>None</serial>
+      <check box="Only the touched suite ran" proof="verify.json lists the suite and exit 0"/>
+    </node>
+    <node id="N6" name="open-pr" after="N5" parallel="none" retry="0" idempotent="false">
+      <input>green verify.json</input><output>PR number, ticket in-review</output>
+      <script>claude/workflow/dag/bin/dag-ship.sh</script>
+      <serial>submit must precede done</serial>
+      <check box="PR exists" proof="gh pr view number matches state pr.number"/>
+      <check box="PR body has no agent footer" proof="grep for the footer exits 1"/>
+    </node>
+    <node id="N7" name="close-out" after="N6" parallel="none" retry="0" idempotent="false">
+      <input>PR number</input><output>ticket archived, hydration entry, pushed</output>
+      <script>claude/workflow/dag/bin/dag-ship.sh</script>
+      <serial>Rides the same PR, after submit</serial>
+      <check box="Ticket done and archived" proof="work-order.sh show status done"/>
+      <check box="Pushed to the PR branch" proof="git rev-parse HEAD equals gh pr view headRefOid"/>
+    </node>
+    <node id="N8" name="ci" after="N7" parallel="none" retry="3" idempotent="true">
+      <input>PR</input><output>gate job results</output>
+      <script>claude/workflow/dag/bin/dag-ci.sh</script>
+      <serial>Intended wait: CI time</serial>
+      <check box="Every required check green" proof="gh pr checks lists each required_checks name as pass"/>
+    </node>
+    <node id="N9" name="merge" after="N8" parallel="none" retry="0" idempotent="false">
+      <input>green CI, design approval record</input><output>merge commit</output>
+      <script>claude/workflow/dag/bin/dag-merge.sh</script>
+      <serial>None</serial>
+      <check box="Approval on record" proof="file in approval_dir names the design id and version"/>
+      <check box="Merged" proof="gh pr view state MERGED"/>
+    </node>
+    <node id="N10" name="cleanup" after="N9" parallel="none" retry="3" idempotent="true">
+      <input>merged PR</input><output>clean machine, archived state</output>
+      <script>claude/workflow/dag/bin/dag-ship.sh</script>
+      <serial>None</serial>
+      <check box="Branch gone local and remote" proof="git branch --list and ls-remote print nothing"/>
+      <check box="Lease released and worktree removed" proof="slot.sh status shows free; path absent"/>
+      <check box="State archived" proof="run dir moved under archive/ with DG-COMPLETE in the ledger"/>
+    </node>
+  </nodes>
+
+  <bundles>
+    <rule>Every node file declares checklist_doc, runbook, playbook and docs. plan returns DG-BUNDLE-MISSING for a missing file.</rule>
+    <runbook pattern="claude/workflow/runbooks/RB-dag-intake.md" sections="Who does what / State / Steps / Check / Failure modes"/>
+    <playbook pattern="claude/workflow/dag/playbooks/PB-intake.md" sections="Input / Steps / Output / Proofs"/>
+  </bundles>
+
+  <migration reuse="claude/workflow/inbox-sweep/bin/migrate.sh">
+    <case change="node edited">done node becomes DG-STALE only if its checklist or script changed; pending nodes take the new version</case>
+    <case change="record schema bumped">copy-forward with migrations/NAME/vN-to-vN+1.sh; original kept</case>
+    <case change="node added">DG-PENDING; upstream of a done node makes that node DG-STALE</case>
+    <case change="node removed">DG-SKIPPED; output kept</case>
+    <case change="state schema bumped">state.vN+1.schema.json plus migrations/state/vN-to-vN+1.sh</case>
+    <rollback>pins reset; newer copies renamed to .rolled-back; no down-migration</rollback>
+    <test>fixture run at 1.0.0 reaches 1.1.0 and back in test_dag_migrate.sh</test>
+  </migration>
+
+  <tickets rule="no two tickets share a file; T1 first; at most one unmerged ticket deep">
+    <ticket id="T1" title="State library: init, read, write, lock, serial, ledger" needs="">
+      <file>claude/workflow/dag/bin/dag-lib.sh</file>
+      <file>claude/workflow/dag/tests/unit/test_dag_lib.sh</file>
+    </ticket>
+    <ticket id="T2" title="plan verb" needs="T1">
+      <file>claude/workflow/dag/bin/dag-plan.sh</file>
+      <file>claude/workflow/dag/tests/unit/test_dag_plan.sh</file>
+    </ticket>
+    <ticket id="T3" title="apply verb with retry and handoff" needs="T1">
+      <file>claude/workflow/dag/bin/dag-apply.sh</file>
+      <file>claude/workflow/dag/tests/unit/test_dag_apply.sh</file>
+    </ticket>
+    <ticket id="T4" title="drift verb" needs="T1">
+      <file>claude/workflow/dag/bin/dag-drift.sh</file>
+      <file>claude/workflow/dag/tests/unit/test_dag_drift.sh</file>
+    </ticket>
+    <ticket id="T5" title="recover verb" needs="T1">
+      <file>claude/workflow/dag/bin/dag-recover.sh</file>
+      <file>claude/workflow/dag/tests/unit/test_dag_recover.sh</file>
+    </ticket>
+    <ticket id="T6" title="Intake node declarations N1 to N10" needs="T2">
+      <file>claude/workflow/dag/nodes/N1.node.json</file>
+      <file>claude/workflow/dag/nodes/N2.node.json</file>
+      <file>claude/workflow/dag/nodes/N3.node.json</file>
+      <file>claude/workflow/dag/nodes/N4.node.json</file>
+      <file>claude/workflow/dag/nodes/N5.node.json</file>
+      <file>claude/workflow/dag/nodes/N6.node.json</file>
+      <file>claude/workflow/dag/nodes/N7.node.json</file>
+      <file>claude/workflow/dag/nodes/N8.node.json</file>
+      <file>claude/workflow/dag/nodes/N9.node.json</file>
+      <file>claude/workflow/dag/nodes/N10.node.json</file>
+    </ticket>
+    <ticket id="T7" title="Runbooks and playbooks for N1 to N10" needs="">
+      <file>claude/workflow/runbooks/RB-dag-intake.md</file>
+      <file>claude/workflow/dag/playbooks/PB-intake.md</file>
+    </ticket>
+    <ticket id="T8" title="Take and ship scripts for N1 to N3 and N6, N7, N10" needs="T1">
+      <file>claude/workflow/dag/bin/dag-take.sh</file>
+      <file>claude/workflow/dag/bin/dag-ship.sh</file>
+      <file>claude/workflow/dag/tests/unit/test_dag_take.sh</file>
+      <file>claude/workflow/dag/tests/unit/test_dag_ship.sh</file>
+    </ticket>
+    <ticket id="T9" title="CI poll and merge scripts with approval check" needs="T1">
+      <file>claude/workflow/dag/bin/dag-ci.sh</file>
+      <file>claude/workflow/dag/bin/dag-merge.sh</file>
+      <file>claude/workflow/dag/tests/unit/test_dag_merge.sh</file>
+    </ticket>
+    <ticket id="T10" title="Migrate verb, state migrations, fixtures" needs="T1">
+      <file>claude/workflow/dag/bin/dag-migrate.sh</file>
+      <file>claude/workflow/dag/migrations/state/v1-to-v2.sh</file>
+      <file>claude/workflow/dag/tests/fixtures/run-1.0.0.json</file>
+      <file>claude/workflow/dag/tests/unit/test_dag_migrate.sh</file>
+    </ticket>
+    <ticket id="T11" title="Config, config schema, dag.mk, Makefile include, dag-check" needs="T1">
+      <file>claude/workflow/dag/config/dag.json</file>
+      <file>claude/workflow/dag/schemas/config.schema.json</file>
+      <file>claude/workflow/dag/dag.mk</file>
+      <file>claude/workflow/Makefile</file>
+      <file>claude/workflow/dag/bin/dag-check.sh</file>
+    </ticket>
+    <ticket id="T12" title="Intake workflow declaration" needs="T6">
+      <file>claude/workflow/schemas/workflows/dag-intake.workflow.json</file>
+    </ticket>
+  </tickets>
+</spec>
