@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "S6",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/lead-followup.sh",
+  "input_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/ledger.jsonl",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/reply/drafts/<id>.txt",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "A follow-up is never sent without its own approval",
+      "proof": "the draft enters L3 as a new card; no `send-*.txt` exists before the answer."
+    },
+    {
+      "box": "None for a decline, an answer or a booked call",
+      "proof": "`jq` over `leads.jsonl` shows a terminal or answered status and no new draft."
+    }
+  ],
+  "serial": null,
+  "parallel": "per conversation",
+  "script_pending": true
+}

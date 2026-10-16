@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "L11",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/reply-send.sh",
+  "input_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/send-result-<id>.json",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/ledger.jsonl",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Result validates against `send-result.schema.json`",
+      "proof": "validator exit 0."
+    },
+    {
+      "box": "Ledger row carries sha256, thread URL, UTC time and proof paths",
+      "proof": "`jq` shows all four keys on the `RP-SENT` row."
+    }
+  ],
+  "serial": "Reads the result and proofs the seat wrote",
+  "parallel": "per approved reply",
+  "script_pending": true
+}

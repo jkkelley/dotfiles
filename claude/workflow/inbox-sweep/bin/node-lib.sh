@@ -14,8 +14,14 @@
 # Opt-in, not a scan for every script, because the scripts are other tickets' files and a header line is the whole cost.
 #
 # Not here yet, and owned by B21 (spec node WO migration runner): the check that a schema_version raise ships a migration.
-# Not here yet, owned by B20b: L and S declarations, and nodes.lock written at init. NODE_DESIGN covers R1 to R7 only,
-# so a declaration for any other node is checked against the schema and its script but has no table to disagree with.
+# nodes.lock at init is written by sweep-init.sh (B20b). The design tables for L1 to L12 and S1 to S7 are prose rows, not
+# the `### Rn` checkbox lists the table check parses, so an L or S declaration is checked against the schema and its
+# script but has no table to disagree with. Their checklists were cut from the rows of design sections 14.3 and 17.
+#
+# script_pending (B20b): the reply and lead scripts are other tickets' files (B14 to B17, B22, B23) and do not exist yet.
+# A declaration may say "script_pending": true until its owner lands; nodes-check then skips the exists test, and prints
+# a note once the script exists so the next edit removes the flag. Rejected: failing on a pending flag whose script now
+# exists, because B14 merging would turn main red until a second change flipped a flag in a file it does not own.
 
 _node_here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -41,7 +47,10 @@ for f in sorted(d.glob("*.node.json")):
     if f.name != j["id"] + ".node.json": no(f"{f.name} declares id {j['id']}; the file must be {j['id']}.node.json"); continue
     decl[j["id"]] = j
     ok(f"{f.name} validates")
-    if not (repo / j["script"]).exists(): no(f"{f.name} names script {j['script']}, which does not exist")
+    there = (repo / j["script"]).exists()
+    if j.get("script_pending"):
+        if there: print(f"note {f.name} is script_pending but {j['script']} now exists; drop the flag")
+    elif not there: no(f"{f.name} names script {j['script']}, which does not exist")
 
 # a script naming a node nobody declared
 for s in sorted(scripts.glob("*.sh")):
@@ -73,13 +82,18 @@ node_bottleneck() {
   python3 -I - "$dir" <<'PY'
 import json, pathlib, sys
 bad = 0
+waits = []
 print(f"{'node':<5} {'parallel':<20} serial")
 for f in sorted(pathlib.Path(sys.argv[1]).glob("*.node.json")):
     j = json.loads(f.read_text()); s = j.get("serial"); p = j.get("parallel")
     print(f"{j['id']:<5} {p:<20} {s if s else '-'}")
+    if s and s.startswith("Intended wait:"): waits.append(j["id"])
     # serial and parallel are two statements of one fact; "none" with no reason is a node nobody justified
     if (s is not None and not str(s).strip()) or (s is None and p == "none"):
         bad = 1; print(f"FAIL {j['id']} is serial and gives no reason (design section 16)")
+# the owner confirm is the one wait the process is allowed (design section 16); a second marked node is a bottleneck
+print("intended wait: " + (", ".join(waits) or "none"))
+if len(waits) > 1: bad = 1; print("FAIL more than one node is marked as the intended wait: " + ", ".join(waits))
 sys.exit(bad)
 PY
 }

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "L8",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/reply-verify.sh",
+  "input_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/readback-<id>.txt",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/verified-<id>.token",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Bytes compared after one fixed newline rule written in the script",
+      "proof": "`reply-verify.sh` exit 0 and the token exists; a one-character mismatch gives `RP-TEXT-MISMATCH`."
+    },
+    {
+      "box": "The seat clicks nothing before the token appears",
+      "proof": "ledger has no click time earlier than the token mtime."
+    }
+  ],
+  "serial": "The click must follow the check, or the check is worthless",
+  "parallel": "per approved reply",
+  "script_pending": true
+}

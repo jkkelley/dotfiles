@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "L5",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/reply-approve.sh",
+  "input_schema": {
+    "path": "<runs>/<run-id>/reply/decisions.jsonl",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/send-<id>.txt",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "File bytes hash to the sha256 in the `approvals.jsonl` row",
+      "proof": "`sha256sum` of the file equals the row."
+    },
+    {
+      "box": "File sits under a folder the Windows allow rule matches",
+      "proof": "path test against `inbox-triage-*\\send-*.txt`."
+    },
+    {
+      "box": "An older file for the same thread is marked `RP-SUPERSEDED`",
+      "proof": "`approvals.jsonl` row for the older sha256."
+    }
+  ],
+  "serial": "The file needs the decision from L4",
+  "parallel": "per approved reply",
+  "script_pending": true
+}

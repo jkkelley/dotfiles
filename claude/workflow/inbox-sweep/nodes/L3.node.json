@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "L3",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/reply-cards.sh",
+  "input_schema": {
+    "path": "<runs>/<run-id>/reply/drafts/<id>.txt",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/questions.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Card holds the full draft text, never a summary",
+      "proof": "card body equals the draft file, bytes compared."
+    },
+    {
+      "box": "Options are exactly `Send as written`, `Send with my edits`, `Drop`",
+      "proof": "`jq` option labels equal that list."
+    },
+    {
+      "box": "Rerun adds no duplicate card",
+      "proof": "card count unchanged after a second run."
+    },
+    {
+      "box": "Card text states that nothing sends until this card is answered",
+      "proof": "grep of the card text."
+    }
+  ],
+  "serial": null,
+  "parallel": "per conversation",
+  "script_pending": true
+}

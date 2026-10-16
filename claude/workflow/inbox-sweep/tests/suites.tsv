@@ -8,7 +8,7 @@ schemas	schemas/,tests/fixtures/,tests/unit/test_schemas.sh	bash tests/unit/test
 proof	bin/sweep-proof.sh,bin/screen.ps1,tests/lib/stub-powershell-exe.sh,tests/lib/stub-claude.sh,tests/lib/stub-wslpath.sh,tests/unit/test_proof.sh	bash tests/unit/test_proof.sh
 clean	bin/sweep-clean.sh,bin/sweep-lib.sh,tests/lib/,tests/unit/test_clean.sh	bash tests/unit/test_clean.sh
 preflight	bin/sweep-preflight.sh,tests/unit/test_preflight.sh	bash tests/unit/test_preflight.sh
-init	bin/sweep-init.sh,tests/unit/test_init.sh,tests/fixtures/owner-words.md,tests/fixtures/config/	bash tests/unit/test_init.sh
+init	bin/sweep-init.sh,nodes/,tests/unit/test_init.sh,tests/fixtures/owner-words.md,tests/fixtures/config/	bash tests/unit/test_init.sh
 cards	bin/sweep-cards.sh,bin/sweep-lib.sh,tests/lib/,tests/fixtures/results/,tests/unit/test_cards.sh	bash tests/unit/test_cards.sh
 collect	bin/sweep-collect.sh,bin/sweep-lib.sh,tests/fixtures/results/,tests/unit/test_collect.sh	bash tests/unit/test_collect.sh
 watch	bin/sweep-watch.sh,tests/lib/stub-seat-record.sh,tests/unit/test_watch.sh	bash tests/unit/test_watch.sh

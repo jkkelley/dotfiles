@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "L2",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/templates/brief-linkedin.md",
+  "input_schema": {
+    "path": "<runs>/<run-id>/reply/linkedin.md",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/reply/drafts/<id>.txt",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "No draft names YieldPoint or ties it to the personal profile",
+      "proof": "grep against the rules in `owner-words.md` is empty."
+    },
+    {
+      "box": "No em dash in any draft",
+      "proof": "`grep` for the em dash character is empty."
+    },
+    {
+      "box": "One `RP-DRAFTED` ledger row per thread",
+      "proof": "`jq` count of `RP-DRAFTED` rows equals the draft count."
+    }
+  ],
+  "serial": null,
+  "parallel": "per conversation"
+}

@@ -8,7 +8,7 @@
   "required": ["schema_version", "id", "version", "script", "input_schema", "output_schema", "checklist", "serial", "parallel"],
   "properties": {
     "schema_version": { "const": 1 },
-    "id": { "type": "string", "pattern": "^(R[1-9]|L([1-9]|1[0-2])|S[1-7])$", "description": "R1 to R7 run DAG, L1 to L12 reply DAG, S1 to S7 lead stage" },
+    "id": { "type": "string", "pattern": "^(R[1-9]|L([1-9]|1[0-2]|6b)|S[1-7])$", "description": "R1 to R7 run DAG, L1 to L12 reply DAG plus L6b (the owner confirm), S1 to S7 lead stage" },
     "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$", "description": "semver; bumped on every change to the file" },
     "script": { "type": "string", "minLength": 1, "description": "repo-root relative path of the script that runs the node, or the actor when no script does" },
     "input_schema": { "$ref": "#/$defs/record" },
@@ -30,6 +30,7 @@
       "type": ["string", "null"],
       "description": "null when the node runs in parallel; otherwise the reason it must be serial. An empty or missing reason fails `make bottleneck-check` (design section 16), which is why the schema does not forbid the empty string: the schema says what shape, the check says what is acceptable."
     },
+    "script_pending": { "type": "boolean", "description": "true while the build ticket that owns `script` has not merged. nodes-check skips the exists test for a pending script and prints a note once it exists, so the flag is removed with the ticket that lands the script." },
     "parallel": { "enum": ["per account", "per conversation", "per approved reply", "none"] }
   },
   "$defs": {

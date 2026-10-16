@@ -65,6 +65,15 @@ else
   win_home="${SWEEP_WIN_HOME:-}"
 fi
 
+# Checked before the run dir exists so a refusal leaves nothing behind. The copy itself happens after the mkdir below.
+shopt -s nullglob
+node_files=("$SWEEP"/nodes/*.node.json)
+shopt -u nullglob
+if [ ${#node_files[@]} -eq 0 ]; then
+  echo "sweep-init: no node declarations in $SWEEP/nodes; refusing to start a run that pins nothing" >&2
+  exit 1
+fi
+
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
 RUN_DIR="$RUNS_ROOT/$RUN_ID"
 mkdir -p "$RUNS_ROOT"
@@ -72,6 +81,13 @@ mkdir -p "$RUNS_ROOT"
 mkdir "$RUN_DIR" || { echo "sweep-init: run dir $RUN_DIR already exists (two inits in one second)" >&2; exit 1; }
 mkdir "$RUN_DIR/results" "$RUN_DIR/logs" "$RUN_DIR/briefs"
 export SWEEP_RUN_DIR="$RUN_DIR"
+# Pin the node declarations (design section 15.3): the run reads nodes.lock/ from here on, so editing nodes/ while it
+# runs changes the next run and never this one. All declarations are copied, R, L and S, because a reply send started
+# from this run's cards must finish on the versions the run began with; the spec says "the ones it needs" and the
+# reply nodes are needed by the cards R6 raises. A run with no declarations is refused: an empty lock pins nothing.
+mkdir "$RUN_DIR/nodes.lock"
+cp "${node_files[@]}" "$RUN_DIR/nodes.lock/"
+NODE_VERSIONS="$(jq -n '[inputs | {(.id): .version}] | add' "$RUN_DIR"/nodes.lock/*.node.json)"
 LOG="$RUN_DIR/logs/init.log"
 
 DEADLINE_AT="$(date -u -d "+${SEAT_DEADLINE_MINUTES} minutes" +%Y-%m-%dT%H:%M:%SZ)"
@@ -80,17 +96,18 @@ OWNER_SHA="$(sha256sum "$OWNER_FILE" | cut -d' ' -f1)"
 # marking read is the one mutation a seat may make (design D1).
 MARK_READ="$(jq -r 'if has("mark_read") then .mark_read else true end | tostring' "$CONFIG")"
 
-jq -n --arg id "$RUN_ID" --arg at "$(sweep_now)" --arg sha "$OWNER_SHA" --arg win "$win_home" --arg dl "$DEADLINE_AT" \
+jq -n --arg id "$RUN_ID" --arg at "$(sweep_now)" --arg sha "$OWNER_SHA" --arg win "$win_home" --arg dl "$DEADLINE_AT" --argjson nv "$NODE_VERSIONS" \
   --rawfile rows <(printf '%s\n' "$seat_rows") '
   { schema_version: "1.0.0", run_id: $id, status: "RUN-RUNNING",
     seats: ($rows | split("\n") | map(select(length > 0) | split("\t")
       | {seat: .[0], source: .[1], account: .[3], status: "RUN-RUNNING", pane: null, deadline_at: $dl, attempts: 0})),
-    win_home: $win, owner_words_sha256: $sha, started_at: $at, finished_at: null, cleaned_at: null, steps: [] }' \
+    win_home: $win, owner_words_sha256: $sha, node_versions: $nv, started_at: $at, finished_at: null, cleaned_at: null, steps: [] }' \
   >"$RUN_DIR/run.json"
 
 {
   echo "init $RUN_ID at $(sweep_now)"
   echo "config $CONFIG validated by validate-schema.sh, exit 0"
+  echo "nodes.lock holds ${#node_files[@]} declarations, versions in run.json node_versions"
 } >"$LOG"
 sweep_check R1 "config validates" "validator exit 0, see logs/init.log"
 sweep_check R1 "owner words present" "run.json owner_words_sha256 $OWNER_SHA"

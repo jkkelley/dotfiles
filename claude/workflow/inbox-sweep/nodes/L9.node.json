@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "L9",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/templates/brief-linkedin-send.md",
+  "input_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/verified-<id>.token",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/send-result-<id>.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "The result records one `send_clicked_at`",
+      "proof": "`jq` count of `send_clicked_at` is 1."
+    },
+    {
+      "box": "The result schema refuses two",
+      "proof": "a fixture with two clicks fails `send-result.schema.json`."
+    },
+    {
+      "box": "The Send is never retried",
+      "proof": "`attempts` for the step is 1 in the result."
+    }
+  ],
+  "serial": "Two Sends to one thread could post twice, so one click per thread, enforced by the ledger check",
+  "parallel": "per approved reply",
+  "script_pending": true
+}

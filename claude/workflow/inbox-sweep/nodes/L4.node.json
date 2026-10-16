@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "L4",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/reply-approve.sh",
+  "input_schema": {
+    "path": "<runs>/<run-id>/reply/answers.json",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/reply/decisions.jsonl",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "`Send as written`: text equals the draft",
+      "proof": "bytes compared, sha256 equal."
+    },
+    {
+      "box": "`Send with my edits`: text equals the owner's words exactly",
+      "proof": "bytes compared against the answer, sha256 equal."
+    },
+    {
+      "box": "`Drop`: row only, no text file",
+      "proof": "`ls` shows no `send-<id>*.txt` for the id."
+    }
+  ],
+  "serial": "The approval file needs the decision, so L5 cannot start before this row exists",
+  "parallel": "per conversation",
+  "script_pending": true
+}

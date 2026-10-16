@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "L6",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/reply-send.sh",
+  "input_schema": {
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/send-<id>.txt",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/reply/send-<id>/state.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Preflight `PF-OK` for this seat",
+      "proof": "`preflight.json` code."
+    },
+    {
+      "box": "The brief names exactly one file and one thread URL",
+      "proof": "grep count in the rendered brief is 1 and 1."
+    },
+    {
+      "box": "Ledger has no `RP-SENT` for this sha256 and thread",
+      "proof": "`jq` over `ledger.jsonl` returns zero rows (the exactly-once check)."
+    },
+    {
+      "box": "The pane shows the id, recipient, text and sha256",
+      "proof": "`herdr pane read` of `agent-reply-<id>`."
+    }
+  ],
+  "serial": null,
+  "parallel": "per approved reply",
+  "script_pending": true
+}

@@ -70,6 +70,18 @@ check "true" "$(grep -q 'Mark read: true' "$run/briefs/gmail.md" && echo true)" 
 check 3 "$(wc -l <"$run/checklist.jsonl")" "three checklist rows are recorded"
 check yes "$(grep -q 'equals seats 4' "$run/logs/init.log" && echo yes)" "logs/init.log records the owner-words count against the seat count"
 
+# B20b AC-H2: the run pins the node declarations. A later edit to nodes/ must not reach this run.
+check "$(find "$R/nodes" -name '*.node.json' | wc -l)" "$(find "$run/nodes.lock" -name '*.node.json' | wc -l)" "AC-H2 nodes.lock holds a copy of every declaration"
+check 27 "$(jq '.node_versions | length' "$run/run.json")" "AC-H2 run.json node_versions names all 27 nodes (R1-R7, L1-L12 with L6b, S1-S7)"
+check "$(jq -r .version "$R/nodes/L6b.node.json")" "$(jq -r .node_versions.L6b "$run/run.json")" "AC-H2 a version in run.json is the declaration's version"
+check yes "$(cmp -s "$R/nodes/R1.node.json" "$run/nodes.lock/R1.node.json" && echo yes)" "AC-H2 the locked copy is byte-identical to the declaration"
+fresh nolock
+mkdir -p "$T/emptyroot/nodes" "$T/tools" && cp -r "$R/bin" "$R/schemas" "$R/templates" "$T/emptyroot/" && cp "$R/../tools/validate-schema.sh" "$T/tools/"
+bash "$T/emptyroot/bin/sweep-init.sh" --seats gmail >/dev/null 2>"$T/err"; rc=$?
+check 1 "$rc" "AC-H2 an init with no node declarations exits 1"
+check yes "$(grep -q 'pins nothing' "$T/err" && echo yes)" "AC-H2 the refusal says why"
+check 0 "$(find "$T/nolock" 2>/dev/null | wc -l)" "AC-H2 and leaves no run dir behind"
+
 # --seats filters, and a disabled seat gets no brief
 fresh proton
 id="$(bash "$INIT" --seats proton 2>/dev/null)"
@@ -87,7 +99,7 @@ check 0 "$(find "$T/none" 2>/dev/null | wc -l)" "and creates nothing"
 # Mutation: a template without the owner-words block must stop the run, or AC-H1 would hold only for good templates.
 cp -r "$R/templates" "$T/tpl"
 sed -i '/^<owner-words>$/,/^<\/owner-words>$/d' "$T/tpl/brief-gmail.md"
-mkdir -p "$T/sweepcopy" && cp -r "$R/bin" "$R/schemas" "$T/sweepcopy/" && cp -r "$T/tpl" "$T/sweepcopy/templates"
+mkdir -p "$T/sweepcopy" && cp -r "$R/bin" "$R/schemas" "$R/nodes" "$T/sweepcopy/" && cp -r "$T/tpl" "$T/sweepcopy/templates"
 mkdir -p "$T/tools" && cp "$R/../tools/validate-schema.sh" "$T/tools/"
 fresh mut
 bash "$T/sweepcopy/bin/sweep-init.sh" --seats gmail >/dev/null 2>"$T/err"; rc=$?
