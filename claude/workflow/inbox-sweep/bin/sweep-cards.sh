@@ -49,9 +49,14 @@ add_cards() {
   incoming="$(jq -c 'if type == "array" then . else [.] end | if all(.[]; type == "object" and (.id | type == "string" and length > 0)) then . else error("every card needs a string id") end')" || return 2
   mkdir -p "$(dirname "$CARDS")"
   [ -f "$CARDS" ] || echo '{"title":"Inbox sweep","items":[]}' >"$CARDS"
-  before="$(jq '.items | length' "$CARDS")"
+  # A questions.json that is not {items:[...]} used to drop every incoming card and still print "added 0", exit 0: jq and
+  # sweep_json_set failed but nothing checked them (sweep-build UAT, 2026-10-16). It now fails loud with exit 2 and
+  # leaves the file as it was, so the caller sees the cards were not written.
+  local cur
+  before="$(jq -e '.items | length' "$CARDS")" || return 2
+  cur="$(jq -c '[.items[].id]' "$CARDS")" || return 2
   sweep_json_set "$CARDS" '.items += ([$c[] | select(.id as $i | ($cur | index($i)) == null)] | unique_by(.id) | map(. + {asked:$at}))' \
-    --argjson c "$incoming" --argjson cur "$(jq -c '[.items[].id]' "$CARDS")" --arg at "$(sweep_now)"
+    --argjson c "$incoming" --argjson cur "$cur" --arg at "$(sweep_now)" || return 2
   after="$(jq '.items | length' "$CARDS")"
   echo "added $((after - before))"
 }

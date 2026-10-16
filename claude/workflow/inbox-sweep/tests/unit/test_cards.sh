@@ -126,6 +126,10 @@ check "added 1" "$(echo '[{"id":"X-1"},{"id":"X-2"},{"id":"X-2"}]' | bash "$S" a
 check 2 "$(jq '.items | length' "$SWEEP_CARDS_FILE")" "B21e AC-H2: two items in all"
 echo '{"about":"no id"}' | bash "$S" add >/dev/null 2>&1; check 2 "$?" "B21e: a card without an id exits 2"
 check 2 "$(jq '.items | length' "$SWEEP_CARDS_FILE")" "B21e: and nothing was written"
+cp "$SWEEP_CARDS_FILE" "$D/cards.bak"; echo '[]' >"$SWEEP_CARDS_FILE"
+echo '{"id":"X-3"}' | bash "$S" add >/dev/null 2>&1; check 2 "$?" "B21e: a questions.json that is not {items:[...]} exits 2, never added 0"
+check '[]' "$(cat "$SWEEP_CARDS_FILE")" "B21e: and the file is left as it was"
+cp "$D/cards.bak" "$SWEEP_CARDS_FILE"
 # AC-H1: no other script writes questions.json
 # shellcheck disable=SC2016 # the pattern is a regex with literal $, single quotes are the point
 w="$(grep -lE 'sweep_json_set +"?\$(CARDS|cards)|>"?\$(CARDS|cards)"?' "$R"/bin/*.sh | xargs -n1 basename | sort | tr '\n' ' ')"
