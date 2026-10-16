@@ -4,7 +4,7 @@ PF      := pr-flow/bin
 PF_LINE ?= pr-flow
 PF_TIME  = bin/step-time.sh --line $(PF_LINE)
 
-.PHONY: pr-merge pr-merge-all pr-flow-sweep pr-flow-consume pr-flow-consume-stop pr-flow-regen pr-regen-index pr-rerun-stale-red pr-flow-ci-install pr-flow-rollback pr-flow-test pr-flow-lint pr-flow-clean
+.PHONY: pr-merge pr-merge-all pr-flow-sweep pr-flow-consume pr-flow-consume-stop pr-flow-regen pr-regen-index pr-rerun-stale-red pr-autofix pr-flow-ci-install pr-flow-rollback pr-flow-test pr-flow-lint pr-flow-clean
 
 pr-merge: ## make pr-merge REPO=owner/name PR=N: merge.sh for one PR (the backstop; the Action is the merge)
 	@test -n "$(REPO)" && test -n "$(PR)" || { echo "pr-merge needs REPO= and PR="; exit 2; }
@@ -44,8 +44,12 @@ pr-rerun-stale-red: ## make pr-rerun-stale-red REPO=owner/name [DRY=1]: the swee
 	@test -n "$(REPO)" || { echo "pr-rerun-stale-red needs REPO="; exit 2; }
 	@$(PF_TIME) --node rerun-stale-red --budget 60 --timeout 240 --retries 1 -- env REPO=$(REPO) DRY=$(DRY) $(PF)/pr-flow-consume.sh rerun-stale-red
 
+pr-autofix: ## make pr-autofix REPO=owner/name [PR=N]: the sweep autofix verb for one repository, posts AUTOFIX
+	@test -n "$(REPO)" || { echo "pr-autofix needs REPO="; exit 2; }
+	@$(PF_TIME) --node autofix --budget 60 --timeout 240 --retries 1 -- env REPO=$(REPO) PR=$(PR) $(PF)/pr-flow-consume.sh autofix
+
 pr-flow-test: image ## make pr-flow-test [CASES="gate records ..."]: the named pr-flow cases (default all) in the pinned test image
-	@for c in $(or $(CASES),ci-template gate records merge merge-hold merge-cleanup consume regen-index rerun-stale-red); do \
+	@for c in $(or $(CASES),ci-template gate records merge merge-hold merge-cleanup consume regen-index rerun-stale-red autofix); do \
 	  $(RUN) bash pr-flow/tests/$$c.test.sh | tail -1 | sed "s/^/$$c: /" | grep -q 'fail=0' && echo "ok  $$c" || { echo "FAIL $$c"; exit 1; }; done
 
 pr-flow-lint: image ## shellcheck every pr-flow script (warnings and errors; the coq ports carry coq's own info notes)

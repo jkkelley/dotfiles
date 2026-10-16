@@ -138,6 +138,7 @@
     <code value="SLOW" kind="step.slow" acts="orchestrator files a bottleneck work order"/>
     <code value="REGEN" kind="regen" acts="none; CI runs on the new head"/>
     <code value="RERUN" kind="ci.rerun" acts="none; CI runs on the new head"/>
+    <code value="AUTOFIX" kind="ci.autofix" acts="none; CI runs on the new head"/>
   </codes>
 
   <config file="claude/workflow/pr-flow/config/pr-flow.json">
