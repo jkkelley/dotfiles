@@ -1,5 +1,17 @@
 # Playbook: worker, the PR steps of pr-flow
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Contents](#contents)
+- [Source](#source)
+- [Steps](#steps)
+- [Records you emit](#records-you-emit)
+- [What wakes you](#what-wakes-you)
+- [Forbidden](#forbidden)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Contents
 
 - [Source](#source)
