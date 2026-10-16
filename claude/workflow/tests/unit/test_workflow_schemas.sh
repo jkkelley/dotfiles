@@ -190,5 +190,6 @@ else:
 sys.exit(bad)
 PY
 
+bash "$R/tests/unit/test_validate_schema_ref.sh" || fail=1
 [ "$fail" -eq 0 ] || exit 1
 echo "ok  workflow-schemas: declarations valid, thresholds required, records strict"
