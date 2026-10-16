@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dag.invalid/config.schema.json",
+  "title": "DAG config (dag.json)",
+  "description": "Inputs every dag script reads; arguments override them. Spec: docs/design/dag-state.spec.xml <config>. design_version and design_dir are read by dag-migrate.sh and the Make targets.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["design_version", "design_dir", "state_dir", "jobs", "retry_waits_seconds", "lock_stale_seconds", "ci_poll_seconds", "ci_timeout_seconds", "required_checks", "approval_dir", "base_branch"],
+  "properties": {
+    "design_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "design_dir": { "type": "string", "minLength": 1, "description": "Repo-root relative directory of *.node.json" },
+    "state_dir": { "type": "string", "minLength": 1, "description": "Root of runs/, outside the repository; a leading ~ is the home directory" },
+    "jobs": { "type": "integer", "minimum": 1 },
+    "retry_waits_seconds": { "type": "array", "maxItems": 3, "items": { "type": "integer", "minimum": 0 } },
+    "lock_stale_seconds": { "type": "integer", "minimum": 1 },
+    "ci_poll_seconds": { "type": "integer", "minimum": 1 },
+    "ci_timeout_seconds": { "type": "integer", "minimum": 1 },
+    "required_checks": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "approval_dir": { "type": "string", "minLength": 1 },
+    "base_branch": { "type": "string", "minLength": 1 }
+  }
+}

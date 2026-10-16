@@ -106,5 +106,6 @@ treehouse-gate: image ## make treehouse-gate OLD= NEW= REPOS="abs..." POOLS="poo
 	$(call need,OLD)$(call need,NEW)$(call need,REPOS)$(call need,POOLS)$(call need,OUT)
 	@$(TIMED) bash tests/container/treehouse-gate.sh --old "$(OLD)" --new "$(NEW)" --repos "$(REPOS)" --pools "$(POOLS)" --out "$(OUT)"
 include herdr-bus/herdr-bus.mk
+include dag/dag.mk
 include stuck-watch/stuck-watch.mk
 include timing/timing.mk
