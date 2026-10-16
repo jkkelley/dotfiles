@@ -7,6 +7,8 @@
 # Environment (tests set these):
 #   STUB_SEAT_DIR      state dir, same as stub-reply-start.sh
 #   STUB_SEAT_MODE     ok (default) | mismatch (types one character wrong, three times) | denied | already | early (types at step 1)
+#                      | die (types a wrong text, then the pane goes empty: a seat that died with text in the box, no token)
+#                      | die-token (types the right text so the controller issues the token, then dies: no result)
 #                      | rogue (claims RP-SENT with no readback and no token) | badresult (writes a result that does not validate)
 #   STUB_OWNER_LINE    the line the owner "types"; unset = never. STUB_OWNER_AT is the step it appears at (default 2).
 #   STUB_LEDGER        the ledger file, ONLY so `typed` log lines can say whether RP-CONFIRMED was already in it
@@ -46,6 +48,9 @@ type_text() { # attempt number
   log "typed $1 confirmed=$(confirmed)"
 }
 
+# A dead seat shows nothing, ever again (the die modes, B17c).
+[ -f "$D/died" ] && exit 0
+
 # What the pane shows. The owner's line is part of it from STUB_OWNER_AT on.
 {
   printf 'Reply id: %s\nRecipient: %s\nApproved sha256: %s\n' "$id" "$to" "$sha"
@@ -65,6 +70,8 @@ if [ -f "$seen_before" ]; then
     already) write_result RP-ALREADY-SENT 0 true false '[]' ;;
     rogue) log clicked; write_result RP-SENT 1 true true '[]' ;;
     badresult) echo '{}' >"$res"; log "result invalid" ;;
+    die) { cat "$file"; printf 'X'; } >"$rb"; log "typed 1 confirmed=$(confirmed)"; : >"$D/died" ;;
+    die-token) cp "$file" "$rb"; log "typed 1 confirmed=$(confirmed)"; : >"$D/died" ;;
     mismatch)
       a=$(($(cat "$D/attempts" 2>/dev/null || echo 0) + 1))
       if [ "$a" -le 3 ]; then echo "$a" >"$D/attempts"; type_text "$a"
