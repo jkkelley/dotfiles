@@ -1,0 +1,21 @@
+{
+  "schema": "zenith.a2a.result.v1",
+  "version": "1.0.0",
+  "id": "RS-REPLACE-ME",
+  "at": "2026-01-01T00:00:00Z",
+  "kind": "notice",
+  "status_code": "A2A-002",
+  "from": {"name": "seat-name", "role": null},
+  "to": {"name": "architect"},
+  "subject": "one line: what was done",
+  "brief_id": "BR-REPLACE-ME",
+  "status": "done",
+  "facts": {},
+  "actions": ["what the seat did, in order"],
+  "reply": null,
+  "refs": [],
+  "acceptance_criteria": [
+    {"id": "AC1", "ticked": true, "proof_kind": "command", "proof": "the actual output that ticks it"}
+  ],
+  "done_token": "DONE seat-name <pr-url>"
+}
