@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: treehouse-gate.sh
+# purpose: the dev gate for a treehouse upgrade: the new binary runs in podman against copies of the live pools.
+# inputs: --old BIN --new BIN --repos ABS_REPO... --pools POOL_DIR_NAME... --out FILE [--image IMG]; env IMAGE TMPDIR
+# outputs: stdout and --out FILE (ok/FAIL per check, timings), exit code
+# writes-to: --out FILE, a mktemp stage dir (pool copies); /tmp inside the container only
+# cleanup: trap removes the stage dir on exit; the container runs --rm
 # treehouse-gate.sh - the dev gate for a treehouse upgrade: the new binary runs in podman against COPIES of the live pools,
 # never the pools themselves, and every call the seat scripts make is proven to still behave before the host is updated.
 #

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: test_treehouse_lease.sh
+# purpose: Proves workflow-spawn.sh takes a seat's worktree as a treehouse lease held by the seat, and stays idempotent.
+# inputs: none (stubs treehouse and herdr on PATH)
+# outputs: stdout, exit code
+# writes-to: a mktemp scratch dir only
+# cleanup: trap removes the scratch dir on exit
 # Proves workflow-spawn.sh takes a seat's worktree as a treehouse lease held by the seat, and stays idempotent.
 #
 # Each check names the failure it rules out:
