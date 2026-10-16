@@ -4,7 +4,7 @@
   "slug": "work-order-sh-approve-code-dir-dir-resolves-a-cr",
   "title": "work-order.sh approve --code-dir DIR resolves a cross-repo ticket's step and AC tools on DIR's freshly fetched origin/main only, never HEAD, the working tree or an old copy",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-fb0c",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design17 cut for ORD-1053 / ORD-0830 RR-orch-14; design approvals ruled done, ORD-0550 O4; Lavish prohibited for Claude seats (global rule)",
@@ -20,15 +20,8 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [
-    "WO-20261016-9c09",
-    "WO-20261016-9fc7",
-    "WO-20261016-2d5b"
-  ],
-  "blocks": [
-    "WO-20261016-2eb1",
-    "WO-20261016-1099"
-  ],
+  "depends_on": [],
+  "blocks": [],
   "ac_checks": [
     {
       "index": 1,
@@ -66,7 +59,8 @@
   ],
   "labels": [
     "line:inbox-triage"
-  ]
+  ],
+  "superseded_by": "WO-20261016-ef1b"
 }
 ---
 
@@ -164,4 +158,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: ORD-1114 C1 reconcile (infra-design18): e297 is being built and 1099 follows it; 1b46's approve-on-origin/main ruling moves into WO-20261016-ef1b with check, evidence and done, so no two tickets carry approve --code-dir
+- superseded by: `WO-20261016-ef1b`
+
+No branch, no PR and no merge commit exist for this work order.
+

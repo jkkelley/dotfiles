@@ -20,11 +20,12 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [],
+  "depends_on": [
+    "WO-20261016-e03c"
+  ],
   "blocks": [
     "WO-20261016-94e2",
-    "WO-20261016-3d4d",
-    "WO-20261016-1b46"
+    "WO-20261016-3d4d"
   ],
   "ac_checks": [
     {

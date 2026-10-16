@@ -4,7 +4,7 @@
   "slug": "line-ops-pr-sweep-gates-make-test-pr-sweep-and-m",
   "title": "line-ops pr-sweep gates: make test-pr-sweep and make gate-uat-pr-sweep, gate-uat-pr-sweep.sh U0-U4 and docs/line-ops/test-plan-pr-sweep.md",
   "type": "test",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-ab87",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "ops-design1 cut for ORD-1042 G1 cluster-ops; design approvals ruled done, ORD-0550 O4",
@@ -21,9 +21,7 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [
-    "WO-20261016-c315"
-  ],
+  "blocks": [],
   "ac_checks": [
     {
       "index": 1,
@@ -64,7 +62,8 @@
   "labels": [
     "line:inbox-triage"
   ],
-  "repo": "jkkelley/homelab-gitops"
+  "repo": "jkkelley/homelab-gitops",
+  "superseded_by": "WO-20261016-ddf1"
 }
 ---
 
@@ -170,4 +169,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: DESIGN-GAP F48 (seats/lo-168e.result.json): one-line JSON test plan, start refuses test_plan_missing; recut with a markdown test plan and the U2 repo source fixed, on the same PR 105
+- superseded by: `WO-20261016-ddf1`
+
+No branch, no PR and no merge commit exist for this work order.
+
