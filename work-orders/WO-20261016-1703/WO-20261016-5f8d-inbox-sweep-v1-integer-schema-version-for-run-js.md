@@ -4,14 +4,14 @@
   "slug": "inbox-sweep-v1-integer-schema-version-for-run-js",
   "title": "Inbox sweep V1 - integer schema_version for run.json with its migration",
   "type": "feature",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:51+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/inbox-sweep-v1-integer-schema-version-for-run-js",
+  "pr": 239,
   "closed": null,
   "approval": {
     "via": "override",
@@ -65,8 +65,10 @@ Design 15.2: every record carries an integer schema_version; run.json still carr
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* sweep-init.sh writes schema_version 2 (integer) and the v2 schema validates its output (test)
-- [ ] `AC-H2` *(human)* migrations/run/v1-to-v2.sh upgrades the v1 fixture copy-forward, the v1 file survives, and the result validates against v2 (make migrate test)
+- [x] `AC-H1` *(human)* sweep-init.sh writes schema_version 2 (integer) and the v2 schema validates its output (test)
+  - observed `2026-10-16` podman, sweep-init.sh --seats all with fixture config: run.json schema_version 2 (jq type number); run.v2.schema.json validation errors: 0
+- [x] `AC-H2` *(human)* migrations/run/v1-to-v2.sh upgrades the v1 fixture copy-forward, the v1 file survives, and the result validates against v2 (make migrate test)
+  - observed `2026-10-16` podman, make migrate path (bin/migrate.sh migrate) over tests/fixtures/migrations/run/v1.json copied as run.json: MIG-OK -> run.v2.json, run.json survives (schema_version 1), run.v2.json schema_version 2, validates against run.v2 with 0 errors; make test migrate suite ran, its AC-H1..H3/H5 cases ok
 - [ ] `AC-H3` *(human)* make nodes-check is green with the bump and its migration
 
 ## Test plan
