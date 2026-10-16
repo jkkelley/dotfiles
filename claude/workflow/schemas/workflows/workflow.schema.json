@@ -204,6 +204,11 @@
             "minLength": 1
           },
           "description": "Repo-relative write boundary, disjoint between seats that run at the same time. An empty array means the seat writes nothing."
+        },
+        "mcp": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,31}$",
+          "description": "Names resources/mcp/<mcp>.json, the only MCP servers this seat starts. The spawner passes it as --strict-mcp-config --mcp-config. Absent means the user's full MCP set (about 650 MB more RSS per seat; resources-result AC3). BREADCRUMB: builders declare none or github because each default seat otherwise starts kubernetes, github, context7, notion and a jenkins container it never calls."
         }
       },
       "oneOf": [
