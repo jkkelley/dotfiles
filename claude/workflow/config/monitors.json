@@ -16,6 +16,14 @@
       "interval_seconds": 60,
       "pane": "{line}-stuck-watch",
       "publishes": "line.{line}.stuck.{code}, line.{line}.heartbeat"
+    },
+    {
+      "id": "node-timing",
+      "make": "node-timing-loop",
+      "args": {},
+      "interval_seconds": 5,
+      "pane": "{line}-node-timing",
+      "publishes": "$KV.TIMING.<line>.<kind>.<node>.<run>, line.{line}.timing.SLOW"
     }
   ]
 }
