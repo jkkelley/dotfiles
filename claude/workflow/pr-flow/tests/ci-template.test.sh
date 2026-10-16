@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# name: ci-template.test.sh
+# purpose: dev gate for the pr-flow templates - render checks and the merge decision against a stub gh
+# inputs: templates/, bin/pr-flow-ci-render.sh
+# outputs: ok/FAIL lines and pass= fail= on stdout; exit 1 on any failure
+# writes-to: a mktemp directory
+# cleanup: the mktemp directory is removed on exit
 # ci-template.test.sh - the pr-flow CI and merge-on-green templates render whole, and the merge decision follows
 # coq's gate minus review: merge only a green, current, non-conflicting head (pr-process.md rules R2, R3, R6).
 # Runs in the workflow test image, --network=none; gh is a stub, so nothing reaches GitHub.

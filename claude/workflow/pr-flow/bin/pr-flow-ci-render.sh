@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# name: pr-flow-ci-render.sh
+# purpose: render the pr-flow ci.yml or merge-on-green.yml template for one repository
+# inputs: --template, --set KEY=VALUE, --out; templates/*.yml beside bin/
+# outputs: the rendered workflow on stdout or at --out
+# writes-to: --out only
+# cleanup: none; the output is a tracked workflow file in the target repository
 # pr-flow-ci-render.sh - render a pr-flow workflow template for one repository.
 #
 #   pr-flow-ci-render.sh --template ci|merge-on-green [--set KEY=VALUE]... [--out FILE]
