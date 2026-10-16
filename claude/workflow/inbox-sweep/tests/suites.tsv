@@ -12,3 +12,4 @@ init	bin/sweep-init.sh,tests/unit/test_init.sh,tests/fixtures/owner-words.md,tes
 cards	bin/sweep-cards.sh,bin/sweep-lib.sh,tests/lib/,tests/fixtures/results/,tests/unit/test_cards.sh	bash tests/unit/test_cards.sh
 collect	bin/sweep-collect.sh,bin/sweep-lib.sh,tests/fixtures/results/,tests/unit/test_collect.sh	bash tests/unit/test_collect.sh
 watch	bin/sweep-watch.sh,tests/lib/stub-seat-record.sh,tests/unit/test_watch.sh	bash tests/unit/test_watch.sh
+spec-lint	bin/spec-lint.sh,tests/unit/test_spec_lint.sh	bash tests/unit/test_spec_lint.sh

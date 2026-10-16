@@ -13,7 +13,7 @@ ROOT  := $(abspath $(CURDIR)/../../..)
 RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:ro,Z" -w /work/claude/workflow/inbox-sweep -e HOME=/tmp
 
 .DEFAULT_GOAL := help
-.PHONY: help image test test-all herdr-first
+.PHONY: help image test test-all herdr-first spec-lint
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-12s %s\n", $$1, $$2}'
@@ -30,3 +30,6 @@ test-all: image ## Every suite; run once before a pull request
 
 herdr-first: image ## Fail if any sweep script backgrounds a process (Rule 18); SWEEP_BIN_DIR= points the scan elsewhere
 	@$(RUN) $(if $(SWEEP_BIN_DIR),-e SWEEP_BIN_DIR=$(SWEEP_BIN_DIR)) $(IMAGE) bash tests/run.sh --suite herdr-first
+
+spec-lint: image ## Fail if any docs/design/*.spec.xml is over 1000 lines or not well-formed XML
+	@$(RUN) $(IMAGE) bash bin/spec-lint.sh
