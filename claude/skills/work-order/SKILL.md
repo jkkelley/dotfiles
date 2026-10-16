@@ -152,9 +152,11 @@ it refuse, is in `references/lifecycle.md`.
 `done` is the whole close-out and it runs on the feature branch **before** the PR
 lands, alongside the `context-compaction` update to `CONTEXT_STATE.md`. It stamps
 the status, stamps `closed`, moves the ticket to `work-orders/archive/<year>/`,
-prunes an emptied epic directory, regenerates `INDEX.md` and the epic READMEs -
-and commits none of it. The move rides the ticket's own pull request, so the
-record lands on `main` in the same commit range as the work it records.
+prunes an emptied epic directory, regenerates `INDEX.md` and the epic READMEs
+locally - and commits none of it. The move rides the ticket's own pull request, so
+the record lands on `main` in the same commit range as the work it records.
+`INDEX.md` and the epic READMEs are generated, gitignored, rebuilt on demand, and
+never part of the pull request.
 
 That is a deliberate choice: it means a rejected PR leaves a ticket claiming done,
 which is what `reopen` exists to correct. In a roll-forward repository that is the
@@ -368,16 +370,19 @@ precisely because a wrong heading breaks nothing downstream.
 
 ### The index as a gate
 
-`INDEX.md` is generated and leads with what is startable, because the question an
-agent arrives with is "what may I pick up". Wire the gate into the commit hook:
+`INDEX.md` is generated, gitignored and rebuilt on demand. It leads with what is
+startable, because the question an agent arrives with is "what may I pick up".
+`next`, `tree`, `list` and `show` regenerate it when it is missing or older than a
+ticket, so a fresh clone needs no step. Wire the check into CI:
 
 ```bash
-bash $WO reindex --check   # exit 3 when INDEX.md and the tickets disagree,
-                           # or when any ticket sits loose at the top level
+bash $WO reindex --check   # generates every view into a temp file and fails on a
+                           # cycle, a dangling link, or a ticket loose at the top level;
+                           # passes with INDEX.md absent
 ```
 
-A stale index is not cosmetic. It is the router the next agent reads, and one that
-disagrees with the tickets on disk sends work to the wrong place.
+Because no view is tracked, two parallel ticket PRs touch only their own ticket
+file and can never conflict on a shared one.
 
 The same gate enforces the layout. When it reports a loose ticket, `reflow` is the
 fix:
