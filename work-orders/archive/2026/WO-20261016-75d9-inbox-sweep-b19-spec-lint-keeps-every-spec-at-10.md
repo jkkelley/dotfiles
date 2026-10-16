@@ -4,15 +4,15 @@
   "slug": "inbox-sweep-b19-spec-lint-keeps-every-spec-at-10",
   "title": "Inbox sweep B19 - spec-lint keeps every spec at 1000 lines or fewer",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T03:03:14+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/inbox-sweep-b19-spec-lint-keeps-every-spec-at-10",
+  "pr": 121,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner approved the reply DAG design on Bearings card D-18, 2026-10-16 UTC; Claude seats never use lavish (global owner rule)",
@@ -64,9 +64,12 @@ Spec files grow until no agent can read one; the 1000-line rule needs a check
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a 1001-line fixture spec fails with the file name and count (test)
-- [ ] `AC-H2` *(human)* a 1000-line fixture passes (test)
-- [ ] `AC-H3` *(human)* every docs/design/*.spec.xml parses (test)
+- [x] `AC-H1` *(human)* a 1001-line fixture spec fails with the file name and count (test)
+  - observed `2026-10-16` test_spec_lint: ok AC-H1: 1001 lines exits 1; ok AC-H1: output names the file and the count
+- [x] `AC-H2` *(human)* a 1000-line fixture passes (test)
+  - observed `2026-10-16` test_spec_lint: ok AC-H2: 1000 lines passes; ok AC-H2: 1000 lines with no trailing newline passes
+- [x] `AC-H3` *(human)* every docs/design/*.spec.xml parses (test)
+  - observed `2026-10-16` test_spec_lint: ok AC-H3: every docs/design/*.spec.xml parses and is within the cap; make spec-lint: ok inbox-sweep.spec.xml (537 lines), ok linkedin-reply.spec.xml (347 lines)
 
 ## Test plan
 
