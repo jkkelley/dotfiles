@@ -1,6 +1,6 @@
 # Test image for dotfiles' workflow machinery (claude/workflow/).
 # Carries exactly what the unit tests need: bash, jq, shellcheck, python3 with jsonschema and yaml (test_ci_job.sh reads the gate),
-# git (scripts/tests/test_home_migrate.sh builds fixture repos and worktrees), make (the a2a test calls the real brief-check target the spawner will call), and gettext-base for envsubst: inbox-sweep/bin/sweep-init.sh renders seat briefs with it (spec briefs/render), so its suite needs the real binary.
+# git (scripts/tests/test_home_migrate.sh builds fixture repos and worktrees; tests/container/treehouse-gate.sh runs treehouse, which shells out to git, against copied pools), make (the a2a test calls the real brief-check target the spawner will call), and gettext-base for envsubst: inbox-sweep/bin/sweep-init.sh renders seat briefs with it (spec briefs/render), so its suite needs the real binary.
 # Dotfiles owns this file rather than borrowing another project's locally built image, which would make
 # this suite pass or fail depending on whether some other repository happened to have been built here.
 # Base pinned by digest (Rule 15). Tag at pin time: debian:bookworm-slim.

@@ -11,7 +11,7 @@ RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:Z" -w
 include mk/line-watch.mk
 include mk/resources.mk
 include a2a-guard/a2a-guard.mk
-.PHONY: help image test schema lint herdr-first compaction chain failover test-plan ci-job grid step-time
+.PHONY: help image test schema lint herdr-first compaction chain failover test-plan ci-job grid step-time lease treehouse-gate
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-10s %s\n", $$1, $$2}'
@@ -84,4 +84,9 @@ line-adopt: ## make line-adopt LINE= ARCH=<pane> SEATS="name=pane ...": migrate 
 	@bash bin/herdr-grid.sh line-adopt "$(LINE)" "$(ARCH)" $(SEATS)
 grid: image ## The grid script against a stub herdr (relevant test only)
 	@$(RUN) bash tests/unit/test_herdr_grid.sh
+lease: image ## workflow-spawn.sh leases the seat's worktree from treehouse (relevant test only)
+	@$(RUN) bash tests/unit/test_treehouse_lease.sh
+treehouse-gate: image ## make treehouse-gate OLD= NEW= REPOS="abs..." POOLS="pool-dir..." OUT=: new treehouse on copied pools, in podman
+	$(call need,OLD)$(call need,NEW)$(call need,REPOS)$(call need,POOLS)$(call need,OUT)
+	@bash tests/container/treehouse-gate.sh --old "$(OLD)" --new "$(NEW)" --repos "$(REPOS)" --pools "$(POOLS)" --out "$(OUT)"
 include herdr-bus/herdr-bus.mk
