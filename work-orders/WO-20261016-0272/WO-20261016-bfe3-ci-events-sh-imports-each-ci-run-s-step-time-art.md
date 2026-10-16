@@ -4,13 +4,13 @@
   "slug": "ci-events-sh-imports-each-ci-run-s-step-time-art",
   "title": "ci-events.sh imports each CI run's step-time-* artifacts to the bus, once per run (recut of ff68)",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T08:00:25+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
+  "branch": "feat/ci-events-sh-imports-each-ci-run-s-step-time-art",
   "pr": null,
   "closed": null,
   "approval": {
@@ -79,10 +79,14 @@ ORD-0715 C1 (brief BR-20261016-infra-design3): "Timed by step-time.sh so SLOW sh
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow timing-test CASE=ci-import` exits 0 and its output matches /fail=0/ and has the three ok lines named in the steps (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* `make -C claude/workflow timing-test CASE=ci-events` exits 0 and its output matches /fail=0/ (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H3` *(human)* `make -C claude/workflow lint` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H4` *(human)* `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/timing/ci-events\.sh|claude/workflow/timing/tests/test_timing\.sh)$'` exits 1 and prints nothing (template: claude/workflow/templates/scope-ac.md)
+- [x] `AC-H1` *(human)* `make -C claude/workflow timing-test CASE=ci-import` exits 0 and its output matches /fail=0/ and has the three ok lines named in the steps (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make -C claude/workflow timing-test CASE=ci-import: exit 0, 3 ok lines, pass=3 fail=0
+- [x] `AC-H2` *(human)* `make -C claude/workflow timing-test CASE=ci-events` exits 0 and its output matches /fail=0/ (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make -C claude/workflow timing-test CASE=ci-events: exit 0, pass=4 fail=0
+- [x] `AC-H3` *(human)* `make -C claude/workflow lint` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make -C claude/workflow lint: exit 0
+- [x] `AC-H4` *(human)* `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/timing/ci-events\.sh|claude/workflow/timing/tests/test_timing\.sh)$'` exits 1 and prints nothing (template: claude/workflow/templates/scope-ac.md)
+  - observed `2026-10-16` scope grep exit 1, printed nothing (only In files changed)
 
 ## Test plan
 
