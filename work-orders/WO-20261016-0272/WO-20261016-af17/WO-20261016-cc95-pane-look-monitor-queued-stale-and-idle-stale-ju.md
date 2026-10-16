@@ -4,14 +4,14 @@
   "slug": "pane-look-monitor-queued-stale-and-idle-stale-ju",
   "title": "pane-look monitor: QUEUED-STALE and IDLE-STALE judged from the pane spinner, never agent_status",
   "type": "feature",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:04:48+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/pane-look-monitor-queued-stale-and-idle-stale-ju",
+  "pr": 200,
   "closed": null,
   "approval": {
     "via": "override",
@@ -83,10 +83,14 @@ MSG-20261016-051746-prevent O2 (brief stuck-watch-brief.v3.json): "pane-look mon
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow pane-look-test` exits 0 and prints `ok working judged from a moving spinner timer while agent_status says idle` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* the same run prints `ok QUEUED-STALE after 300s of unchanged queued input`, `ok IDLE-STALE after 60s idle with no result file` and `ok no IDLE-STALE when the result file exists` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* `jq -e '.monitors[]|select(.name=="pane-look" and .slot=="3.3")' claude/workflow/config/monitors.json` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H4` *(human)* `grep -c agent_status claude/workflow/stuck-watch/pane-look.sh` lines never feed the working/idle decision (test case `agent_status idle with a moving spinner is working`) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `make -C claude/workflow pane-look-test` exits 0 and prints `ok working judged from a moving spinner timer while agent_status says idle` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -C claude/workflow pane-look-test exit 0; output: ok working judged from a moving spinner timer while agent_status says idle
+- [x] `AC-H2` *(human)* the same run prints `ok QUEUED-STALE after 300s of unchanged queued input`, `ok IDLE-STALE after 60s idle with no result file` and `ok no IDLE-STALE when the result file exists` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` exit 0; output: ok QUEUED-STALE after 300s of unchanged queued input;ok IDLE-STALE after 60s idle with no result file;ok no IDLE-STALE when the result file exists;
+- [x] `AC-H3` *(human)* `jq -e '.monitors[]|select(.name=="pane-look" and .slot=="3.3")' claude/workflow/config/monitors.json` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` jq -e exit 0; output: {"name":"pane-look","owner":"stuck-watch","slot":"3.3","interval":0,"command":"make-C${repo}pane-look-loopLINE=${line}WS=${ws}","publishes":"line.${line}.stuck.QUEUED-STALE,line.${line}.stuck.IDLE-STALE"}
+- [x] `AC-H4` *(human)* `grep -c agent_status claude/workflow/stuck-watch/pane-look.sh` lines never feed the working/idle decision (test case `agent_status idle with a moving spinner is working`) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` grep -c agent_status = 6 lines: comments, the recorded event field and the herdr read only; none feeds working/idle; exit 0; test case 'agent_status idle with a moving spinner is working' ok
 
 ## Test plan
 
