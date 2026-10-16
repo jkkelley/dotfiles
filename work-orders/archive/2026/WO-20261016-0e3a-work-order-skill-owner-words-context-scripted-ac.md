@@ -4,7 +4,7 @@
   "slug": "work-order-skill-owner-words-context-scripted-ac",
   "title": "work-order skill: owner words, context, scripted AC checks, check verb, approve resolves tools",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-0272",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -21,10 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [
-    "WO-20261016-6e76",
-    "WO-20261016-565d"
-  ]
+  "blocks": [],
+  "superseded_by": "WO-20261016-6ef4"
 }
 ---
 
@@ -142,4 +140,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: DESIGN-GAP: In list omitted testing/assert.sh and cases 150, 250; AC regexes never matched run-tests.sh output; recut
+- superseded by: `WO-20261016-6ef4`
+
+No branch, no PR and no merge commit exist for this work order.
+
