@@ -173,6 +173,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-16` DESIGN-GAP: AC-H3 check regex ends the work-orders/ alternative with $, so no work-orders path can match; the check exits 1 on the required ticket file. Evidence for criterion 3 is that the diff holds only the two In files plus the ticket file; the check itself needs a trailing .* after work-orders/.
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._
