@@ -6,6 +6,5 @@ This ticket: [Spec check - golden rules 25 to 30 and make spec-check](WO-2026101
 
 One level down only. A child of a child is listed in its own directory, not here.
 
-| ID | status | pri | waiting on | title |
-|---|---|---|---|---|
-| `WO-20261016-04d3` | in-progress | p1 | - | [make spec-check gates XML specs in the fast PR check](WO-20261016-04d3-make-spec-check-gates-xml-specs-in-the-fast-pr-c.md) |
+_No children yet. This ticket sits at the top level, so it holds the directory
+on its own until work is filed underneath it._
