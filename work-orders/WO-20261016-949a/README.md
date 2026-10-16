@@ -8,4 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-bece` | draft | p1 | - | [golden-rules repos opens each PR against origin, never the fork parent](WO-20261016-bece-golden-rules-repos-opens-each-pr-against-origin-.md) |
+| `WO-20261016-bece` | ready | p1 | - | [golden-rules repos opens each PR against origin, never the fork parent](WO-20261016-bece-golden-rules-repos-opens-each-pr-against-origin-.md) |

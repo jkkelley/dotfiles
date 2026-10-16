@@ -4,7 +4,7 @@
   "slug": "golden-rules-repos-opens-each-pr-against-origin-",
   "title": "golden-rules repos opens each PR against origin, never the fork parent",
   "type": "bug",
-  "status": "draft",
+  "status": "ready",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "owner: i approved of everything (brief BR-20261016-spec-check)",
+    "at": "2026-10-16"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
