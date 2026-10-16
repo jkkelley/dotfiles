@@ -13,4 +13,4 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-a29e` | ready | p1 | WO-20261016-984d | [pr-flow merge.sh ported from coq with its three test files (T5)](WO-20261016-a29e-pr-flow-merge-sh-ported-from-coq-with-its-three-.md) |
 | `WO-20261016-984d` | ready | p1 | - | [pr-flow records.sh with dir and bus backends and record schema (T2)](WO-20261016-984d-pr-flow-records-sh-with-dir-and-bus-backends-and.md) |
 | `WO-20261016-5630` | ready | p1 | WO-20261016-1708 | [retire merge-train old body and point golden rules at the PR process (T9)](WO-20261016-5630-retire-merge-train-old-body-and-point-golden-rul.md) |
-| `WO-20261016-17dc` | draft | p1 | WO-20261016-83fb | [test: PR process UAT on dotfiles then stable on three repos (T10)](WO-20261016-17dc-test-pr-process-uat-on-dotfiles-then-stable-on-t.md) |
+| `WO-20261016-17dc` | ready | p1 | WO-20261016-83fb | [test: PR process UAT on dotfiles then stable on three repos (T10)](WO-20261016-17dc-test-pr-process-uat-on-dotfiles-then-stable-on-t.md) |
