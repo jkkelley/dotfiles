@@ -1,5 +1,18 @@
 # quota-probe
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Contents](#contents)
+- [What it is](#what-it-is)
+- [Status codes](#status-codes)
+- [Add a probe](#add-a-probe)
+- [Make targets](#make-targets)
+- [Gates](#gates)
+- [Cleanup](#cleanup)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Contents
 
 - What it is

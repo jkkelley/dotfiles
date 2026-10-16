@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# name: quota-probe.sh
+# purpose: probe a rate-limited tool once; QUOTA-OK, QUOTA-OUT or QUOTA-ERR, published on the bus on change.
+# cleanup: make clean (claude/workflow/quota-probe/Makefile) removes ~/.local/state/zenith/quota-probe
 # quota-probe.sh - probe a rate-limited tool once; QUOTA-OK, QUOTA-OUT or QUOTA-ERR, published on the bus on change.
 # usage: quota-probe.sh --name NAME [--config FILE]
 # inputs: config.json beside this script (or --config); env QP_STATE_DIR overrides state_dir, QP_BUS overrides the publisher
