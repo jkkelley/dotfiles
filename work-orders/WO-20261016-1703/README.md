@@ -8,7 +8,6 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-c78f` | in-progress | p1 | - | [Inbox sweep B10 - sweep-clean.sh clean and prune verbs](WO-20261016-c78f-inbox-sweep-b10-sweep-clean-sh-clean-and-prune-v.md) |
 | `WO-20261016-e2e8` | draft | p1 | WO-20261016-61ae | [Inbox sweep B11 - live end-to-end run](WO-20261016-e2e8-inbox-sweep-b11-live-end-to-end-run.md) |
 | `WO-20261016-5328` | draft | p1 | - | [Inbox sweep B12 - spike, can the extension be woken without the owner](WO-20261016-5328-inbox-sweep-b12-spike-can-the-extension-be-woken.md) |
 | `WO-20261016-4376` | ready | p1 | - | [Inbox sweep B3 - sweep-init.sh run dir, run.json and rendered briefs](WO-20261016-4376-inbox-sweep-b3-sweep-init-sh-run-dir-run-json-an.md) |
@@ -17,4 +16,4 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-a865` | ready | p1 | - | [Inbox sweep B6 - sweep-watch.sh result bridge to record rows](WO-20261016-a865-inbox-sweep-b6-sweep-watch-sh-result-bridge-to-r.md) |
 | `WO-20261016-eaa9` | ready | p1 | - | [Inbox sweep B7 - sweep-cards.sh Bearings cards from results](WO-20261016-eaa9-inbox-sweep-b7-sweep-cards-sh-bearings-cards-fro.md) |
 | `WO-20261016-3aa8` | ready | p1 | - | [Inbox sweep B8 - sweep-collect.sh run summary](WO-20261016-3aa8-inbox-sweep-b8-sweep-collect-sh-run-summary.md) |
-| `WO-20261016-61ae` | ready | p1 | WO-20261016-4376 WO-20261016-f390 WO-20261016-b956 WO-20261016-a865 WO-20261016-eaa9 WO-20261016-3aa8 WO-20261016-c78f | [Inbox sweep B9 - sweep.sh controller, Makefile and README](WO-20261016-61ae-inbox-sweep-b9-sweep-sh-controller-makefile-and-.md) |
+| `WO-20261016-61ae` | ready | p1 | WO-20261016-4376 WO-20261016-f390 WO-20261016-b956 WO-20261016-a865 WO-20261016-eaa9 WO-20261016-3aa8 | [Inbox sweep B9 - sweep.sh controller, Makefile and README](WO-20261016-61ae-inbox-sweep-b9-sweep-sh-controller-makefile-and-.md) |
