@@ -4,6 +4,7 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Seat](#seat)
+- [Replies](#replies)
 - [Forbidden](#forbidden)
 - [Browser check](#browser-check)
 - [Show and wait](#show-and-wait)
