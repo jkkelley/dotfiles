@@ -4,13 +4,13 @@
   "slug": "timed-run-every-target-of-claude-workflow-mk-lin",
   "title": "timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper",
   "type": "chore",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:05:49+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
+  "branch": "feat/timed-run-every-target-of-claude-workflow-mk-lin",
   "pr": null,
   "closed": null,
   "approval": {
@@ -69,9 +69,12 @@ Item 37 amended, owner 2026-10-16 UTC: "time out everything logically, you'll ID
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `grep -c '$(TIMED)' claude/workflow/mk/line-watch.mk` equals the number of wrapped targets listed in the PR body (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `make -n` of every wrapped target of claude/workflow/mk/line-watch.mk prints `timed-run.sh --node <target> --kind make` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* with the bus down (no NATS on the port) a wrapped target exits with its own exit code and prints only a WARN line (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `grep -c '$(TIMED)' claude/workflow/mk/line-watch.mk` equals the number of wrapped targets listed in the PR body (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` grep -cF '$(TIMED)' claude/workflow/mk/line-watch.mk -> exit 0, prints 16 (16 wrapped targets, listed in PR body). The AC's non-F grep prints 0 (BRE); TP-1 regex prints 16.
+- [x] `AC-H2` *(human)* `make -n` of every wrapped target of claude/workflow/mk/line-watch.mk prints `timed-run.sh --node <target> --kind make` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -n -C claude/workflow <target> for all 16 wrapped targets -> exit 0, each prints 'timed-run.sh --node <target> --kind make'
+- [x] `AC-H3` *(human)* with the bus down (no NATS on the port) a wrapped target exits with its own exit code and prints only a WARN line (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` podman, SW_NATS_URL=127.0.0.1:1, timed-run.sh --node probe --kind make -- true -> WARN bus unreachable lines only, rc=0. make -C claude/workflow line-watch-test -> rc=0, all ok
 
 ## Test plan
 
