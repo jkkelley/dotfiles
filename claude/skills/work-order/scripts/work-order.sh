@@ -171,8 +171,9 @@ next:
   handoff list: an empty result means nothing may be started, not "pick anything".
 
 reindex:
-  --check      exit 3 when INDEX.md does not match the tickets on disk, and print
-               nothing but the reason. For a commit gate.
+  --check      generate every view and validate layout, cycles and loose top-level
+               tickets; writes nothing. Passes with INDEX.md absent. For CI.
+               INDEX.md and the epic READMEs are untracked build outputs.
 
 repair:
   Rewrites the H1 of any ticket still carrying the `%%ID%% - %%TITLE%%` template
@@ -1672,6 +1673,7 @@ render_branch() {
 
 cmd_tree() {
   wo_require_jq
+  ensure_views
   load_graph
   if ((PS_JSON)); then
     local gid first=1
@@ -1693,6 +1695,7 @@ cmd_tree() {
 
 cmd_next() {
   wo_require_jq
+  ensure_views
   load_graph
   local gid
   local -a picks=()
@@ -1816,12 +1819,14 @@ cmd_resync() {
 
 cmd_show() {
   wo_require_jq; require_id
+  ensure_views
   local file; file=$(wo_find "$project" "$id")
   if ((PS_JSON)); then wo_fm "$file"; else cat -- "$file"; fi
 }
 
 cmd_list() {
   wo_require_jq
+  ensure_views
   [[ -d $root ]] || ps_die "$PS_NOTFOUND" "no_work_orders" "no $WO_DIR_NAME/ in $project"
   [[ -n $status_filter ]] && ps_require_enum status "$status_filter" "${WO_STATUSES[@]}"
   local f rows=()
@@ -2056,9 +2061,26 @@ each_child_dir() {
   done
 }
 
+# ignore_views - INDEX.md and every README under work-orders/ are build outputs,
+# never committed (WO-20261016-565d). The ignore goes in .git/info/exclude, which
+# every worktree of the clone shares, because the project's .gitignore is not a
+# file this skill owns. Idempotent; a project that is not a git work tree is left
+# alone.
+ignore_views() {
+  local ex
+  ex=$(git -C "$project" rev-parse --git-path info/exclude 2>/dev/null) || return 0
+  [[ $ex == /* ]] || ex="$project/$ex"
+  mkdir -p -- "$(dirname -- "$ex")" 2>/dev/null || return 0
+  local pat
+  for pat in "/$WO_DIR_NAME/INDEX.md" "/$WO_DIR_NAME/**/README.md"; do
+    grep -qxF -- "$pat" "$ex" 2>/dev/null || printf '%s\n' "$pat" >>"$ex"
+  done
+}
+
 reindex() {
   [[ -d $root ]] || return 0
   load_graph
+  ignore_views
   local tmp gid dir
   tmp=$(ps_tempfile)
   build_index >"$tmp"
@@ -2071,8 +2093,19 @@ reindex() {
   done < <(each_child_dir)
 }
 
-# reindex --check is the commit gate: a stale index means the tickets on disk and
-# the router disagree, and the router is what the next agent reads.
+# ensure_views - readers regenerate INDEX.md and the epic READMEs when either is
+# missing or older than any ticket, so a fresh clone works with no step.
+ensure_views() {
+  [[ -d $root ]] || return 0
+  if [[ ! -f $root/INDEX.md ]] \
+    || [[ -n $(find "$root" -name 'WO-*.md' -newer "$root/INDEX.md" -print -quit) ]]; then
+    load_graph
+    reindex
+  fi
+}
+
+# reindex --check is the CI gate: it generates every view and fails on a bad
+# layout or graph. The views themselves are untracked, so none is compared.
 cmd_reindex() {
   wo_require_jq
   [[ -d $root ]] || ps_die "$PS_NOTFOUND" "no_work_orders" "no $WO_DIR_NAME/ in $project"
@@ -2088,19 +2121,20 @@ cmd_reindex() {
         "these tickets sit loose at the top of $WO_DIR_NAME/ instead of inside a directory: $names - run 'work-order.sh reflow'"
     fi
 
+    # INDEX.md and the epic READMEs are untracked build outputs (WO-20261016-565d),
+    # so there is nothing committed to compare against. The check generates every
+    # view and fails if generation does, which is what validates cycles and
+    # dangling links. It no longer reads or requires the files on disk: a fresh
+    # clone has none, and a stale local copy is not a CI failure.
     load_graph
     local tmp gid dir
     tmp=$(ps_tempfile)
     build_index >"$tmp"
-    cmp -s "$tmp" "$root/INDEX.md" || ps_die "$PS_VALIDATION" "index_stale" \
-      "INDEX.md does not match the tickets on disk - run 'work-order.sh reindex'"
     while IFS=$'\t' read -r gid dir; do
       tmp=$(ps_tempfile)
       build_child_readme "$gid" >"$tmp"
-      cmp -s "$tmp" "$dir/README.md" || ps_die "$PS_VALIDATION" "readme_stale" \
-        "${dir#"$project"/}/README.md does not match its children - run 'work-order.sh reindex'"
     done < <(each_child_dir)
-    if ((PS_JSON)); then printf '{"ok":true,"index":"current"}\n'; else ps_info "INDEX.md and every child README are current"; fi
+    if ((PS_JSON)); then printf '{"ok":true,"index":"generated"}\n'; else ps_info "INDEX.md and every child README generate cleanly"; fi
     return 0
   fi
   reindex
