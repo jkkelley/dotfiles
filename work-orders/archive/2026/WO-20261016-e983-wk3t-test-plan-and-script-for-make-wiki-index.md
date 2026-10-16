@@ -4,15 +4,15 @@
   "slug": "wk3t-test-plan-and-script-for-make-wiki-index",
   "title": "WK3t: test plan and script for make wiki-index",
   "type": "test",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T12:04:24+00:00",
   "parent": "WO-20261016-35de",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/e983-wk3t-test-plan-and-script-for-make-wiki-index",
+  "pr": 349,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design20 recut for DESIGN-GAP F48; design approvals ruled done, ORD-0550 O4",
@@ -106,11 +106,14 @@ Recut by infra-design20 (BR-20261016-infra-design20, DESIGN-GAP F48): the predec
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* TP-1 the unit tests pass in the pinned image
+- [x] `AC-H1` *(human)* TP-1 the unit tests pass in the pinned image
+  - observed `2026-10-16` 7 tests OK exit 0; /home/luna/.local/state/zenith/log/2026/10/20261016-121441-wk3-test.log
   - check: `podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_index.py` exit 0 expect /^OK/
-- [ ] `AC-H2` *(human)* TP-2 the FB-001 fallback path runs the cached digest
+- [x] `AC-H2` *(human)* TP-2 the FB-001 fallback path runs the cached digest
+  - observed `2026-10-16` FALLBACK FB-001 wk3-t, exit 0; /home/luna/.local/state/zenith/log/2026/10/20261016-121441-wk3-test.log
   - check: `env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk3-t --fallback "podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_index.py" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_index.py` exit 0 expect /FALLBACK FB-001/
-- [ ] `AC-H3` *(human)* the diff holds only generated work-orders files
+- [x] `AC-H3` *(human)* the diff holds only generated work-orders files
+  - observed `2026-10-16` diff outside work-orders empty (grep exit 1); /home/luna/.local/state/zenith/log/2026/10/20261016-121441-wk3-test.log
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan
