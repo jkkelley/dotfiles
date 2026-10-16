@@ -1,5 +1,28 @@
 # DAG state - one deterministic path from taking work to cleanup
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Contents](#contents)
+- [1. Design principles 101](#1-design-principles-101)
+- [2. Goal](#2-goal)
+- [3. Inventory](#3-inventory)
+- [4. Tool choice](#4-tool-choice)
+- [5. Architecture](#5-architecture)
+- [6. The intake DAG](#6-the-intake-dag)
+- [7. The state file](#7-the-state-file)
+- [8. Verbs: plan, apply, drift, recover](#8-verbs-plan-apply-drift-recover)
+- [9. Status code map](#9-status-code-map)
+- [10. Node bundles](#10-node-bundles)
+- [11. Migration](#11-migration)
+- [12. Make targets and config](#12-make-targets-and-config)
+- [13. Bottlenecks found and fixed in this design](#13-bottlenecks-found-and-fixed-in-this-design)
+- [14. Build tickets](#14-build-tickets)
+- [15. Testing](#15-testing)
+- [16. Where everything lives, and how it is cleaned](#16-where-everything-lives-and-how-it-is-cleaned)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Status: DESIGN, for the owner to read on Bearings. Nothing in this document is built yet.
 Owner order, 2026-10-16 UTC: "worktrees and feature branches with the whole process DAG when getting work so it follows a deterministic path with clear checklist runbooks playbooks documents everything that node needs is there and graceful recovery, always, doc design first with those mermaid and build to spec and keep the idea of terraform in mind, the state file is the source of truth, so should the DAG doc design architecture".
 Companion files: [`dag-state.spec.xml`](dag-state.spec.xml) (verbs, codes, make, config), [`dag-state-nodes.spec.xml`](dag-state-nodes.spec.xml) (nodes, bundles, migration, build tickets) and the schemas in [`claude/workflow/dag/schemas/`](../../claude/workflow/dag/schemas/).
