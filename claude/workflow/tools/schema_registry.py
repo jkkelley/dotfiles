@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: schema_registry.py
+# purpose: validate an instance against a schema, resolving $ref offline from a local registry keyed by $id.
+# inputs: <schema.json> <instance.json>; env SCHEMA_REGISTRY_ROOTS, SCHEMA_REF_IMPL
+# outputs: stderr messages, exit code 0 valid / 1 invalid / 2 registry error
+# writes-to: nothing (read-only)
+# cleanup: none needed
 """Validate an instance against a schema, resolving $ref offline from a local registry.
 
 Built for WO-20261016-f052, order ORD-0921 E3. Seat dag-t6b was blocked on WO-20261016-efb2

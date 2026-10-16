@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: test_validate_schema_ref.sh
+# purpose: validate-schema.sh resolves $ref offline from a local registry (WO-20261016-f052, TP-1 to TP-5).
+# inputs: none (uses validate-schema.sh and schemas in the repo)
+# outputs: stdout, exit code
+# writes-to: a mktemp scratch directory only
+# cleanup: removes its own temp files on exit
 # validate-schema.sh resolves $ref offline from a local registry (WO-20261016-f052, TP-1 to TP-5).
 set -euo pipefail
 R="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
