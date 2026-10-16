@@ -4,7 +4,7 @@
   "slug": "test-seat-up-waits-for-the-agent-to-be-idle-or-w",
   "title": "Test - seat-up waits for the agent to be idle or working, never idle only",
   "type": "test",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-4b6c",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -26,7 +26,8 @@
   "blocks": [],
   "labels": [
     "line:inbox-triage"
-  ]
+  ],
+  "superseded_by": "WO-20261016-1ca6"
 }
 ---
 
@@ -111,4 +112,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: DESIGN-GAP: TP-2 named an 'agent never reached idle' case that did not exist; case cut as WO-20261016-7e48, plan recut under WO-20261016-1ca6 (infra-design23)
+- superseded by: `WO-20261016-1ca6`
+
+No branch, no PR and no merge commit exist for this work order.
+

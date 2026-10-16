@@ -22,7 +22,8 @@
   "surfaces": [],
   "depends_on": [
     "WO-20261016-2092",
-    "WO-20261016-ad18"
+    "WO-20261016-ad18",
+    "WO-20261016-0c07"
   ],
   "blocks": [],
   "ac_checks": [
@@ -147,6 +148,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` infra-design23: ordered after WO-20261016-0c07, both touch claude/workflow/config/line-watch.json (item 19, ORD-1140 S3)
 
 ## Outcome
 

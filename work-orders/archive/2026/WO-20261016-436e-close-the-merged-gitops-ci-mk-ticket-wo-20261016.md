@@ -4,7 +4,7 @@
   "slug": "close-the-merged-gitops-ci-mk-ticket-wo-20261016",
   "title": "Close the merged gitops-ci.mk ticket WO-20261016-ae02 (PR 347)",
   "type": "chore",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-770f",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design21 cut DESIGN-GAP d38a and ORD-1140 S3 (brief BR-20261016-infra-design21); design approvals ruled done, ORD-0550 O4; Claude seats never use lavish (global owner rule)",
@@ -45,7 +45,8 @@
   "provides": [],
   "labels": [
     "line:inbox-triage"
-  ]
+  ],
+  "superseded_by": "WO-20261016-a425"
 }
 ---
 
@@ -150,4 +151,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: DESIGN-GAP: TP-1 could not pass from a git worktree (git common dir not mounted in podman); recut with the mount under WO-20261016-a425 (infra-design23)
+- superseded by: `WO-20261016-a425`
+
+No branch, no PR and no merge commit exist for this work order.
+
