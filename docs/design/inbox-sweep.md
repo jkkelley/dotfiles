@@ -1,6 +1,7 @@
 # Inbox sweep - design
 
-Status: DESIGN, awaiting owner read. No build ticket is cut from this document until the owner has read it.
+Status: APPROVED, owner ruling 2026-10-16 UTC on Bearings card D-04, with the architect's rulings recorded in [section 12](#12-owner-decisions).
+Build tickets are cut from [section 10](#10-build-dag).
 Owner order, 2026-10-15 UTC: "make sure you clean up too and shit is automated with makefiles and scripts, i'm not fucking around, dag this shit out doc design first".
 Companion files: [`inbox-sweep.spec.xml`](inbox-sweep.spec.xml) (the build spec) and [`inbox-sweep.result.schema.json`](inbox-sweep.result.schema.json) (one seat's result record).
 
@@ -17,7 +18,7 @@ Companion files: [`inbox-sweep.spec.xml`](inbox-sweep.spec.xml) (the build spec)
 9. [Where everything lives, and how it is cleaned](#9-where-everything-lives-and-how-it-is-cleaned)
 10. [Build DAG](#10-build-dag)
 11. [Testing](#11-testing)
-12. [Open owner decisions](#12-open-owner-decisions)
+12. [Owner decisions](#12-owner-decisions)
 13. [Conflicts surfaced](#13-conflicts-surfaced)
 
 ## 1. Goal
@@ -204,7 +205,7 @@ Seat codes appear in a result's `status`; run codes in `summary.json.status`; pr
 
 | Step             | Tool                                                                       | Why                                                                                                      | Rejected                                                                             |
 | ---------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Entry point      | `make` over `bin/sweep.sh`                                                 | Owner asked for makefiles; `claude/workflow/Makefile` is the precedent; targets are one-line delegations | A justfile mirror, see [D2](#d2-make-only-or-make-plus-just)                         |
+| Entry point      | `make` over `bin/sweep.sh`                                                 | Owner asked for makefiles; `claude/workflow/Makefile` is the precedent; targets are one-line delegations | A justfile mirror, decided A in [D2](#d2-make-only-or-make-plus-just)                         |
 | Orchestration    | Bash scripts plus `jq`                                                     | Deterministic routing and retries are code, not model work (Rule 5); same stack as `claude/workflow/bin` | Python: a second language for the same machinery                                     |
 | Seat start       | `workflow-spawn.sh` with a chain link                                      | Already names tabs, writes seat-link, exports `RAIL_SURFACE`, supports a launcher unlike its kind        | `herdr agent start` by hand, which duplicates the spawner                            |
 | Browser seats    | `claude.exe --chrome` from WSL                                             | The extension's native host is registered to Windows Claude Code only (I11, I12)                         | WSL `claude --chrome` (F1); the separate debug Chrome profile (owner rejected)       |
@@ -316,53 +317,67 @@ All tests run in Podman on the image built from `claude/workflow/tests/container
 The live run (B11) is the end-to-end test and is the only step that touches real mailboxes; it is never run by CI.
 Where the `container-sandbox` skill has no section for stubbed Windows binaries, B0 adds one to `claude/skills/container-sandbox/references/skill-testing.md`.
 
-## 12. Open owner decisions
+## 12. Owner decisions
 
-Each goes to the Getting My Bearings page as one card, one at a time, after the owner has read this design.
+All seven were decided together on 2026-10-16 UTC, when the owner approved this design on Bearings card D-04 with the architect's rulings.
+Each heading keeps its anchor so links into this section still resolve.
+
+| Code | Decision                     | Ruling                                                                                       |
+| ---- | ---------------------------- | -------------------------------------------------------------------------------------------- |
+| D1   | Mark read or leave unread    | A: mark everything read                                                                      |
+| D2   | Make only, or make plus just | A: make only; the controller is declared WSL-only under Rule 17's escape clause               |
+| D3   | Waking the extension         | A: a sleeping extension raises one card; Gmail still runs                                    |
+| D4   | Proton seats                 | A: one Proton seat per account, in parallel                                                  |
+| D5   | When a sweep runs            | A then B: on demand until three clean live runs, then daily                                  |
+| D6   | Retention of run dirs        | A: 14 days                                                                                   |
+| D7   | After a LinkedIn draft       | A draft is sent only after the owner approves that exact draft; the sweep itself never sends |
 
 ### D1 Mark read or leave unread
 
-- A: Mark processed messages read (today's Gmail precedent). Recommended: the sweep's after count then proves coverage.
-- B: Leave everything unread; the sweep only reports.
-- C: Mark bulk read, leave human and important mail unread.
+Decided: A.
+Every message a seat processes is marked read, so the after count proves coverage.
+Marking read stays the only mailbox mutation a sweep may make.
 
 ### D2 Make only, or make plus just
 
-- A: Make only, controller declared WSL-only per Rule 17's escape clause. Recommended: one entry point, and the controller cannot run without herdr and WSL interop anyway.
-- B: Make plus a justfile mirror: two entry points to keep in sync.
-- C: Justfile only: contradicts the owner's "makefiles".
+Decided: A.
+`make` is the one entry point, and `bin/sweep.sh <verb>` is its plain equivalent.
+The controller is WSL-only by necessity (herdr and WSL interop), which its README states per Rule 17.
 
 ### D3 Waking the extension
 
-- A: When preflight says `PF-NO-BROWSER`, one card asks the owner to open the Claude side panel once; Gmail still runs. Recommended until B12 finds an automatic wake.
-- B: Block the whole run until the browser is connected.
+Decided: A.
+When preflight reports `PF-NO-BROWSER`, the run raises exactly one card asking the owner to open the Claude side panel once, and the Gmail seat still runs.
+B12 stays in the build DAG to look for an automatic wake; if it finds one, this ruling is revisited.
 
 ### D4 Proton seats
 
-- A: One seat per account, in parallel, each in its own tab. Recommended: one account's login wall does not block the others, and results map one to one.
-- B: One seat walks every account in turn.
+Decided: A.
+One seat per configured Proton account, each in its own tab, all in parallel.
 
 ### D5 When a sweep runs
 
-- A: On demand only, `make sweep`. Recommended until three clean live runs.
-- B: Daily at a fixed UTC time, started by the orchestrator.
+Decided: A, then B.
+On demand only (`make sweep`) until three clean live runs, then daily at a fixed UTC time started by the orchestrator.
+"Clean" means the run code is `RUN-OK` and R7's verdict is `CLEAN-OK`.
+Scheduling the daily run is a follow-up ticket cut after the third clean run, not part of this build.
 
 ### D6 Retention of run dirs
 
-- A: 14 days. Recommended: they hold mail gists and LinkedIn text.
-- B: 7 days.
-- C: 30 days.
+Decided: A.
+14 days, enforced by `make prune --days 14`.
 
 ### D7 After a LinkedIn draft is approved
 
-- A: The owner sends it; the sweep never sends. Recommended: matches "never send".
-- B: A separate send seat, gated per approved card, designed later.
+Decided: a LinkedIn draft is sent only after the owner approves that exact draft on its card.
+No sweep seat ever sends; `sent` stays a refused mutation in the result schema.
+The send path after approval is out of scope for this build and is designed separately before anything can send.
 
 ## 13. Conflicts surfaced
 
 - The brief asks for real paths with no placeholders; the repository's PII policy forbids real usernames in this public repo.
   Resolved by resolving the Windows home at run time (section 9), which is specific and runnable without naming anyone.
 - Rule 17 asks every skill with code for a justfile; the owner asked for makefiles.
-  The sweep is workflow machinery, not a skill, and is WSL-only by necessity; [D2](#d2-make-only-or-make-plus-just) asks the owner to confirm.
+  The sweep is workflow machinery, not a skill, and is WSL-only by necessity; the owner confirmed make only in [D2](#d2-make-only-or-make-plus-just).
 - The bearings skill starts its server and wait with `run_in_background`, which Rule 18 forbids under herdr.
   The sweep runs both in labeled herdr panes `bearings-inbox-sweep` and `bearings-wait`; the bearings skill text should be updated to match, flagged for cleanup.
