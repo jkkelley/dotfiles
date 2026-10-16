@@ -61,7 +61,8 @@ Design principles 101 item 31 makes an error raised without repro or screenshot 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* A2A-004 row exists in claude/workflow/templates/a2a/README.md Status codes table
+- [x] `AC-H1` *(human)* A2A-004 row exists in claude/workflow/templates/a2a/README.md Status codes table
+  - observed `2026-10-16` claude/workflow/templates/a2a/README.md:34 holds the A2A-004 row
 - [ ] `AC-H2` *(human)* PR checks green
 
 ## Test plan
@@ -81,6 +82,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` branch is docs/a2a-sop-breach-code per brief BR-20261016-sop-code; start's feat/ branch was renamed to it
 
 ## Outcome
 

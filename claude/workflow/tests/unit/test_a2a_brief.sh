@@ -46,6 +46,13 @@ refuses "a blocked result is not a finished result" result-check "$T/r3.json"
 jq '.acceptance_criteria += [{"id":"AC2","ticked":true,"proof_kind":"url","proof":"x"}] | .acceptance_criteria[0].id = "AC9"' "$T/result.json" > "$T/r4.json"
 refuses "a result that skips a brief AC is rejected against its brief" result-check "$T/r4.json" --brief "$T/brief.json"
 
+# status code map: every code a seat or the orchestrator may set has its row (A2A-004 is Design principles 101 item 31)
+M="$R/templates/a2a/README.md"
+miss=""; for c in A2A-001 A2A-002 A2A-003 A2A-004; do grep -q "^| $c |" "$M" || miss="$miss $c"; done
+[ -z "$miss" ] && ok "the status code map lists A2A-001 to A2A-004" || bad "the status code map lists A2A-001 to A2A-004 (missing:$miss)"
+jq '.status_code = "A2A-004"' "$T/brief.json" > "$T/b5.json"
+passes  "a brief carrying A2A-004 is valid" check "$T/b5.json"
+
 # migration: a draft-0 brief upgrades with no hand edits
 cat > "$T/draft0.json" <<'D'
 {"schema":"brief/draft-0","id":"BR-1","at":"2026-10-16T04:03:56Z","from":"architect","to":"a2a","owner_words":["w"],"rules":["r"],

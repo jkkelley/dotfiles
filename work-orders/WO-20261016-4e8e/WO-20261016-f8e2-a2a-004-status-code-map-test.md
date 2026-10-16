@@ -59,7 +59,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case in the plan passes
+- [x] `AC-H1` *(human)* every case in the plan passes
+  - observed `2026-10-16` make -C claude/workflow -f a2a.mk a2a-test: 26 checks, exit 0, incl. 'ok the status code map lists A2A-001 to A2A-004' and 'ok a brief carrying A2A-004 is valid'
 
 ## Test plan
 
