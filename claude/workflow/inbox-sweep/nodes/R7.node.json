@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "R7",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/sweep-clean.sh",
+  "input_schema": {
+    "path": "<runs>/<run-id>/run.json",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/run.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "No `agent-sweep-*` herdr tab left for this run",
+      "proof": "`herdr tab list` captured after close."
+    },
+    {
+      "box": "No Claude tab group and no orphaned seat tab left in Chrome",
+      "proof": "`proof/R7-tabbar-<UTC>.png` from `screen.ps1`, compared with the R2 baseline by the verifier, verdict in `proof/R7-verdict.json`."
+    },
+    {
+      "box": "Controller pane left open showing the final summary line",
+      "proof": "pane title `sweep-ctl <run-id> <status>`."
+    }
+  ],
+  "serial": "Reads the final status R5 wrote and R6 acted on; closing tabs earlier would hide a seat still working",
+  "parallel": "none"
+}

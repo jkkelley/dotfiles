@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "R6",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/sweep-cards.sh",
+  "input_schema": {
+    "path": "<runs>/<run-id>/summary.json",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "~/.bearings/inbox-sweep/questions.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Ids are new and never reused",
+      "proof": "`jq` uniqueness check in `logs/cards.log`."
+    },
+    {
+      "box": "Every `BLOCKED-*` seat produced exactly one card",
+      "proof": "count match in `logs/cards.log`."
+    }
+  ],
+  "serial": "Reads what R5 wrote",
+  "parallel": "none"
+}

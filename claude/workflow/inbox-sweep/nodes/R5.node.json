@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "R5",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/sweep-collect.sh",
+  "input_schema": {
+    "path": "<runs>/<run-id>/results/",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/summary.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Run status derived by the rule in spec `codes/run`",
+      "proof": "`summary.json.status`."
+    },
+    {
+      "box": "Every seat accounted for, including `SKIPPED`",
+      "proof": "seat count in summary equals seat count in `run.json`."
+    }
+  ],
+  "serial": "A join over all seats: it reads every result and cannot start until the last seat has one",
+  "parallel": "none"
+}

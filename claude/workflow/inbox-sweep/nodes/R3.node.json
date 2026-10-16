@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "R3",
+  "version": "1.0.0",
+  "script": "claude/workflow/bin/workflow-spawn.sh",
+  "input_schema": {
+    "path": "<runs>/<run-id>/briefs/<seat>.md",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/results/<seat>.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Seat started in tab `agent-sweep-<seat>`",
+      "proof": "seat-link written by the spawner."
+    },
+    {
+      "box": "Counts before and after recorded, after verified by a second read",
+      "proof": "`counts.after.verified_at` in the result."
+    },
+    {
+      "box": "No forbidden mutation",
+      "proof": "`mutations[]` holds only `marked-read`, enforced by the schema."
+    },
+    {
+      "box": "Anchor tab reused as the first working tab, never closed early",
+      "proof": "`tab_group.anchor_reused: true` in the result."
+    },
+    {
+      "box": "Group closed at the very end, anchor last",
+      "proof": "`tab_group.closed_anchor_last: true`; the claim is checked by the R7 screenshot, not trusted."
+    }
+  ],
+  "serial": null,
+  "parallel": "per account"
+}

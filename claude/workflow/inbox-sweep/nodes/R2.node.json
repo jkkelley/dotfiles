@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "R2",
+  "version": "1.0.0",
+  "script": "claude/workflow/inbox-sweep/bin/sweep-preflight.sh",
+  "input_schema": {
+    "path": "<runs>/<run-id>/run.json",
+    "schema_version": 1
+  },
+  "output_schema": {
+    "path": "<runs>/<run-id>/preflight.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Inside herdr",
+      "proof": "`HERDR_ENV=1` and `herdr workspace list` shows the configured label."
+    },
+    {
+      "box": "`claude.exe` resolves and runs",
+      "proof": "`claude.exe --version` output captured."
+    },
+    {
+      "box": "Chrome is running",
+      "proof": "`tasklist.exe` row for `chrome.exe`."
+    },
+    {
+      "box": "Baseline tab bar captured before any seat starts",
+      "proof": "`proof/R2-tabbar-<UTC>.png` from `screen.ps1`."
+    },
+    {
+      "box": "Extension connected",
+      "proof": "probe output lists at least one browser, tries recorded (max 3)."
+    }
+  ],
+  "serial": "The seats need the answer on whether a browser exists, and the R7 comparison needs the baseline tab bar captured before any seat opens a tab",
+  "parallel": "none"
+}

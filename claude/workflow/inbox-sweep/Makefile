@@ -13,7 +13,7 @@ ROOT  := $(abspath $(CURDIR)/../../..)
 RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:ro,Z" -w /work/claude/workflow/inbox-sweep -e HOME=/tmp
 
 .DEFAULT_GOAL := help
-.PHONY: help image test test-all herdr-first spec-lint
+.PHONY: help image test test-all herdr-first spec-lint nodes-check bottleneck-check
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-12s %s\n", $$1, $$2}'
@@ -33,3 +33,9 @@ herdr-first: image ## Fail if any sweep script backgrounds a process (Rule 18); 
 
 spec-lint: image ## Fail if any docs/design/*.spec.xml is over 1000 lines or not well-formed XML
 	@$(RUN) $(IMAGE) bash bin/spec-lint.sh
+
+nodes-check: image ## Node declarations validate, scripts name declared nodes, design tables agree
+	@$(RUN) $(IMAGE) bash bin/node-lib.sh nodes-check
+
+bottleneck-check: image ## List every node's serial reason; fail on a serial node with none
+	@$(RUN) $(IMAGE) bash bin/node-lib.sh bottleneck-check
