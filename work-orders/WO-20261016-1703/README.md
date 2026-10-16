@@ -17,6 +17,7 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-5f8d` | ready | p1 | WO-20261016-002d | [Inbox sweep V1 - integer schema_version for run.json with its migration](WO-20261016-5f8d-inbox-sweep-v1-integer-schema-version-for-run-js.md) |
 | `WO-20261016-67ab` | ready | p1 | WO-20261016-002d | [Inbox sweep V2 - integer schema_version for summary.json with its migration](WO-20261016-67ab-inbox-sweep-v2-integer-schema-version-for-summar.md) |
 | `WO-20261016-870d` | ready | p1 | WO-20261016-002d | [Inbox sweep V3 - integer schema_version for R7-verdict.json with its migration](WO-20261016-870d-inbox-sweep-v3-integer-schema-version-for-r7-ver.md) |
+| `WO-20261016-4409` | ready | p1 | - | [Inbox sweep lint red on main after B17d](WO-20261016-4409-inbox-sweep-lint-red-on-main-after-b17d.md) |
 | `WO-20261016-8aed` | ready | p1 | WO-20261016-6242 | [Test B21c - suite reply-ledger on main after the build merges](WO-20261016-8aed-test-b21c-suite-reply-ledger-on-main-after-the-b.md) |
 | `WO-20261016-cbb4` | ready | p1 | WO-20261016-5b59 | [Test B21e - suite cards on main after the build merges](WO-20261016-cbb4-test-b21e-suite-cards-on-main-after-the-build-me.md) |
 | `WO-20261016-4794` | ready | p1 | WO-20261016-002d | [Test B21f2 - suite controller on main after the build merges](WO-20261016-4794-test-b21f2-suite-controller-on-main-after-the-bu.md) |
