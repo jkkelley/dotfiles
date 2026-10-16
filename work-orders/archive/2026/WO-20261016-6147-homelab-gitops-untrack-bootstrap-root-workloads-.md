@@ -4,15 +4,15 @@
   "slug": "homelab-gitops-untrack-bootstrap-root-workloads-",
   "title": "homelab-gitops: untrack bootstrap/.root-workloads.yaml.un~, a vim undo file tracked since 66123b9 and ignored by .gitignore *.un~",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T12:20:18+00:00",
   "parent": "WO-20261016-770f",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/6147-homelab-gitops-untrack-bootstrap-root-workloads-",
+  "pr": 107,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design21 cut DESIGN-GAP d38a and ORD-1140 S3 (brief BR-20261016-infra-design21); design approvals ruled done, ORD-0550 O4; Claude seats never use lavish (global owner rule)",
@@ -111,13 +111,17 @@ Reproduced by infra-design21 in ~/projects/homelab-gitops at origin/main: git ls
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* no tracked path is ignored
+- [x] `AC-H1` *(human)* no tracked path is ignored
+  - observed `2026-10-16` check: git ls-files -ci --exclude-standard | grep -c . exit 1 output: 0
   - check: `git ls-files -ci --exclude-standard | grep -c .` exit 1 expect /^0$/
-- [ ] `AC-H2` *(human)* the undo file is out of the index
+- [x] `AC-H2` *(human)* the undo file is out of the index
+  - observed `2026-10-16` check: git ls-files 'bootstrap/.root-workloads.yaml.un~' | grep -c . exit 1 output: 0
   - check: `git ls-files 'bootstrap/.root-workloads.yaml.un~' | grep -c .` exit 1 expect /^0$/
-- [ ] `AC-H3` *(human)* the root app manifest stays tracked
+- [x] `AC-H3` *(human)* the root app manifest stays tracked
+  - observed `2026-10-16` check: git ls-files bootstrap/root-application.yaml | grep -c . exit 0 output: 1
   - check: `git ls-files bootstrap/root-application.yaml | grep -c .` exit 0 expect /^1$/
-- [ ] `AC-H4` *(human)* the diff holds only the undo file
+- [x] `AC-H4` *(human)* the diff holds only the undo file
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vxF 'bootstrap/.root-workloads.yaml.un~' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vxF 'bootstrap/.root-workloads.yaml.un~'` exit 1
 
 ## Test plan
