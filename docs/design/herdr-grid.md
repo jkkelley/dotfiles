@@ -14,6 +14,7 @@
 - [State](#state)
 - [GOOD and NEVER](#good-and-never)
 - [Migration of a live workspace](#migration-of-a-live-workspace)
+- [Architect and seat flags](#architect-and-seat-flags)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
