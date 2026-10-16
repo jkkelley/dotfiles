@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "L6b",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "script": "claude/workflow/inbox-sweep/bin/reply-send.sh",
   "input_schema": {
     "path": "<owner's typed line in the send pane>",
@@ -26,6 +26,5 @@
     }
   ],
   "serial": "Intended wait: the single wait in the whole process, the owner decides each reply; the other replies do not queue behind it",
-  "parallel": "per approved reply",
-  "script_pending": true
+  "parallel": "per approved reply"
 }

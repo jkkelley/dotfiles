@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "L11",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "script": "claude/workflow/inbox-sweep/bin/reply-send.sh",
   "input_schema": {
     "path": "<win-home>/inbox-triage-<yyyymmdd>/send-result-<id>.json",
@@ -22,6 +22,5 @@
     }
   ],
   "serial": "Reads the result and proofs the seat wrote",
-  "parallel": "per approved reply",
-  "script_pending": true
+  "parallel": "per approved reply"
 }
