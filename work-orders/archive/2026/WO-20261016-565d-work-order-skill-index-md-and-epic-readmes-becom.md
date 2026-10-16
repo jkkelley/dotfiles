@@ -4,7 +4,7 @@
   "slug": "work-order-skill-index-md-and-epic-readmes-becom",
   "title": "work-order skill: INDEX.md and epic READMEs become untracked build outputs, regenerated on demand",
   "type": "feature",
-  "status": "in-review",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-0272",
   "branch": "feat/work-order-skill-index-md-and-epic-readmes-becom",
   "pr": 207,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
