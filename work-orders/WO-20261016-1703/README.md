@@ -10,7 +10,7 @@ One level down only. A child of a child is listed in its own directory, not here
 |---|---|---|---|---|
 | `WO-20261016-e2e8` | draft | p1 | - | [Inbox sweep B11 - live end-to-end run](WO-20261016-e2e8-inbox-sweep-b11-live-end-to-end-run.md) |
 | `WO-20261016-5328` | draft | p1 | - | [Inbox sweep B12 - spike, can the extension be woken without the owner](WO-20261016-5328-inbox-sweep-b12-spike-can-the-extension-be-woken.md) |
-| `WO-20261016-c606` | ready | p1 | - | [Inbox sweep B17d - one Send them line per batch in reply-send.sh](WO-20261016-c606-inbox-sweep-b17d-one-send-them-line-per-batch-in.md) |
+| `WO-20261016-c606` | in-progress | p1 | - | [Inbox sweep B17d - one Send them line per batch in reply-send.sh](WO-20261016-c606-inbox-sweep-b17d-one-send-them-line-per-batch-in.md) |
 | `WO-20261016-80aa` | draft | p1 | WO-20261016-c606 | [Inbox sweep B18 - live first LinkedIn send](WO-20261016-80aa-inbox-sweep-b18-live-first-linkedin-send.md) |
 | `WO-20261016-6242` | ready | p1 | WO-20261016-c606 | [Inbox sweep B21c - reply-ledger.sh owns ledger.jsonl with an append verb](WO-20261016-6242-inbox-sweep-b21c-reply-ledger-sh-owns-ledger-jso.md) |
 | `WO-20261016-5b59` | ready | p1 | WO-20261016-6242 | [Inbox sweep B21e - sweep-cards.sh owns questions.json with an add verb](WO-20261016-5b59-inbox-sweep-b21e-sweep-cards-sh-owns-questions-j.md) |
