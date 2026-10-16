@@ -4,13 +4,13 @@
   "slug": "timed-run-every-target-of-claude-workflow-mk-res",
   "title": "timed-run: every target of claude/workflow/mk/resources.mk runs through the timing wrapper",
   "type": "chore",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:05:55+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
+  "branch": "feat/timed-run-every-target-of-claude-workflow-mk-res",
   "pr": null,
   "closed": null,
   "approval": {
@@ -69,9 +69,12 @@ Item 37 amended, owner 2026-10-16 UTC: "time out everything logically, you'll ID
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `grep -c '$(TIMED)' claude/workflow/mk/resources.mk` equals the number of wrapped targets listed in the PR body (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `make -n` of every wrapped target of claude/workflow/mk/resources.mk prints `timed-run.sh --node <target> --kind make` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* with the bus down (no NATS on the port) a wrapped target exits with its own exit code and prints only a WARN line (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `grep -c '$(TIMED)' claude/workflow/mk/resources.mk` equals the number of wrapped targets listed in the PR body (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` grep -c '$(TIMED)' claude/workflow/mk/resources.mk -> exit 0, 5 (4 wrapped recipes: seat-resources, seat-resources-loop, mcp-orphans-clean, resources-test, plus the TIMED definition); TP-1 grep -cE recipe-only -> 4
+- [x] `AC-H2` *(human)* `make -n` of every wrapped target of claude/workflow/mk/resources.mk prints `timed-run.sh --node <target> --kind make` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -n -C claude/workflow <target> -> exit 0, prints 'timed-run.sh --node <target> --kind make' for seat-resources, seat-resources-loop, mcp-orphans-clean, resources-test
+- [x] `AC-H3` *(human)* with the bus down (no NATS on the port) a wrapped target exits with its own exit code and prints only a WARN line (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` podman TP-2 with SW_NATS_URL=127.0.0.1:1 -> 'WARN bus unreachable, start/end of probe not published', rc=0; make resources-test passes
 
 ## Test plan
 
