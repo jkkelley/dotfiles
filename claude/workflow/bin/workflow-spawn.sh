@@ -219,6 +219,7 @@ esac
 
 # The pane gets RAIL_SURFACE before the agent starts, and the agent inherits it. report/rail.sh routes on it.
 # Rejected: --env on agent start, which herdr lacks. Cost: one extra command sent to the pane before the start.
+spawn_at="$(wf_now)"
 run herdr pane run "$pane" "export RAIL_SURFACE=$surface RAIL_SEAT=$name"
 printf 'seat %s: link %s/%s %s via %s (herdr kind %s), RAIL_SURFACE=%s\n' "$name" "$LINK" "$nlinks" "$link_id" "$launcher" "$kind" "$surface"
 
@@ -238,6 +239,45 @@ else
   run herdr pane run "$pane" "$cmd"
   run herdr agent wait "$pane" --until idle --timeout "$start_timeout"
   run herdr agent rename "$pane" "$name"
+fi
+
+# BREADCRUMB - the seat's name and role are carried into compaction-guard, or the start says plainly that they were not.
+# What broke: the guard binds a session on claude's first hook, from HERDR_PANE_ID, with an empty name and role
+#   (ensure_binding in ~/.local/bin/compaction-guard, ~line 339), so every alert and checkpoint for a seat started here
+#   read as an unnamed session. `compaction-guard bind --name --role` fixes that but needs a session id, which does not
+#   exist until that first hook has fired, so it cannot be passed at launch.
+# Why this fix: once the agent is up, find the binding whose pane is this pane and which was bound (or moved here) after
+#   this spawn began, and re-bind that session with name and role. The other fields are passed back from the existing
+#   binding because do_bind rewrites binding.json whole; phase.json is kept by the guard. Bounded: 3 tries.
+# Rejected: guessing a session id (none exists yet), or writing binding.json directly (the guard owns that format).
+# Cost: up to (tries-1) x ${CTXBIND_WAIT:-5} s of foreground wait when no hook has fired; the guard missing or no binding
+#   appearing is a warning on stderr and the seat still starts, so that seat's alerts stay unnamed.
+bind_seat_name() {
+  if ! command -v compaction-guard >/dev/null 2>&1; then
+    printf 'warning: compaction-guard is not on PATH; seat %s will be unnamed in guard alerts and checkpoints\n' "$name" >&2; return 0
+  fi
+  local root="${COMPACTION_GUARD_STATE:-$HOME/.local/state/compaction-guard}/sessions" try=0 tries=3 b sid
+  while [ "$try" -lt "$tries" ]; do
+    try=$((try + 1))
+    b="$(cat "$root"/*/binding.json 2>/dev/null | jq -sc --arg p "$pane" --arg at "$spawn_at" \
+      '[.[] | select(.pane == $p and ((.pane_moved_at // .bound_at) >= $at or .bound_at >= $at))] | sort_by(.bound_at) | last // empty' 2>/dev/null)" || b=""
+    if [ -n "$b" ]; then
+      sid="$(jq -r .session <<<"$b")"
+      if compaction-guard bind --session "$sid" --name "$name" --role "$role" --pane "$pane" \
+           --schema "$(jq -r '.schema // ""' <<<"$b")" --cwd "$(jq -r '.cwd // ""' <<<"$b")" \
+           --transcript "$(jq -r '.transcript // ""' <<<"$b")" --driver "$(jq -r '.driver // ""' <<<"$b")" >/dev/null; then
+        printf 'seat %s: compaction-guard session %s bound as %s/%s\n' "$name" "$sid" "$name" "$role"; return 0
+      fi
+    fi
+    [ "$try" -ge "$tries" ] || sleep "${CTXBIND_WAIT:-5}"
+  done
+  printf 'warning: no compaction-guard binding for pane %s after %s tries; seat %s will be unnamed in guard alerts and checkpoints\n' "$pane" "$tries" "$name" >&2
+  return 0
+}
+if [ "$DRY" = 1 ]; then
+  printf 'DRY: compaction-guard bind --name %s --role %s --pane %s (session found by pane after the agent is up)\n' "$name" "$role" "$pane"
+else
+  bind_seat_name
 fi
 
 # The seat-link file tells bin/seat-watch.sh what runs in this pane: which workflow, seat and ticket, which link of

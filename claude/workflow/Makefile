@@ -8,7 +8,7 @@ ROOT  := $(abspath $(CURDIR)/../..)
 RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:Z" -w /work/claude/workflow -e HOME=/tmp $(IMAGE)
 
 .DEFAULT_GOAL := help
-.PHONY: help image test schema lint herdr-first compaction chain failover test-plan ci-job
+.PHONY: help image test schema lint herdr-first compaction chain ctxbind failover test-plan ci-job
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-10s %s\n", $$1, $$2}'
@@ -31,6 +31,9 @@ compaction: image ## The compaction ceremony, watcher, switch and hook, against 
 chain: image ## The spawner starts the requested link of a model chain on that link's surface
 	@$(RUN) bash tests/unit/test_model_chain.sh
 
+ctxbind: image ## The spawner carries seat name and role into compaction-guard, warning and continuing when it cannot
+	@$(RUN) bash tests/unit/test_spawn_ctx_bind.sh
+
 failover: image ## The seat watcher: done records, hot swap along the chain, exhaustion, against a stub herdr
 	@$(RUN) bash tests/unit/test_seat_watch.sh
 
@@ -40,5 +43,5 @@ test-plan: image ## The test-plan block: template, work-order's parser and the s
 ci-job: image ## CI runs this suite: the gate's selector and the job that calls make test (PR 99 gap)
 	@$(RUN) bash tests/unit/test_ci_job.sh
 
-test: schema lint herdr-first compaction chain failover test-plan ci-job ## Everything
-	@echo "ok  workflow: schema, lint, herdr-first, compaction, chain, failover, test-plan, ci-job"
+test: schema lint herdr-first compaction chain ctxbind failover test-plan ci-job ## Everything
+	@echo "ok  workflow: schema, lint, herdr-first, compaction, chain, ctxbind, failover, test-plan, ci-job"
