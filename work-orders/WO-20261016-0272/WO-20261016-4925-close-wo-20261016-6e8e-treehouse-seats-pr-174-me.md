@@ -91,9 +91,11 @@ Order ORD-0830 RR-orch-14 (brief BR-20261016-infra-design10, item STALE-READY); 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* WO-20261016-6e8e is done and archived
+- [x] `AC-H1` *(human)* WO-20261016-6e8e is done and archived
+  - observed `2026-10-16` done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-6e8e --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H2` *(human)* the diff holds only work-orders files
+- [x] `AC-H2` *(human)* the diff holds only work-orders files
+  - observed `2026-10-16` only work-orders files; grep exit 1
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan
