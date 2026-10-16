@@ -8,6 +8,7 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
+| `WO-20261016-4c73` | ready | p1 | - | [CI never runs the inbox-sweep suites](WO-20261016-4c73-ci-never-runs-the-inbox-sweep-suites.md) |
 | `WO-20261016-e2e8` | draft | p1 | - | [Inbox sweep B11 - live end-to-end run](WO-20261016-e2e8-inbox-sweep-b11-live-end-to-end-run.md) |
 | `WO-20261016-5328` | draft | p1 | - | [Inbox sweep B12 - spike, can the extension be woken without the owner](WO-20261016-5328-inbox-sweep-b12-spike-can-the-extension-be-woken.md) |
 | `WO-20261016-80aa` | draft | p1 | - | [Inbox sweep B18 - live first LinkedIn send](WO-20261016-80aa-inbox-sweep-b18-live-first-linkedin-send.md) |
