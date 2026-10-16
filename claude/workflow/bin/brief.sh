@@ -10,6 +10,7 @@
 #                 [--ac 'AC1|statement|command|proof']... [--out FILE]
 #                                                  build a brief from the template, a config file (a partial brief)
 #                                                  and arguments, in that order of precedence; refuses to write an invalid one
+#   brief.sh state-check  FILE                     every non-empty line is JSON valid against schemas/seat-state.schema.json
 #   brief.sh migrate FILE [--out FILE]             upgrade an older brief to the current schema, by migrations/brief/*.jq
 #
 # Owner rule 2026-10-16: "agent to agent prose sucks, schemas with defined AC always".
@@ -128,6 +129,24 @@ cmd_new() {
   if [ -n "$out" ]; then mkdir -p "$(dirname "$out")"; cp "$tmp" "$out"; printf 'ok  brief written: %s\n' "$out"; else cat "$tmp"; fi
 }
 
+cmd_state_check() {
+  local file="${1:-}" line n=0 row=0
+  [ $# -eq 1 ] || die "usage: brief.sh state-check FILE"
+  [ -f "$file" ] || die "no such file: $file"
+  while IFS= read -r line || [ -n "$line" ]; do
+    n=$((n+1))
+    [ -n "${line//[[:space:]]/}" ] || continue
+    row=$((row+1))
+    local one; one="$(mktemp)"
+    printf '%s\n' "$line" > "$one"
+    if ! jq -e . "$one" >/dev/null 2>&1 || ! validate "$SCHEMAS/seat-state.schema.json" "$one" >/dev/null 2>&1; then
+      rm -f "$one"; die "$file:$n fails seat-state.schema.json"
+    fi
+    rm -f "$one"
+  done < "$file"
+  printf 'ok  %s %s row(s)\n' "$file" "$row"
+}
+
 cmd_migrate() {
   local file="" out=""
   while [ $# -gt 0 ]; do
@@ -158,6 +177,7 @@ case "$verb" in
   check) cmd_check "$@" ;;
   result-check) cmd_result_check "$@" ;;
   new) cmd_new "$@" ;;
+  state-check) cmd_state_check "$@" ;;
   migrate) cmd_migrate "$@" ;;
-  *) die "usage: brief.sh check|result-check|new|migrate ..." ;;
+  *) die "usage: brief.sh check|result-check|new|state-check|migrate ..." ;;
 esac

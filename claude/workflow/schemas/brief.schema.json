@@ -40,7 +40,10 @@
     "output": {
       "type": "object",
       "required": ["result_file"],
-      "properties": {"result_file": {"type": "string", "minLength": 1, "description": "Where the receiver writes its result JSON, valid against zenith.a2a.result.v1."}}
+      "properties": {
+        "result_file": {"type": "string", "minLength": 1, "description": "Where the receiver writes its result JSON, valid against zenith.a2a.result.v1."},
+        "state_file": {"type": "string", "minLength": 1, "description": "JSONL file the seat appends one zenith.a2a.seat-state.v1 row to per step; the seat's resume point after a compaction."}
+      }
     }
   }
 }

@@ -18,7 +18,7 @@ A2A_ROOT := $(abspath $(CURDIR)/../..)
 #   Rejected: a SHELL override, which would also time every recipe-internal shell call.
 TIMED = bash $(abspath bin/timed-run.sh) --node $@ --kind make --
 
-.PHONY: brief-new brief-check result-check brief-migrate a2a-test
+.PHONY: brief-new brief-check result-check state-check brief-migrate a2a-test
 
 brief-new: ## Build a brief: OUT= [CONFIG=] [ID= FROM= TO= SUBJECT= RESULT_FILE= DONE_TOKEN= AC='AC1|statement|kind|proof']
 	@test -n "$(OUT)" || { echo "usage: make brief-new OUT=<file> [CONFIG=<file>] [ID= FROM= TO= SUBJECT= AC=...]" >&2; exit 2; }
@@ -34,10 +34,14 @@ result-check: ## Validate a result: FILE= [BRIEF=] (done, every AC ticked with p
 	@test -n "$(FILE)" || { echo "usage: make result-check FILE=<result.json> [BRIEF=<brief.json>]" >&2; exit 2; }
 	@$(TIMED) $(BRIEF_SH) result-check "$(FILE)" $(if $(BRIEF),--brief "$(BRIEF)")
 
+state-check: ## Validate a seat state file: FILE=
+	@test -n "$(FILE)" || { echo "usage: make state-check FILE=<state.jsonl>" >&2; exit 2; }
+	@$(TIMED) $(BRIEF_SH) state-check "$(FILE)"
+
 brief-migrate: ## Upgrade an older brief: FILE= OUT=
 	@test -n "$(FILE)" -a -n "$(OUT)" || { echo "usage: make brief-migrate FILE=<old> OUT=<new>" >&2; exit 2; }
 	@$(TIMED) $(BRIEF_SH) migrate "$(FILE)" --out "$(OUT)"
 
 a2a-test: ## The relevant tests only, in Podman
 	@$(TIMED) podman run --rm --network=none --userns=keep-id -v "$(A2A_ROOT):/work:Z" -w /work/claude/workflow -e HOME=/tmp $(A2A_IMAGE) \
-	  bash -c 'shellcheck -x bin/brief.sh tests/unit/test_a2a_brief.sh && bash tests/unit/test_a2a_brief.sh'
+	  bash -c 'shellcheck -x bin/brief.sh tests/unit/test_a2a_brief.sh && bash tests/unit/test_a2a_brief.sh && shellcheck -x tests/unit/test_a2a_state.sh && bash tests/unit/test_a2a_state.sh'
