@@ -211,7 +211,7 @@ unset STUB_CLEAR_MODE STUB_CLEAR_OK_AT
 URLN() { echo "https://www.linkedin.com/messaging/thread/2-EXAMPLE$1/"; }
 batchfresh() { # <count>
   fresh
-  local k
+  local k a s   # assigned through eval below; declared so SC2154 sees them (WO-20261016-4409)
   : >"$F/approvals.jsonl"; : >"$F/ledger.jsonl"; rm -f "$F/send-m1.txt"
   for k in $(seq 1 "$1"); do
     printf 'Hi Sam %s,\n\nhappy to talk Thursday.' "$k" >"$F/send-m$k.txt"
@@ -221,7 +221,6 @@ batchfresh() { # <count>
   done
 }
 batch() { out="$(bash "$S" send "$@" 2>"$T/err")"; rc=$?; }
-codeof() { jq -rs --arg i "$1" '[.[] | select(.id == $i and .code != "RP-READY")] | map(.code) | last // ""' "$F/ledger.jsonl"; }
 
 # AC-H1: three RP-READY files start exactly one seat, whose brief names all three
 batchfresh 3; export STUB_OWNER_LINE="Send them"; batch

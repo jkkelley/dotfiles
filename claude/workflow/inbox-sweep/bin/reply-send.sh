@@ -178,7 +178,7 @@ if [ -z "$maxn" ]; then
   maxn="$(jq -r '.reply_batch_max // empty' "${SWEEP_CONFIG:-$HOME/.config/zenith/inbox-sweep/config.json}" 2>/dev/null || true)"
 fi
 maxn="${maxn:-10}"
-[[ $maxn =~ ^[0-9]+$ ]] && [ "$maxn" -ge 1 ] || { echo "reply-send: reply_batch_max '$maxn' is not a positive integer" >&2; exit 2; }
+if ! { [[ $maxn =~ ^[0-9]+$ ]] && [ "$maxn" -ge 1 ]; }; then echo "reply-send: reply_batch_max '$maxn' is not a positive integer" >&2; exit 2; fi
 BATCH="${SWEEP_BATCH_ID:-$(date -u +%Y%m%d%H%M%S)}"
 [[ $BATCH =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,40}$ ]] || { echo "reply-send: batch id '$BATCH' cannot be a seat id" >&2; exit 2; }
 SEAT_NAME="agent-reply-batch-$BATCH"
@@ -237,7 +237,7 @@ if [ "$auto" = 1 ]; then
     [ "${#A_PATH[@]}" -lt "$maxn" ] || break
     [ -f "$p" ] || continue
     s="$(sha_of "$p")"; rid="$(all_approvals | jq -rs --arg p "$p" --arg s "$s" '[.[] | select(.path == $p and .sha256 == $s)] | (last | .id) // empty')"
-    [ -n "$rid" ] && [ "$(latest_code "$rid" "$s")" = RP-READY ] || continue
+    if ! { [ -n "$rid" ] && [ "$(latest_code "$rid" "$s")" = RP-READY ]; }; then continue; fi
     load_file "$p" 2>/dev/null || true
   done < <(all_approvals | jq -r '.path // empty' | awk '!seen[$0]++')
   if [ "${#A_PATH[@]}" = 0 ]; then echo "reply-send: no RP-READY reply to send"; exit 0; fi
@@ -437,7 +437,7 @@ settle() {
   [ "$status" != RP-DENIED-CLASSIFIER ] || DENIED=1
 }
 
-starts=0 waiting=0 pane="" confirmed=0
+starts=0 pane="" confirmed=0
 while :; do
   pending
   [ "${#P[@]}" -gt 0 ] || break
@@ -498,7 +498,7 @@ while :; do
         fi
       fi
     done
-    [ "$early" = 0 ] && [ "$DENIED" = 0 ] || break
+    if ! { [ "$early" = 0 ] && [ "$DENIED" = 0 ]; }; then break; fi
     [ "$left" = 1 ] || { for j in "${P[@]}"; do [ -n "${FIN[$j]}" ] || left=1; done; }
     [ "$left" = 1 ] || break
     # a seat that is gone and left no result is dead
@@ -523,7 +523,7 @@ while :; do
   fi
   pending
   [ "${#P[@]}" -gt 0 ] || break
-  if [ "$confirmed" = 0 ] && [ "$died" = 0 ]; then waiting=1; break; fi   # the owner has not typed; the seat stays up
+  if [ "$confirmed" = 0 ] && [ "$died" = 0 ]; then break; fi   # the owner has not typed; the seat stays up (report gives exit 5 from FIN; WO-20261016-4409 dropped a dead waiting flag, SC2034)
   for j in "${P[@]}"; do
     ctx "$j"; box_extra='{}'
     if [ "$died" = 1 ] && [ -f "$READBACK" ]; then   # B17c: the seat died after typing

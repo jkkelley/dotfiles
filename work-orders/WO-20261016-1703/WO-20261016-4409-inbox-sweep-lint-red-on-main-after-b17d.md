@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-lint-red-on-main-after-b17d",
   "title": "Inbox sweep lint red on main after B17d",
   "type": "bug",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:52:44+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-lint-red-on-main-after-b17d",
   "pr": null,
   "closed": null,
   "approval": {
@@ -61,8 +61,10 @@ make -C claude/workflow/inbox-sweep test, suite lint, fails on main 76c4d39: SC2
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* suite lint ok in podman
-- [ ] `AC-H2` *(human)* suite reply-send ok in podman
+- [x] `AC-H1` *(human)* suite lint ok in podman
+  - observed `2026-10-16` make -C claude/workflow/inbox-sweep test in podman: ok lint (was FAIL lint on main 76c4d39)
+- [x] `AC-H2` *(human)* suite reply-send ok in podman
+  - observed `2026-10-16` same run: ok reply-send, ran 10 suites, 0 failed
 
 ## Test plan
 
