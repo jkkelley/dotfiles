@@ -1,0 +1,153 @@
+{
+  "schema_version": "1.0.0",
+  "id": "inbox-sweep-gmail",
+  "version": "1.0.0",
+  "title": "Sweep the Gmail inbox through the connector, read only",
+  "why": "Prevents a Gmail sweep seat from sending, deleting or relabeling mail. The tool allow and deny lists are data in this declaration, so the spawner enforces them and a message body that asks for a send cannot reach a send tool.",
+  "trigger": {
+    "on": "manual",
+    "condition": "make sweep starts one Gmail seat per run; it reads unread mail and marks it read, nothing more."
+  },
+  "agent": {
+    "role": "operator",
+    "effort": "medium",
+    "context_threshold_percent": 30,
+    "denied_commands": [
+      "gh",
+      "git",
+      "sudo",
+      "rm",
+      "curl"
+    ],
+    "allowed_paths": [],
+    "runtime": "claude",
+    "model": "sonnet-5",
+    "allowed_tools": [
+      "Bash",
+      "Read",
+      "Write",
+      "mcp__claude_ai_Gmail__search_threads",
+      "mcp__claude_ai_Gmail__get_thread",
+      "mcp__claude_ai_Gmail__get_message",
+      "mcp__claude_ai_Gmail__unlabel_thread",
+      "mcp__claude_ai_Gmail__unlabel_message"
+    ],
+    "denied_tools": [
+      "Agent",
+      "Task",
+      "Edit",
+      "WebFetch",
+      "WebSearch",
+      "mcp__claude_ai_Gmail__send_message",
+      "mcp__claude_ai_Gmail__reply",
+      "mcp__claude_ai_Gmail__forward",
+      "mcp__claude_ai_Gmail__create_draft",
+      "mcp__claude_ai_Gmail__update_draft",
+      "mcp__claude_ai_Gmail__trash_thread",
+      "mcp__claude_ai_Gmail__trash_message",
+      "mcp__claude_ai_Gmail__label_thread",
+      "mcp__claude_ai_Gmail__label_message",
+      "mcp__claude_ai_Gmail__mark_thread_spam",
+      "mcp__claude_ai_Gmail__mark_message_spam"
+    ]
+  },
+  "gates": [
+    {
+      "id": "result-valid",
+      "command": "bash claude/workflow/tools/validate-schema.sh claude/workflow/inbox-sweep/schemas/result.schema.json \"$SWEEP_RUN_DIR/results/gmail.json\"",
+      "expect": "exit-zero",
+      "why": "Completion is a result file that validates against the result schema (spec rule done-is-a-file); no script reads a pane to decide it."
+    }
+  ],
+  "exit": {
+    "condition": "The seat has written results/gmail.json that validates against the result schema and has passed the status to bin/seat-record.sh.",
+    "verified_by": "bash claude/workflow/tools/validate-schema.sh claude/workflow/inbox-sweep/schemas/result.schema.json \"$SWEEP_RUN_DIR/results/gmail.json\""
+  },
+  "on_failure": [
+    {
+      "case": "the result does not validate",
+      "action": "sweep-watch.sh asks the seat to rewrite it, up to 3 times",
+      "outcome": "FAILED-SCHEMA after the third refusal"
+    },
+    {
+      "case": "no valid result at the 40 minute deadline",
+      "action": "sweep-watch.sh writes the TIMEOUT row; the orchestrator reruns the seat",
+      "outcome": "TIMEOUT"
+    }
+  ],
+  "record": {
+    "emitted_to": "state:records/inbox-sweep-gmail.jsonl",
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "workflow",
+        "workflow_version",
+        "at",
+        "role",
+        "outcome",
+        "run_id",
+        "status",
+        "result_path"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "workflow": {
+          "const": "inbox-sweep-gmail"
+        },
+        "workflow_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "role": {
+          "const": "operator"
+        },
+        "outcome": {
+          "enum": [
+            "passed",
+            "failed",
+            "blocked"
+          ]
+        },
+        "ticket": {
+          "type": "string",
+          "minLength": 2
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "run_id": {
+          "type": "string",
+          "pattern": "^[0-9]{8}T[0-9]{6}Z$"
+        },
+        "status": {
+          "enum": [
+            "OK",
+            "PARTIAL",
+            "BLOCKED-NO-BROWSER",
+            "BLOCKED-SIGNED-OUT",
+            "BLOCKED-CHALLENGE",
+            "BLOCKED-CONNECTOR",
+            "REFUSED",
+            "TIMEOUT",
+            "FAILED-SEAT",
+            "FAILED-SCHEMA",
+            "SKIPPED"
+          ]
+        },
+        "result_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

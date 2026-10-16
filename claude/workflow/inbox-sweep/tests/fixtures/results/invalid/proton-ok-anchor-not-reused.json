@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "20261016T010000Z",
+  "seat": "proton-first",
+  "source": "proton",
+  "account": "first",
+  "status": "OK",
+  "started_at": "2026-10-16T01:00:00Z",
+  "finished_at": "2026-10-16T01:20:00Z",
+  "attempts": 1,
+  "counts": {
+    "before": {
+      "unread": 1
+    },
+    "after": {
+      "unread": 0,
+      "verified_at": "2026-10-16T01:20:00Z"
+    },
+    "processed": 1,
+    "important": 0,
+    "bulk": 0
+  },
+  "items": [],
+  "drafts": [],
+  "owner_decisions": [],
+  "mutations": [],
+  "errors": [],
+  "tab_closed": true,
+  "tab_group": {
+    "anchor_reused": false,
+    "tabs_opened": 2,
+    "closed_anchor_last": true
+  }
+}

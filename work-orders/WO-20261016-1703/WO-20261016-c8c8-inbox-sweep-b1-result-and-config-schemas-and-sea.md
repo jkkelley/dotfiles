@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-b1-result-and-config-schemas-and-sea",
   "title": "Inbox sweep B1 - result and config schemas and seat declarations",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T01:19:08+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-b1-result-and-config-schemas-and-sea",
   "pr": null,
   "closed": null,
   "approval": {
@@ -69,10 +69,14 @@ Seats need a result contract that refuses forbidden mutations, and the spawner n
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* make -C claude/workflow schema is green with the 3 declarations
-- [ ] `AC-H2` *(human)* one fixture per seat status code validates
-- [ ] `AC-H3` *(human)* a fixture with mutation action sent fails validation
-- [ ] `AC-H4` *(human)* docs/design/inbox-sweep.md links point at the new schema path
+- [x] `AC-H1` *(human)* make -C claude/workflow schema is green with the 3 declarations
+  - observed `2026-10-16` make -C claude/workflow schema printed: ok workflow-schemas: declarations valid, thresholds required, records strict (3 inbox-sweep declarations included)
+- [x] `AC-H2` *(human)* one fixture per seat status code validates
+  - observed `2026-10-16` make test (schemas suite) printed: all 11 seat status codes have a validating fixture, plus OK-linkedin-with-draft.json validates
+- [x] `AC-H3` *(human)* a fixture with mutation action sent fails validation
+  - observed `2026-10-16` schemas suite printed ok for invalid/mutation-sent.json refused (also deleted, archived, replied, moved): 'sent' is not 'marked-read'
+- [x] `AC-H4` *(human)* docs/design/inbox-sweep.md links point at the new schema path
+  - observed `2026-10-16` docs/design/inbox-sweep.md line 6 and spec.xml lines 4 and 411 now point at claude/workflow/inbox-sweep/schemas/result.schema.json; grep finds no docs/design/inbox-sweep.result.schema.json left
 
 ## Test plan
 

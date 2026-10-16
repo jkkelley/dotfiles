@@ -1,0 +1,144 @@
+{
+  "schema_version": "1.0.0",
+  "id": "inbox-sweep-linkedin",
+  "version": "1.0.0",
+  "title": "Sweep the LinkedIn inbox in the owner's Chrome and draft replies, never typing them",
+  "why": "Prevents a LinkedIn sweep seat from typing into a message box, accepting an invitation or posting. Draft replies exist only in the result's drafts[] for the owner to approve on a card; they are never typed into LinkedIn.",
+  "trigger": {
+    "on": "manual",
+    "condition": "make sweep starts one LinkedIn seat per run."
+  },
+  "agent": {
+    "role": "operator",
+    "effort": "medium",
+    "context_threshold_percent": 30,
+    "denied_commands": [
+      "gh",
+      "git",
+      "sudo",
+      "rm",
+      "curl"
+    ],
+    "allowed_paths": [],
+    "models": [
+      {
+        "id": "claude-win-chrome",
+        "launcher": "claude.exe",
+        "herdr_kind": "claude",
+        "model": "sonnet",
+        "surface": "artifact"
+      }
+    ],
+    "allowed_tools": [
+      "Read",
+      "Write",
+      "mcp__claude-in-chrome__*"
+    ],
+    "denied_tools": [
+      "Agent",
+      "Task",
+      "Edit",
+      "WebFetch",
+      "WebSearch"
+    ]
+  },
+  "gates": [
+    {
+      "id": "result-valid",
+      "command": "bash claude/workflow/tools/validate-schema.sh claude/workflow/inbox-sweep/schemas/result.schema.json \"$SWEEP_RUN_DIR/results/linkedin.json\"",
+      "expect": "exit-zero",
+      "why": "Completion is a result file that validates against the result schema (spec rule done-is-a-file); no script reads a pane to decide it."
+    }
+  ],
+  "exit": {
+    "condition": "The seat has written results/linkedin.json that validates against the result schema and has passed the status to bin/seat-record.sh.",
+    "verified_by": "bash claude/workflow/tools/validate-schema.sh claude/workflow/inbox-sweep/schemas/result.schema.json \"$SWEEP_RUN_DIR/results/linkedin.json\""
+  },
+  "on_failure": [
+    {
+      "case": "the result does not validate",
+      "action": "sweep-watch.sh asks the seat to rewrite it, up to 3 times",
+      "outcome": "FAILED-SCHEMA after the third refusal"
+    },
+    {
+      "case": "no valid result at the 40 minute deadline",
+      "action": "sweep-watch.sh writes the TIMEOUT row; the orchestrator reruns the seat",
+      "outcome": "TIMEOUT"
+    }
+  ],
+  "record": {
+    "emitted_to": "state:records/inbox-sweep-linkedin.jsonl",
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "workflow",
+        "workflow_version",
+        "at",
+        "role",
+        "outcome",
+        "run_id",
+        "status",
+        "result_path"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "workflow": {
+          "const": "inbox-sweep-linkedin"
+        },
+        "workflow_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "role": {
+          "const": "operator"
+        },
+        "outcome": {
+          "enum": [
+            "passed",
+            "failed",
+            "blocked"
+          ]
+        },
+        "ticket": {
+          "type": "string",
+          "minLength": 2
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "run_id": {
+          "type": "string",
+          "pattern": "^[0-9]{8}T[0-9]{6}Z$"
+        },
+        "status": {
+          "enum": [
+            "OK",
+            "PARTIAL",
+            "BLOCKED-NO-BROWSER",
+            "BLOCKED-SIGNED-OUT",
+            "BLOCKED-CHALLENGE",
+            "BLOCKED-CONNECTOR",
+            "REFUSED",
+            "TIMEOUT",
+            "FAILED-SEAT",
+            "FAILED-SCHEMA",
+            "SKIPPED"
+          ]
+        },
+        "result_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

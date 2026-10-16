@@ -174,8 +174,9 @@
           "uniqueItems": true,
           "items": {
             "type": "string",
-            "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
-          }
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]*\\*?$"
+          },
+          "description": "BREADCRUMB: the pattern admits a hyphen and one trailing star because a Claude in Chrome seat is granted the whole server, mcp__claude-in-chrome__*, and the old pattern refused both characters (inbox-sweep B1, WO-20261016-c8c8). Rejected alternative: listing every browser tool by name, which goes stale each time the extension adds one. Cost: a trailing star is a prefix grant, so denied_tools is where a browser seat's limits must be stated. Only allowed_tools is widened; denied_tools stays exact."
         },
         "denied_tools": {
           "type": "array",

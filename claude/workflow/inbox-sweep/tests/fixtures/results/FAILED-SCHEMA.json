@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "20261016T010000Z",
+  "seat": "linkedin",
+  "source": "linkedin",
+  "account": "linkedin",
+  "status": "FAILED-SCHEMA",
+  "started_at": "2026-10-16T01:00:00Z",
+  "finished_at": "2026-10-16T01:20:00Z",
+  "attempts": 3,
+  "counts": {
+    "before": {
+      "unread": null
+    },
+    "after": {
+      "unread": null
+    },
+    "processed": 0,
+    "important": 0,
+    "bulk": 0
+  },
+  "items": [],
+  "drafts": [],
+  "owner_decisions": [],
+  "mutations": [],
+  "errors": [
+    {
+      "at": "2026-10-16T01:20:00Z",
+      "attempt": 1,
+      "step": "probe",
+      "message": "example failure"
+    }
+  ],
+  "tab_closed": true,
+  "tab_group": {
+    "anchor_reused": true,
+    "tabs_opened": 2,
+    "closed_anchor_last": true
+  }
+}

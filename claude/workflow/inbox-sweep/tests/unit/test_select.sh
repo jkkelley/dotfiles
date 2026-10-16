@@ -39,7 +39,11 @@ out="$(SWEEP_CHANGED="$P/bin/sweep-cards.sh-not" run --changed)"
 check "ok  herdr-first
 ran 1 suite" "$out" "a file entry matches exactly, not by prefix (only the bin/ directory entry hits)"
 
-printf '%s\n' "$P/bin/sweep-clean.sh" | { out="$(run --changed)"; check "ok  clean
+# BREADCRUMB: `make test` passes SWEEP_CHANGED into the container, so this stdin case silently read the real changed
+# list instead of stdin and failed whenever a branch touched a covered path (found by B1, WO-20261016-c8c8, once
+# schemas/ changed). Unsetting it here makes the case mean what it says. Rejected: dropping the case, which would
+# leave the stdin path of run.sh untested.
+printf '%s\n' "$P/bin/sweep-clean.sh" | { unset SWEEP_CHANGED; out="$(run --changed)"; check "ok  clean
 ok  herdr-first
 ran 2 suites" "$out" "without SWEEP_CHANGED the paths are read from stdin"; }
 
