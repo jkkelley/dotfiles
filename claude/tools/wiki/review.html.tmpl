@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>@@TITLE@@</title>
+<style>body{max-width:920px;margin:0 auto;padding:24px 16px;font:16px/1.6 system-ui,sans-serif;background:#0f1115;color:#e6e6e6}a{color:#7cb7ff}table{border-collapse:collapse;display:block;overflow-x:auto}td,th{border:1px solid #333;padding:4px 8px}code,pre{background:#1a1d24;border-radius:4px}pre{padding:12px;overflow-x:auto}img,iframe{max-width:100%}.mermaid{background:#fff;border-radius:6px;padding:8px}footer{margin-top:32px;font-size:13px;color:#8a8f99}</style></head><body>
+<h1>@@TITLE@@</h1>
+<div id="doc">Loading...</div>
+<footer>@@FOOTER@@</footer>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
+const md = await (await fetch("design.md")).text();
+const r = new marked.Renderer(); const code = r.code.bind(r);
+r.code = (c, lang) => lang === "mermaid" ? '<pre class="mermaid">'+c.replace(/</g,"&lt;")+'</pre>' : code(c, lang);
+document.getElementById("doc").innerHTML = marked.parse(md, {renderer: r});
+mermaid.initialize({startOnLoad:false}); await mermaid.run();
+</script></body></html>
