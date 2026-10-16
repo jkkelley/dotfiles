@@ -1,0 +1,37 @@
+{
+  "$comment": "Inputs for bin/bus.sh and bin/line-watch.sh. Images are pinned by digest (Rule 15); the tags they were pulled as sit beside them. Consumers filter by event code: subject line.<line>.event.<status_code>. Breadcrumb in bin/bus.sh.",
+  "bus": {
+    "name": "zenith-nats",
+    "image": "docker.io/library/nats@sha256:2ae57dfba3063d5e25fecb75256118c0882a1a2d2cf7d0fba17a7c701df956f6",
+    "image_tag": "docker.io/library/nats:2.15.1-alpine",
+    "box_image": "docker.io/natsio/nats-box@sha256:d2f04223f40e016f77922a8115d34b0cd5fad2ec10b19b39316ae92d07f3d295",
+    "box_tag": "docker.io/natsio/nats-box, nats CLI 0.5.0, digest taken 2026-10-16",
+    "port": 4222,
+    "monitor_port": 8222,
+    "store": "~/.local/state/zenith/state/nats",
+    "stream": "LINE",
+    "subjects": "line.>",
+    "max_age": "7d"
+  },
+  "consumers": {
+    "line-consume": {
+      "ack_wait": "120s",
+      "codes": ["LW-DONE"]
+    },
+    "orchestrator": {
+      "ack_wait": "30s",
+      "codes": [
+        "LW-ALERT-IDLE",
+        "LW-ALERT-BLOCKED",
+        "LW-ALERT-EXITED",
+        "LW-ALERT-DISCOVERY",
+        "LW-AC-FAILED",
+        "LW-DOWN-FAILED"
+      ]
+    },
+    "architect": {
+      "ack_wait": "30s",
+      "codes": ["LW-RULING"]
+    }
+  }
+}
