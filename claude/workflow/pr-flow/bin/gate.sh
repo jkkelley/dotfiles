@@ -15,7 +15,17 @@
 #                                                 0 the PR's head is SHA and every check run on it completed with success, skipped
 #                                                   or neutral, and CHECK (default ci-ok) is among them and passed
 #                                                 1 hold: the reason is printed on one line   4 gh failed 3 times
+#   gate.sh ticket-open [--repo DIR] --base REF --sha SHA
+#                                                 0 no work-order the head adds or changes is in-progress or in-review
+#                                                 1 hold: one 'TICKET-OPEN WO-id status' line per open ticket   4 a sha is not in the repo
 # Exit: 0 ok, 1 hold or differ, 2 usage, 4 io or a sha the repo cannot resolve.
+#
+# BREADCRUMB 2026-10-16 - WO-20261016-0233, F36. ticket-open: PR 273, PR 285 and 448e squash-merged on green before the seat pushed its
+#   work-order.sh submit and done commit, stranding the close-out on a deleted branch (evidence: seats/close-6e7f.result.json, branch tip
+#   a8b8410 'chore(work-orders): close WO-20261016-6e7f' never merged); the ticket stayed open on main and WO-20261016-ea9e failed on
+#   branch_exists. Closing before gh pr create cannot work (submit needs the PR number), so the gate holds the merge instead. Ready and
+#   draft tickets do not hold, so a design PR that cuts tickets still merges; archived tickets are skipped. Cost: a ticket file with no
+#   readable JSON header is skipped, not held.
 #
 # BREADCRUMB 2026-10-16 - BR-20261016-merge-port, WO-20261016-e6f1. What changed from coq, and why:
 #   - heads_match (test.passed 201 on the same head) is replaced by ci-green. Owner, 2026-10-16 UTC: "automate that process, we dont
@@ -34,7 +44,7 @@
 #      test, or a checkout without the commit, still agrees with itself.
 set -uo pipefail
 export LC_ALL=C
-REPO=$(pwd); SLUG=""; PR=""; SHA_ARG=""; REQUIRED="ci-ok"; GH=${GH:-gh}
+REPO=$(pwd); SLUG=""; PR=""; SHA_ARG=""; REQUIRED="ci-ok"; BASE=""; GH=${GH:-gh}
 read -r -a IGNORE <<<"${PR_FLOW_IGNORE_PATHS:-events}"
 EXCL=(); for p in "${IGNORE[@]}"; do EXCL+=(":(exclude)$p"); done
 die() { local c=$1; shift; printf 'gate: %s\n' "$*" >&2; exit "$c"; }
@@ -43,9 +53,9 @@ VERB=${1:-}; shift || true
 ARGS=()
 while [ $# -gt 0 ]; do case $1 in
   --repo) REPO=$(cd "${2:?}" && pwd) || die 4 "no such --repo"; shift 2;; --slug) SLUG=${2:?}; shift 2;; --pr) PR=${2:?}; shift 2;;
-  --sha) SHA_ARG=${2:?}; shift 2;; --required) REQUIRED=${2:?}; shift 2;;
+  --sha) SHA_ARG=${2:?}; shift 2;; --required) REQUIRED=${2:?}; shift 2;; --base) BASE=${2:?}; shift 2;;
   -*) die 2 "unknown flag $1";; *) ARGS+=("$1"); shift;; esac; done
-case $VERB in same-head|ci-green) ;; *) sed -n '11,18p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2;; esac
+case $VERB in same-head|ci-green|ticket-open) ;; *) sed -n '11,21p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2;; esac
 
 # resolve SHA: the commit it names in the repo, fetching once when it is not there; empty when it cannot be found.
 resolve() {
@@ -82,8 +92,25 @@ ci_green() {
   jq -e --arg r "$REQUIRED" 'any(.[]; .n == $r and .c == "success")' <<<"$checks" >/dev/null || hold "required check $REQUIRED has not passed on $head"
   exit 0
 }
+# ticket_open: work-orders the head adds or changes (not archived) whose status is in-progress or in-review are held.
+ticket_open() {
+  if [ -z "$BASE" ] || [ -z "$SHA_ARG" ]; then die 2 "ticket-open needs --base and --sha"; fi
+  local sha base mb f json st id held=0
+  sha=$(resolve "$SHA_ARG"); [ -n "$sha" ] || die 4 "$SHA_ARG is not in this repo"
+  base=$(resolve "$BASE"); [ -n "$base" ] || die 4 "$BASE is not in this repo"
+  mb=$(git -C "$REPO" merge-base "$base" "$sha" 2>/dev/null) || die 4 "no merge base of $BASE and $SHA_ARG"
+  while IFS= read -r f; do
+    [[ $f =~ ^work-orders/ && $f =~ WO-[0-9]{8}-[0-9a-f]{4}-[^/]*\.md$ && ! $f =~ ^work-orders/archive/ ]] || continue
+    json=$(git -C "$REPO" show "$sha:$f" 2>/dev/null | awk '/^---$/ { n++; next } n == 1 { print } n >= 2 { exit }')
+    st=$(jq -r '.status // empty' <<<"$json" 2>/dev/null) || continue
+    case $st in in-progress|in-review)
+      id=$(jq -r '.id // empty' <<<"$json"); printf 'TICKET-OPEN %s %s\n' "${id:-$f}" "$st"; held=1;; esac
+  done < <(git -C "$REPO" diff --name-only --diff-filter=AMR "$mb" "$sha")
+  exit "$held"
+}
 
 case $VERB in
+  ticket-open) [ "${#ARGS[@]}" = 0 ] || die 2 "ticket-open takes no positional arguments"; ticket_open ;;
   same-head) [ "${#ARGS[@]}" = 2 ] || die 2 "same-head needs two shas"; same_head "${ARGS[0]}" "${ARGS[1]}"; exit $? ;;
   ci-green) [ "${#ARGS[@]}" = 0 ] || die 2 "ci-green takes no positional arguments"; ci_green ;;
 esac

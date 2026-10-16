@@ -4,7 +4,7 @@
   "slug": "ticket-repo-field-new-repo-and-set-repo-name-the",
   "title": "Ticket repo field: new --repo and set --repo name the code repo OWNER/NAME; submit and stale-merged resolve a bare pr there (2d5b TP-3)",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-fb0c",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design11 cut for ORD-0932-next Q2 and the ORD-0830 RR-orch-14 DESIGN-GAPs; design approvals ruled done, ORD-0550 O4",
@@ -23,9 +23,7 @@
   "depends_on": [
     "WO-20261016-67c7"
   ],
-  "blocks": [
-    "WO-20261016-e297"
-  ],
+  "blocks": [],
   "ac_checks": [
     {
       "index": 1,
@@ -48,7 +46,8 @@
   ],
   "provides": [
     "claude/skills/work-order/testing/cases/360-ticket-repo.sh"
-  ]
+  ],
+  "superseded_by": "WO-20261016-9c09"
 }
 ---
 
@@ -168,4 +167,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: code merged in PR 295; checks re-run under WO-20261016-9c09
+- superseded by: `WO-20261016-9c09`
+
+No branch, no PR and no merge commit exist for this work order.
+

@@ -4,7 +4,7 @@
   "slug": "gate-sh-ticket-open-a-pr-whose-head-carries-a-wo",
   "title": "gate.sh ticket-open: a PR whose head carries a work-order still in-progress or in-review is held TICKET-OPEN, and merge.sh holds on it",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-fb0c",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design14 cut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -21,9 +21,7 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [
-    "WO-20261016-ac25"
-  ],
+  "blocks": [],
   "ac_checks": [
     {
       "index": 1,
@@ -55,7 +53,8 @@
   ],
   "labels": [
     "line:inbox-triage"
-  ]
+  ],
+  "superseded_by": "WO-20261016-0233"
 }
 ---
 
@@ -154,4 +153,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: AC-H1 needs claude/workflow/pr-flow/tests/lib-merge.sh, not under In; recut with it in touches and the real-commit fixture ruling
+- superseded by: `WO-20261016-0233`
+
+No branch, no PR and no merge commit exist for this work order.
+
