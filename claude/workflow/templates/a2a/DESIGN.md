@@ -28,7 +28,7 @@
 16. Migration test: a draft-0 brief upgrades with zero hand edits (tested).
 17. Config and arguments: `brief.sh new --config FILE` plus flags; Make passes `VAR=value`.
 18. Agent to agent is schema: this design is that rule.
-19. File ownership: each node lists its files; N6 and N7 wait for PR 134 which owns the same two files.
+19. File ownership: each node lists its files; Makefile (PR 134) and workflow-spawn.sh (seat herdr-grid) are not touched; targets live in a2a.mk.
 20. Worktree, branch, DAG walk: `~/.cache/wt-dotfiles-a2a`, `feat/a2a-brief-schemas`, state in the state file below.
 
 ## Inventory
@@ -47,11 +47,9 @@ flowchart LR
   N3 --> N5[N5 tests]
   N4 --> N5
   N5 --> N6[N6 Make targets]
-  N5 --> N7[N7 spawner gate]
-  P134[PR 134 merged] --> N6
-  P134 --> N7
+  N5 --> N7[N7 spawner wiring by herdr-grid]
   N6 --> N8[N8 PR and CI]
-  N7 --> N8
+  N8 --> N7
 ```
 
 ## Nodes
@@ -63,8 +61,8 @@ flowchart LR
 | N3 | N1, N2 | brief.sh | bin/brief.sh | check, result-check, new, migrate; shellcheck |
 | N4 | N3 | migration | migrations/brief/*.jq | draft-0 upgrades unedited |
 | N5 | N3, N4 | test | tests/unit/test_a2a_brief.sh | 21 checks green in Podman |
-| N6 | N5, PR 134 | Make targets | claude/workflow/Makefile | brief-new, brief-check, result-check, in `test` |
-| N7 | N5, PR 134 | spawner gate | bin/workflow-spawn.sh | `--brief` refuses invalid, hands path |
+| N6 | N5 | Make targets | claude/workflow/a2a.mk | brief-new, brief-check, result-check, brief-migrate, a2a-test |
+| N7 | N8 merged | spawner call, owned by seat herdr-grid | bin/workflow-spawn.sh | calls `make -C claude/workflow -f a2a.mk brief-check FILE=<brief>`, refuses on non-zero, hands the seat the path |
 | N8 | N6, N7 | PR | none | checks green, done token |
 
 ## State and recovery

@@ -67,18 +67,10 @@ passes  "brief new from a config file" new --config "$T/cfg.json" --out "$T/n2.j
 refuses "brief new refuses an AC with a bad proof_kind" new --ac 'AC1|s|vibes|p' --out "$T/n3.json"
 [ ! -e "$T/n3.json" ] && ok "nothing is written when refused" || bad "nothing is written when refused"
 
-# spawner: wired in the same change set as workflow-spawn.sh; skipped until then so this file never lies green
-if grep -q -- '--brief ' "$R/bin/workflow-spawn.sh"; then
-  mkdir -p "$T/bin"
-  printf '#!/usr/bin/env bash\nexit 0\n' > "$T/bin/herdr"; chmod +x "$T/bin/herdr"
-  jq --arg s "$T/state" --arg w "$T" '.project.state_dir=$s | .workflow.seats |= map(.worktree=$w)' "$R/config/project.json" > "$T/config.json"
-  sp() { PATH="$T/bin:$PATH" HERDR_ENV=1 WORKFLOW_CONFIG="$T/config.json" "$R/bin/workflow-spawn.sh" architect "$@" --dry-run 2>&1; }
-  if out="$(sp --brief "$T/b1.json")"; then bad "AC4 spawner refuses an invalid brief"; else ok "AC4 spawner refuses an invalid brief"; fi
-  grep -q "brief" <<<"$out" && ok "refusal names the brief" || bad "refusal names the brief"
-  out="$(sp --brief "$T/brief.json")" && grep -qF "$T/brief.json" <<<"$out" && ok "spawner hands the seat the brief path" || bad "spawner hands the seat the brief path"
-  grep -q "do the first step" <<<"$out" && bad "spawner inlines brief prose" || ok "spawner does not inline brief prose"
-else
-  printf 'skip spawner checks: workflow-spawn.sh has no --brief yet\n'
-fi
+# AC4 contract: the spawner (owned by seat herdr-grid) refuses a seat when `make -f a2a.mk brief-check FILE=<brief>` exits non-zero.
+# So that call must exit 0 for a valid brief and non-zero for an invalid or prose one, and print nothing the spawner must parse.
+if make -s -C "$R" -f a2a.mk brief-check FILE="$T/brief.json" >/dev/null 2>&1; then ok "AC4 brief-check exits 0 on a valid brief"; else bad "AC4 brief-check exits 0 on a valid brief"; fi
+if make -s -C "$R" -f a2a.mk brief-check FILE="$T/b1.json" >/dev/null 2>&1; then bad "AC4 brief-check exits non-zero on an invalid brief"; else ok "AC4 brief-check exits non-zero on an invalid brief"; fi
+if make -s -C "$R" -f a2a.mk brief-check FILE="$T/prose.txt" >/dev/null 2>&1; then bad "AC4 brief-check exits non-zero on a prose brief"; else ok "AC4 brief-check exits non-zero on a prose brief"; fi
 printf '%s checks\n' "$n"
 exit $fail
