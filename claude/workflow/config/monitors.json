@@ -1,13 +1,45 @@
 {
-  "$comment": "One entry per monitor (Design principles 101 item 27). Add a monitor by adding an entry here, never a new mechanism. Fields: id, make (the target, run from claude/workflow), args (VAR=value), interval_seconds, pane (label template), publishes (NATS subject).",
+  "$comment": "The monitoring tab of a line: every monitor declared once, placed by bin/monitors.sh at its slot (row.col of the 3x3). ${line}, ${ws}, ${repo} and any ${ENV_NAME} are substituted when the pane is started. interval 0: the command runs for as long as the pane does; interval N: it is re-run every N seconds. down runs on monitors-down, before the tab closes. Seats add their own entry and edit no one else's (architect, 2026-10-16T04:36Z).",
+  "tab": "${line} monitor",
+  "grid": "3x3",
   "monitors": [
     {
-      "id": "seat-resources",
-      "make": "seat-resources-loop",
-      "args": {"LINE": "{line}"},
-      "interval_seconds": 60,
-      "pane": "{line}-resources",
-      "publishes": "res.{line}.{seat}"
+      "name": "bus",
+      "owner": "line-watch",
+      "slot": "1.1",
+      "interval": 0,
+      "command": "make -C ${repo} bus-up && make -C ${repo} bus-logs",
+      "down": "make -C ${repo} bus-down"
+    },
+    {
+      "name": "sweep",
+      "owner": "line-watch",
+      "slot": "1.2",
+      "interval": 0,
+      "command": "make -C ${repo} line-sweep LINE=${line} WS=${ws}",
+      "down": "make -C ${repo} line-watch-stop LINE=${line} WS=${ws}"
+    },
+    {
+      "name": "consume",
+      "owner": "line-watch",
+      "slot": "1.3",
+      "interval": 0,
+      "command": "make -C ${repo} line-consume LINE=${line} WS=${ws} LW_RESULTS=${LW_RESULTS}"
+    },
+    {
+      "name": "resources",
+      "owner": "resources",
+      "slot": "2.1",
+      "interval": 0,
+      "command": "make -C ${repo} seat-resources-loop LINE=${line}",
+      "publishes": "res.${line}.<seat>"
+    },
+    {
+      "name": "events",
+      "owner": "line-watch",
+      "slot": "2.2",
+      "interval": 0,
+      "command": "make -C ${repo} bus-tail"
     }
   ]
 }

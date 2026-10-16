@@ -2,14 +2,23 @@
 # line-watch.sh - one line's monitoring, in labeled herdr panes of a "<line> monitor" tab, driven by Make.
 #
 # usage: line-watch.sh <cmd> <line> [--once]
-#   up     <line>          open tab "<line> monitor", run the sweep in pane "<line>-sweep", then adopt
+#   run    <line>          adopt, then sweep: the "sweep" monitor of config/monitors.json (make monitors-up LINE= starts it)
 #   adopt  <line>          put every running seat of the line under the watchers, no restarts
 #   sweep  <line> [--once] the loop itself; runs in the foreground of the sweep pane only (Rule 18)
-#   off    <line>          stop the sweep and every watcher it armed, close the monitor tabs
-#   status <line>          sweep pid, armed watchers, last three log lines
-# env (Make passes VAR=value): WS (default $HERDR_WORKSPACE_ID), ARCH (architect pane; default the pane labelled
-#   architect in tab "<line> 1"), LW_INTERVAL (60), LW_IDLE (60, seconds before an idle seat is an ALERT),
-#   LW_STATE (~/.local/state/zenith/line-watch), ARTIFACT_ROOT (~/.local/state/zenith), LW_COMPACT (1: arm compact-watch)
+#   stop   <line>          stop the sweep, the consumer and every watcher this line armed (the sweep monitor's down)
+#   status <line>          sweep and consumer pids, armed watchers, bus status, last three log lines
+#   consume <line> [--once] consumer line-consume, no model, in pane "<line>-consume": acts on LW-DONE, then acks
+#   queue  <line> <role>   consumers orchestrator and architect pull their waiting events (bin/bus.sh pull)
+# env (Make passes VAR=value): WS (default $HERDR_WORKSPACE_ID), LW_INTERVAL (60), LW_IDLE (60, seconds before an idle
+#   seat is an ALERT), LW_CONSUME_INTERVAL (10), LW_RESULTS (dir holding <seat>-result.json), LW_STATE
+#   (~/.local/state/zenith/line-watch), ARTIFACT_ROOT (~/.local/state/zenith), LW_COMPACT (1: arm compact-watch),
+#   LW_BUS (config/line-watch.json: the bus, the stream and which consumer filters which event codes)
+#
+# Producer and consumers (architect redesign 2026-10-16T04:31Z, owner: "prodcuer consumer model man"):
+#   sweep (producer) --publish--> NATS JetStream stream LINE, subject line.<line>.event.<status_code> (bin/bus.sh)
+#   line-consume consumer 1, this script, no model: LW-DONE -> result-check -> herdr-grid seat-down, ack after acting
+#   orchestrator consumer 2 pulls with make line-queue ROLE=orchestrator on its own schedule
+#   architect    consumer 3 pulls only codes that need a ruling (LW-RULING-*); nothing is ever pushed into a pane
 #
 # Owner, 2026-10-16 UTC: "what automation is doing the monitoring, because humans and agents suck and forget, it should
 # be in herdr tab too within a herdr pane driven by makefiles and scripts". Every agent is checked every minute, and no
@@ -63,38 +72,26 @@ seats() {
     | @tsv'
 }
 
-arch_pane() {
-  [ -n "${ARCH:-}" ] && { printf '%s' "$ARCH"; return; }
-  jq -rn --argjson T "$(tabs)" --argjson P "$(panes)" --arg t "$LINE 1" '
-    first($T.result.tabs[] | select(.label == $t) | .tab_id) as $id
-    | first($P.result.panes[] | select(.tab_id == $id and .label == "architect") | .pane_id) // empty'
-}
+# ---- events go on the bus (bin/bus.sh), never into a pane ----------------------------------------------------------
+# BREADCRUMB - events are published, never prompted into a pane.
+# What broke: the first live run (2026-10-16T04:30Z) prompted the architect pane wD9:p1 once per seat with JSON; owner:
+#   "your gonna get bogged down, thats fucked right there", then "prodcuer consumer model man" and "drop that shit on a
+#   bus we have nats" (item 26).
+# Why this fix: the sweep only publishes; each consumer pulls when it chooses, so a busy seat is never interrupted and a
+#   restart loses nothing. Mechanical events never reach a model: consumer line-consume is this script.
+#   Rejected: prompting the orchestrator pane instead (same interruption one seat down); jsonl queues with offset files
+#   (a hand-built bus, superseded 04:32Z).
+# Cost: an event waits until its consumer pulls; the bus must be up (make bus-up), else the publish fails loud in the log.
+BUS="$HERE/bus.sh"
 
 # ---- monitor tabs: 3x3, labelled, a new tab when full (~/AGENTS.md herdr tab layout) -----------------------------
 mon_tabs() { tabs | jq -r --arg t "$TAB" '.result.tabs[] | select((.label // "") == $t or ((.label // "") | startswith($t + " "))) | .tab_id'; }
 
-# new_mon_tab: tab "<line> monitor" (then "... 2", "... 3"), 3 columns of 3 panes, every pane labelled free.
-# Prints the root (top left) pane, so the caller takes it without listing again.
+# new_mon_tab: one more 3x3 tab "<line> monitor N", built by bin/monitors.sh grid; prints its top-left pane.
 new_mon_tab() {
-  local n label r root c r2 prev
-  local -a cols
+  local n label
   n=$(( $(mon_tabs | wc -l) + 1 )); label="$TAB"; [ "$n" -gt 1 ] && label="$TAB $n"
-  r="$(herdr tab create --workspace "$WS" --cwd "$WF_REPO" --label "$label" --no-focus)" || return 1
-  root="$(jq -r '.result.root_pane.pane_id' <<<"$r")"
-  herdr pane rename "$root" "$FREE" >/dev/null
-  cols=("$root")
-  for c in 1 2; do
-    r="$(herdr pane split "${cols[c-1]}" --direction right --ratio "$(awk -v k=$((4 - c)) 'BEGIN{printf "%.4f", 1/k}')" --cwd "$WF_REPO" --no-focus)" || return 1
-    cols[c]="$(jq -r '.result.pane.pane_id' <<<"$r")"; herdr pane rename "${cols[c]}" "$FREE" >/dev/null
-  done
-  for c in 0 1 2; do
-    prev="${cols[c]}"
-    for r2 in 3 2; do
-      r="$(herdr pane split "$prev" --direction down --ratio "$(awk -v k="$r2" 'BEGIN{printf "%.4f", 1/k}')" --cwd "$WF_REPO" --no-focus)" || return 1
-      prev="$(jq -r '.result.pane.pane_id' <<<"$r")"; herdr pane rename "$prev" "$FREE" >/dev/null
-    done
-  done
-  printf '%s\n' "$root"
+  WS="$WS" bash "$HERE/monitors.sh" grid "$label"
 }
 
 # slot <label>: the pane holding <label>, else the first free monitor slot renamed to it, else a new monitor tab's.
@@ -102,7 +99,7 @@ slot() {
   local p ids
   p="$(pane_by_label "$1")"; [ -n "$p" ] && { printf '%s' "$p"; return 0; }
   ids="$(mon_tabs | jq -R . | jq -sc .)"
-  p="$(panes | jq -r --argjson ids "$ids" --arg f "$FREE" 'first(.result.panes[] | select(.label == $f and (.tab_id as $t | $ids | index($t)))) | .pane_id // empty')"
+  p="$(panes | jq -r --argjson ids "$ids" --arg f "$FREE" 'first(.result.panes[] | select(((.label // "") | startswith($f)) and (.tab_id as $t | $ids | index($t)))) | .pane_id // empty')"
   if [ -z "$p" ]; then
     p="$(new_mon_tab)" || wf_die "could not open a monitor tab for $LINE"
   fi
@@ -126,21 +123,20 @@ log_file() {
   printf '%s' "$f"
 }
 
-# ---- the architect is woken only by DONE or ALERT, with one JSON line (item 18: schema with acceptance criteria) --
-wake() { # wake <code> <seat> <pane> <summary> <evidence> <ctx>
-  local a msg
+# ---- emit: one event (item 18: schema with acceptance criteria) published on the bus under its status code ---------
+emit() { # emit <code> <seat> <pane> <summary> <evidence> <ctx>
+  local msg
   msg="$(jq -cn --arg code "$1" --arg seat "$2" --arg pane "$3" --arg s "$4" --arg ev "$5" --arg ctx "$6" \
-    --arg line "$LINE" --arg at "$(wf_now)" '{
-      schema:"line-watch-event", version:"1.0.0", id:("LW-" + ($at|gsub("[-:TZ]";"")) + "-" + $seat), at:$at,
-      kind:"event", status_code:$code, from:("line-watch:" + $line), to:"architect", subject:$s,
+    --arg line "$LINE" --arg at "$(wf_now)" --arg to "$(jq -r --arg c "$1" '[.consumers | to_entries[] | select(.value.codes | index($c)) | .key] | first // "orchestrator"' "${LW_BUS:-$WF_REPO/config/line-watch.json}")" '{
+      schema:"line-watch-event", version:"1.0.0", id:("LW-" + ($at|gsub("[-:TZ]";"")) + "-" + $seat + "-" + $code), at:$at,
+      kind:"event", status_code:$code, from:("line-watch:" + $line), to:$to, subject:$s,
       facts:{line:$line, seat:$seat, pane:$pane, context_pct:(($ctx|tonumber?) // null), evidence:$ev},
       actions:(if $code == "LW-DONE" then ["read the seat result, then make seat-down SEAT=" + $seat]
                else ["give the seat work, unblock it, or make seat-down SEAT=" + $seat + " FORCE=1"] end),
       acceptance_criteria:[{id:"AC1", statement:("seat " + $seat + " is no longer " + $code), proof_kind:"log",
         proof:("the next line-watch log line for " + $seat)}]}')"
-  a="$(arch_pane)"
-  if [ -n "$a" ] && herdr agent prompt "$a" "$msg" >/dev/null 2>&1; then wf_watch_log "woke: architect $a $1 $2"
-  else wf_watch_log "ALERT could not wake the architect (pane '${a:-none}'); event was: $msg"; fi
+  if bash "$BUS" pub "line.$SAFE.event.$1" "$msg" 2>/dev/null; then wf_watch_log "published: $1 $2"
+  else wf_watch_log "ALERT bus publish failed for $1 $2 (is the bus up? make bus-up); event was: $msg"; fi
 }
 
 ctx_of() { # context percent from compaction-guard, else the transcript, else empty
@@ -153,18 +149,35 @@ ctx_of() { # context percent from compaction-guard, else the transcript, else em
   tr="$(wf_transcript "$1" 2>/dev/null)" && wf_context_pct "$tr"
 }
 
+# done_hits <name> <pane> <text>: every done line in the text, trimmed. bin/herdr-grid.sh finished(): a non-placeholder
+# word after the name, so a quoted "DONE <seat> <pr-url>" never counts. An unnamed seat (its pane id) matches any name.
+done_hits() {
+  if [ "$1" = "${2//:/-}" ]; then grep -Eo '(^|[[:space:]])DONE [A-Za-z0-9_-]+ [^< ][^[:space:]]*' <<<"$3"
+  else grep -Eo "(^|[[:space:]])DONE ${1} [^< ][^[:space:]]*" <<<"$3"; fi | sed 's/^[[:space:]]*//'
+}
+
+# baseline <name> <text>: written once per seat; the done lines visible when line-watch first saw it.
+baseline() {
+  local f="$STATE/seats/$1.baseline"
+  [ -f "$f" ] && return 0
+  { printf '%s\n' '#baseline'; done_hits "$1" "${PANE_OF:-}" "$2"; } > "$f"
+}
+
 # check_seat <name> <pane> <agent> <status>: prints "<code>\t<evidence>". Precedence: exited, done, blocked, idle.
 check_seat() {
   local name="$1" pane="$2" agent="$3" st="$4" txt hit tr age f h
   [ -n "$agent" ] || { printf 'LW-ALERT-EXITED\tno agent in the pane'; return; }
   txt="$(herdr pane read "$pane" --source recent-unwrapped --lines 40 2>/dev/null)"
   # bin/herdr-grid.sh finished(): a non-placeholder word after the name, so a quoted "DONE <seat> <pr-url>" never counts.
-  if [[ "$name" == *-p* && "$name" == "${pane//:/-}" ]]; then
-    hit="$(grep -Eo '(^|[[:space:]])DONE [A-Za-z0-9_-]+ [^< ][^[:space:]]*' <<<"$txt" | tail -1)"
-  else
-    hit="$(grep -Eo "(^|[[:space:]])DONE ${name} [^< ][^[:space:]]*" <<<"$txt" | tail -1)"
-  fi
-  [ -n "$hit" ] && { printf 'LW-DONE\t%s' "$(printf '%s' "$hit" | sed 's/^[[:space:]]*//')"; return; }
+  # BREADCRUMB - a done line already on screen when the seat was first seen is stale, never an event.
+  # What broke: the first live run sent LW-DONE for li-page off "DONE li-page BLOCKED", printed at 03:10Z, an hour before
+  #   line-watch started (architect, 2026-10-16T04:31Z). herdr pane read has no scrollback offset to record.
+  # Why this fix: at first sight (adopt or the first sweep) every done line on screen is written to <seat>.baseline, and
+  #   only lines not in it count. Rejected: dropping the scrollback read, which loses the done line a seat prints next.
+  # Cost: a seat that prints the very same line again after adopt is not re-reported; a new done carries a new token.
+  baseline "$name" "$txt"
+  hit="$(done_hits "$name" "$pane" "$txt" | grep -vxFf "$STATE/seats/$name.baseline" | tail -1)"
+  [ -n "$hit" ] && { printf 'LW-DONE\t%s' "$hit"; return; }
   # the scratchpad watch.sh dialog check, unchanged: a permission or confirm prompt at the bottom of the pane
   if tail -n 15 <<<"$txt" | grep -qE 'Do you want|Enter to confirm|Esc to cancel'; then
     printf 'LW-ALERT-BLOCKED\t%s' "$(tail -n 15 <<<"$txt" | grep -E 'Do you want|Enter to confirm|Esc to cancel' | head -1 | cut -c1-120)"; return
@@ -205,21 +218,22 @@ sweep_once() {
         wf_watch_log "DONE $name $pane $ev ctx=${ctx:-?}%"
         grep -qxF "$key" "$STATE/notified" 2>/dev/null && continue
         printf '%s\n' "$key" >> "$STATE/notified"
-        wake "$code" "$name" "$pane" "seat $name printed its done token" "$ev" "$ctx" ;;
+        emit "$code" "$name" "$pane" "seat $name printed its done token" "$ev" "$ctx" ;;
       *)        wf_watch_log "ALERT $name $pane $code: $ev ctx=${ctx:-?}%"
-                wake "$code" "$name" "$pane" "seat $name: ${code#LW-ALERT-} ($ev)" "$ev" "$ctx" ;;
+                emit "$code" "$name" "$pane" "seat $name: ${code#LW-ALERT-} ($ev)" "$ev" "$ctx" ;;
     esac
   done < <(seats || echo DISCOVERY_FAILED)
   # BREADCRUMB - a failed herdr list is not "every seat left". Reviewer finding, 2026-10-16: an empty list once wiped every
   #   seat's code, so the next tick re-alerted all of them. Discovery failure skips the cleanup and logs once.
   case "$seen" in *" DISCOVERY_FAILED "*)
-    [ -f "$STATE/discovery-failed" ] || { : > "$STATE/discovery-failed"; wf_watch_log "ALERT herdr list failed for workspace $WS; seats unchecked until it answers"; }
+    [ -f "$STATE/discovery-failed" ] || { : > "$STATE/discovery-failed"; wf_watch_log "ALERT herdr list failed for workspace $WS; seats unchecked until it answers"
+      emit LW-ALERT-DISCOVERY "-" "-" "herdr list failed for workspace $WS" "seats unchecked" ""; }
     return ;; esac
   [ -f "$STATE/discovery-failed" ] && { rm -f "$STATE/discovery-failed"; wf_watch_log "discovery: herdr answers again"; }
   # a seat that left the line takes its state with it, so a new seat reusing the name starts clean
   for f in "$STATE"/seats/*.code; do
     [ -f "$f" ] || continue; name="$(basename "$f" .code)"
-    case "$seen" in *" $name "*) ;; *) rm -f "$f" "$STATE/seats/$name.idle-since"; wf_watch_log "seat: $name left the line" ;; esac
+    case "$seen" in *" $name "*) ;; *) rm -f "$f" "$STATE/seats/$name".{idle-since,baseline,text}; wf_watch_log "seat: $name left the line" ;; esac
   done
 }
 
@@ -233,8 +247,52 @@ cmd_sweep() {
   if [ "$ONCE" = 1 ]; then sweep_once; return; fi
   echo "$$" > "$pf"; trap 'rm -f "$pf"; wf_watch_log "watch: stopped"' EXIT
   wf_watch_log "watch: started line=$LINE ws=$WS every=${INTERVAL}s idle=${IDLE}s log=$WF_WATCH_LOG"
-  echo "line-watch $LINE: log $WF_WATCH_LOG (ALERT and DONE lines wake the architect)"
+  echo "line-watch $LINE: log $WF_WATCH_LOG (ALERT and DONE events go on the bus, never into a pane)"
   while :; do sweep_once; sleep "$INTERVAL"; done
+}
+
+# ---- consumer 1, no model --------------------------------------------------------------------------------------
+# handle <event-json>: LW-DONE with a result that passes bin/brief.sh result-check -> bin/herdr-grid.sh seat-down.
+# What it cannot finish goes back on the bus for the orchestrator. A seat already gone counts as down, so a redelivered
+# event (the consumer died before its ack) does nothing twice.
+handle() {
+  local ev="$1" code seat rf why
+  code="$(jq -r .status_code <<<"$ev")"; seat="$(jq -r .facts.seat <<<"$ev")"
+  [ "$code" = LW-DONE ] || { wf_watch_log "consume: $code $seat is not line-consume's; acked and ignored"; return; }
+  if ! seats | cut -f1 | grep -qxF "$seat"; then wf_watch_log "consume: $seat already off the line"; return; fi
+  rf="${LW_RESULTS:+$(wf_expand "$LW_RESULTS")/$seat-result.json}"
+  if [ -z "$rf" ]; then why="LW_RESULTS is not set, so there is no result file to check"
+  else why="$(bash "$HERE/brief.sh" result-check "$rf" 2>&1 >/dev/null | head -1)" || true
+       bash "$HERE/brief.sh" result-check "$rf" >/dev/null 2>&1 && why=""; fi
+  if [ -n "$why" ]; then
+    emit LW-AC-FAILED "$seat" "$(jq -r .facts.pane <<<"$ev")" "seat $seat printed done but its result does not pass" "$why" ""
+    return
+  fi
+  if WS="$WS" bash "$HERE/herdr-grid.sh" seat-down "$seat" "$LINE" >/dev/null 2>"$STATE/down.err"; then
+    wf_watch_log "consume: $seat result passes, seat downed"
+  else emit LW-DOWN-FAILED "$seat" "$(jq -r .facts.pane <<<"$ev")" "seat-down failed for $seat" "$(tail -1 "$STATE/down.err")" ""; fi
+}
+
+cmd_consume() {
+  [ "${HERDR_ENV:-}" = 1 ] || wf_die "refusing to run outside a herdr pane (dotfiles Rule 18); use: make line-consume LINE=$LINE"
+  local m
+  WF_WATCH_LOG="$(readlink -f "$STATE/sweep.log" 2>/dev/null)"
+  if [ -z "$WF_WATCH_LOG" ] || [ ! -f "$WF_WATCH_LOG" ]; then WF_WATCH_LOG="$(log_file)"; ln -sfn "$WF_WATCH_LOG" "$STATE/sweep.log"; fi
+  export WF_WATCH_LOG
+  [ "$ONCE" = 1 ] || { echo "$$" > "$STATE/consume.pid"; trap 'rm -f "$STATE/consume.pid"' EXIT; }
+  while :; do
+    while m="$(bash "$BUS" next line-consume)" && [ -n "$m" ]; do
+      handle "${m#*$'\t'}"; bash "$BUS" ack "${m%%$'\t'*}"   # acked after the action, never before
+    done
+    [ "$ONCE" = 1 ] && return 0
+    sleep "${LW_CONSUME_INTERVAL:-10}"
+  done
+}
+
+# queue <role>: consumers orchestrator and architect pull every waiting event, one JSON per line, acked as read.
+cmd_queue() {
+  case "${ROLE:-}" in orchestrator|architect) ;; *) wf_die "ROLE= must be orchestrator or architect" ;; esac
+  bash "$BUS" pull "$ROLE"
 }
 
 # arm <kind> <pane> <seat>: bin/watch-ctl.sh on, recorded in $STATE/armed only when it came up.
@@ -252,6 +310,7 @@ cmd_adopt() {
   [ "${HERDR_ENV:-}" = 1 ] || wf_die "not inside herdr; watchers run in labeled herdr panes only (Rule 18)"
   while IFS=$'\t' read -r name pane agent st; do
     if [ -z "$name" ] || [ -z "$agent" ]; then continue; fi
+    PANE_OF="$pane" baseline "$name" "$(herdr pane read "$pane" --source recent-unwrapped --lines 40 2>/dev/null)"
     if [ "${LW_COMPACT:-1}" = 1 ]; then
       label="watch-compact-${pane//[^A-Za-z0-9-]/-}"; ( slot "$label" >/dev/null ) || { echo "$name: no monitor slot for $label" >&2; continue; }
       arm compact "$pane" "$name"
@@ -266,31 +325,23 @@ cmd_adopt() {
   done < <(seats)
 }
 
-cmd_up() {
-  [ "${HERDR_ENV:-}" = 1 ] || wf_die "not inside herdr; the sweep runs in a labeled herdr pane only (Rule 18)"
-  local p
-  p="$(slot "$SAFE-sweep")" || exit 1
-  if [ -f "$STATE/sweep.pid" ] && kill -0 "$(cat "$STATE/sweep.pid")" 2>/dev/null; then echo "sweep for $LINE already on in $p"
-  else
-    herdr pane run "$p" "$(printf 'HERDR_ENV=1 WS=%q ARCH=%q LW_INTERVAL=%q LW_IDLE=%q LW_STATE=%q ARTIFACT_ROOT=%q WORKFLOW_CONFIG=%q COMPACTION_GUARD_BIN=%q bash %q sweep %q' \
-      "$WS" "${ARCH:-}" "$INTERVAL" "$IDLE" "${LW_STATE:-$HOME/.local/state/zenith/line-watch}" \
-      "${ARTIFACT_ROOT:-$HOME/.local/state/zenith}" "$WF_CONFIG" "$CG" "$HERE/line-watch.sh" "$LINE")" >/dev/null \
-      || wf_die "herdr could not start the sweep in $p"
-    echo "sweep for $LINE on in $p ($SAFE-sweep), tab $TAB"
-  fi
-  cmd_adopt
-}
 
-cmd_off() {
-  local kind pane t
+# run: what the sweep monitor (config/monitors.json) runs in its pane: adopt every seat, then sweep in the foreground.
+cmd_run() { cmd_adopt; cmd_sweep; }
+
+# stop: the sweep monitor's `down`; stops the sweep, the consumer and every watcher this line armed. Tabs are
+# bin/monitors.sh's to close (monitors-down), so this never closes one.
+cmd_stop() {
+  local kind pane
   if [ -f "$STATE/sweep.pid" ] && kill -0 "$(cat "$STATE/sweep.pid")" 2>/dev/null; then kill "$(cat "$STATE/sweep.pid")"; echo "sweep for $LINE off"; fi
   rm -f "$STATE/sweep.pid"
+  if [ -f "$STATE/consume.pid" ] && kill -0 "$(cat "$STATE/consume.pid")" 2>/dev/null; then kill "$(cat "$STATE/consume.pid")"; echo "consumer for $LINE off"; fi
+  rm -f "$STATE/consume.pid"
   while read -r kind pane; do
     [ -n "$kind" ] && WATCH_WS="$WS" bash "$HERE/watch-ctl.sh" off "$kind" "$pane" --close
   done < "$STATE/armed" 2>/dev/null
   rm -f "$STATE/armed"
-  for t in $(mon_tabs); do herdr tab close "$t" >/dev/null 2>&1 && echo "closed monitor tab $t"; done
-  # the log stays in the artifact store; only the pointer and per-seat codes go
+  # the log stays in the artifact store and unpulled events stay on the bus; only the pointer and seat codes go
   rm -rf "$STATE/seats" "$STATE/notified" "$STATE/sweep.log"
 }
 
@@ -298,11 +349,14 @@ cmd_status() {
   if [ -f "$STATE/sweep.pid" ] && kill -0 "$(cat "$STATE/sweep.pid")" 2>/dev/null; then echo "sweep $LINE on, pid $(cat "$STATE/sweep.pid")"
   else echo "sweep $LINE off"; fi
   [ -f "$STATE/armed" ] && sed 's/^/armed: /' "$STATE/armed"
+  if [ -f "$STATE/consume.pid" ] && kill -0 "$(cat "$STATE/consume.pid")" 2>/dev/null; then echo "consumer $LINE on, pid $(cat "$STATE/consume.pid")"; else echo "consumer $LINE off"; fi
+  bash "$BUS" status
   [ -e "$STATE/sweep.log" ] && { echo "log: $(readlink -f "$STATE/sweep.log")"; tail -n 3 "$STATE/sweep.log"; }
   return 0
 }
 
 case "$cmd" in
-  up) cmd_up ;; adopt) cmd_adopt ;; sweep) cmd_sweep ;; off) cmd_off ;; status) cmd_status ;;
-  *) wf_die "unknown command $cmd (up|adopt|sweep|off|status)" ;;
+  run) cmd_run ;; adopt) cmd_adopt ;; sweep) cmd_sweep ;; stop) cmd_stop ;; status) cmd_status ;;
+  consume) cmd_consume ;; queue) ROLE="${ROLE:-${3:-}}" cmd_queue ;;
+  *) wf_die "unknown command $cmd (run|adopt|sweep|consume|queue|stop|status)" ;;
 esac

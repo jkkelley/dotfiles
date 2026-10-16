@@ -80,3 +80,30 @@ spec-check:             ## fail a changed XML spec over LIMIT lines, malformed, 
 spec-check-test:        ## run scripts/tests/test_spec_check.sh in the pinned workflow test image (Rule 14)
 	podman build -q -t $(SPEC_IMAGE) -f claude/workflow/tests/container/Containerfile claude/workflow >/dev/null
 	podman run --rm --network=none --userns=keep-id -v "$(CURDIR):/work:Z" -w /work -e HOME=/tmp $(SPEC_IMAGE) bash scripts/tests/test_spec_check.sh
+
+# Home migration: move a project's clones and worktrees into one home, symlink the old paths (docs/design/home-migrate.md).
+# Inputs passed as VAR=value: CONF=<home project.json> (required), ONLY=<one old path> (UAT gate), PASSES= retries for busy paths, WAIT= seconds between.
+.PHONY: home-plan home-apply home-check home-rollback home-migrate-test home-migrate-dev
+
+home-plan:              ## read-only: one status-coded line per item (MOVE DONE BUSY CONFLICT KEEP)
+	ONLY=$(ONLY) bash scripts/home-migrate.sh plan "$(CONF)"
+
+home-apply:             ## move every MOVE item, symlink the old path; busy paths wait (PASSES= WAIT=)
+	ONLY=$(ONLY) PASSES=$(or $(PASSES),1) WAIT=$(or $(WAIT),60) bash scripts/home-migrate.sh apply "$(CONF)"
+
+home-check:             ## proof: every item in the home, old paths resolve, byte_for_byte manifests equal
+	ONLY=$(ONLY) bash scripts/home-migrate.sh check "$(CONF)"
+
+home-rollback:          ## scripted way back for one item: ONLY=<old path> required
+	ONLY=$(ONLY) bash scripts/home-migrate.sh rollback "$(CONF)"
+
+home-migrate-test:      ## dev gate: scripts/tests/test_home_migrate.sh in the pinned workflow test image (Rule 14)
+	podman build -q -t $(SPEC_IMAGE) -f claude/workflow/tests/container/Containerfile claude/workflow >/dev/null
+	podman run --rm --network=none --userns=keep-id -v "$(CURDIR):/work:Z" -w /work -e HOME=/tmp $(SPEC_IMAGE) bash -c 'shellcheck scripts/home-migrate.sh scripts/tests/test_home_migrate.sh && bash scripts/tests/test_home_migrate.sh'
+
+home-migrate-dev:       ## dev gate on a mirror of CONF's real tree: manifest read on the host, migrated in Podman (Rule 14)
+	@m=$$(mktemp) && c=$$(mktemp) && trap 'rm -f "$$m" "$$c"' EXIT && cp "$(CONF)" "$$c" && \
+	bash scripts/tests/home_migrate_dev.sh manifest "$(CONF)" >"$$m" && \
+	podman build -q -t $(SPEC_IMAGE) -f claude/workflow/tests/container/Containerfile claude/workflow >/dev/null && \
+	podman run --rm --network=none --userns=keep-id -v "$(CURDIR):/work:Z" -v "$$m:/in/manifest.tsv:ro,Z" -v "$$c:/in/conf.json:ro,Z" \
+	  -w /work -e HOME=/tmp $(SPEC_IMAGE) bash -c 'shellcheck scripts/tests/home_migrate_dev.sh && bash scripts/tests/home_migrate_dev.sh run /in/manifest.tsv /in/conf.json'
