@@ -4,15 +4,15 @@
   "slug": "test-spec-check-fails-long-malformed-and-content",
   "title": "Test spec-check - fails long, malformed and contents-less specs",
   "type": "test",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:43:27+00:00",
   "parent": "WO-20261016-949a",
   "branch": "feat/test-spec-check-fails-long-malformed-and-content",
-  "pr": null,
-  "closed": null,
+  "pr": 158,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "owner: i approved of everything (brief BR-20261016-spec-check)",
@@ -63,8 +63,10 @@ spec-check needs a scripted test plan run in podman.
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* make spec-check-test prints 12 ok lines and no not ok line
-- [ ] `AC-H2` *(human)* evidence: repro command and output written by claude/tools/artifact/artifact.sh new --key log to the artifact store, path in the PR body
+- [x] `AC-H1` *(human)* make spec-check-test prints 12 ok lines and no not ok line
+  - observed `2026-10-16` 12 ok, 0 not ok, rc=0: /home/luna/.local/state/zenith/log/2026/10/20261016-045256-spec-check-test-plan.txt
+- [x] `AC-H2` *(human)* evidence: repro command and output written by claude/tools/artifact/artifact.sh new --key log to the artifact store, path in the PR body
+  - observed `2026-10-16` evidence: /home/luna/.local/state/zenith/log/2026/10/20261016-045256-spec-check-test-plan.txt
 
 ## Test plan
 
