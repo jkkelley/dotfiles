@@ -104,6 +104,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-16` DESIGN-GAP (infra-design12): stays draft; its build ticket WO-20261016-3787 - YW-V is draft (see its note)
 - `2026-10-16` DRAFT until tool WO-20261016-d304 - TR-FB (timed-run.sh --fallback) is on main (ORD-0555 O1); then approve --no-lavish --reason "architect ruled design approvals done, ORD-0550 O4"
 
 ## Outcome
