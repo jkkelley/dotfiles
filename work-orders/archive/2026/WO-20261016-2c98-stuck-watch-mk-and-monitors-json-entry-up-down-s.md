@@ -1,0 +1,92 @@
+---
+{
+  "id": "WO-20261016-2c98",
+  "slug": "stuck-watch-mk-and-monitors-json-entry-up-down-s",
+  "title": "stuck-watch.mk and monitors.json entry: up, down, status, deadman-install, uninstall, clean",
+  "type": "feature",
+  "status": "done",
+  "priority": "p2",
+  "created": "2026-10-16",
+  "updated": "2026-10-16",
+  "created_at": "2026-10-16T04:51:58+00:00",
+  "parent": "WO-20261016-3570",
+  "branch": "feat/stuck-watch-mk-and-monitors-json-entry-up-down-s",
+  "pr": 170,
+  "closed": "2026-10-16",
+  "approval": {
+    "via": "override",
+    "reason": "Claude seat: lavish is prohibited outside firstmate (~/AGENTS.md owner interaction surface); brief BR-20261016-stuck-watch from the architect is the approval",
+    "at": "2026-10-16"
+  },
+  "evidence": null,
+  "surfaces": [],
+  "depends_on": [
+    "WO-20261016-2d3e",
+    "WO-20261016-7ce0"
+  ],
+  "blocks": []
+}
+---
+
+# WO-20261016-2c98 - stuck-watch.mk and monitors.json entry: up, down, status, deadman-install, uninstall, clean
+
+## Contents
+
+- Problem
+- Scope
+- Degrees of freedom
+- Acceptance criteria
+- Test plan
+- Assumptions
+- Open questions
+- Notes
+- Outcome
+
+## Problem
+
+The scripts need Make entry points and one monitors.json entry.
+
+## Scope
+
+**In**
+
+- claude/workflow/stuck-watch/stuck-watch.mk
+- claude/workflow/Makefile (one include)
+- claude/workflow/config/monitors.json
+
+**Out - non-goals**
+
+- script logic
+
+## Degrees of freedom
+
+- [fixed] None declared: implement exactly as specified; raise a question before deviating.
+
+## Acceptance criteria
+
+- [x] `AC-H1` *(human)* make stuck-watch-up/down/status, deadman-install/uninstall, stuck-watch-clean exist and are idempotent
+  - observed `2026-10-16` stuck-watch.mk: stuck-watch-up/down/status/loop, deadman-install/uninstall/status, stuck-watch-clean; ctl up reuses the labelled pane and leaves a running watcher alone; uninstall uses || true and rm -f; UAT ran install then uninstall cleanly
+- [x] `AC-H2` *(human)* monitors.json has a stuck-watch entry
+  - observed `2026-10-16` claude/workflow/config/monitors.json entry id stuck-watch, make stuck-watch-loop, pane {line}-stuck-watch
+
+## Test plan
+
+```sh
+make -C claude/workflow stuck-watch-test
+```
+
+## Assumptions
+
+_none_
+
+## Open questions
+
+_none_
+
+## Notes
+
+_Newest first. Appended only by `work-order note` - never by hand._
+
+## Outcome
+
+_Written by `work-order done`. Empty until then._

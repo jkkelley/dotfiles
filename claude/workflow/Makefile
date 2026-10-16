@@ -85,3 +85,5 @@ line-adopt: ## make line-adopt LINE= ARCH=<pane> SEATS="name=pane ...": migrate 
 grid: image ## The grid script against a stub herdr (relevant test only)
 	@$(RUN) bash tests/unit/test_herdr_grid.sh
 include herdr-bus/herdr-bus.mk
+include stuck-watch/stuck-watch.mk
+include timing/timing.mk
