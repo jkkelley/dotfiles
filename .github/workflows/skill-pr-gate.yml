@@ -116,6 +116,9 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: make md-contents-check
 
+      # Golden system design rules block must match claude/golden-rules.md (owner order 2026-10-16 UTC).
+      - run: make golden-rules-check
+
   detect:
     name: what has to run
     runs-on: ubuntu-24.04

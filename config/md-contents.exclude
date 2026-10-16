@@ -8,3 +8,5 @@ HYDRATION.md
 work-orders/*
 # Vendored skill copies installed by skill-sync; fixed in dotfiles claude/skills only.
 */skills/synced/*
+# Snippet inserted verbatim into other files by golden-rules.sh; a list inside it would be copied everywhere.
+claude/golden-rules.md
