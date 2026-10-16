@@ -1,0 +1,11 @@
+# stuck-deadman.timer - every minute, from boot. AC2: a dead stuck-watch pages within heartbeat_max_seconds + 60 s.
+[Unit]
+Description=stuck-watch deadman every minute
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=60
+AccuracySec=5
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,19 @@
+{
+  "$comment": "Budgets and timeouts per node kind (Design principles 101 item 37: 'budgets are set in the design; code that runs over budget is status SLOW and becomes a bottleneck work order'). nodes.<name> overrides its kind; BUDGET= and TIMEOUT= arguments override both. Read by bin/timed-run.sh, timing/node-timing.sh and timing/line-timing.sh.",
+  "schema": "time-budgets/1",
+  "retries": 3,
+  "default": {"budget_s": 600, "timeout_s": 1800},
+  "kinds": {
+    "make": {"budget_s": 120, "timeout_s": 600},
+    "seat": {"budget_s": 2700, "timeout_s": 7200},
+    "ci": {"budget_s": 600, "timeout_s": 1800},
+    "merge": {"budget_s": 300, "timeout_s": 900},
+    "gate": {"budget_s": 600, "timeout_s": 1200}
+  },
+  "nodes": {},
+  "kv_bucket": "TIMING",
+  "consumer": "node-timing",
+  "filters": ["line.*.event.node.>", "herdr.>"],
+  "wo_project": "~/.local/state/zenith/bottlenecks",
+  "wo_epic_title": "Bottlenecks: nodes over budget or past timeout (item 37)"
+}

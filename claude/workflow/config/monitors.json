@@ -48,6 +48,22 @@
       "interval": 0,
       "command": "make -C ${repo} a2a-deliver-loop LINE=${line}",
       "publishes": "a2a.${line}.<seat>"
+    },
+    {
+      "name": "stuck-watch",
+      "owner": "stuck-watch",
+      "slot": "3.1",
+      "interval": 0,
+      "command": "make -C ${repo} stuck-watch-loop LINE=${line}",
+      "publishes": "line.${line}.stuck.<code>, line.${line}.heartbeat"
+    },
+    {
+      "name": "node-timing",
+      "owner": "timing",
+      "slot": "3.2",
+      "interval": 0,
+      "command": "make -C ${repo} node-timing-loop",
+      "publishes": "$KV.TIMING.<line>.<kind>.<node>.<run>, line.<line>.timing.SLOW"
     }
   ]
 }
