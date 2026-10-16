@@ -1,18 +1,18 @@
 ---
 {
-  "id": "WO-20261016-20e8",
-  "slug": "test-timed-run-every-target-of-claude-workflow-m",
-  "title": "Test - timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper",
+  "id": "WO-20261016-9ae2",
+  "slug": "test-dag-state-t10-migrate-verb-state-migrations",
+  "title": "Test - dag-state T10 - Migrate verb, state migrations, fixtures",
   "type": "test",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
-  "created_at": "2026-10-16T06:05:52+00:00",
-  "parent": "WO-20261016-af17",
-  "branch": "feat/20e8-test-timed-run-every-target-of-claude-workflow-m",
-  "pr": null,
-  "closed": null,
+  "created_at": "2026-10-16T06:07:47+00:00",
+  "parent": "WO-20261016-41d0",
+  "branch": "feat/9ae2-test-dag-state-t10-migrate-verb-state-migrations",
+  "pr": 372,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -21,7 +21,7 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261016-7e9f"
+    "WO-20261016-3f4f"
   ],
   "blocks": [],
   "labels": [
@@ -30,7 +30,7 @@
 }
 ---
 
-# WO-20261016-20e8 - Test - timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper
+# WO-20261016-9ae2 - Test - dag-state T10 - Migrate verb, state migrations, fixtures
 
 ## Contents
 
@@ -46,7 +46,7 @@
 
 ## Problem
 
-Run the filled test plan of WO-20261016-7e9f - timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper exactly as written; dev gate (item 34), no owner notification (item 35).
+Run the filled test plan of WO-20261016-3f4f - dag-state T10 - Migrate verb, state migrations, fixtures exactly as written; dev gate (item 34), no owner notification (item 35).
 
 ## Scope
 
@@ -67,9 +67,9 @@ _none_
 ## Acceptance criteria
 
 - [x] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
-  - observed `2026-10-16` TP-1 printed 16 wrapped targets rc=0; TP-2 printed WARN bus unreachable lines and rc=0. Log: /home/luna/.local/state/zenith/log/2026/10/20261016-124126-tp-20e8-line-watch-timed.md
+  - observed `2026-10-16` TP-1 ran in podman localhost/dotfiles-workflow-test:1: exit 0, 51 cases ok, last line 'pass=51 fail=0'. Full output in /home/luna/.local/state/zenith/log/2026/10/20261016-124131-9ae2-dag-migrate-test.md
 - [x] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
-  - observed `2026-10-16` /home/luna/.local/state/zenith/log/2026/10/20261016-124126-tp-20e8-line-watch-timed.md
+  - observed `2026-10-16` path: /home/luna/.local/state/zenith/log/2026/10/20261016-124131-9ae2-dag-migrate-test.md (written by claude/tools/artifact/artifact.sh new --key log, frontmatter present)
 
 ## Test plan
 
@@ -77,18 +77,14 @@ _Test plan from claude/workflow/templates/test-plan.md, shaped by claude/workflo
 
 **Scope under test**
 
-claude/workflow/mk/line-watch.mk recipes routed through timed-run.sh
+claude/workflow/dag/bin/dag-migrate.sh, claude/workflow/dag/migrations/state/v1-to-v2.sh, claude/workflow/dag/tests/fixtures/run-1.0.0.json, claude/workflow/dag/tests/unit/test_dag_migrate.sh built to <migration> of dag-state-nodes.spec.xml
 
 **Cases**
 
 - `TP-1`
-  - intent: an untimed target is an invisible bottleneck (item 37)
-  - command: `grep -cE '^[[:space:]]+@?[$][(]TIMED[)] ' claude/workflow/mk/line-watch.mk`
-  - expected: exit 0; prints the wrapped-target count listed in the PR body
-- `TP-2`
-  - intent: the bus must never be a build dependency
-  - command: `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'SW_NATS_URL=127.0.0.1:1 bash claude/workflow/bin/timed-run.sh --node probe --kind make -- true; echo rc=$?'`
-  - expected: prints a `WARN bus unreachable` line and rc=0
+  - intent: the DAG is the source; a build that drifts from docs/design/dag-state.spec.xml is rejected (item 20)
+  - command: `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_migrate.sh'`
+  - expected: exit 0; every case prints ok and the last line is the pass count with fail=0
 
 **Isolation**
 
@@ -97,7 +93,7 @@ claude/workflow/mk/line-watch.mk recipes routed through timed-run.sh
 
 **Out of scope - CI covers**
 
-- the owner's full suite
+- the full dag and workflow suites
 
 ## Assumptions
 

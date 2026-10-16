@@ -1,18 +1,18 @@
 ---
 {
-  "id": "WO-20261016-eb5f",
+  "id": "WO-20261016-20e8",
   "slug": "test-timed-run-every-target-of-claude-workflow-m",
-  "title": "Test - timed-run: every target of claude/workflow/Makefile runs through the timing wrapper",
+  "title": "Test - timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper",
   "type": "test",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
-  "created_at": "2026-10-16T06:05:45+00:00",
+  "created_at": "2026-10-16T06:05:52+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/20e8-test-timed-run-every-target-of-claude-workflow-m",
+  "pr": 369,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -21,7 +21,7 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261016-599f"
+    "WO-20261016-7e9f"
   ],
   "blocks": [],
   "labels": [
@@ -30,7 +30,7 @@
 }
 ---
 
-# WO-20261016-eb5f - Test - timed-run: every target of claude/workflow/Makefile runs through the timing wrapper
+# WO-20261016-20e8 - Test - timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper
 
 ## Contents
 
@@ -46,7 +46,7 @@
 
 ## Problem
 
-Run the filled test plan of WO-20261016-599f - timed-run: every target of claude/workflow/Makefile runs through the timing wrapper exactly as written; dev gate (item 34), no owner notification (item 35).
+Run the filled test plan of WO-20261016-7e9f - timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper exactly as written; dev gate (item 34), no owner notification (item 35).
 
 ## Scope
 
@@ -66,8 +66,10 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+- [x] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
+  - observed `2026-10-16` TP-1 printed 16 wrapped targets rc=0; TP-2 printed WARN bus unreachable lines and rc=0. Log: /home/luna/.local/state/zenith/log/2026/10/20261016-124126-tp-20e8-line-watch-timed.md
+- [x] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+  - observed `2026-10-16` /home/luna/.local/state/zenith/log/2026/10/20261016-124126-tp-20e8-line-watch-timed.md
 
 ## Test plan
 
@@ -75,13 +77,13 @@ _Test plan from claude/workflow/templates/test-plan.md, shaped by claude/workflo
 
 **Scope under test**
 
-claude/workflow/Makefile recipes routed through timed-run.sh
+claude/workflow/mk/line-watch.mk recipes routed through timed-run.sh
 
 **Cases**
 
 - `TP-1`
   - intent: an untimed target is an invisible bottleneck (item 37)
-  - command: `grep -cE '^[[:space:]]+@?[$][(]TIMED[)] ' claude/workflow/Makefile`
+  - command: `grep -cE '^[[:space:]]+@?[$][(]TIMED[)] ' claude/workflow/mk/line-watch.mk`
   - expected: exit 0; prints the wrapped-target count listed in the PR body
 - `TP-2`
   - intent: the bus must never be a build dependency

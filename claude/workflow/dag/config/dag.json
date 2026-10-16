@@ -1,0 +1,13 @@
+{
+  "design_version": "1.0.0",
+  "design_dir": "claude/workflow/dag/nodes",
+  "state_dir": "~/.local/state/zenith/dag-state",
+  "jobs": 4,
+  "retry_waits_seconds": [10, 30, 90],
+  "lock_stale_seconds": 600,
+  "ci_poll_seconds": 20,
+  "ci_timeout_seconds": 1800,
+  "required_checks": ["claude/workflow", "markdown contents lists", "no tracked artifacts"],
+  "approval_dir": "~/.local/state/zenith/dag-state/approvals",
+  "base_branch": "main"
+}

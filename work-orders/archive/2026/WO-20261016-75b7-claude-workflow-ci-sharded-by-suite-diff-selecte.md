@@ -4,7 +4,7 @@
   "slug": "claude-workflow-ci-sharded-by-suite-diff-selecte",
   "title": "claude/workflow CI sharded by suite: diff-selected matrix, full on main and nightly, cached image, timed by step-time.sh",
   "type": "feature",
-  "status": "in-review",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-0272",
   "branch": "feat/claude-workflow-ci-sharded-by-suite-diff-selecte",
   "pr": 220,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design3 cut for ORD-0715; design approvals ruled done, ORD-0550 O4",

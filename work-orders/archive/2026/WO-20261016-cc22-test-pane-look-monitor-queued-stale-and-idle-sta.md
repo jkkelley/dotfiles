@@ -4,15 +4,15 @@
   "slug": "test-pane-look-monitor-queued-stale-and-idle-sta",
   "title": "Test - pane-look monitor: QUEUED-STALE and IDLE-STALE judged from the pane spinner, never agent_status",
   "type": "test",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:04:50+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/cc22-test-pane-look-monitor-queued-stale-and-idle-sta",
+  "pr": 373,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -66,8 +66,10 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+- [x] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
+  - observed `2026-10-16` TP-1..TP-4 all ok, pass=1/3/1/1 fail=0; output in /home/luna/.local/state/zenith/log/2026/10/20261016-124143-wo-cc22-pane-look-test.log
+- [x] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+  - observed `2026-10-16` /home/luna/.local/state/zenith/log/2026/10/20261016-124143-wo-cc22-pane-look-test.log
 
 ## Test plan
 
