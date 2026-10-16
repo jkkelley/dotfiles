@@ -4,7 +4,7 @@
   "slug": "make-wo-untrack-generated-repo-untrack-the-gener",
   "title": "make wo-untrack-generated REPO=: untrack the generated work-order views, plan before apply",
   "type": "feature",
-  "status": "in-review",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-0272",
   "branch": "feat/make-wo-untrack-generated-repo-untrack-the-gener",
   "pr": 204,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -26,6 +26,9 @@
   "blocks": [
     "WO-20261016-de15",
     "WO-20261016-2ffe"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

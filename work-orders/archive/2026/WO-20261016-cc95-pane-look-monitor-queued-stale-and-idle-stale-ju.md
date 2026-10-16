@@ -4,7 +4,7 @@
   "slug": "pane-look-monitor-queued-stale-and-idle-stale-ju",
   "title": "pane-look monitor: QUEUED-STALE and IDLE-STALE judged from the pane spinner, never agent_status",
   "type": "feature",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-af17",
   "branch": "feat/pane-look-monitor-queued-stale-and-idle-stale-ju",
   "pr": 200,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -24,6 +24,9 @@
   "blocks": [
     "WO-20261016-cc22",
     "WO-20261016-e8f2"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

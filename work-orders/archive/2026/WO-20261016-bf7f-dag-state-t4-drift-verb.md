@@ -1,18 +1,18 @@
 ---
 {
-  "id": "WO-20261016-3f4f",
-  "slug": "dag-state-t10-migrate-verb-state-migrations-fixt",
-  "title": "dag-state T10 - Migrate verb, state migrations, fixtures",
+  "id": "WO-20261016-bf7f",
+  "slug": "dag-state-t4-drift-verb",
+  "title": "dag-state T4 - drift verb",
   "type": "feature",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
-  "created_at": "2026-10-16T06:07:43+00:00",
+  "created_at": "2026-10-16T06:06:58+00:00",
   "parent": "WO-20261016-41d0",
-  "branch": "feat/dag-state-t10-migrate-verb-state-migrations-fixt",
-  "pr": 256,
-  "closed": null,
+  "branch": "feat/dag-state-t4-drift-verb",
+  "pr": 255,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -24,13 +24,15 @@
     "WO-20261016-05db"
   ],
   "blocks": [
-    "WO-20261016-9ae2",
-    "WO-20261016-a215"
+    "WO-20261016-dbed"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---
 
-# WO-20261016-3f4f - dag-state T10 - Migrate verb, state migrations, fixtures
+# WO-20261016-bf7f - dag-state T4 - drift verb
 
 ## Contents
 
@@ -52,13 +54,11 @@ Owner, 2026-10-16 UTC: "DAG SHOULD BE EFFORTLESS WITH EASY MIGRATION PLANS FOR U
 
 **In**
 
-- touches: claude/workflow/dag/bin/dag-migrate.sh
-- touches: claude/workflow/dag/migrations/state/v1-to-v2.sh
-- touches: claude/workflow/dag/tests/fixtures/run-1.0.0.json
-- touches: claude/workflow/dag/tests/unit/test_dag_migrate.sh
-- step: build to <migration> of dag-state-nodes.spec.xml: the five cases, rollback (pins reset, newer copies renamed .rolled-back, no down-migration), reuse claude/workflow/inbox-sweep/bin/migrate.sh; dag-migrate --rollback is the scripted way back
+- touches: claude/workflow/dag/bin/dag-drift.sh
+- touches: claude/workflow/dag/tests/unit/test_dag_drift.sh
+- step: build to <verb name="drift"> checks design worktree lease ticket pr ci output, exits 0/1
 - step: every script: rolodex header (name, purpose, inputs, outputs, writes-to, cleanup), inputs by flag or config, idempotent, retries 3 where the spec says retry=3
-- step: run `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_migrate.sh'`
+- step: run `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_drift.sh'`
 - tool: path:claude/workflow/tests/container/Containerfile - on main; fallback: no fallback permitted (dotfiles Rule 14, never the host): podman or the image missing stops the node with ENV-MISSING podman
 - tool: make:Makefile:spec-check - on main; fallback: target missing or failing to parse: stop with DESIGN-GAP naming the target; no hand-run substitute
 
@@ -74,12 +74,12 @@ Owner, 2026-10-16 UTC: "DAG SHOULD BE EFFORTLESS WITH EASY MIGRATION PLANS FOR U
 
 ## Acceptance criteria
 
-- [x] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_migrate.sh'` exit 0; every case prints ok and the last line is the pass count with fail=0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-  - observed `2026-10-16` cmd: make -C claude/workflow image && podman run ... test_dag_migrate.sh; exit 0; last line: pass=51 fail=0 (every case ok)
+- [x] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_drift.sh'` exit 0; every case prints ok and the last line is the pass count with fail=0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -C claude/workflow image && podman run ... test_dag_drift.sh: exit 0; 36 cases ok; last line: pass=36 fail=0
 - [x] `AC-H2` *(human)* `make spec-check` exits 0 (the specs were read, not edited) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-  - observed `2026-10-16` cmd: make spec-check; exit 0; output: spec-check: nothing in scope (specs read, not edited)
+  - observed `2026-10-16` make spec-check: BASE=origin/main LIMIT=1000 PATTERN='*.spec.xml' bash scripts/spec-check.sh spec-check: nothing in scope rc=0
 - [x] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-  - observed `2026-10-16` cmd: git diff --name-only origin/main (minus generated work-orders file); exit 0; lists only dag-migrate.sh, migrations/state/v1-to-v2.sh, fixtures/run-1.0.0.json, unit/test_dag_migrate.sh
+  - observed `2026-10-16` git diff --name-only origin/main: claude/workflow/dag/bin/dag-drift.sh claude/workflow/dag/tests/unit/test_dag_drift.sh claude/workflow/pre-push/pre-push.json claude/workflow/pre-push/pre-push.mk claude/workflow/pre-push/pre-push.sh claude/workflow/pre-push/tests/e2e_pre_push.sh claude/workflow/pre-push/tests/test_pre_push.sh work-orders/WO-20261016-0272/WO-20261016-41d0/WO-20261016-bf7f-dag-state-t4-drift-verb.md work-orders/WO-20261016-ebe4/WO-20261016-5222-pre-push-sh-every-fast-gate-on-the-changed-files.md (In files plus the ticket file work-order.sh start rewrote)
 
 ## Test plan
 
@@ -87,13 +87,13 @@ _Test plan from claude/workflow/templates/test-plan.md, shaped by claude/workflo
 
 **Scope under test**
 
-claude/workflow/dag/bin/dag-migrate.sh, claude/workflow/dag/migrations/state/v1-to-v2.sh, claude/workflow/dag/tests/fixtures/run-1.0.0.json, claude/workflow/dag/tests/unit/test_dag_migrate.sh built to <migration> of dag-state-nodes.spec.xml
+claude/workflow/dag/bin/dag-drift.sh, claude/workflow/dag/tests/unit/test_dag_drift.sh built to <verb name="drift"> checks design worktree lease ticket pr ci output, exits 0/1
 
 **Cases**
 
 - `TP-1`
   - intent: the DAG is the source; a build that drifts from docs/design/dag-state.spec.xml is rejected (item 20)
-  - command: `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_migrate.sh'`
+  - command: `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_drift.sh'`
   - expected: exit 0; every case prints ok and the last line is the pass count with fail=0
 
 **Isolation**

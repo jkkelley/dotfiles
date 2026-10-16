@@ -56,6 +56,9 @@
   "provides": [
     "claude/workflow/pr-flow/tests/stale-merged.test.sh",
     "pr-stale-merged"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

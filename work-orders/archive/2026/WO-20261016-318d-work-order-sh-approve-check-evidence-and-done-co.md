@@ -4,15 +4,15 @@
   "slug": "work-order-sh-approve-check-evidence-and-done-co",
   "title": "work-order.sh approve, check, evidence and done --code-dir run in a detached worktree of the code repo at freshly fetched origin/main or the ticket's open code PR head, never the checkout's HEAD or working tree",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T12:06:32+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/318d-work-order-sh-approve-check-evidence-and-done-co",
+  "pr": 353,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design20 recut of ef1b for its DESIGN-GAP (370, 420); design approvals ruled done, ORD-0550 O4",
@@ -156,23 +156,32 @@ Order brief BR-20261016-infra-design18, ORD-1114 C1. Reconciliation: WO-20261016
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every code_repo verb runs in a worktree of the code repo origin, never the checkout as it stands
+- [x] `AC-H1` *(human)* every code_repo verb runs in a worktree of the code repo origin, never the checkout as it stands
+  - observed `2026-10-16` check: bash claude/skills/work-order/testing/run-tests.sh exit 0 output: work-order test suite image: localhost/work-order-test:1 skill: /home/luna/.cache/wt-318d/claude/skills/work-order (read-only) scratch: /tmp/work-order-test.fvkNl9 (removed on exit) 010-new-happy.sh ok new exits 0 on the documented example (exit 0) ok INDEX.md is generated ok INDEX lists the new ticket ok starts in draft ok renders the non-goals section ok records the non-goal ok records the human criterion ok frontmatter parses as JSON (exit 0) created /work/proj.QPA1Pi/work-orders/WO-20260805-f57b/WO-20260805-f57b-empty-cart-state.md (status: draft, evidence: human) ok same input and clock produce an identical ticket 010-new-happy: 9 checks, 0 failed 020-new-refuses.sh
   - check: `bash claude/skills/work-order/testing/run-tests.sh` exit 0 expect /450-code-dir-worktree/
-- [ ] `AC-H2` *(human)* run_checks cds into the code worktree
+- [x] `AC-H2` *(human)* run_checks cds into the code worktree
+  - observed `2026-10-16` check: grep -c 'cd "${CODE_TREE:-$project}"' claude/skills/work-order/scripts/work-order.sh exit 0 output: 1
   - check: `grep -c 'cd "${CODE_TREE:-$project}"' claude/skills/work-order/scripts/work-order.sh` exit 0 expect /^1$/
-- [ ] `AC-H3` *(human)* one code_tree function serves every verb
+- [x] `AC-H3` *(human)* one code_tree function serves every verb
+  - observed `2026-10-16` check: grep -c '^code_tree()' claude/skills/work-order/scripts/work-order.sh exit 0 output: 1
   - check: `grep -c '^code_tree()' claude/skills/work-order/scripts/work-order.sh` exit 0 expect /^1$/
-- [ ] `AC-H4` *(human)* the four verbs' usage lines name --code-dir and --code-ref
+- [x] `AC-H4` *(human)* the four verbs' usage lines name --code-dir and --code-ref
+  - observed `2026-10-16` check: grep -c -F -- '[--code-dir DIR [--code-ref REF]]' claude/skills/work-order/scripts/work-order.sh exit 0 output: 4
   - check: `grep -c -F -- '[--code-dir DIR [--code-ref REF]]' claude/skills/work-order/scripts/work-order.sh` exit 0 expect /^4$/
-- [ ] `AC-H5` *(human)* rolodex pointers hold
+- [x] `AC-H5` *(human)* rolodex pointers hold
+  - observed `2026-10-16` check: make rolodex-check BASE=origin/main exit 0 output: python3 scripts/rolodex.py check --root . --base origin/main rolodex-check: 1 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H6` *(human)* the whole work-order suite passes, 370 and 420 included, under --network=none
+- [x] `AC-H6` *(human)* the whole work-order suite passes, 370 and 420 included, under --network=none
+  - observed `2026-10-16` check: bash claude/skills/work-order/testing/run-tests.sh exit 0 output: work-order test suite image: localhost/work-order-test:1 skill: /home/luna/.cache/wt-318d/claude/skills/work-order (read-only) scratch: /tmp/work-order-test.CmNECf (removed on exit) 010-new-happy.sh ok new exits 0 on the documented example (exit 0) ok INDEX.md is generated ok INDEX lists the new ticket ok starts in draft ok renders the non-goals section ok records the non-goal ok records the human criterion ok frontmatter parses as JSON (exit 0) created /work/proj.1u6IKB/work-orders/WO-20260805-f57b/WO-20260805-f57b-empty-cart-state.md (status: draft, evidence: human) ok same input and clock produce an identical ticket 010-new-happy: 9 checks, 0 failed 020-new-refuses.sh
   - check: `bash claude/skills/work-order/testing/run-tests.sh` exit 0 expect /all cases passed/
-- [ ] `AC-H7` *(human)* code_repo_slug reads the configured origin url, not the insteadOf-rewritten one
+- [x] `AC-H7` *(human)* code_repo_slug reads the configured origin url, not the insteadOf-rewritten one
+  - observed `2026-10-16` check: grep -c 'config --get remote.origin.url' claude/skills/work-order/scripts/work-order.sh exit 0 output: 1
   - check: `grep -c 'config --get remote.origin.url' claude/skills/work-order/scripts/work-order.sh` exit 0 expect /^1$/
-- [ ] `AC-H8` *(human)* no case points a code checkout at a github url without the local bare-repo redirect
+- [x] `AC-H8` *(human)* no case points a code checkout at a github url without the local bare-repo redirect
+  - observed `2026-10-16` check: grep -nE 'remote set-url origin [^ ]*github' claude/skills/work-order/testing/cases/370-approve-code-dir.sh claude/skills/work-order/testing/cases/420-code-dir-checks.sh claude/skills/work-order/testing/cases/450-code-dir-worktree.sh exit 1 output:
   - check: `grep -nE 'remote set-url origin [^ ]*github' claude/skills/work-order/testing/cases/370-approve-code-dir.sh claude/skills/work-order/testing/cases/420-code-dir-checks.sh claude/skills/work-order/testing/cases/450-code-dir-worktree.sh` exit 1
-- [ ] `AC-H9` *(human)* the diff holds only the In files
+- [x] `AC-H9` *(human)* the diff holds only the In files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/skills/work-order/(scripts/work-order.sh|testing/SOP.md|testing/assert.sh|testing/cases/(370-approve-code-dir|420-code-dir-checks|450-code-dir-worktree).sh))$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/skills/work-order/(scripts/work-order\.sh|testing/SOP\.md|testing/assert\.sh|testing/cases/(370-approve-code-dir|420-code-dir-checks|450-code-dir-worktree)\.sh))$'` exit 1
 
 ## Test plan

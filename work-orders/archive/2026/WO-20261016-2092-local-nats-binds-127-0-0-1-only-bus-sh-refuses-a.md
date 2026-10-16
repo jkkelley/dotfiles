@@ -4,7 +4,7 @@
   "slug": "local-nats-binds-127-0-0-1-only-bus-sh-refuses-a",
   "title": "Local NATS binds 127.0.0.1 only: bus.sh refuses any other bind host",
   "type": "feature",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-af17",
   "branch": "feat/local-nats-binds-127-0-0-1-only-bus-sh-refuses-a",
   "pr": 198,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -25,6 +25,9 @@
     "WO-20261016-9f87",
     "WO-20261016-5ee5",
     "WO-20261016-0c07"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

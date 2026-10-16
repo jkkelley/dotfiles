@@ -4,7 +4,7 @@
   "slug": "dag-state-t7-runbooks-and-playbooks-for-n1-to-n1",
   "title": "dag-state T7 - Runbooks and playbooks for N1 to N10",
   "type": "feature",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-41d0",
   "branch": "feat/dag-state-t7-runbooks-and-playbooks-for-n1-to-n1",
   "pr": 212,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -24,6 +24,9 @@
   "blocks": [
     "WO-20261016-bb80",
     "WO-20261016-a215"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

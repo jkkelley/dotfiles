@@ -4,7 +4,7 @@
   "slug": "timed-run-every-target-of-claude-workflow-mk-lin",
   "title": "timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper",
   "type": "chore",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-af17",
   "branch": "feat/timed-run-every-target-of-claude-workflow-mk-lin",
   "pr": 218,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -23,6 +23,9 @@
   "depends_on": [],
   "blocks": [
     "WO-20261016-20e8"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

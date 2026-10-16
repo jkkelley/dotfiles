@@ -19,7 +19,10 @@
   "depends_on": [
     "WO-20261016-2013"
   ],
-  "blocks": []
+  "blocks": [],
+  "labels": [
+    "line:inbox-triage"
+  ]
 }
 ---
 

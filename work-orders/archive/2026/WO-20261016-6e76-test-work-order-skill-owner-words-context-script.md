@@ -4,15 +4,15 @@
   "slug": "test-work-order-skill-owner-words-context-script",
   "title": "Test - work-order skill: owner words, context, scripted AC checks, check verb, approve resolves tools",
   "type": "test",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:05:09+00:00",
   "parent": "WO-20261016-0272",
   "branch": "feat/test-work-order-skill-owner-words-context-script",
-  "pr": null,
-  "closed": null,
+  "pr": 271,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -23,7 +23,10 @@
   "depends_on": [
     "WO-20261016-6ef4"
   ],
-  "blocks": []
+  "blocks": [],
+  "labels": [
+    "line:inbox-triage"
+  ]
 }
 ---
 

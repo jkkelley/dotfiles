@@ -19,8 +19,8 @@ code=$(git_project)
 other=$(git_project)
 printf 'x\n' >"$code/marker"
 git -C "$code" add -A && git -C "$code" commit -qm "marker" && git -C "$code" push -q origin main
-git -C "$code" remote set-url origin git@github.com:acme/code.git
-git -C "$other" remote set-url origin https://github.com/acme/else.git
+fake_origin "$code" git@github.com:acme/code.git
+fake_origin "$other" https://github.com/acme/else.git
 
 err() { wo "$@" --json 2>&1 | jq -r '.error // .status'; }
 has() { if [[ $1 == "$2" ]]; then _pass "$3"; else _fail "$3" "wanted $2" "got: ${1:0:200}"; fi; }

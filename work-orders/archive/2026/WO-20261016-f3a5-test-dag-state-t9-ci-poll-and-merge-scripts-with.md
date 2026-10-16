@@ -4,7 +4,7 @@
   "slug": "test-dag-state-t9-ci-poll-and-merge-scripts-with",
   "title": "Test - dag-state T9 - CI poll and merge scripts with approval check",
   "type": "test",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-41d0",
   "branch": "feat/test-dag-state-t9-ci-poll-and-merge-scripts-with",
   "pr": 267,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -23,7 +23,10 @@
   "depends_on": [
     "WO-20261016-0797"
   ],
-  "blocks": []
+  "blocks": [],
+  "labels": [
+    "line:inbox-triage"
+  ]
 }
 ---
 
