@@ -342,7 +342,7 @@ wo_test_plan_json() {
         sub(/^[[:space:]]+- /, "", l); k = l; sub(/:.*/, "", k); v = l; sub(/^[a-z]+:/, "", v)
         print "F\t" k "\t" strip(v); return
       }
-      if (mode == "iso" && l ~ /^- (runtime|image):/) {
+      if (mode == "iso" && l ~ /^- (runtime|image|build|containerfile):/) {
         sub(/^- /, "", l); k = l; sub(/:.*/, "", k); v = l; sub(/^[a-z]+:/, "", v)
         # The image line carries its human tag in parentheses after the digest,
         # the Rule 15 convention; the tag is for the reader, not the contract.
@@ -386,9 +386,35 @@ wo_require_test_plan() {
   bad=$(printf '%s' "$plan" | jq -r '[.cases[] | select((.intent // "") == "" or (.command // "") == "" or (.expected // "") == "") | .id] | join(", ")')
   [[ -z $bad ]] || ps_die "$PS_VALIDATION" "test_plan_incomplete_case" \
     "$id test plan case(s) missing intent, command or expected: $bad"
-  printf '%s' "$plan" | jq -e '(.isolation.runtime // "") == "podman" and ((.isolation.image // "") | test("@sha256:[0-9a-f]{64}$"))' >/dev/null \
+  # RR-orch-18 (log 20261016-080957-t21e-cards-uat-digest.txt): a locally built image is never pinned by
+  # digest. A localhost digest names one build on one machine and every rebuild mints a new one, so plans
+  # pinned to it stopped resolving (11 plans on 0a6832bb). What Rule 15 protects is the base, so the local
+  # form is tag + build command + a Containerfile whose every FROM is digest-pinned; --pull=never makes a
+  # missing image a loud error. Rules run in this order, each a validation refusal by its own name.
+  local image build cfile project
+  image=$(printf '%s' "$plan" | jq -r '.isolation.image // ""')
+  build=$(printf '%s' "$plan" | jq -r '.isolation.build // ""')
+  cfile=$(printf '%s' "$plan" | jq -r '.isolation.containerfile // ""')
+  if [[ $image =~ ^localhost/.*@sha256: ]]; then
+    ps_die "$PS_VALIDATION" "test_plan_local_digest" \
+      "$id test plan pins a locally built image by digest: a locally built image is never pinned by digest: use the tag with build: and containerfile: (RR-orch-18)"
+  fi
+  if [[ $image == localhost/* ]]; then
+    [[ -n $build && -n $cfile ]] || ps_die "$PS_VALIDATION" "test_plan_local_no_build" \
+      "$id test plan names a locally built image but no build: command or no containerfile: path"
+    project=$(dirname "$(dirname "$(dirname "$file")")")
+    while [[ $project != / && ! -d $project/.git && ! -f $project/.git ]]; do project=$(dirname "$project"); done
+    [[ -f $project/$cfile ]] && ! grep -iE '^[[:space:]]*FROM[[:space:]]' "$project/$cfile" | grep -qvE '@sha256:[0-9a-f]{64}' \
+      && grep -qiE '^[[:space:]]*FROM[[:space:]]' "$project/$cfile" || ps_die "$PS_VALIDATION" "test_plan_local_from_unpinned" \
+      "$id test plan containerfile $cfile is missing under the project or has a FROM not pinned by @sha256:<64 hex>"
+    if printf '%s' "$plan" | jq -e '[.cases[].command | select(test("podman run")) | select(test("--pull=never") | not)] | length > 0' >/dev/null; then
+      ps_die "$PS_VALIDATION" "test_plan_local_pull" \
+        "$id test plan runs podman run on a local image without --pull=never: a missing image must be a loud error, not a registry lookup"
+    fi
+  fi
+  printf '%s' "$plan" | jq -e '(.isolation.runtime // "") == "podman" and (((.isolation.image // "") | test("^localhost/[a-z0-9._/-]+:[A-Za-z0-9._-]+$")) or ((.isolation.image // "") | test("@sha256:[0-9a-f]{64}$")))' >/dev/null \
     || ps_die "$PS_VALIDATION" "test_plan_not_isolated" \
-      "$id test plan must run in podman on an image pinned by digest (runtime: podman, image: <name>@sha256:<64 hex>)"
+      "$id test plan must run in podman on a locally built image tag (with build: and containerfile:) or an image pinned by digest (runtime: podman, image: <name>@sha256:<64 hex>)"
 }
 
 # ---------------------------------------------------------------------------
