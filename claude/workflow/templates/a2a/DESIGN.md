@@ -47,9 +47,8 @@ flowchart LR
   N3 --> N5[N5 tests]
   N4 --> N5
   N5 --> N6[N6 Make targets]
-  N5 --> N7[N7 spawner wiring by herdr-grid]
+  N8 --> N7[N7 spawner wiring by herdr-grid]
   N6 --> N8[N8 PR and CI]
-  N8 --> N7
 ```
 
 ## Nodes
@@ -63,7 +62,7 @@ flowchart LR
 | N5 | N3, N4 | test | tests/unit/test_a2a_brief.sh | 21 checks green in Podman |
 | N6 | N5 | Make targets | claude/workflow/a2a.mk | brief-new, brief-check, result-check, brief-migrate, a2a-test |
 | N7 | N8 merged | spawner call, owned by seat herdr-grid | bin/workflow-spawn.sh | calls `make -C claude/workflow -f a2a.mk brief-check FILE=<brief>`, refuses on non-zero, hands the seat the path |
-| N8 | N6, N7 | PR | none | checks green, done token |
+| N8 | N6 | PR | none | checks green, done token |
 
 ## State and recovery
 
