@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "20261016T010000Z",
+  "seat": "gmail",
+  "source": "gmail",
+  "account": "gmail",
+  "status": "OK",
+  "started_at": "2026-10-16T01:00:00+02:00",
+  "finished_at": "2026-10-16T01:20:00Z",
+  "attempts": 1,
+  "counts": {
+    "before": {
+      "unread": 1
+    },
+    "after": {
+      "unread": 0,
+      "verified_at": "2026-10-16T01:20:00Z"
+    },
+    "processed": 1,
+    "important": 0,
+    "bulk": 0
+  },
+  "items": [
+    {
+      "id": "m1",
+      "received_at": "2026-10-16T01:00:00Z",
+      "from": "sender@example.com",
+      "subject": "Hello",
+      "gist": "A short note.",
+      "kind": "human",
+      "flag": "none",
+      "action_taken": "marked-read"
+    }
+  ],
+  "drafts": [],
+  "owner_decisions": [],
+  "mutations": [
+    {
+      "action": "marked-read",
+      "count": 1
+    }
+  ],
+  "errors": [],
+  "tab_closed": true
+}

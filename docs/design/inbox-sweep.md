@@ -3,7 +3,7 @@
 Status: APPROVED, owner ruling 2026-10-16 UTC on Bearings card D-04, with the architect's rulings recorded in [section 12](#12-owner-decisions).
 Build tickets are cut from [section 10](#10-build-dag).
 Owner order, 2026-10-15 UTC: "make sure you clean up too and shit is automated with makefiles and scripts, i'm not fucking around, dag this shit out doc design first".
-Companion files: [`inbox-sweep.spec.xml`](inbox-sweep.spec.xml) (the build spec) and [`inbox-sweep.result.schema.json`](inbox-sweep.result.schema.json) (one seat's result record).
+Companion files: [`inbox-sweep.spec.xml`](inbox-sweep.spec.xml) (the build spec) and [`result.schema.json`](../../claude/workflow/inbox-sweep/schemas/result.schema.json) (one seat's result record).
 
 ## Contents
 

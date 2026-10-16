@@ -4,3 +4,4 @@ select	tests/run.sh,tests/suites.tsv,tests/unit/test_select.sh	bash tests/unit/t
 herdr-first	bin/,tests/lib/bg-scan.sh,tests/unit/test_herdr_first.sh	bash tests/unit/test_herdr_first.sh
 lint	bin/,tests/	shellcheck -x -P SCRIPTDIR bin/*.sh tests/run.sh tests/lib/*.sh tests/unit/*.sh && echo "ok  lint: shellcheck clean"
 briefs	templates/,tests/unit/test_briefs.sh	bash tests/unit/test_briefs.sh
+schemas	schemas/,tests/fixtures/,tests/unit/test_schemas.sh	bash tests/unit/test_schemas.sh

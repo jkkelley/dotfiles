@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "mark_read": true,
+  "gmail": {
+    "enabled": true,
+    "account": "main"
+  },
+  "proton": {
+    "enabled": true,
+    "accounts": [
+      {
+        "label": "first",
+        "address": "first@example.com"
+      },
+      {
+        "label": "second",
+        "address": "second@example.com"
+      }
+    ]
+  },
+  "linkedin": {
+    "enabled": true,
+    "max_drafts": 26
+  },
+  "retention_days": 14
+}

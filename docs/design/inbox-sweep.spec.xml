@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   Inbox sweep - build spec.
-  Design: docs/design/inbox-sweep.md. Result schema: docs/design/inbox-sweep.result.schema.json.
+  Design: docs/design/inbox-sweep.md. Result schema: claude/workflow/inbox-sweep/schemas/result.schema.json.
   Every time is UTC. Every path below is real; <win-home> and <run-id> are resolved at run time by the rules in
   paths/resolve, never typed by hand.
 
@@ -408,7 +408,7 @@
       <check box="herdr-first catches a planted ampersand" proof="unit test on a fixture script"/>
     </node>
     <node id="B1" name="schemas and declarations" after="B0" files="inbox-sweep/schemas/result.schema.json, inbox-sweep/schemas/config.schema.json, schemas/workflows/inbox-sweep-{gmail,proton,linkedin}.workflow.json">
-      <input>docs/design/inbox-sweep.result.schema.json, spec sections config and declarations</input>
+      <input>claude/workflow/inbox-sweep/schemas/result.schema.json (moved from docs/design), spec sections config and declarations</input>
       <output>result schema moved by git mv, config schema, 3 declarations</output>
       <check box="declarations valid" proof="make -C claude/workflow schema green"/>
       <check box="one fixture per seat code validates" proof="unit test over tests/fixtures/results/*.json"/>

@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "mark_read": true,
+  "gmail": {
+    "enabled": true,
+    "account": "main"
+  },
+  "proton": {
+    "enabled": true,
+    "accounts": []
+  },
+  "linkedin": {
+    "enabled": true,
+    "max_drafts": 10
+  },
+  "retention_days": 14
+}
