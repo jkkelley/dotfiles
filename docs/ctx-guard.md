@@ -15,7 +15,7 @@
 ## Design principles 101
 
 1. Speed is king: the PR runs `make ctx-guard-test` (relevant only) in CI selection; CI runs lint and the full suite.
-2. Parallelism: the dedupe proof and the spawner change were built by parallel subagents.
+2. Parallelism: the dedupe proof ran as a parallel subagent.
 3. Make and scripts: every action is a `make ctx-guard-*` target over `ctx-guard.sh`.
 4. Portable, reused: wraps the existing compaction-guard, no new guard; one `.mk` any repo includes.
 5. Small scope, proven: one wrapper, dedupe proven in Podman with the real `claude`.
