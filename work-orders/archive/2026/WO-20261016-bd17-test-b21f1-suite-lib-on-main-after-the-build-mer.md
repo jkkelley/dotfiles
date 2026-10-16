@@ -4,15 +4,15 @@
   "slug": "test-b21f1-suite-lib-on-main-after-the-build-mer",
   "title": "Test B21f1 - suite lib on main after the build merges",
   "type": "test",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:25+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/test-b21f1-suite-lib-on-main-after-the-build-mer",
+  "pr": 172,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Architect rulings R3 and R4, 2026-10-16T04:25Z, recorded in design 18 (PR 153); Claude seats never use lavish",
@@ -61,7 +61,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+- [x] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+  - observed `2026-10-16` On main e6afb03: podman run localhost/dotfiles-workflow-test:1 bash tests/run.sh --suite lib -> exit 0, output 'ok lib' / 'ran 1 suite'. Output: ~/.local/state/zenith/log/2026/10/20261016-052422-t21f1-tp1-suite-lib.log
 
 ## Test plan
 
