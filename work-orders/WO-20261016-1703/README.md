@@ -10,7 +10,7 @@ One level down only. A child of a child is listed in its own directory, not here
 |---|---|---|---|---|
 | `WO-20261016-e2e8` | draft | p1 | WO-20261016-61ae | [Inbox sweep B11 - live end-to-end run](WO-20261016-e2e8-inbox-sweep-b11-live-end-to-end-run.md) |
 | `WO-20261016-5328` | draft | p1 | - | [Inbox sweep B12 - spike, can the extension be woken without the owner](WO-20261016-5328-inbox-sweep-b12-spike-can-the-extension-be-woken.md) |
-| `WO-20261016-f9a7` | ready | p1 | - | [Inbox sweep B14 - reply-cards.sh owner cards per LinkedIn draft](WO-20261016-f9a7-inbox-sweep-b14-reply-cards-sh-owner-cards-per-l.md) |
+| `WO-20261016-f9a7` | in-progress | p1 | - | [Inbox sweep B14 - reply-cards.sh owner cards per LinkedIn draft](WO-20261016-f9a7-inbox-sweep-b14-reply-cards-sh-owner-cards-per-l.md) |
 | `WO-20261016-1130` | ready | p1 | WO-20261016-f9a7 | [Inbox sweep B15 - reply-approve.sh writes the approval file verbatim](WO-20261016-1130-inbox-sweep-b15-reply-approve-sh-writes-the-appr.md) |
 | `WO-20261016-24c5` | ready | p1 | WO-20261016-1130 | [Inbox sweep B16 - send seat brief, declaration and send-result schema](WO-20261016-24c5-inbox-sweep-b16-send-seat-brief-declaration-and-.md) |
 | `WO-20261016-de23` | ready | p1 | WO-20261016-1130 | [Inbox sweep B17a - reply-verify.sh character check and token](WO-20261016-de23-inbox-sweep-b17a-reply-verify-sh-character-check.md) |

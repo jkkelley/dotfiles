@@ -100,3 +100,39 @@ sweep_win_home() {
   fi
   printf '%s\n' "$home"
 }
+
+# sweep_bearings_server <cards-file> <server-js>
+# Starts the Bearings server for the page that owns <cards-file> unless <dir>/server.json says one is up. The server
+# goes in a new herdr pane labeled bearings-inbox-sweep (split, rename, run), never a background job (CLAUDE.md Rule 18):
+# the owner watches herdr. Moved here from sweep-cards.sh in B14 because reply-cards.sh needs the same server and a copy
+# of 20 lines would drift; the behaviour is unchanged and tests/unit/test_cards.sh still covers it. A server that cannot
+# be started is logged through the caller's `log` function, not fatal: the cards are on disk and the next run tries again.
+# Environment: SWEEP_HERDR_WORKSPACE herdr workspace label to put the pane in (default dotfiles).
+sweep_bearings_server() {
+  local cards="$1" server_js="$2" ws anchor known pane
+  if [ -f "$(dirname "$cards")/server.json" ]; then
+    log "bearings server already up"
+    return 0
+  fi
+  ws="$(herdr workspace list 2>/dev/null | jq -r --arg l "${SWEEP_HERDR_WORKSPACE:-dotfiles}" 'first(.result.workspaces[] | select(.label == $l) | .workspace_id) // empty' || true)"
+  anchor="" known=""
+  if [ -n "$ws" ]; then
+    known="$(herdr pane list --workspace "$ws" 2>/dev/null | jq -c '[.result.panes[].pane_id]' || true)"
+    anchor="$(jq -r '.[0] // empty' <<<"${known:-[]}")"
+  fi
+  if [ -z "$anchor" ]; then
+    log "no herdr pane to split; server not started"
+  elif ! herdr pane split "$anchor" --direction down >/dev/null 2>&1; then
+    log "herdr pane split failed; server not started"
+  else
+    # The new pane is the id that was not in the list before the split: panes can be unlabeled already, so "last
+    # unlabeled pane" could rename someone else's.
+    pane="$(herdr pane list --workspace "$ws" 2>/dev/null | jq -r --argjson k "${known:-[]}" '[.result.panes[].pane_id | select(. as $i | $k | index($i) | not)] | last // empty' || true)"
+    if [ -n "$pane" ] && herdr pane rename "$pane" bearings-inbox-sweep >/dev/null 2>&1 &&
+      herdr pane run "$pane" "node $server_js inbox-sweep" >/dev/null 2>&1; then
+      log "bearings server started in pane $pane (bearings-inbox-sweep)"
+    else
+      log "could not label or run the server pane; server not started"
+    fi
+  fi
+}
