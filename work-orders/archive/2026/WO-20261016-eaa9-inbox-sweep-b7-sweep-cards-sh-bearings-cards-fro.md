@@ -4,15 +4,15 @@
   "slug": "inbox-sweep-b7-sweep-cards-sh-bearings-cards-fro",
   "title": "Inbox sweep B7 - sweep-cards.sh Bearings cards from results",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T01:19:12+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/inbox-sweep-b7-sweep-cards-sh-bearings-cards-fro",
+  "pr": 114,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner approved the design on Bearings card D-04, 2026-10-16 UTC; Claude seats never use lavish (global owner rule)",
@@ -66,10 +66,14 @@ Owner decisions and LinkedIn drafts must reach the owner as Bearings cards, once
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a rerun adds no duplicate card (test, item count unchanged)
-- [ ] `AC-H2` *(human)* each BLOCKED-* code gives one card (test)
-- [ ] `AC-H3` *(human)* a draft card carries the full draft text (test)
-- [ ] `AC-H4` *(human)* the bearings server starts in a labeled pane only (calls.log: split and rename, no background)
+- [x] `AC-H1` *(human)* a rerun adds no duplicate card (test, item count unchanged)
+  - observed `2026-10-16` test_cards.sh: 'AC-H1: a rerun leaves the item count unchanged', ids unique, existing card not rewritten (ok)
+- [x] `AC-H2` *(human)* each BLOCKED-* code gives one card (test)
+  - observed `2026-10-16` test_cards.sh: one card each for BLOCKED-NO-BROWSER (2 seats, 1 card), CHALLENGE, CONNECTOR, SIGNED-OUT and PF-NO-CHROME (ok); cards.log 'BLOCKED codes 4, BLOCKED cards 4'
+- [x] `AC-H3` *(human)* a draft card carries the full draft text (test)
+  - observed `2026-10-16` test_cards.sh: 'AC-H3: the draft card carries the full draft text' and a 3000 char draft is not truncated (ok)
+- [x] `AC-H4` *(human)* the bearings server starts in a labeled pane only (calls.log: split and rename, no background)
+  - observed `2026-10-16` test_cards.sh: calls.log shows pane split wS:p1, pane rename wS:p9 bearings-inbox-sweep, pane run; bg_scan clean; no pane read (ok)
 
 ## Test plan
 
