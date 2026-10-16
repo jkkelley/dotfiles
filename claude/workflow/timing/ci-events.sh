@@ -35,6 +35,29 @@ gh_runs() { # gh_runs <repo>: run list JSON, retried 3 times
   echo "A2A-003 gh run list -R $1 failed 3 times: $out" >&2; return 1
 }
 
+ci_import() { # ci_import <repo> <id>: publish every step-time-* artifact line of a completed run verbatim; rc 0 done, 1 download failed
+  local repo="$1" id="$2" tmp out f line s p tries=0 got=1
+  tmp="$(mktemp -d)"
+  while [ "$tries" -lt 3 ]; do
+    tries=$((tries + 1))
+    if out="$("$GH" run download "$id" -R "$repo" -p 'step-time-*' -D "$tmp" 2>&1)"; then got=0; break; fi
+    case "$out" in *'no artifact matches'*) rm -rf "$tmp"; return 0 ;; esac
+    [ "$tries" -lt 3 ] && sleep "${CI_EVENTS_RETRY_SLEEP:-2}"
+  done
+  if [ "$got" = 1 ]; then
+    echo "A2A-003 gh run download $id -R $repo failed 3 times: $out" >&2; rm -rf "$tmp"; return 1
+  fi
+  for f in "$tmp"/*/step-time.jsonl; do
+    [ -f "$f" ] || continue
+    while IFS= read -r line || [ -n "$line" ]; do
+      [ -n "$line" ] || continue
+      s="$(jq -r .subject <<<"$line")"; p="$(jq -c .payload <<<"$line")"
+      sw_pub "$s" "$p" || echo "ci-events: publish to $s failed" >&2
+    done < "$f"
+  done
+  rm -rf "$tmp"; return 0
+}
+
 rc=0
 while IFS= read -r repo; do
   runs="$(gh_runs "$repo")" || { rc=1; continue; }
@@ -42,18 +65,24 @@ while IFS= read -r repo; do
   while IFS= read -r run; do
     id="$(jq -r .databaseId <<<"$run")"; key="$repo#$id"; node="ci-$name-$id"
     seen="$(jq -r --arg k "$key" '.[$k] // empty' "$STATE")"
-    [ "$seen" = end ] && continue
+    [ "$seen" = imported ] && continue
     if [ "$seen" != start ]; then
       tm_event all "$node" ci "$id" start "$(jq -c '{workflow:.name,branch:.headBranch}' <<<"$run")"
       echo "start $node"
       seen=start; jq --arg k "$key" '.[$k]="start"' "$STATE" > "$STATE.tmp" && mv "$STATE.tmp" "$STATE"
     fi
     [ "$(jq -r .status <<<"$run")" = completed ] || continue
-    d="$(jq -r '((.updatedAt|fromdateiso8601) - (.createdAt|fromdateiso8601))' <<<"$run")"
-    r=1; [ "$(jq -r .conclusion <<<"$run")" = success ] && r=0
-    tm_event all "$node" ci "$id" end "$(jq -nc --argjson r "$r" --argjson d "$d" --argjson b "$(tm_limit budget_s ci "$node")" '{rc:$r,duration_s:$d,budget_s:$b}')"
-    echo "end $node rc=$r duration_s=$d"
-    jq --arg k "$key" '.[$k]="end"' "$STATE" > "$STATE.tmp" && mv "$STATE.tmp" "$STATE"
+    if [ "$seen" != end ]; then
+      d="$(jq -r '((.updatedAt|fromdateiso8601) - (.createdAt|fromdateiso8601))' <<<"$run")"
+      r=1; [ "$(jq -r .conclusion <<<"$run")" = success ] && r=0
+      tm_event all "$node" ci "$id" end "$(jq -nc --argjson r "$r" --argjson d "$d" --argjson b "$(tm_limit budget_s ci "$node")" '{rc:$r,duration_s:$d,budget_s:$b}')"
+      echo "end $node rc=$r duration_s=$d"
+      jq --arg k "$key" '.[$k]="end"' "$STATE" > "$STATE.tmp" && mv "$STATE.tmp" "$STATE"
+    fi
+    if ci_import "$repo" "$id"; then
+      jq --arg k "$key" '.[$k]="imported"' "$STATE" > "$STATE.tmp" && mv "$STATE.tmp" "$STATE"
+      echo "import $node"
+    fi
   done < <(jq -c '.[]' <<<"$runs")
 done < <(tm_cfg '.ci_events.repos[]')
 exit "$rc"
