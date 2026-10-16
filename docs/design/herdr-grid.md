@@ -214,4 +214,5 @@ Owner, 2026-10-16 UTC: "make sure your seat always has bypass permissions on and
 `architect-up LINE= [RESUME=1]` restarts it through the same function, so a restart or resume keeps both flags and adds `--continue` on resume.
 It refuses when the pane already runs an agent.
 `seat-up` adds `--dangerously-skip-permissions` to any claude or claude.exe seat command that lacks it, and refuses a seat command with `--remote-control`, so the owner sees one session per line.
+`BUILD=1 BRIEF=<file>`: refuses with DESIGN-GAP unless brief-check BUILD=1 passes.
 Not verified: the installed `claude --help` does not list `--remote-control`; the flag is used as the owner specified it.

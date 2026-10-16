@@ -257,4 +257,13 @@ FORCE=1 $G seat-down tq L >/dev/null 2>&1
 [ ! -e "$T/seat-tmp/L/tq" ] && ok "seat-down removes the seat TMPDIR" || bad "seat-down removes the seat TMPDIR"
 unset GRID_SEAT_TMP
 
+# ---- seat-up BUILD=1 refuses a brief with no ready work order (WO-20261016-ec34, ORD-0548 O4)
+printf '#!/bin/bash\n[[ "$*" == *no-wo.json* ]] && { echo "brief has no ready work order" >&2; exit 3; }\nexit 0\n' > "$T/bin/make"; chmod +x "$T/bin/make"
+mk_tab1 free free free free free free
+: > "$T/log"; out="$(BUILD=1 BRIEF=/x/no-wo.json $G seat-up L nb 2>&1)"; rc=$?
+[ "$rc" = 3 ] && grep -q 'DESIGN-GAP' <<<"$out" && ! grep -qF 'pane rename' "$T/log" && ok "seat-up BUILD=1 with a brief that names no ready work order exits 3 with DESIGN-GAP and claims no slot" || bad "seat-up BUILD=1 refusal" "rc=$rc out=$out"
+: > "$T/log"; $G seat-up L nc >/dev/null 2>&1; rc=$?
+[ "$rc" = 0 ] && grep -qF 'pane rename' "$T/log" && ok "seat-up without BUILD starts as before" || bad "seat-up without BUILD" "rc=$rc"
+rm -f "$T/bin/make"
+
 [ "$fail" = 0 ] && echo "ok  herdr-grid" || { echo "FAIL herdr-grid"; exit 1; }
