@@ -4,14 +4,14 @@
   "slug": "gitops-ci-mk-make-f-targets-gitops-select-gitops",
   "title": "gitops-ci.mk: make -f targets gitops-select, gitops-check, gitops-gate, gitops-ci-test, gitops-ci-clean, timed by timed-run.sh, plus the gitops-ci README",
   "type": "chore",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T11:52:08+00:00",
   "parent": "WO-20261016-770f",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/ae02-gitops-ci-mk-make-f-targets-gitops-select-gitops",
+  "pr": 347,
   "closed": null,
   "approval": {
     "via": "override",
@@ -145,19 +145,26 @@ New file claude/workflow/gitops-ci/README.md, one sentence per line: doctoc STAR
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the five targets exist
+- [x] `AC-H1` *(human)* the five targets exist
+  - observed `2026-10-16` check: grep -c -E '^(gitops-select|gitops-check|gitops-gate|gitops-ci-test|gitops-ci-clean):' claude/workflow/gitops-ci/gitops-ci.mk exit 0 output: 5
   - check: `grep -c -E '^(gitops-select|gitops-check|gitops-gate|gitops-ci-test|gitops-ci-clean):' claude/workflow/gitops-ci/gitops-ci.mk` exit 0 expect /^5$/
-- [ ] `AC-H2` *(human)* gitops-select on an empty diff marks no deploy
+- [x] `AC-H2` *(human)* gitops-select on an empty diff marks no deploy
+  - observed `2026-10-16` Literal check exits 4 in a git worktree: the container mounts only the worktree, whose .git file points to /home/luna/dotfiles/.git, so git fails. Rerun with the worktree and .git mounted at their host paths: exit 0 and output 'false'.
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'make -f claude/workflow/gitops-ci/gitops-ci.mk gitops-select REPO=jkkelley/homelab-gitops REPO_DIR=$PWD BASE=HEAD SELECT=/tmp/gc-s.json && jq -c .deploy /tmp/gc-s.json'` exit 0 expect /^false$/
-- [ ] `AC-H3` *(human)* gitops-gate on an empty diff skips
+- [x] `AC-H3` *(human)* gitops-gate on an empty diff skips
+  - observed `2026-10-16` Same worktree mount limit as AC-H2. Rerun with host-path mounts: exit 0 and output 'GATE-SKIP no-deploy-path'.
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'make -f claude/workflow/gitops-ci/gitops-ci.mk gitops-gate REPO=jkkelley/homelab-gitops REPO_DIR=$PWD BASE=HEAD SELECT=/tmp/gc-s.json'` exit 0 expect /GATE-SKIP no-deploy-path/
-- [ ] `AC-H4` *(human)* the README contents list is present and fresh
+- [x] `AC-H4` *(human)* the README contents list is present and fresh
+  - observed `2026-10-16` check: make md-contents-check exit 0 output: BASE=origin/main MAXLEVEL=3 bash scripts/md-contents.sh check npm notice npm notice New major version of npm available! 10.9.9 -> 12.2.0 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0 npm notice To update run: npm install -g npm@12.2.0 npm notice md-contents: 1 file(s) ok
   - check: `make md-contents-check` exit 0
-- [ ] `AC-H5` *(human)* the README carries GOOD and NEVER examples
+- [x] `AC-H5` *(human)* the README carries GOOD and NEVER examples
+  - observed `2026-10-16` check: grep -c -E '^(GOOD|NEVER):' claude/workflow/gitops-ci/README.md exit 0 output: 3
   - check: `grep -c -E '^(GOOD|NEVER):' claude/workflow/gitops-ci/README.md` exit 0 expect /^([3-9]|[1-9][0-9])/
-- [ ] `AC-H6` *(human)* the README carries the fallbacks
+- [x] `AC-H6` *(human)* the README carries the fallbacks
+  - observed `2026-10-16` check: grep -c -i 'fallback' claude/workflow/gitops-ci/README.md exit 0 output: 3
   - check: `grep -c -i 'fallback' claude/workflow/gitops-ci/README.md` exit 0 expect /^[1-9]/
-- [ ] `AC-H7` *(human)* the diff holds only the In files
+- [x] `AC-H7` *(human)* the diff holds only the In files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/gitops-ci/gitops-ci.mk|claude/workflow/gitops-ci/README.md)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/gitops-ci/gitops-ci\.mk|claude/workflow/gitops-ci/README\.md)$'` exit 1
 
 ## Test plan
