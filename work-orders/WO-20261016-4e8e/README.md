@@ -8,4 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-f8e2` | ready | p1 | - | [A2A-004 status code map test](WO-20261016-f8e2-a2a-004-status-code-map-test.md) |
+| `WO-20261016-f8e2` | in-progress | p1 | - | [A2A-004 status code map test](WO-20261016-f8e2-a2a-004-status-code-map-test.md) |
