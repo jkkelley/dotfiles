@@ -250,3 +250,8 @@ Why: wiki-process was refused as tool_missing although `make -n wiki-process` ex
 
 `approve`, `check`, `evidence` and `done` on a ticket with a repo run in a detached worktree of `--code-dir` at freshly fetched origin/main, the open PR head, or `--code-ref`; the checkout's working tree is never read, `code_fetch_failed` follows three failed fetches, and no worktree is left behind.
 Why: a stale or dirty code checkout passed approve for tools not on main, and done in the wrong tree failed WO-20261016-64f2 (F44, WO-20261016-318d).
+
+## 460-ac-expect-multiline
+
+`check` matches an `--ac-expect` regex against the whole output as one PCRE multiline record when the per-line match misses, so an expect spanning lines gives AC-PASS; a non-matching one still gives AC-FAIL, and when `grep -P` is unsupported (exit 2) the per-line verdict stands.
+Why: the WO-20261016-64f2 index 2 expect ended in `^1000$` after four other lines and returned AC-FAIL on correct output, stranding WO-20261016-a1ca (WO-20261016-49e1).

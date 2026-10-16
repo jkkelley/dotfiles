@@ -2007,7 +2007,16 @@ run_checks() {
     ok=0
     if [[ $rc == "$want" ]]; then
       ok=1
-      if [[ -n $expect ]] && ! printf '%s\n' "$out" | grep -Eq -- "$expect"; then ok=0; fi
+      # Breadcrumb, WO-20261016-49e1 (DESIGN-GAP a1ca): the per-line grep -Eq above
+      # never matches a regex that spans lines, so the WO-20261016-64f2 index 2
+      # expect ([\s\S]* then ^1000$) returned AC-FAIL on correct output and stranded
+      # WO-20261016-a1ca. On a per-line miss the whole output is tried once as one
+      # PCRE multiline record. Rejected: amending 64f2, because amend needs draft and
+      # the bug is generic. Fallback: grep -P unsupported (exit 2) keeps the per-line
+      # verdict. Cost: one extra grep on a miss; no passing check can fail.
+      if [[ -n $expect ]] && ! printf '%s\n' "$out" | grep -Eq -- "$expect"; then
+        printf '%s\n' "$out" | grep -Pzq -- "(?m)$expect" || ok=0
+      fi
     fi
     if ((ok)); then
       if [[ $notick != notick && $(printf '%s\n' "$states" | sed -n "${i}p") == unmet ]]; then
