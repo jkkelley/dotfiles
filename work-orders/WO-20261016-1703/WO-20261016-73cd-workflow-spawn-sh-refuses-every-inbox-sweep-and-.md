@@ -4,7 +4,7 @@
   "slug": "workflow-spawn-sh-refuses-every-inbox-sweep-and-",
   "title": "workflow-spawn.sh refuses every inbox sweep and send seat: no seat named in project.json",
   "type": "bug",
-  "status": "draft",
+  "status": "ready",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "Architect ruling R1, 2026-10-16T04:25Z",
+    "at": "2026-10-16"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [
@@ -77,7 +81,8 @@ _none_
 
 ## Open questions
 
-- [ ] Which shape: a run-local seat overlay passed to the spawner (--seats-file), fixed generic seat names mapped to accounts at run time, or the spawner accepting an inline seat spec? Needs a design ruling (design first, item 20).
+- [x] Which shape: a run-local seat overlay passed to the spawner (--seats-file), fixed generic seat names mapped to accounts at run time, or the spawner accepting an inline seat spec? Needs a design ruling (design first, item 20).
+  - answer `2026-10-16` Architect ruling R1, 2026-10-16T04:25Z: fix as config, no edit to workflow-spawn.sh. Seat names are run-time and Proton labels are owner data, so each run writes a run-local copy of project.json declaring its seats and passes it through the spawner's existing WORKFLOW_CONFIG override.
 
 ## Notes
 
