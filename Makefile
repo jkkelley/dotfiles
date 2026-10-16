@@ -142,3 +142,9 @@ wo-untrack-generated:   ## make wo-untrack-generated REPO=<dir> [APPLY=1]
 wo-untrack-generated-test: ## run scripts/tests/test_wo_untrack_generated.sh in the pinned workflow test image (Rule 14)
 	podman build -q -t $(SPEC_IMAGE) -f claude/workflow/tests/container/Containerfile claude/workflow >/dev/null
 	podman run --rm --network=none --userns=keep-id -v "$(CURDIR):/work:Z" -w /work -e HOME=/tmp $(SPEC_IMAGE) bash scripts/tests/test_wo_untrack_generated.sh
+
+# Fallback for the index-regen Action (WO-20261016-2ffe): merge main into PR branches, regenerate generated work-order views.
+# Inputs passed as VAR=value: REPO= target repo dir, BRANCHES= space-separated branch names.
+.PHONY: pr-regen-index
+pr-regen-index:         ## make pr-regen-index REPO=<dir> BRANCHES="<b> ..."
+	bash scripts/pr-regen-index.sh --repo "$(REPO)" --branches "$(BRANCHES)"
