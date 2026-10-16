@@ -43,7 +43,7 @@
 
 ## Problem
 
-Live runs cannot start a single seat. Repro on main 79b5d1e-or-later, in Podman on localhost/dotfiles-workflow-test:1 with --network=none: 'bash claude/workflow/bin/workflow-spawn.sh inbox-sweep-gmail gmail --brief-file b.md --ticket IS-x --dry-run' prints 'workflow: no seat named gmail in claude/workflow/config/project.json'; the same for 'inbox-sweep-proton proton-work' and 'inbox-sweep-linkedin-send reply-x'. project.json declares only builder, reviewer, orch-builder, architect, smoke. Callers: claude/workflow/inbox-sweep/bin/sweep.sh line 161 and reply-send.sh SWEEP_SEAT_START default. Tests stub the spawner (SWEEP_SPAWN, SWEEP_SEAT_START), so no suite sees it. Blocks B11 and B18.
+Live runs cannot start a single seat. Repro on main a358bfa, in Podman on localhost/dotfiles-workflow-test:1 with --network=none: 'bash claude/workflow/bin/workflow-spawn.sh inbox-sweep-gmail gmail --brief-file b.md --ticket IS-x --dry-run' prints 'workflow: no seat named gmail in claude/workflow/config/project.json'; the same for 'inbox-sweep-proton proton-work' and 'inbox-sweep-linkedin-send reply-x'. project.json declares only builder, reviewer, orch-builder, architect, smoke. Callers: claude/workflow/inbox-sweep/bin/sweep.sh line 161 and reply-send.sh SWEEP_SEAT_START default. Tests stub the spawner (SWEEP_SPAWN, SWEEP_SEAT_START), so no suite sees it. Blocks B11 and B18.
 
 ## Scope
 
