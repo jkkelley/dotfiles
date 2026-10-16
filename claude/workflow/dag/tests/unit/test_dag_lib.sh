@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# name: test_dag_lib.sh
+# purpose: proves bin/dag-lib.sh keeps the state, ledger, lock and retry promises of dag-state.spec.xml rules R1-R5.
+# inputs: none
+# outputs: stdout, exit code
+# writes-to: a mktemp scratch dir
+# cleanup: removes its own temp dir on exit
 # Proves bin/dag-lib.sh does what docs/design/dag-state.spec.xml rules R1-R5 promise. Each check names the failure it rules out:
 #   - a half-written state.json after a crash (R2)            - a write that skips the schema (R2)
 #   - a last-writer-wins overwrite that drops a proof (R3)     - two writers inside the lock at once (R3)
