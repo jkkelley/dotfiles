@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pr-flow-record.schema.json",
+  "title": "pr-flow record",
+  "description": "One PR process event on line.<line>.event.<kind> (pr-process.md section 9, spec records).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "kind", "code", "ticket", "at", "seat", "line"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[a-z0-9.]+-[0-9a-f]{8}$"},
+    "kind": {"enum": ["pr.opened", "ci.passed", "ci.failed", "merged", "already-merged", "held", "merge.conflict", "blocked", "verified", "rejected"]},
+    "code": {"enum": ["100", "201", "422", "200", "0", "3", "409", "423"]},
+    "ticket": {"type": "string", "minLength": 1},
+    "pr": {"type": "integer", "minimum": 1},
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"},
+    "repo": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
+    "at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "seat": {"type": "string", "minLength": 1},
+    "line": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+    "note": {"type": "string", "maxLength": 240}
+  }
+}

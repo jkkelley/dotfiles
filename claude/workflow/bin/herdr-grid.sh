@@ -363,7 +363,7 @@ down_unregistered() {
 }
 
 cmd_seat_down() {
-  local seat="$1" line="${2:-}" hit n tab pane l agent
+  local seat="$1" line="${2:-}" hit n tab pane l agent rc=0
   hit="$(find_seat "$seat" "$line")"
   if [ -z "$hit" ]; then down_unregistered "$seat" "$line"; return; fi
   read -r n tab pane l <<<"$hit"
@@ -374,8 +374,31 @@ cmd_seat_down() {
   hj pane close "$pane" >/dev/null || return 1
   close_watchers "$pane"
   rm -f "$(state_file "$l" "$seat")"
+  return_slot "$seat" || rc=1
   reflow "$tab" "$n" && close_if_empty "$tab" "$n"
   log "seat $seat down"
+  return "$rc"
+}
+
+# return_slot <seat>: gives back the treehouse slot workflow-spawn.sh leased to <seat>, if it holds one.
+# BREADCRUMB 2026-10-16 (brief BR-20261016-treehouse-seats): seats now lease their worktree from the treehouse pool
+#   (bin/workflow-spawn.sh, the worktree block), and nothing gave a slot back, so the pool would fill with leased slots
+#   (coq line/bin/merge.sh return_slot fixed the same leak there). Why this fix: the pane is closed first, so no seat
+#   process is left in the slot, and the return is pinned to the holder with --if-lease-holder, so a slot leased to
+#   anyone else is never touched. --force is NOT passed: v3 then refuses a slot with uncommitted work rather than wiping
+#   it (dev gate C6: a clean slot returns with stdin closed), and the refusal is reported, leaving the lease for a human.
+#   Rejected: coq's --force, which ends every process in the slot and discards uncommitted work. Cost: a dirty slot
+#   stays leased until someone commits or discards that work and reruns seat-down.
+return_slot() {
+  local seat="$1" root st path
+  command -v treehouse >/dev/null 2>&1 || return 0
+  root="$(git -C "$WF_REPO" rev-parse --show-toplevel 2>/dev/null)" || return 0
+  st="$(cd "$root" && treehouse status --json 2>/dev/null)" || { log "treehouse status failed; slot of $seat unchecked"; return 1; }
+  path="$(jq -r --arg h "$seat" '[.[]? | select(.lease_holder == $h)] | last | .path // empty' <<<"$st")"
+  [ -n "$path" ] || return 0
+  if [ "$DRY" = 1 ]; then printf 'DRY: treehouse return %s --if-lease-holder %s\n' "$path" "$seat" >&2; return 0; fi
+  if treehouse return "$path" --if-lease-holder "$seat" </dev/null >/dev/null 2>&1; then log "slot $path returned by $seat"; return 0; fi
+  log "slot $path leased to $seat would not return (uncommitted work?); left leased"; return 1
 }
 
 # seat-adopt <line> <seat> <pane>: a named pane outside the grid takes the next free slot. The pane is moved onto the free
