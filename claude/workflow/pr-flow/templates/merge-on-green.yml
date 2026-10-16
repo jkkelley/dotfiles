@@ -16,7 +16,9 @@
 #     #37 merged with zero checks). A pending check holds: the workflow that finishes last fires this again.
 #
 # Cost: a merge made with GITHUB_TOKEN starts no push workflow on main (GitHub's recursion guard). Every workflow
-# that must run after a merge is listed in DISPATCH and started by workflow_dispatch, which the guard exempts.
+# that must run after a merge is listed in DISPATCH and started by workflow_dispatch, which the guard exempts, with
+# input `before` set to the base branch sha read just before the merge (what github.event.before is on a push), and
+# only when the PR targeted the default branch. A dispatched workflow therefore declares a `before` input.
 name: merge on green
 
 on:
@@ -46,6 +48,7 @@ jobs:
       HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
       REQUIRED_CHECK: "@@REQUIRED_CHECK@@"
       DISPATCH: "@@DISPATCH@@"
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       - name: merge when green
         run: |
@@ -57,9 +60,9 @@ jobs:
             || { say 423 "blocked: gh failed 3 times listing PRs"; exit 1; }
           [ -n "$pr" ] || { say 3 "held: no open PR has this head"; exit 0; }
           for n in 1 2 3 4 5; do
-            view="$(retry gh pr view "$pr" -R "$REPO" --json headRefOid,mergeable,state --jq '"\(.headRefOid) \(.mergeable) \(.state)"')" \
+            view="$(retry gh pr view "$pr" -R "$REPO" --json headRefOid,mergeable,state,baseRefName --jq '"\(.headRefOid) \(.mergeable) \(.state) \(.baseRefName)"')" \
               || { say 423 "blocked: gh failed 3 times reading the PR"; exit 1; }
-            read -r head mergeable state <<<"$view"
+            read -r head mergeable state baseref <<<"$view"
             [ "$mergeable" = UNKNOWN ] || break
             sleep $((n * 3))
           done
@@ -75,11 +78,15 @@ jobs:
           [ -z "$failed" ] || { say 3 "held: failed $failed"; exit 0; }
           jq -e --arg r "$REQUIRED_CHECK" 'any(.[]; .n == $r and .c == "success")' <<<"$checks" >/dev/null \
             || { say 3 "held: required check $REQUIRED_CHECK has not passed"; exit 0; }
+          before="$(retry gh api "repos/$REPO/git/ref/heads/$baseref" --jq .object.sha)" || before=""
           if ! gh pr merge "$pr" -R "$REPO" --squash --delete-branch --match-head-commit "$HEAD_SHA"; then
             st="$(gh pr view "$pr" -R "$REPO" --json state --jq .state || true)"
             [ "$st" = MERGED ] && { say 0 "already-merged"; exit 0; }
             say 423 "blocked: gh pr merge failed"; exit 1
           fi
           say 200 "merged"
-          for wf in $DISPATCH; do retry gh workflow run "$wf" -R "$REPO" --ref main || say 423 "blocked: dispatch $wf failed"; done
+          [ "$baseref" = "$DEFAULT_BRANCH" ] || exit 0
+          for wf in $DISPATCH; do
+            retry gh workflow run "$wf" -R "$REPO" --ref "$DEFAULT_BRANCH" -f before="$before" || say 423 "blocked: dispatch $wf failed"
+          done
           # <<< merge-on-green

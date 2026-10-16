@@ -37,7 +37,8 @@ cat > "$tmp/bin/gh" <<'STUB'
 echo "gh $*" >> "$LOG"
 case "$*" in
   "api repos/o/r/commits/$HEAD_SHA/pulls"*) [ "${F_PR:-}" = none ] && echo "" || echo 7 ;;
-  "pr view 7 -R o/r --json headRefOid,mergeable,state"*) echo "${F_HEAD:-$HEAD_SHA} ${F_MERGEABLE:-MERGEABLE} ${F_STATE:-OPEN}" ;;
+  "pr view 7 -R o/r --json headRefOid,mergeable,state,baseRefName"*) echo "${F_HEAD:-$HEAD_SHA} ${F_MERGEABLE:-MERGEABLE} ${F_STATE:-OPEN} ${F_BASE:-main}" ;;
+  "api repos/o/r/git/ref/heads/"*) echo b4f0re ;;
   "api repos/o/r/commits/$HEAD_SHA/check-runs"*) echo "${F_CHECKS}" ;;
   "pr merge"*) [ "${F_MERGE_FAIL:-}" = 1 ] && exit 1; exit 0 ;;
   "pr view 7 -R o/r --json state"*) echo "${F_AFTER:-OPEN}" ;;
@@ -50,7 +51,7 @@ green='[{"n":"ci-ok","s":"completed","c":"success"},{"n":"lint","s":"completed",
 run() { # name expect-merge expect-out [VAR=val ...]
   local name="$1" want="$2" pat="$3"; shift 3
   : > "$tmp/log"
-  out="$(env PATH="$tmp/bin:$PATH" LOG="$tmp/log" REPO=o/r HEAD_SHA=abc REQUIRED_CHECK=ci-ok DISPATCH="${DISPATCH:-}" \
+  out="$(env PATH="$tmp/bin:$PATH" LOG="$tmp/log" REPO=o/r HEAD_SHA=abc REQUIRED_CHECK=ci-ok DISPATCH="${DISPATCH:-}" DEFAULT_BRANCH=main \
     F_CHECKS="$green" "$@" bash "$tmp/mog.sh" 2>&1)" || true
   local merged=no; grep -q '^gh pr merge 7 -R o/r --squash --delete-branch --match-head-commit abc$' "$tmp/log" && merged=yes
   if [ "$merged" = "$want" ] && grep -q -- "$pat" <<<"$out"; then ok "$name"; else no "$name: merged=$merged out=$out"; fi
@@ -66,7 +67,9 @@ run "zero checks holds (F3)"                          no  '^3 .*required check' 
 run "required check missing holds"                    no  '^3 .*required check'     F_CHECKS='[{"n":"lint","s":"completed","c":"success"}]'
 run "lost merge race reads already-merged"            yes '^0 .*already-merged'       F_MERGE_FAIL=1 F_AFTER=MERGED
 DISPATCH="skill-publish.yml" run "dispatch after merge" yes '^200 '
-grep -q '^gh workflow run skill-publish.yml -R o/r --ref main$' "$tmp/log" && ok "post-merge workflow dispatched" || no "dispatch not called"
+grep -q '^gh workflow run skill-publish.yml -R o/r --ref main -f before=b4f0re$' "$tmp/log" && ok "post-merge workflow dispatched with before" || no "dispatch not called"
+DISPATCH="skill-publish.yml" run "stacked PR merges, no dispatch" yes '^200 ' F_BASE=ticket/x
+grep -q '^gh workflow run' "$tmp/log" && no "dispatched for a non-default base" || ok "no dispatch for a non-default base"
 
 echo "pass=$pass fail=$fail"
 [ "$fail" = 0 ]
