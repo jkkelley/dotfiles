@@ -28,6 +28,7 @@
 13. Multi-agent: GOOD `make ctx-guard-install` once, every later seat guarded. NEVER hand-editing each seat's settings.
 14. XML spec and mermaid DAG: below; GOOD build matches the DAG. NEVER a step with no node.
 15. Migration is the test: install, upgrade (guard release promote) and removal are each one target; no workflow needs a hand rebuild.
+17. Config and arguments: inputs come from `CTX_GUARD_*` variables, a conf file or arguments, passed as `make VAR=value`; nothing hard-coded.
 
 ## DAG
 
@@ -65,6 +66,7 @@ Projects with a project-level install do not run the hook twice: identical comma
 
 ## Migration and updates
 
+Inputs: arguments, `CTX_GUARD_*` variables passed as `make VAR=value`, or a `CTX_GUARD_CONF` file; nothing is hard-coded.
 Re-running install is idempotent.
 A new guard release is picked up by `compaction-guard promote`; the settings command string does not change, so no seat is edited.
 Removal is `make ctx-guard-uninstall`, which restores the chained status line.

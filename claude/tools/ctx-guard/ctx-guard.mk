@@ -1,6 +1,9 @@
 # ctx-guard.mk - include from any repo's Makefile: `include path/to/ctx-guard.mk`, then `make ctx-guard-install`.
 # Wraps the existing compaction-guard (30% ceiling, smart checkpoints). See ctx-guard.sh for the breadcrumb.
 CTX_GUARD_SH := $(dir $(lastword $(MAKEFILE_LIST)))ctx-guard.sh
+# Inputs are Make variables, passed through: make ctx-guard-install CTX_GUARD_BACKUP_ROOT=... CTX_GUARD_RETRIES=5
+# (also CTX_GUARD_WATCH_LABEL, CTX_GUARD_CONF, COMPACTION_GUARD_BIN, COMPACTION_GUARD_STATE).
+export CTX_GUARD_CONF CTX_GUARD_BACKUP_ROOT CTX_GUARD_WATCH_LABEL CTX_GUARD_RETRIES COMPACTION_GUARD_BIN COMPACTION_GUARD_STATE
 .PHONY: ctx-guard-install ctx-guard-project ctx-guard-status ctx-guard-check ctx-guard-uninstall ctx-guard-watch
 ctx-guard-install: ## Wire compaction-guard into ~/.claude (all projects), backed up, asserted
 	@bash $(CTX_GUARD_SH) install --global

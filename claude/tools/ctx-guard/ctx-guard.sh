@@ -15,6 +15,13 @@
 # Backups: ~/.local/state/zenith/backup/YYYY/MM/ (UTC). Record: compaction-guard events ledger.
 set -uo pipefail
 
+# Inputs come from arguments or the environment (Make passes them as VAR=value), never hard-coded below.
+# CTX_GUARD_CONF: optional file of KEY=value lines sourced first. CTX_GUARD_BACKUP_ROOT, CTX_GUARD_WATCH_LABEL, CTX_GUARD_RETRIES.
+# shellcheck disable=SC1090
+[ -z "${CTX_GUARD_CONF:-}" ] || . "$CTX_GUARD_CONF"
+BACKUP_ROOT="${CTX_GUARD_BACKUP_ROOT:-$HOME/.local/state/zenith/backup}"
+WATCH_LABEL="${CTX_GUARD_WATCH_LABEL:-ctx-watch}"
+RETRIES="${CTX_GUARD_RETRIES:-3}"
 CG="${COMPACTION_GUARD_BIN:-compaction-guard}"
 STATE="${COMPACTION_GUARD_STATE:-$HOME/.local/state/compaction-guard}"
 die() { printf 'ctx-guard: %s\n' "$*" >&2; exit 1; }
@@ -31,7 +38,7 @@ mode_args() { # sets TARGET_ARGS and SETTINGS from --global | --project DIR
 }
 
 backup() { # UTC-stamped copy of the settings file about to change
-  local d; d="$HOME/.local/state/zenith/backup/$(date -u +%Y/%m)"
+  local d; d="$BACKUP_ROOT/$(date -u +%Y/%m)"
   mkdir -p "$d"
   [ -f "$SETTINGS" ] || return 0
   cp "$SETTINGS" "$d/$(date -u +%Y%m%d%H%M%S)-$(echo "$SETTINGS" | tr '/' '_')"
@@ -40,7 +47,7 @@ backup() { # UTC-stamped copy of the settings file about to change
 retry3() { # a step is tried 3 times, then reported, never looped
   local n=1
   until "$@"; do
-    [ "$n" -ge 3 ] && return 1
+    [ "$n" -ge "$RETRIES" ] && return 1
     n=$((n + 1)); sleep 1
   done
 }
@@ -79,7 +86,7 @@ case "$cmd" in
     if [ "${HERDR_ENV:-}" = 1 ] && [ -z "${CTX_WATCH_INPANE:-}" ]; then
       pane=$(herdr pane list 2>/dev/null | jq -r 'first(.result.panes[]? | select(.agent | not) | .pane_id) // empty')
       [ -n "$pane" ] || die "no free herdr pane for ctx-watch"
-      herdr pane rename "$pane" ctx-watch >/dev/null 2>&1 || true
+      herdr pane rename "$pane" "$WATCH_LABEL" >/dev/null 2>&1 || true
       herdr pane run "$pane" "CTX_WATCH_INPANE=1 $0 watch"
       echo "ok  ctx-watch running in pane $pane"
     else
