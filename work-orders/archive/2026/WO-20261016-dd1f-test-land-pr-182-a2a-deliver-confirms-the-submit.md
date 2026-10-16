@@ -4,7 +4,7 @@
   "slug": "test-land-pr-182-a2a-deliver-confirms-the-submit",
   "title": "Test - Land PR 182: a2a-deliver confirms the submit, lowercase enter retried once",
   "type": "test",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-e9d4",
   "branch": "feat/test-land-pr-182-a2a-deliver-confirms-the-submit",
   "pr": 182,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
