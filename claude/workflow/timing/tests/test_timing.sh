@@ -115,7 +115,35 @@ case_ci_events() {
   unset GH_BIN TM_CI_STATE CI_EVENTS_RETRY_SLEEP
 }
 
-CASES="${CASE:-timeout start-end slow fast report ci-events}"
+# ci-import: completed runs' step-time-* artifacts are published verbatim once; a run with no artifact is marked imported
+case_ci_import() {
+  setup
+  printf '%s\n%s\n' '{"subject":"line.ci.time.workflow-lint","payload":{"node":"workflow-lint","dur_s":200,"budget_s":180}}' \
+    '{"subject":"line.ci.event.step.slow","payload":{"code":"SLOW","node":"workflow-lint","dur_s":200,"budget_s":180}}' > "$C/step-time.jsonl"
+  r='{"databaseId":%s,"name":"ci","status":"completed","conclusion":"success","createdAt":"2026-10-16T01:00:00Z","updatedAt":"2026-10-16T01:07:00Z","headBranch":"feat/x"}'
+  # shellcheck disable=SC2059 # r is a printf template
+  printf "[$r,$r]" 77 78 > "$C/runs.json"
+  cat > "$C/bin/gh" <<'EOF'
+#!/usr/bin/env bash
+if [ "$1 $2" = "run list" ]; then cat "$STUB/runs.json"; exit 0; fi
+id="$3"; while [ $# -gt 0 ]; do [ "$1" = -D ] && d="$2"; shift; done
+echo "download $id" >> "$STUB/gh.log"
+if [ "$id" = 78 ]; then echo 'no artifact matches any of the names or patterns provided' >&2; exit 1; fi
+mkdir -p "$d/step-time-lint"; cp "$STUB/step-time.jsonl" "$d/step-time-lint/"
+EOF
+  chmod +x "$C/bin/gh"; : > "$C/gh.log"
+  export GH_BIN="$C/bin/gh" TM_CI_STATE="$C/state/ci-events.json" CI_EVENTS_RETRY_SLEEP=0
+  bash "$WF/timing/ci-events.sh" --once >/dev/null 2>"$C/err"; rc=$?
+  n=0; while IFS= read -r l; do n=$((n + $(grep -Fxc "$(jq -r .subject <<<"$l") $(jq -c .payload <<<"$l")" "$C/bus.log"))); done < "$C/step-time.jsonl"
+  [ "$n" = 2 ] && ok "ci-import: run 77 lines published verbatim" || no "ci-import: run 77 lines" "$(cat "$C/bus.log" "$C/err")"
+  [ "$rc" = 0 ] && [ "$(jq -r '.["jkkelley/dotfiles#78"]' "$C/state/ci-events.json")" = imported ] && ok "ci-import: no artifact matches marks run 78 imported, exit 0" || no "ci-import: run 78" "rc=$rc $(cat "$C/state/ci-events.json" "$C/err")"
+  b="$(wc -l < "$C/bus.log")"; g="$(wc -l < "$C/gh.log")"
+  bash "$WF/timing/ci-events.sh" --once >/dev/null 2>>"$C/err"
+  [ "$(wc -l < "$C/bus.log")" = "$b" ] && [ "$(wc -l < "$C/gh.log")" = "$g" ] && ok "ci-import: a second poll publishes nothing and downloads nothing" || no "ci-import: second poll" "$(cat "$C/bus.log" "$C/gh.log")"
+  unset GH_BIN TM_CI_STATE CI_EVENTS_RETRY_SLEEP
+}
+
+CASES="${CASE:-timeout start-end slow fast report ci-events ci-import}"
 for c in $CASES; do fn="case_${c//-/_}"; if declare -F "$fn" >/dev/null; then "$fn"; else no "unknown case $c"; fi; done
 echo "pass=$PASS fail=$FAIL"
 [ "$FAIL" = 0 ]
