@@ -8,5 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-5630` | ready | p1 | - | [retire merge-train old body and point golden rules at the PR process (T9)](WO-20261016-5630-retire-merge-train-old-body-and-point-golden-rul.md) |
 | `WO-20261016-17dc` | draft | p1 | - | [test: PR process UAT on dotfiles then stable on three repos (T10)](WO-20261016-17dc-test-pr-process-uat-on-dotfiles-then-stable-on-t.md) |
