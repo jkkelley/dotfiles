@@ -9,7 +9,7 @@ One level down only. A child of a child is listed in its own directory, not here
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
 | `WO-20261016-2ffe` | ready | p0 | WO-20261016-1c04 | [make pr-regen-index REPO= BRANCHES=: regen-merge.sh ported as the index-regen fallback](WO-20261016-2ffe-make-pr-regen-index-repo-branches-regen-merge-sh.md) |
-| `WO-20261016-1c04` | ready | p0 | WO-20261016-565d | [make wo-untrack-generated REPO=: untrack the generated work-order views, plan before apply](WO-20261016-1c04-make-wo-untrack-generated-repo-untrack-the-gener.md) |
+| `WO-20261016-1c04` | in-progress | p0 | WO-20261016-565d | [make wo-untrack-generated REPO=: untrack the generated work-order views, plan before apply](WO-20261016-1c04-make-wo-untrack-generated-repo-untrack-the-gener.md) |
 | `WO-20261016-565d` | ready | p0 | WO-20261016-6ef4 | [work-order skill: INDEX.md and epic READMEs become untracked build outputs, regenerated on demand](WO-20261016-565d-work-order-skill-index-md-and-epic-readmes-becom.md) |
 | `WO-20261016-6ef4` | ready | p0 | - | [work-order skill: owner words, context, scripted AC checks, check verb, approve resolves tools](WO-20261016-6ef4-work-order-skill-owner-words-context-scripted-ac.md) |
 | `WO-20261016-e9d4` | ready | p1 | - | [Line build L0 - a2a-guard: orders never typed into busy panes](WO-20261016-e9d4/WO-20261016-e9d4-line-build-l0-a2a-guard-orders-never-typed-into-.md) |

@@ -60,7 +60,7 @@ WO-20261016-1703  ready       p1 Inbox sweep build
 `-- WO-20261016-657b  ready       p1 Test V3 - suite migrate on main after the build merges
 WO-20261016-0272  draft       p1 Inbox-triage line build order - DAG of line nodes
 |-- WO-20261016-2ffe  ready       p0 make pr-regen-index REPO= BRANCHES=: regen-merge.sh ported ...
-|-- WO-20261016-1c04  ready       p0 make wo-untrack-generated REPO=: untrack the generated work...
+|-- WO-20261016-1c04  in-progress p0 make wo-untrack-generated REPO=: untrack the generated work...
 |-- WO-20261016-565d  ready       p0 work-order skill: INDEX.md and epic READMEs become untracke...
 |-- WO-20261016-6ef4  ready       p0 work-order skill: owner words, context, scripted AC checks,...
 |-- WO-20261016-e9d4  ready       p1 Line build L0 - a2a-guard: orders never typed into busy panes
@@ -191,7 +191,7 @@ WO-20261016-3610  draft       p1 merge-train batch promotion: dev, UAT, stable p
 |---|---|---|---|---|---|---|
 | `WO-20261016-0272` | draft | p1 | chore | - | - | [Inbox-triage line build order - DAG of line nodes](WO-20261016-0272/WO-20261016-0272-inbox-triage-line-build-order-dag-of-line-nodes.md) |
 | `WO-20261016-1844` | ready | p1 | test | WO-20261016-0272 | WO-20261016-565d | [Test - work-order skill: INDEX.md and epic READMEs become untracked build outputs, regenerated on demand](WO-20261016-0272/WO-20261016-1844-test-work-order-skill-index-md-and-epic-readmes-.md) |
-| `WO-20261016-1c04` | ready | p0 | feature | WO-20261016-0272 | WO-20261016-565d | [make wo-untrack-generated REPO=: untrack the generated work-order views, plan before apply](WO-20261016-0272/WO-20261016-1c04-make-wo-untrack-generated-repo-untrack-the-gener.md) |
+| `WO-20261016-1c04` | in-progress | p0 | feature | WO-20261016-0272 | WO-20261016-565d | [make wo-untrack-generated REPO=: untrack the generated work-order views, plan before apply](WO-20261016-0272/WO-20261016-1c04-make-wo-untrack-generated-repo-untrack-the-gener.md) |
 | `WO-20261016-253b` | ready | p1 | test | WO-20261016-0272 | WO-20261016-6630 | [Test - generated-lint: CI fails a PR that adds a file marked auto-generated to the tracked tree](WO-20261016-0272/WO-20261016-253b-test-generated-lint-ci-fails-a-pr-that-adds-a-fi.md) |
 | `WO-20261016-2e9f` | ready | p1 | chore | WO-20261016-0272 | WO-20261016-a8eb WO-20261016-e9d4 WO-20261016-d304 WO-20261016-474f | [Line build L3 - yp-line content engine: lint, preview, jitter, humanize](WO-20261016-0272/WO-20261016-2e9f-line-build-l3-yp-line-content-engine-lint-previe.md) |
 | `WO-20261016-2ffe` | ready | p0 | feature | WO-20261016-0272 | WO-20261016-1c04 | [make pr-regen-index REPO= BRANCHES=: regen-merge.sh ported as the index-regen fallback](WO-20261016-0272/WO-20261016-2ffe-make-pr-regen-index-repo-branches-regen-merge-sh.md) |
