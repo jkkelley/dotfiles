@@ -4,15 +4,15 @@
   "slug": "tr-fb-timed-run-sh-fallback-cmd-fallback-code-fb",
   "title": "TR-FB: timed-run.sh --fallback CMD --fallback-code FB-NNN, the one scripted fallback switch, with the FB code catalog",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:18:02+00:00",
   "parent": "WO-20261016-0272",
   "branch": "feat/tr-fb-timed-run-sh-fallback-cmd-fallback-code-fb",
-  "pr": null,
-  "closed": null,
+  "pr": 223,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -85,10 +85,14 @@ Order ORD-0558 O1 verbatim: 'every design and ready ticket names the fallback fo
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `podman run --rm --network=none --userns=keep-id -v ~/dotfiles:/work:Z -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash claude/workflow/tests/unit/test_timed_run_fallback.sh` -> exit 0, output ends with `ok` for every case and no `FAIL`. Proof: command output
-- [ ] `AC-H2` *(human)* `FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node tp --fallback 'true' --fallback-code FB-001 -- false` -> exit 0, stderr contains `FALLBACK FB-001 tp`. Proof: command output
-- [ ] `AC-H3` *(human)* `bash claude/workflow/bin/timed-run.sh --node tp --fallback 'true' --fallback-code BAD -- true` -> exit 2, stderr contains `fallback-code`. Proof: command output
-- [ ] `AC-H4` *(human)* `jq -r 'keys|join(" ")' claude/workflow/config/fallbacks.json` -> exit 0, output `FB-001 FB-002 FB-003 FB-004 FB-005 FB-006 FB-007 FB-008`. Proof: command output
+- [x] `AC-H1` *(human)* `podman run --rm --network=none --userns=keep-id -v ~/dotfiles:/work:Z -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash claude/workflow/tests/unit/test_timed_run_fallback.sh` -> exit 0, output ends with `ok` for every case and no `FAIL`. Proof: command output
+  - observed `2026-10-16` exit 0; 8 cases ok, pass=8 fail=0, no FAIL
+- [x] `AC-H2` *(human)* `FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node tp --fallback 'true' --fallback-code FB-001 -- false` -> exit 0, stderr contains `FALLBACK FB-001 tp`. Proof: command output
+  - observed `2026-10-16` exit 0; stderr: FALLBACK FB-001 tp
+- [x] `AC-H3` *(human)* `bash claude/workflow/bin/timed-run.sh --node tp --fallback 'true' --fallback-code BAD -- true` -> exit 2, stderr contains `fallback-code`. Proof: command output
+  - observed `2026-10-16` exit 2; stderr: timed-run: --fallback needs --fallback-code matching FB-NNN
+- [x] `AC-H4` *(human)* `jq -r 'keys|join(" ")' claude/workflow/config/fallbacks.json` -> exit 0, output `FB-001 FB-002 FB-003 FB-004 FB-005 FB-006 FB-007 FB-008`. Proof: command output
+  - observed `2026-10-16` exit 0; FB-001 FB-002 FB-003 FB-004 FB-005 FB-006 FB-007 FB-008
 
 ## Test plan
 
