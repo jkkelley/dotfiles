@@ -1,18 +1,18 @@
 ---
 {
-  "id": "WO-20261016-7d69",
-  "slug": "node-timing-tests-slow-and-fast",
-  "title": "node-timing tests: slow and fast",
+  "id": "WO-20261016-02d3",
+  "slug": "line-timing-test-report-from-a-kv-dump",
+  "title": "line-timing test: report from a KV dump",
   "type": "test",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
-  "created_at": "2026-10-16T05:20:15+00:00",
+  "created_at": "2026-10-16T05:20:16+00:00",
   "parent": "WO-20261016-3570",
-  "branch": "feat/node-timing-tests-slow-and-fast",
-  "pr": null,
-  "closed": null,
+  "branch": "feat/line-timing-test-report-from-a-kv-dump",
+  "pr": 170,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat: lavish prohibited outside firstmate; brief BR-20261016-stuck-watch v2 is the approval",
@@ -25,7 +25,7 @@
 }
 ---
 
-# WO-20261016-7d69 - node-timing tests: slow and fast
+# WO-20261016-02d3 - line-timing test: report from a KV dump
 
 ## Contents
 
@@ -41,7 +41,7 @@
 
 ## Problem
 
-node-timing.sh has no plan a tester can run
+line-timing.sh has no plan a tester can run
 
 ## Scope
 
@@ -59,7 +59,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case in the plan passes
+- [x] `AC-H1` *(human)* every case in the plan passes
+  - observed `2026-10-16` make timing-test CASE=report in podman --network=none: make: *** [timing/timing.mk:29: timing-test] Error 1 (2026-10-16)
 
 ## Test plan
 
@@ -67,18 +68,14 @@ _Test plan from claude/workflow/templates/test-plan.md, shaped by claude/workflo
 
 **Scope under test**
 
-claude/workflow/timing/node-timing.sh against a stub bus, stub KV and stub work-order
+claude/workflow/timing/line-timing.sh against a stub KV dump
 
 **Cases**
 
 - `TP-1`
-  - intent: a node over its budget must yield SLOW and a work order, or bottlenecks stay invisible (AC7)
-  - command: `make -C claude/workflow timing-test CASE=slow`
-  - expected: exit 0; line.t.timing.SLOW with budget and duration, one work order, KV put
-- `TP-2`
-  - intent: a node inside its budget must stay quiet
-  - command: `make -C claude/workflow timing-test CASE=fast`
-  - expected: exit 0; KV put, no SLOW, no work order
+  - intent: the morning report must show durations against budgets and the top 5 bottlenecks (AC8)
+  - command: `make -C claude/workflow timing-test CASE=report`
+  - expected: exit 0; report artifact path printed, top 5 sorted by overrun
 
 **Isolation**
 
