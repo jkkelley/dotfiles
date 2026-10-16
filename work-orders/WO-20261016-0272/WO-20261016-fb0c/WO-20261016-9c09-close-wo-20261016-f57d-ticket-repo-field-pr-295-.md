@@ -124,15 +124,20 @@ AC-H2 expects exactly one '--repo) ' arm in work-order.sh as on main 10fd77b; if
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* f57d's case 360 and the work-order skill suite pass on main
+- [x] `AC-H1` *(human)* f57d's case 360 and the work-order skill suite pass on main
+  - observed `2026-10-16` check: bash claude/skills/work-order/testing/run-tests.sh exit 0 output: work-order test suite image: localhost/work-order-test:1 skill: /home/luna/.cache/wt-close-9c09/claude/skills/work-order (read-only) scratch: /tmp/work-order-test.aG5eQ3 (removed on exit) 010-new-happy.sh ok new exits 0 on the documented example (exit 0) ok INDEX.md is generated ok INDEX lists the new ticket ok starts in draft ok renders the non-goals section ok records the non-goal ok records the human criterion ok frontmatter parses as JSON (exit 0) created /work/proj.HNUhSx/work-orders/WO-20260805-f57b/WO-20260805-f57b-empty-cart-state.md (status: draft, evidence: human) ok same input and clock produce an identical ticket 010-new-happy: 9 checks, 0 failed 020-new-refuses.sh
   - check: `bash claude/skills/work-order/testing/run-tests.sh` exit 0 expect /all cases passed/
-- [ ] `AC-H2` *(human)* new and set take --repo
+- [x] `AC-H2` *(human)* new and set take --repo
+  - observed `2026-10-16` check: grep -c -- '--repo) ' claude/skills/work-order/scripts/work-order.sh exit 0 output: 1
   - check: `grep -c -- '--repo) ' claude/skills/work-order/scripts/work-order.sh` exit 0 expect /^1$/
-- [ ] `AC-H3` *(human)* f57d is cancelled and superseded by this ticket
+- [x] `AC-H3` *(human)* f57d is cancelled and superseded by this ticket
+  - observed `2026-10-16` check: bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-f57d --json | jq -r '.status' exit 0 output: cancelled
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-f57d --json | jq -r '.status'` exit 0 expect /^cancelled$/
-- [ ] `AC-H4` *(human)* e297 no longer depends on f57d
+- [x] `AC-H4` *(human)* e297 no longer depends on f57d
+  - observed `2026-10-16` check: bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-e297 --json | jq -e '.depends_on | index("WO-20261016-f57d") == null' exit 0 output: true
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-e297 --json | jq -e '.depends_on | index("WO-20261016-f57d") == null'` exit 0
-- [ ] `AC-H5` *(human)* the diff holds only generated work-orders files
+- [x] `AC-H5` *(human)* the diff holds only generated work-orders files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan
