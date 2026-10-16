@@ -4,13 +4,13 @@
   "slug": "wk5t-test-plan-and-script-for-make-wiki-review",
   "title": "WK5t: test plan and script for make wiki-review",
   "type": "test",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:49:51+00:00",
   "parent": "WO-20261016-35de",
-  "branch": null,
+  "branch": "feat/6edb-wk5t-test-plan-and-script-for-make-wiki-review",
   "pr": null,
   "closed": null,
   "approval": {
@@ -108,9 +108,11 @@ Recut of WO-20261016-a4da by design seat infra-design16 (ORD-0830 RR-orch-14, F3
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* TP-1 the unit tests pass in the pinned image
+- [x] `AC-H1` *(human)* TP-1 the unit tests pass in the pinned image
+  - observed `2026-10-16` exit 0, Ran 8 tests, OK; log /home/luna/.local/state/zenith/log/2026/10/20261016-110422-wk5-test.log
   - check: `podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_review.py` exit 0 expect /^OK/
-- [ ] `AC-H2` *(human)* TP-2 the FB-001 fallback path runs the cached digest
+- [x] `AC-H2` *(human)* TP-2 the FB-001 fallback path runs the cached digest
+  - observed `2026-10-16` exit 0, output has FALLBACK FB-001; log /home/luna/.local/state/zenith/log/2026/10/20261016-110422-wk5-test.log
   - check: `env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk5-t --fallback "podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_review.py" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_review.py` exit 0 expect /FALLBACK FB-001/
 - [ ] `AC-H3` *(human)* the diff holds only generated work-orders files
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
