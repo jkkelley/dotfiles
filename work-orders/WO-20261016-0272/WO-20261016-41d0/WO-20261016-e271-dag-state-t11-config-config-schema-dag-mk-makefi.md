@@ -4,13 +4,13 @@
   "slug": "dag-state-t11-config-config-schema-dag-mk-makefi",
   "title": "dag-state T11 - Config, config schema, dag.mk, Makefile include, dag-check",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:07:51+00:00",
   "parent": "WO-20261016-41d0",
-  "branch": null,
+  "branch": "feat/e271-dag-state-t11-config-config-schema-dag-mk-makefi",
   "pr": null,
   "closed": null,
   "approval": {
@@ -82,9 +82,12 @@ Owner, 2026-10-16 UTC: "DAG SHOULD BE EFFORTLESS WITH EASY MIGRATION PLANS FOR U
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'for f in claude/workflow/dag/config/dag.json claude/workflow/dag/schemas/config.schema.json claude/workflow/dag/dag.mk claude/workflow/Makefile claude/workflow/dag/bin/dag-check.sh; do test -s $f || exit 1; done; echo ok-files'` exit 0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `make spec-check` exits 0 (the specs were read, not edited) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'for f in claude/workflow/dag/config/dag.json claude/workflow/dag/schemas/config.schema.json claude/workflow/dag/dag.mk claude/workflow/Makefile claude/workflow/dag/bin/dag-check.sh; do test -s $f || exit 1; done; echo ok-files'` exit 0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make: Leaving directory '/home/luna/.cache/wt-e271/claude/workflow' ok-files exit=0
+- [x] `AC-H2` *(human)* `make spec-check` exits 0 (the specs were read, not edited) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` BASE=origin/main LIMIT=1000 PATTERN='*.spec.xml' bash scripts/spec-check.sh spec-check: nothing in scope exit=0
+- [x] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` Makefile claude/workflow/Makefile claude/workflow/bin/bus.sh claude/workflow/bin/herdr-grid.sh claude/workflow/config/line-watch.json claude/workflow/config/monitors.json claude/workflow/dag/bin/dag-check.sh claude/workflow/dag/config/dag.json claude/workflow/dag/dag.mk claude/workflow/dag/schemas/config.schema.json claude/workflow/mk/line-watch.mk claude/workflow/tests/unit/test_bus_health.sh claude/workflow/tests/unit/test_herdr_grid.sh docs/design/herdr-grid.md scripts/pr-regen-index.sh scripts/tests/test_pr_regen_index.sh work-orders/WO-20261016-0272/WO-20261016-2ffe-make-pr-regen-index-repo-branches-regen-merge-sh.md work-orders/WO-20261016-0272/WO-20261016-35de/WO-20261016-6edb-wk5t-test-plan-and-script-for-make-wiki-review.md work-orders/WO-20261016-0272/WO-20261016-3ac1-close-wo-20261016-3570-stuck-watch-pr-170-merged.md work-orders/WO-20261016-0272/WO-20261016-41d0/WO-20261016-9ae2-test-dag-state-t10-migrate-verb-state-migrations.md work-orders/WO-20261016-0272/WO-20261016-41d0/WO-20261016-bb80-test-dag-state-t7-runbooks-and-playbooks-for-n1-.md work-orders/WO-20261016-0272/WO-20261016-41d0/WO-20261016-dbed-test-dag-state-t4-drift-verb.md work-orders/WO-20261016-0272/WO-20261016-41d0/WO-20261016-e271-dag-state-t11-config-config-schema-dag-mk-makefi.md work-orders/WO-20261016-0272/WO-20261016-4b6c/WO-20261016-ec34-seat-up-refuses-a-build-seat-whose-brief-has-no-.md work-orders/WO-20261016-0272/WO-20261016-75b7-claude-workflow-ci-sharded-by-suite-diff-selecte.md work-orders/WO-20261016-0272/WO-20261016-af17/WO-20261016-0c07-bus-sh-health-runs-podman-healthcheck-run-on-eac.md work-orders/WO-20261016-0272/WO-20261016-af17/WO-20261016-20e8-test-timed-run-every-target-of-claude-workflow-m.md work-orders/WO-20261016-0272/WO-20261016-af17/WO-20261016-2b83-close-the-merged-tickets-wo-20261016-75b7-wo-202.md work-orders/WO-20261016-0272/WO-20261016-af17/WO-20261016-8590-test-timed-run-every-target-of-claude-workflow-m.md work-orders/WO-20261016-0272/WO-20261016-af17/WO-20261016-9f87-test-local-nats-binds-127-0-0-1-only-bus-sh-refu.md work-orders/WO-20261016-0272/WO-20261016-af17/WO-20261016-cc22-test-pane-look-monitor-queued-stale-and-idle-sta.md work-orders/WO-20261016-0272/WO-20261016-af17/WO-20261016-eb5f-test-timed-run-every-target-of-claude-workflow-m.md work-orders/WO-20261016-0272/WO-20261016-de15-test-make-wo-untrack-generated-repo-untrack-the-.md exit=0
 
 ## Test plan
 
