@@ -135,6 +135,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-16` AC-H4 evidence line shows exit 1 from a malformed ad hoc brief I used; corrected observation: make -s brief-check FILE=templates/a2a/brief.json (valid, no work_order, no BUILD) exit 0, and a2a-test prints 'ok brief-check without BUILD still passes a brief with no work_order'. Evidence cannot be rewritten (issue 93).
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._
