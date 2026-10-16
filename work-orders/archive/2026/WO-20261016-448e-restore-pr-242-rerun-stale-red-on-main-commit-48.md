@@ -4,7 +4,7 @@
   "slug": "restore-pr-242-rerun-stale-red-on-main-commit-48",
   "title": "Restore PR 242 rerun-stale-red on main: commit 4817abc of PR 240 reverted all nine of its files",
   "type": "bug",
-  "status": "in-review",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-fb0c",
   "branch": "feat/restore-pr-242-rerun-stale-red-on-main-commit-48",
   "pr": 262,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design7 cut for ORD-0830 RR-orch-15 and ORD-0832 B1; design approvals ruled done, ORD-0550 O4",
