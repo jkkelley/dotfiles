@@ -4,15 +4,15 @@
   "slug": "dag-state-t2-plan-verb",
   "title": "dag-state T2 - plan verb",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:06:43+00:00",
   "parent": "WO-20261016-41d0",
   "branch": "feat/dag-state-t2-plan-verb",
-  "pr": null,
-  "closed": null,
+  "pr": 252,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -73,9 +73,12 @@ Owner, 2026-10-16 UTC: "DAG SHOULD BE EFFORTLESS WITH EASY MIGRATION PLANS FOR U
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_plan.sh'` exit 0; every case prints ok and the last line is the pass count with fail=0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `make spec-check` exits 0 (the specs were read, not edited) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_plan.sh'` exit 0; every case prints ok and the last line is the pass count with fail=0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -C claude/workflow image && podman run ... test_dag_plan.sh: exit 0; every case ok; last line 'pass=43 fail=0'
+- [x] `AC-H2` *(human)* `make spec-check` exits 0 (the specs were read, not edited) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make spec-check: exit 0, output 'spec-check: nothing in scope' (specs read, not edited)
+- [x] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` git diff --name-only origin/main (before close-out): claude/workflow/dag/bin/dag-plan.sh claude/workflow/dag/tests/unit/test_dag_plan.sh work-orders/WO-20261016-0272/WO-20261016-41d0/WO-20261016-acde-dag-state-t2-plan-verb.md
 
 ## Test plan
 
