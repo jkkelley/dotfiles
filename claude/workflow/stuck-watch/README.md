@@ -37,6 +37,7 @@ Owner, 2026-10-16 UTC: "what really ensure things are stuck? i dont trust you or
 | STK-005 | result claims done, gh shows a PR not merged or CI not green | orchestrator, never trusts the claim |
 | STK-090 | stuck-watch dead: heartbeat older than `heartbeat_max_seconds` | architect break glass: `make stuck-watch-up` |
 | STK-091 | bus down | architect break glass: bring the bus up |
+| STK-092 | Bearings server of a live line down (probe 000 or no server.json) | architect break glass: make bearings-up LINE= |
 | A2A-004 | SOP breach in a result file, paged as is | architect |
 
 ## Gates

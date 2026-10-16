@@ -4,14 +4,14 @@
   "slug": "stuck-watch-deadman-probes-each-live-line-s-bear",
   "title": "stuck-watch deadman probes each live line's Bearings server and pages STK-092 when the probe returns 000 (ORD-0832 B1)",
   "type": "feature",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T08:50:21+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/e8f2-stuck-watch-deadman-probes-each-live-line-s-bear",
+  "pr": 376,
   "closed": null,
   "approval": {
     "via": "override",
@@ -125,13 +125,17 @@ config.json additions, exactly: "bearings": {"dir": "~/.bearings", "probe_path":
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the probe cases and every stuck-watch case pass
+- [x] `AC-H1` *(human)* the probe cases and every stuck-watch case pass
+  - observed `2026-10-16` make -C claude/workflow stuck-watch-test exit 0, pass=36 fail=0 incl. bearings_down, bearings_up
   - check: `make -C claude/workflow stuck-watch-test` exit 0
-- [ ] `AC-H2` *(human)* STK-092 is in the status code map
+- [x] `AC-H2` *(human)* STK-092 is in the status code map
+  - observed `2026-10-16` jq exit 0: architect break glass: make -C claude/workflow bearings-up LINE=<line>
   - check: `jq -r '.codes["STK-092"].acts' claude/workflow/stuck-watch/config.json` exit 0 expect /bearings-up LINE=/
-- [ ] `AC-H3` *(human)* every script has a rolodex header
+- [x] `AC-H3` *(human)* every script has a rolodex header
+  - observed `2026-10-16` make rolodex-check BASE=origin/main exit 0, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` diff name-only filtered by the allowed pattern is empty, exit 0 (grep -v rc 1)
   - check: `bash -c \!\ git\ diff\ --name-only\ origin/main...HEAD\ \|\ grep\ -vE\ \'\^\(work-orders/\|claude/workflow/stuck-watch/\(deadman\\.sh\|config\\.json\|README\\.md\|tests/test_stuck_watch\\.sh\)\)\$\'` exit 0
 
 ## Test plan
