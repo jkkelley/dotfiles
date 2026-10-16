@@ -4,15 +4,15 @@
   "slug": "work-order-sh-start-names-the-branch-feat-id-hex",
   "title": "work-order.sh start names the branch feat/<id hex>-<slug>, so a ticket whose slug matches a merged ticket's branch can still start",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:39:15+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/work-order-sh-start-names-the-branch-feat-id-hex",
+  "pr": 318,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design15 cut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -119,13 +119,17 @@ Order brief BR-20261016-infra-design15. Repro: on origin/main, bash claude/skill
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* two tickets with one slug start on two branches, each carrying its id
+- [x] `AC-H1` *(human)* two tickets with one slug start on two branches, each carrying its id
+  - observed `2026-10-16` run-tests.sh exit 0: 431 checks, 410-start-branch-id ok
   - check: `bash claude/skills/work-order/testing/run-tests.sh` exit 0 expect /410-start-branch-id/
-- [ ] `AC-H2` *(human)* start's branch line carries the id hex
+- [x] `AC-H2` *(human)* start's branch line carries the id hex
+  - observed `2026-10-16` grep count 1 at work-order.sh:1116
   - check: `grep -c 'branch="feat/${id##\*-}-${slug}"' claude/skills/work-order/scripts/work-order.sh` exit 0 expect /^1$/
-- [ ] `AC-H3` *(human)* rolodex pointers hold
+- [x] `AC-H3` *(human)* rolodex pointers hold
+  - observed `2026-10-16` rolodex-check exit 0, 1 script all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H4` *(human)* the diff holds only the In files
+- [x] `AC-H4` *(human)* the diff holds only the In files
+  - observed `2026-10-16` grep -vE exit 1, only In files and work-orders
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/skills/work-order/(SKILL\.md|scripts/work-order\.sh|references/lifecycle\.md|testing/SOP\.md|testing/cases/(070-cleanup-refuses-unmerged|410-start-branch-id)\.sh))$'` exit 1
 
 ## Test plan
