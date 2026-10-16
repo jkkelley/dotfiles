@@ -8,5 +8,5 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-bdcb` | ready | p1 | WO-20261016-04d3 | [Test spec-check - fails long, malformed and contents-less specs](WO-20261016-bdcb-test-spec-check-fails-long-malformed-and-content.md) |
+| `WO-20261016-bdcb` | in-progress | p1 | WO-20261016-04d3 | [Test spec-check - fails long, malformed and contents-less specs](WO-20261016-bdcb-test-spec-check-fails-long-malformed-and-content.md) |
 | `WO-20261016-04d3` | ready | p1 | - | [make spec-check gates XML specs in the fast PR check](WO-20261016-04d3-make-spec-check-gates-xml-specs-in-the-fast-pr-c.md) |

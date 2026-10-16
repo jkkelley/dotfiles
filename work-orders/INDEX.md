@@ -48,7 +48,7 @@ WO-20261016-1703  ready       p1 Inbox sweep build
 |-- WO-20261016-aaa0  ready       p1 Test V2 - suite migrate on main after the build merges
 `-- WO-20261016-657b  ready       p1 Test V3 - suite migrate on main after the build merges
 WO-20261016-949a  draft       p1 Spec check - golden rules 25 to 30 and make spec-check
-|-- WO-20261016-bdcb  ready       p1 Test spec-check - fails long, malformed and contents-less s...
+|-- WO-20261016-bdcb  in-progress p1 Test spec-check - fails long, malformed and contents-less s...
 `-- WO-20261016-04d3  ready       p1 make spec-check gates XML specs in the fast PR check
 ```
 
@@ -80,7 +80,7 @@ WO-20261016-949a  draft       p1 Spec check - golden rules 25 to 30 and make spe
 | `WO-20261016-fc28` | ready | p1 | test | WO-20261016-1703 | WO-20261016-ae19 | [Test B21d - suite lead on main after the build merges](WO-20261016-1703/WO-20261016-fc28-test-b21d-suite-lead-on-main-after-the-build-mer.md) |
 | `WO-20261016-04d3` | ready | p1 | feature | WO-20261016-949a | - | [make spec-check gates XML specs in the fast PR check](WO-20261016-949a/WO-20261016-04d3-make-spec-check-gates-xml-specs-in-the-fast-pr-c.md) |
 | `WO-20261016-949a` | draft | p1 | feature | - | - | [Spec check - golden rules 25 to 30 and make spec-check](WO-20261016-949a/WO-20261016-949a-spec-check-golden-rules-25-to-30-and-make-spec-c.md) |
-| `WO-20261016-bdcb` | ready | p1 | test | WO-20261016-949a | WO-20261016-04d3 | [Test spec-check - fails long, malformed and contents-less specs](WO-20261016-949a/WO-20261016-bdcb-test-spec-check-fails-long-malformed-and-content.md) |
+| `WO-20261016-bdcb` | in-progress | p1 | test | WO-20261016-949a | WO-20261016-04d3 | [Test spec-check - fails long, malformed and contents-less specs](WO-20261016-949a/WO-20261016-bdcb-test-spec-check-fails-long-malformed-and-content.md) |
 
 ## Archived
 
