@@ -4,15 +4,15 @@
   "slug": "inbox-sweep-b20b-l1-to-l12-and-s1-to-s7-declarat",
   "title": "Inbox sweep B20b - L1 to L12 and S1 to S7 declarations and nodes.lock at run init",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T03:03:15+00:00",
   "parent": "WO-20261016-1703",
   "branch": "feat/inbox-sweep-b20b-l1-to-l12-and-s1-to-s7-declarat",
-  "pr": null,
-  "closed": null,
+  "pr": 124,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner approved the reply DAG design on Bearings card D-18, 2026-10-16 UTC; Claude seats never use lavish (global owner rule)",
@@ -67,8 +67,10 @@ Reply and lead nodes need declarations, and a running sweep must stay on the nod
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every L and S declaration validates and bottleneck-check lists L6b as the single intended wait (test)
-- [ ] `AC-H2` *(human)* init writes nodes.lock/ and node_versions into run.json (test)
+- [x] `AC-H1` *(human)* every L and S declaration validates and bottleneck-check lists L6b as the single intended wait (test)
+  - observed `2026-10-16` make test-all suite nodes ok: 13 L (L1-L12 + L6b) and 7 S declarations validate; bottleneck-check printed 'intended wait: L6b'; a second Intended wait fails
+- [x] `AC-H2` *(human)* init writes nodes.lock/ and node_versions into run.json (test)
+  - observed `2026-10-16` make test-all suite init ok: nodes.lock holds every declaration byte-identical, run.json node_versions names all 27 nodes; empty nodes dir exits 1 with no run dir
 
 ## Test plan
 
