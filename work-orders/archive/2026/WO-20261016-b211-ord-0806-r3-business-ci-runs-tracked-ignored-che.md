@@ -4,15 +4,15 @@
   "slug": "ord-0806-r3-business-ci-runs-tracked-ignored-che",
   "title": "ORD-0806 R3: business CI runs tracked-ignored-check - pr-flow.json business ci targets, Makefile target, ci.yml re-rendered",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T08:08:08+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/ord-0806-r3-business-ci-runs-tracked-ignored-che",
+  "pr": 244,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "biz-design1 cut for ORD-0806 R3; design approvals ruled done, ORD-0550 O4",
@@ -87,12 +87,18 @@ Order ORD-0806 R3 verbatim: "port tracked-ignored-check to business (after busin
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `jq -c '.repos["jkkelley/business"].ci | [.pr_targets, .main_targets]' claude/workflow/pr-flow/config/pr-flow.json` exits 0 and its output matches /^\[\["tracked-ignored-check"\],\["tracked-ignored-check"\]\]$/
-- [ ] `AC-H2` *(human)* `jq --indent 2 . claude/workflow/pr-flow/config/pr-flow.json | diff - claude/workflow/pr-flow/config/pr-flow.json` exits 0 and prints nothing (format preserved)
-- [ ] `AC-H3` *(human)* `gh pr list -R jkkelley/business --head chore/tracked-ignored-check --json number -q length` exits 0 and its output matches /^1$/
-- [ ] `AC-H4` *(human)* `gh pr view chore/tracked-ignored-check -R jkkelley/business --json files -q '[.files[].path]|sort|join(",")'` exits 0 and its output matches /^\.github\/workflows\/ci\.yml,Makefile$/
-- [ ] `AC-H5` *(human)* `gh api 'repos/jkkelley/business/contents/Makefile?ref=chore/tracked-ignored-check' -q .content | base64 -d | sha256sum` exits 0 and its output matches /^f23c20f15fd8733f844306c376b5ae8c27ad9e8905ac2748cc1071f25baaed5c /
-- [ ] `AC-H6` *(human)* `gh api 'repos/jkkelley/business/contents/.github/workflows/ci.yml?ref=chore/tracked-ignored-check' -q .content | base64 -d | diff - <(bash claude/workflow/pr-flow/bin/pr-flow-ci-render.sh --template ci --set PR_TARGETS='["tracked-ignored-check"]' --set MAIN_TARGETS='["tracked-ignored-check"]')` exits 0 and prints nothing
+- [x] `AC-H1` *(human)* `jq -c '.repos["jkkelley/business"].ci | [.pr_targets, .main_targets]' claude/workflow/pr-flow/config/pr-flow.json` exits 0 and its output matches /^\[\["tracked-ignored-check"\],\["tracked-ignored-check"\]\]$/
+  - observed `2026-10-16` [["tracked-ignored-check"],["tracked-ignored-check"]] exit 0
+- [x] `AC-H2` *(human)* `jq --indent 2 . claude/workflow/pr-flow/config/pr-flow.json | diff - claude/workflow/pr-flow/config/pr-flow.json` exits 0 and prints nothing (format preserved)
+  - observed `2026-10-16` diff empty, exit 0
+- [x] `AC-H3` *(human)* `gh pr list -R jkkelley/business --head chore/tracked-ignored-check --json number -q length` exits 0 and its output matches /^1$/
+  - observed `2026-10-16` output 1 (business PR 77)
+- [x] `AC-H4` *(human)* `gh pr view chore/tracked-ignored-check -R jkkelley/business --json files -q '[.files[].path]|sort|join(",")'` exits 0 and its output matches /^\.github\/workflows\/ci\.yml,Makefile$/
+  - observed `2026-10-16` .github/workflows/ci.yml,Makefile
+- [x] `AC-H5` *(human)* `gh api 'repos/jkkelley/business/contents/Makefile?ref=chore/tracked-ignored-check' -q .content | base64 -d | sha256sum` exits 0 and its output matches /^f23c20f15fd8733f844306c376b5ae8c27ad9e8905ac2748cc1071f25baaed5c /
+  - observed `2026-10-16` sha256 f23c20f1...aed5c matches
+- [x] `AC-H6` *(human)* `gh api 'repos/jkkelley/business/contents/.github/workflows/ci.yml?ref=chore/tracked-ignored-check' -q .content | base64 -d | diff - <(bash claude/workflow/pr-flow/bin/pr-flow-ci-render.sh --template ci --set PR_TARGETS='["tracked-ignored-check"]' --set MAIN_TARGETS='["tracked-ignored-check"]')` exits 0 and prints nothing
+  - observed `2026-10-16` rendered diff empty, exit 0
 
 ## Test plan
 
