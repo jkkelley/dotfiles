@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# name: 310-local-image-plan.sh
+# purpose: prove work-order start accepts a locally built image plan by tag, build command and digest-pinned Containerfile FROM, and refuses each wrong form (RR-orch-18)
+# inputs: SKILL (skill dir), a git project from testing/assert.sh
+# outputs: ok/FAIL lines from assert.sh
+# writes-to: a temporary project and plan files under the test sandbox only
+# cleanup: the sandbox is removed by the test harness
 # A test plan on a locally built image is named by tag, build command and a digest-pinned Containerfile
 # FROM, never by a localhost digest (RR-orch-18, log 20261016-080957-t21e-cards-uat-digest.txt).
 #
