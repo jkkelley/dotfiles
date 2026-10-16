@@ -4,15 +4,15 @@
   "slug": "work-order-sh-check-matches-an-ac-expect-regex-a",
   "title": "work-order.sh check matches an --ac-expect regex across lines when the per-line match misses, so the WO-20261016-64f2 multi-line expect passes (DESIGN-GAP a1ca)",
   "type": "bug",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T12:32:55+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/49e1-work-order-sh-check-matches-an-ac-expect-regex-a",
+  "pr": 378,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design22 cut for BR-20261016-infra-design22; design approvals ruled done, ORD-0550 O4",
@@ -120,13 +120,17 @@ Fix shape (fixed, no freedom): keep the per-line grep -Eq as the first try, unch
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the skill suite passes with case 460
+- [x] `AC-H1` *(human)* the skill suite passes with case 460
+  - observed `2026-10-16` check: bash claude/skills/work-order/testing/run-tests.sh exit 0 output: work-order test suite image: localhost/work-order-test:1 skill: /home/luna/.cache/zenith/wt-wo-49e1/claude/skills/work-order (read-only) scratch: /home/luna/.cache/zenith/seat-tmp/inbox-triage/wo-49e1/work-order-test.GgjUfK (removed on exit) 010-new-happy.sh ok new exits 0 on the documented example (exit 0) ok INDEX.md is generated ok INDEX lists the new ticket ok starts in draft ok renders the non-goals section ok records the non-goal ok records the human criterion ok frontmatter parses as JSON (exit 0) created /work/proj.VmbAo1/work-orders/WO-20260805-f57b/WO-20260805-f57b-empty-cart-state.md (status: draft, evidence: human) ok same input and clock produce an identical ticket 010-new-happy: 9 checks, 0 failed 020-new-refuses.sh
   - check: `bash claude/skills/work-order/testing/run-tests.sh` exit 0 expect /all cases passed/
-- [ ] `AC-H2` *(human)* run_checks tries a PCRE multiline whole-output match
+- [x] `AC-H2` *(human)* run_checks tries a PCRE multiline whole-output match
+  - observed `2026-10-16` check: grep -cF 'grep -Pzq -- "(?m)$expect"' claude/skills/work-order/scripts/work-order.sh exit 0 output: 1
   - check: `grep -cF 'grep -Pzq -- "(?m)$expect"' claude/skills/work-order/scripts/work-order.sh` exit 0 expect /^1$/
-- [ ] `AC-H3` *(human)* the new case file exists
+- [x] `AC-H3` *(human)* the new case file exists
+  - observed `2026-10-16` check: test -f claude/skills/work-order/testing/cases/460-ac-expect-multiline.sh && grep -c '^## 460-ac-expect-multiline' claude/skills/work-order/testing/SOP.md exit 0 output: 1
   - check: `test -f claude/skills/work-order/testing/cases/460-ac-expect-multiline.sh && grep -c '^## 460-ac-expect-multiline' claude/skills/work-order/testing/SOP.md` exit 0 expect /^1$/
-- [ ] `AC-H4` *(human)* the diff holds only In files
+- [x] `AC-H4` *(human)* the diff holds only In files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/skills/work-order/(scripts/work-order.sh|testing/SOP.md|testing/cases/460-ac-expect-multiline.sh))$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/skills/work-order/(scripts/work-order\.sh|testing/SOP\.md|testing/cases/460-ac-expect-multiline\.sh))$'` exit 1
 
 ## Test plan
