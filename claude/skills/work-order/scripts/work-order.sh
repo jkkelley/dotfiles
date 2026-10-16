@@ -65,6 +65,9 @@ Usage:
   work-order.sh show    [--project DIR] --id WO-... [--json]
   work-order.sh list    [--project DIR] [--status S] [--json]
   work-order.sh stale-merged [--project DIR] [--pr-repo OWNER/NAME] [--json]
+  work-order.sh next    [--project DIR] [--line NAME] [--offline] [--pr-repo OWNER/NAME] [--json]
+  work-order.sh set     [--project DIR] (--id WO-... | --tree WO-...)
+                        [--add-label L]... [--remove-label L]... [--json]
 
 Lifecycle:
   draft --approve--> ready --start--> in-progress --submit--> in-review
@@ -104,6 +107,8 @@ new:
                snapshotted into work-orders/evidence/<ID>/ so a later wireframe
                run cannot destroy this ticket's evidence.
   --frames     glob over build_order, e.g. 'wf/checkout-cart/*'. Default: all.
+  --label      a label, repeatable, ^[a-z0-9][a-z0-9:._-]*$. A line label is
+               line:<name>. With --parent the parent's labels are copied first.
   --parent     an existing WO this one belongs to. The file is written into that
                parent's directory, so the tree mirrors the work.
   --depends-on an existing WO that must reach `done` first. Repeatable. The
@@ -237,6 +242,8 @@ command="$1"; shift
 title=""; type=""; problem=""; test_plan=""; test_plan_file=""; priority="p2"
 id=""; pr=""; reason=""; status_filter=""; from_figma=""; frames_glob="*"; pr_repo=""
 parent=""; text=""; answer=""; observed=""; index=""; match=""; superseded_by=""
+tree_id=""; line_name=""; offline=0
+declare -a label_items=() add_labels=() remove_labels=()
 no_lavish=0; dry_run=0; detach=0; check=0; top_level=0
 declare -a in_items=() out_items=() ac_items=() freedom_items=() surfaces=() assumptions=() questions=()
 declare -a owner_items=() context_items=() provides_items=() ac_cmd=() ac_exit=() ac_expect=()
@@ -277,6 +284,12 @@ while (($#)); do
     --from-figma) from_figma="${2-}"; shift 2 ;;
     --frames) frames_glob="${2-}"; shift 2 ;;
     --parent) parent="${2-}"; shift 2 ;;
+    --label) label_items+=("${2-}"); shift 2 ;;
+    --add-label) add_labels+=("${2-}"); shift 2 ;;
+    --remove-label) remove_labels+=("${2-}"); shift 2 ;;
+    --tree) tree_id="${2-}"; shift 2 ;;
+    --line) line_name="${2-}"; shift 2 ;;
+    --offline) offline=1; shift ;;
     --depends-on) dep_items+=("${2-}"); shift 2 ;;
     --blocks) block_items+=("${2-}"); shift 2 ;;
     --no-depends-on) no_dep_items+=("${2-}"); shift 2 ;;
@@ -547,6 +560,24 @@ del_edge() {
 # new
 # ---------------------------------------------------------------------------
 
+# label_valid <label> - ^[a-z0-9][a-z0-9:._-]*$, else exit 2 bad_label.
+label_valid() {
+  [[ $1 =~ ^[a-z0-9][a-z0-9:._-]*$ ]] || ps_die "$PS_USAGE" "bad_label" \
+    "label '$1' must match ^[a-z0-9][a-z0-9:._-]*\$"
+}
+
+# new_labels_json - the parent's labels plus every --label, sorted and unique.
+new_labels_json() {
+  local l pf=""
+  local -a all=()
+  for l in "${label_items[@]+"${label_items[@]}"}"; do label_valid "$l"; all+=("$l"); done
+  if [[ -n $parent ]]; then
+    pf=$(wo_find "$project" "$parent")
+    while IFS= read -r l; do [[ -n $l ]] && all+=("$l"); done < <(wo_fm "$pf" | jq -r '.labels // [] | .[]')
+  fi
+  if ((${#all[@]})); then printf '%s\n' "${all[@]}" | jq -R . | jq -sc 'unique'; else printf '[]'; fi
+}
+
 cmd_new() {
   wo_require_jq
   ps_require_value title "$title"
@@ -583,6 +614,10 @@ cmd_new() {
       "a ticket needs a home: pass --parent WO-... to file it under existing work, or --top-level to open a new epic at the root of $WO_DIR_NAME/"
   fi
   if [[ -n $parent ]]; then require_edge_target parent "$parent"; fi
+  # ORD-0932 Q2: a child starts with its parent's labels, so a line label set on
+  # an epic reaches every ticket cut under it without a second pass.
+  local labels_json
+  labels_json=$(new_labels_json)
   require_test_plan_file
   for e in "${dep_items[@]+"${dep_items[@]}"}"; do require_edge_target depends-on "$e"; done
   for e in "${block_items[@]+"${block_items[@]}"}"; do require_edge_target blocks "$e"; done
@@ -676,6 +711,7 @@ cmd_new() {
     --arg pri "$priority" --arg now "$stamp" --arg today "$today" \
     --argjson ev "$ev_json" \
     --arg parent "$parent" \
+    --argjson labels "$labels_json" \
     --argjson acchecks "$(ac_checks_json "$base_n")" \
     --argjson provides "$(printf '%s\n' "${provides_items[@]+"${provides_items[@]}"}" | grep -v '^$' | jq -R . | jq -s .)" \
     --argjson surfaces "$(printf '%s\n' "${surfaces[@]+"${surfaces[@]}"}" | grep -v '^$' | jq -R . | jq -s .)" \
@@ -686,7 +722,8 @@ cmd_new() {
       parent:(if $parent == "" then null else $parent end),
       branch:null, pr:null, closed:null,
       approval:null, evidence:$ev, surfaces:$surfaces,
-      depends_on:$deps, blocks:$blocks, ac_checks:$acchecks, provides:$provides}')
+      depends_on:$deps, blocks:$blocks, ac_checks:$acchecks, provides:$provides}
+     + (if ($labels | length) > 0 then {labels:$labels} else {} end)')
 
   tmp=$(ps_tempfile)
   {
@@ -2003,15 +2040,50 @@ cmd_tree() {
   fi
 }
 
+# next - ORD-0932 Q2.
+# What broke: next listed every ready ticket whose deps were done. On 2026-10-16
+# that included the epics WO-20261016-fb0c, WO-20261016-ebe4, WO-20261016-1703
+# and WO-20261016-6e8e, tickets whose PR had already merged, and the 2026-08
+# Venture 1 business tickets, so a seat started on any of them burned a slot on
+# nothing.
+# Why this fix: the queue the line reads holds only seat-ready leaves: no ticket
+# with children, nothing merged (merged_info, shared with stale-merged), and with
+# --line N only tickets labeled line:N. Rejected: deriving the line from the
+# parent tree at read time, because a ticket moves between epics by link and the
+# owner order says the label is written by script (the set verb).
+# Cost: one gh call per candidate that has a pr or branch; --offline skips it.
 cmd_next() {
   wo_require_jq
   ensure_views
   load_graph
+  [[ -z $line_name ]] || label_valid "line:$line_name"
   local gid
+  local -A has_kids=()
+  for gid in "${G_IDS[@]+"${G_IDS[@]}"}"; do
+    [[ -z ${G_PARENT[$gid]} ]] || has_kids[${G_PARENT[$gid]}]=1
+  done
+  ((offline)) && ps_info "next: merged check skipped (--offline)"
   local -a picks=()
+  local -A labels=()
+  local f mi rc
   for gid in "${G_IDS[@]+"${G_IDS[@]}"}"; do
     g_archived "$gid" && continue
-    g_startable "$gid" && picks+=("${G_PRI[$gid]}|$gid")
+    g_startable "$gid" || continue
+    [[ -z ${has_kids[$gid]:-} ]] || continue
+    f="$root/${G_PATH[$gid]}"
+    labels[$gid]=$(wo_fm "$f" | jq -c '(.labels // []) | unique')
+    if [[ -n $line_name ]]; then
+      jq -e --arg l "line:$line_name" 'index($l) != null' <<<"${labels[$gid]}" >/dev/null || continue
+    fi
+    if ((!offline)); then
+      # An assignment, not a test on $(...): a gh_failed die inside a command
+      # substitution would otherwise only end the subshell and the verb would go on.
+      # In --json mode ps_die writes its error to stdout, which the substitution
+      # swallowed; replay it so the caller still sees gh_failed.
+      mi=$(merged_info "$f" "$pr_repo") || { rc=$?; printf '%s\n' "$mi"; exit "$rc"; }
+      [[ -z $mi ]] || continue
+    fi
+    picks+=("${G_PRI[$gid]}|$gid")
   done
 
   if ((PS_JSON)); then
@@ -2023,13 +2095,14 @@ cmd_next() {
         ((first)) || printf ','
         first=0
         jq -nc --arg id "$gid" --arg pr "${G_PRI[$gid]}" --arg t "${G_TITLE[$gid]}" \
-          --arg p "${G_PATH[$gid]}" '{id:$id, priority:$pr, title:$t, path:$p}'
+          --arg p "${G_PATH[$gid]}" --argjson l "${labels[$gid]}" \
+          '{id:$id, priority:$pr, title:$t, path:$p, labels:$l}'
       done < <(printf '%s\n' "${picks[@]}" | sort)
     fi
     printf ']\n'
   else
     if ((${#picks[@]} == 0)); then
-      ps_info "nothing is startable: no ticket is 'ready' with all dependencies done"
+      ps_info "nothing is startable: no seat-ready leaf is 'ready' with all dependencies done"
       return 0
     fi
     local line
@@ -2038,6 +2111,68 @@ cmd_next() {
       printf '%-17s %-2s %s\n' "$gid" "${G_PRI[$gid]}" "${G_TITLE[$gid]}"
     done < <(printf '%s\n' "${picks[@]}" | sort)
   fi
+}
+
+# set - ORD-0932 Q2.
+# What broke: nothing wrote a label, so next --line had nothing to read and the
+# four epics above stayed in the queue.
+# Why this fix: a verb on the existing tool (item 30). It writes only .labels -
+# never status, scope or updated - so it cannot conflict with a close-out on
+# another branch, and a ticket whose labels already match is not rewritten.
+# Cost: --tree walks the whole parent subtree of the named ticket.
+cmd_set() {
+  wo_require_jq
+  [[ -d $root ]] || ps_die "$PS_NOTFOUND" "no_work_orders" "no $WO_DIR_NAME/ in $project"
+  local l
+  for l in "${add_labels[@]+"${add_labels[@]}"}" "${remove_labels[@]+"${remove_labels[@]}"}"; do label_valid "$l"; done
+  ((${#add_labels[@]} + ${#remove_labels[@]})) || ps_die "$PS_USAGE" "usage" \
+    "set needs at least one --add-label or --remove-label"
+  [[ -n $id || -n $tree_id ]] || ps_die "$PS_USAGE" "usage" "set needs --id WO-... or --tree WO-..."
+  local -a targets=()
+  local gid
+  if [[ -n $tree_id ]]; then
+    wo_id_valid "$tree_id" || ps_die "$PS_USAGE" "bad_id_format" "--tree must look like WO-20260805-3f2a (got: $tree_id)"
+    wo_find "$project" "$tree_id" >/dev/null
+    load_graph
+    local -A in_tree=([$tree_id]=1)
+    local grew=1
+    while ((grew)); do
+      grew=0
+      for gid in "${G_IDS[@]}"; do
+        [[ -z ${in_tree[$gid]:-} && -n ${G_PARENT[$gid]} && -n ${in_tree[${G_PARENT[$gid]}]:-} ]] || continue
+        in_tree[$gid]=1; grew=1
+      done
+    done
+    for gid in "${G_IDS[@]}"; do
+      [[ -n ${in_tree[$gid]:-} ]] && ! g_archived "$gid" && targets+=("$gid")
+    done
+  else
+    require_id
+    local one; one=$(wo_find "$project" "$id")
+    wo_is_archived "$one" && ps_die "$PS_VALIDATION" "archived" "$id is archived; its labels are not changed"
+    targets+=("$id")
+  fi
+
+  local add_json rem_json rows='[]' tid file cur new changed
+  add_json=$(jq -nc '$ARGS.positional' --args -- "${add_labels[@]+"${add_labels[@]}"}")
+  rem_json=$(jq -nc '$ARGS.positional' --args -- "${remove_labels[@]+"${remove_labels[@]}"}")
+  for tid in "${targets[@]+"${targets[@]}"}"; do
+    file=$(wo_find "$project" "$tid")
+    cur=$(wo_fm "$file" | jq -c '.labels // []')
+    new=$(jq -nc --argjson c "$cur" --argjson a "$add_json" --argjson r "$rem_json" \
+      '(($c + $a) - $r) | unique')
+    changed=false
+    if [[ $new != "$cur" ]]; then
+      changed=true
+      wo_fm_set "$file" '.labels = $l' --argjson l "$new"
+      ((PS_JSON)) || printf 'LABELED %s %s\n' "$tid" "$(jq -r 'join(",")' <<<"$new")"
+    fi
+    rows=$(jq -c --arg id "$tid" --argjson l "$new" --argjson ch "$changed" \
+      '. + [{id:$id,labels:$l,changed:$ch}]' <<<"$rows")
+  done
+  load_graph
+  reindex
+  ((!PS_JSON)) || printf '%s\n' "$rows"
 }
 
 # ---------------------------------------------------------------------------
@@ -2604,6 +2739,44 @@ stale_gh() {
   return 1
 }
 
+# merged_info <file> <repo> - ORD-0932 Q2: the one lookup behind stale-merged and
+# next, so the two verbs never disagree about what counts as merged. Prints the
+# info JSON {pr,repo,merge_commit,merged_at,url} when the ticket's pr or branch
+# merged, nothing when it did not or when neither is set. gh failing 3 times
+# dies exit 4 gh_failed. An empty <repo> is resolved once through gh repo view.
+merged_info() {
+  local f="$1" repo="$2" tpr tbranch info=""
+  tpr=$(wo_field "$f" '.pr'); tbranch=$(wo_field "$f" '.branch')
+  [[ -n $tpr || -n $tbranch ]] || return 0
+  if [[ -z $repo && ( -n $tbranch || ! $tpr =~ ^https:// ) ]]; then
+    repo=$(stale_gh repo view --json nameWithOwner -q .nameWithOwner) \
+      || ps_die "$PS_IO" "gh_failed" "gh repo view failed 3 times"
+  fi
+  if [[ -n $tpr ]]; then
+    # A pr that is a URL names its own repo (ORD-0921 E2): a business ticket
+    # whose PR lives in ypconsult-01-src must never be looked up in the
+    # current repo, where the same number is a different PR or none. A bare
+    # number carries no repo, so it uses --pr-repo or the project's repo.
+    local prrepo="$repo" prnum="$tpr"
+    if [[ $tpr =~ ^https://github\.com/([^/]+/[^/]+)/pull/([0-9]+) ]]; then
+      prrepo="${BASH_REMATCH[1]}"; prnum="${BASH_REMATCH[2]}"
+      info=$(stale_gh pr view "$tpr" --json state,mergeCommit,mergedAt,url) \
+        || ps_die "$PS_IO" "gh_failed" "gh pr view $tpr failed 3 times"
+    else
+      info=$(stale_gh pr view "$tpr" -R "$repo" --json state,mergeCommit,mergedAt,url) \
+        || ps_die "$PS_IO" "gh_failed" "gh pr view $tpr -R $repo failed 3 times"
+    fi
+    [[ $(jq -r '.state // ""' <<<"$info") == MERGED ]] || return 0
+    jq -c --arg n "$prnum" --arg r "$prrepo" '{pr:($n|tonumber),repo:$r,merge_commit:(.mergeCommit.oid // ""),merged_at:(.mergedAt // ""),url:(.url // "")}' <<<"$info"
+  else
+    info=$(stale_gh pr list -R "$repo" --head "$tbranch" --state merged \
+             --json number,mergeCommit,mergedAt,url --limit 1) \
+      || ps_die "$PS_IO" "gh_failed" "gh pr list -R $repo --head $tbranch failed 3 times"
+    [[ $(jq -r 'length' <<<"$info") -gt 0 ]] || return 0
+    jq -c --arg r "$repo" '.[0] | {pr:.number,repo:$r,merge_commit:(.mergeCommit.oid // ""),merged_at:(.mergedAt // ""),url:(.url // "")}' <<<"$info"
+  fi
+}
+
 cmd_stale_merged() {
   wo_require_jq; wo_require_gh
   [[ -d $root ]] || ps_die "$PS_NOTFOUND" "no_work_orders" "no $WO_DIR_NAME/ in $project"
@@ -2617,34 +2790,10 @@ cmd_stale_merged() {
     wo_is_archived "$f" && continue
     s=$(wo_field "$f" '.status')
     case $s in ready | in-progress | in-review) ;; *) continue ;; esac
-    local tid ttitle tpr tbranch info=""
+    local tid ttitle info
     tid=$(wo_field "$f" '.id'); ttitle=$(wo_field "$f" '.title')
-    tpr=$(wo_field "$f" '.pr'); tbranch=$(wo_field "$f" '.branch')
-    if [[ -n $tpr ]]; then
-      # A pr that is a URL names its own repo (ORD-0921 E2): a business ticket
-      # whose PR lives in ypconsult-01-src must never be looked up in the
-      # current repo, where the same number is a different PR or none. A bare
-      # number carries no repo, so it uses --pr-repo or the project's repo.
-      local prref="$tpr" prrepo="$repo" prnum="$tpr"
-      if [[ $tpr =~ ^https://github\.com/([^/]+/[^/]+)/pull/([0-9]+) ]]; then
-        prrepo="${BASH_REMATCH[1]}"; prnum="${BASH_REMATCH[2]}"
-        info=$(stale_gh pr view "$tpr" --json state,mergeCommit,mergedAt,url) \
-          || ps_die "$PS_IO" "gh_failed" "gh pr view $tpr failed 3 times"
-      else
-        info=$(stale_gh pr view "$tpr" -R "$repo" --json state,mergeCommit,mergedAt,url) \
-          || ps_die "$PS_IO" "gh_failed" "gh pr view $tpr -R $repo failed 3 times"
-      fi
-      [[ $(jq -r '.state // ""' <<<"$info") == MERGED ]] || continue
-      info=$(jq -c --arg n "$prnum" --arg r "$prrepo" '{pr:($n|tonumber),repo:$r,merge_commit:(.mergeCommit.oid // ""),merged_at:(.mergedAt // ""),url:(.url // "")}' <<<"$info")
-    elif [[ -n $tbranch ]]; then
-      info=$(stale_gh pr list -R "$repo" --head "$tbranch" --state merged \
-               --json number,mergeCommit,mergedAt,url --limit 1) \
-        || ps_die "$PS_IO" "gh_failed" "gh pr list -R $repo --head $tbranch failed 3 times"
-      [[ $(jq -r 'length' <<<"$info") -gt 0 ]] || continue
-      info=$(jq -c --arg r "$repo" '.[0] | {pr:.number,repo:$r,merge_commit:(.mergeCommit.oid // ""),merged_at:(.mergedAt // ""),url:(.url // "")}' <<<"$info")
-    else
-      continue
-    fi
+    info=$(merged_info "$f" "$repo")
+    [[ -n $info ]] || continue
     rows=$(jq -c --arg id "$tid" --arg t "$ttitle" --arg s "$s" --argjson i "$info" \
       '. + [{id:$id,title:$t,status:$s,pr:$i.pr,repo:$i.repo,merge_commit:$i.merge_commit,merged_at:$i.merged_at,url:$i.url}]' <<<"$rows")
   done < <(find "$root" -type f -name 'WO-*.md' | sort)
@@ -2673,6 +2822,7 @@ case $command in
   evidence) cmd_evidence ;;
   check) cmd_check ;;
   next) cmd_next ;;
+  set) cmd_set ;;
   tree) cmd_tree ;;
   reindex) cmd_reindex ;;
   reflow) cmd_reflow ;;
@@ -2693,5 +2843,5 @@ case $command in
   # only listing an agent that guessed wrong ever sees. `evidence` and `reflow`
   # were missing from it for as long as they have existed.
   *) ps_die "$PS_USAGE" "unknown_command" \
-       "unknown command: $command (new|amend|link|note|resolve|evidence|check|approve|start|submit|done|cleanup|cancel|reopen|verify|resync|show|list|stale-merged|next|tree|reindex|reflow|repair)" ;;
+       "unknown command: $command (new|amend|link|note|resolve|evidence|check|approve|start|submit|done|cleanup|cancel|reopen|verify|resync|show|list|stale-merged|next|set|tree|reindex|reflow|repair)" ;;
 esac
