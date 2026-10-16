@@ -88,6 +88,11 @@ jobs:
       # Golden system design rules block must match claude/golden-rules.md (owner order 2026-10-16 UTC).
       - run: make golden-rules-check
 
+      # XML specs changed by this PR: 1000 lines or less, parse, <contents> first (Design principles 101 item 28).
+      - env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: make spec-check
+
   # Design principles 101 item 23 (owner, 2026-10-16 UTC): logs, results and
   # screenshots never go in git; they live in the artifact store and the repo
   # points to them. This job is where a committed one is stopped. It has no
