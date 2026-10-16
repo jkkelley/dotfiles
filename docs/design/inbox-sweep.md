@@ -425,7 +425,7 @@ The send path after approval is its own DAG, designed in [section 14](#14-linked
 Owner orders, 2026-10-16 UTC: "i need to approve, because i may want the wording changed or updated or drop or all of it, you feel me, so yah, it needs me, thats the dag to this fucking process, doc design first fuvcker, dag this process".
 Earlier the same day: "i want agents being the ones to send the message, i don't want to at all ever".
 This section is the send path that [D7](#d7-after-a-linkedin-draft-is-approved) left open.
-Status: proposed, for the owner to read; nothing here is built until the owner approves it on a Bearings card.
+Status: approved by the owner on Bearings card D-18, 2026-10-16 UTC ("Approve"); built as B14 to B23 in [section 10](#10-build-dag).
 
 ### Sections in this part
 
