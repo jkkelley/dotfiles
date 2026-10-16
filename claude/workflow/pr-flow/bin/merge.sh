@@ -339,7 +339,7 @@ post_merge_clean() {
 
 do_pr() { # do_pr PR
   local pr=$1 view state title head branch mergeable ticket rc n=1 out mstate
-  gh_retry pr view "$pr" --json number,state,title,body,headRefOid,headRefName,mergeable || { fail_io "$pr" "" "gh pr view"; return 4; }
+  gh_retry pr view "$pr" --json number,state,title,body,headRefOid,headRefName,baseRefName,mergeable || { fail_io "$pr" "" "gh pr view"; return 4; }
   view=$GH_OUT
   state=$(jq -r '.state // empty' <<<"$view" 2>/dev/null); title=$(jq -r '.title // empty' <<<"$view"); head=$(jq -r '.headRefOid // empty' <<<"$view")
   branch=$(jq -r '.headRefName // empty' <<<"$view")
@@ -361,6 +361,13 @@ do_pr() { # do_pr PR
     0) ;;
     1) say "$pr" "$ticket" held "$out"; return 3;;
     *) GH_ERR=$(tail -c 300 "$ERRF" | tr '\n' ' '); fail_io "$pr" "$ticket" "gate.sh ci-green"; return 4;;
+  esac
+  # WO-20261016-0233 (F36): a head that still carries an in-progress or in-review work-order is held, never merged ahead of its close-out
+  out=$("$GATE" ticket-open --repo "$GIT_REPO" --base "origin/$(jq -r '.baseRefName // "main"' <<<"$view")" --sha "$head" 2>"$ERRF"); rc=$?
+  case $rc in
+    0) ;;
+    1) say "$pr" "$ticket" held "$(printf '%s' "$out" | tr '\n' ' ')"; return 3;;
+    *) GH_ERR=$(tail -c 300 "$ERRF" | tr '\n' ' '); fail_io "$pr" "$ticket" "gate.sh ticket-open"; return 4;;
   esac
 
   # the merge: GitHub refuses it if the head moved since we read it; a hold written since the pass began refuses it here
