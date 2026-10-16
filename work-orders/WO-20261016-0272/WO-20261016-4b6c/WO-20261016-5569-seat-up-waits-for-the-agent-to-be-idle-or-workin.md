@@ -4,14 +4,14 @@
   "slug": "seat-up-waits-for-the-agent-to-be-idle-or-workin",
   "title": "seat-up waits for the agent to be idle or working, never idle only",
   "type": "bug",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:04:22+00:00",
   "parent": "WO-20261016-4b6c",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/seat-up-waits-for-the-agent-to-be-idle-or-workin",
+  "pr": 199,
   "closed": null,
   "approval": {
     "via": "override",
@@ -71,9 +71,12 @@ Evidence 2026-10-16T05:42Z: make seat-up exited 1 at claude/workflow/Makefile:63
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow grid` exits 0 and prints `ok seat-up with a prompted seat that is working exits 0 and writes agent-seen` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `git grep -n -- '--until idle --until working' claude/workflow/bin/herdr-grid.sh` prints exactly one line (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the two files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `make -C claude/workflow grid` exits 0 and prints `ok seat-up with a prompted seat that is working exits 0 and writes agent-seen` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -C claude/workflow grid exit 0; ok seat-up with a prompted seat that is working exits 0 and writes agent-seen
+- [x] `AC-H2` *(human)* `git grep -n -- '--until idle --until working' claude/workflow/bin/herdr-grid.sh` prints exactly one line (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` git grep exit 0; claude/workflow/bin/herdr-grid.sh:270: hj agent wait "$pane" --until idle --until working --timeout "$START_TIMEOUT_MS" >/dev/null || { log "seat $seat: agent never reached idle in $pane"; return 1; }
+- [x] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the two files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` git diff --name-only origin/main: claude/workflow/bin/herdr-grid.sh claude/workflow/tests/unit/test_herdr_grid.sh work-orders/INDEX.md work-orders/WO-20261016-0272/WO-20261016-4b6c/README.md work-orders/WO-20261016-0272/WO-20261016-4b6c/WO-20261016-5569-seat-up-waits-for-the-agent-to-be-idle-or-workin.md
 
 ## Test plan
 
