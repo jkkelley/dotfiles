@@ -45,5 +45,11 @@ rc=0; "$ST" --node N4 -- true 2>/dev/null || rc=$?; [ "$rc" = 2 ] && ok "missing
 rc=0; "$ST" --line 'a.b' --node N4 -- true 2>/dev/null || rc=$?; [ "$rc" = 2 ] && ok "a dot in line exits 2 (subject injection)" || no "dot rc=$rc"
 rc=0; "$ST" --line t --node N4 2>/dev/null || rc=$?; [ "$rc" = 2 ] && ok "no command exits 2" || no "no cmd rc=$rc"
 
+# WO-20261016-a702: default publisher must run a non-executable bus.sh through bash
+mkdir "$tmp/nx"; cp "$ST" "$tmp/nx/step-time.sh"
+printf '#!/usr/bin/env bash\necho "$*" >> "%s/nx.log"\n' "$tmp" > "$tmp/nx/bus.sh"; chmod 0644 "$tmp/nx/bus.sh"
+rc=0; err="$(env -u STEP_TIME_PUB bash "$tmp/nx/step-time.sh" --line t --node n --retries 1 -- true 2>&1)" || rc=$?
+[ "$rc" = 0 ] && grep -q '^pub line.t.time.n' "$tmp/nx.log" && ! grep -q 'publish to' <<<"$err" && ok "non-executable bus.sh is published through bash" || no "noexec bus rc=$rc err=$err"
+
 echo "pass=$pass fail=$fail"
 [ "$fail" = 0 ]

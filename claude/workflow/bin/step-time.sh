@@ -36,7 +36,12 @@ if [ -z "$LINE" ] || [ -z "$NODE" ]; then die "--line and --node are required"; 
 for n in "$BUDGET" "$TIMEOUT" "$RETRIES"; do case "$n" in ''|*[!0-9]*) die "budget, timeout and retries are whole seconds or counts" ;; esac; done
 [ "$RETRIES" -ge 1 ] || die "--retries is at least 1"
 case "$LINE$NODE" in *[!A-Za-z0-9_-]*) die "line and node are subject tokens: letters, digits, _ and -" ;; esac
-read -r -a PUB <<<"${STEP_TIME_PUB:-$HERE/bus.sh pub}"
+# WO-20261016-a702: bus.sh is mode 100644 in git, so executing it directly failed with
+# Permission denied (126) and every timed target lost its bus events (evidence:
+# ~/.local/state/zenith/evidence/2026/10/20261016-101833-step-time-bus-sh-noexec.txt).
+# Run it through bash. Rejected: chmod +x bus.sh - it is in WO-20261016-2092's In list, and a
+# mode bit is lost on copy to Windows Git Bash (Rule 17). STEP_TIME_PUB stays the override.
+read -r -a PUB <<<"${STEP_TIME_PUB:-bash $HERE/bus.sh pub}"
 run_id="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 
 pub() { # subject kind code attempt [dur rc]
