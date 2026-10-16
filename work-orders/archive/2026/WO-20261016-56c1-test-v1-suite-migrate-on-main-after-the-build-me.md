@@ -4,15 +4,15 @@
   "slug": "test-v1-suite-migrate-on-main-after-the-build-me",
   "title": "Test V1 - suite migrate on main after the build merges",
   "type": "test",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:53+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/test-v1-suite-migrate-on-main-after-the-build-me",
+  "pr": 247,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Architect rulings R3 and R4, 2026-10-16T04:25Z, recorded in design 18 (PR 153); Claude seats never use lavish",
@@ -61,7 +61,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+- [x] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+  - observed `2026-10-16` TP-1 command on main (ffe1b50): exit 0, output 'ok migrate' then 'ran 1 suite'. Output log: /home/luna/.local/state/zenith/artifacts/inbox-triage/2026/10/20261016-083152-tv1-migrate-suite.log. Note: tests/unit/test_migrate.sh prints no case named for a run upgrade; run migration is covered only via nodes-check requiring migrations/run and its fixture.
 
 ## Test plan
 
