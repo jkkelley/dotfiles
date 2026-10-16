@@ -134,7 +134,7 @@ WO-20261016-0272  draft       p1 Inbox-triage line build order - DAG of line nod
 |   |-- WO-20261016-bf7f  ready       p1 dag-state T4 - drift verb
 |   |-- WO-20261016-61f0  ready       p1 dag-state T5 - recover verb
 |   |-- WO-20261016-2397  ready       p1 dag-state T6 - Intake node declarations N1 to N10
-|   |-- WO-20261016-1e26  in-progress p1 dag-state T7 - Runbooks and playbooks for N1 to N10
+|   |-- WO-20261016-1e26  in-review   p1 dag-state T7 - Runbooks and playbooks for N1 to N10
 |   |-- WO-20261016-9464  ready       p1 dag-state T8 - Take and ship scripts for N1 to N3 and N6, N...
 |   `-- WO-20261016-0797  ready       p1 dag-state T9 - CI poll and merge scripts with approval check
 |-- WO-20261016-824e  ready       p1 Line build L1 - design-drift check
@@ -227,7 +227,7 @@ WO-20261016-3610  draft       p1 merge-train batch promotion: dev, UAT, stable p
 | `WO-20261016-0fb9` | ready | p1 | test | WO-20261016-41d0 | WO-20261016-2397 | [Test - dag-state T6 - Intake node declarations N1 to N10](WO-20261016-0272/WO-20261016-41d0/WO-20261016-0fb9-test-dag-state-t6-intake-node-declarations-n1-to.md) |
 | `WO-20261016-1139` | ready | p1 | test | WO-20261016-41d0 | WO-20261016-acde | [Test - dag-state T2 - plan verb](WO-20261016-0272/WO-20261016-41d0/WO-20261016-1139-test-dag-state-t2-plan-verb.md) |
 | `WO-20261016-141d` | ready | p1 | feature | WO-20261016-41d0 | WO-20261016-05db | [dag-state T3 - apply verb with retry and handoff](WO-20261016-0272/WO-20261016-41d0/WO-20261016-141d-dag-state-t3-apply-verb-with-retry-and-handoff.md) |
-| `WO-20261016-1e26` | in-progress | p1 | feature | WO-20261016-41d0 | - | [dag-state T7 - Runbooks and playbooks for N1 to N10](WO-20261016-0272/WO-20261016-41d0/WO-20261016-1e26-dag-state-t7-runbooks-and-playbooks-for-n1-to-n1.md) |
+| `WO-20261016-1e26` | in-review | p1 | feature | WO-20261016-41d0 | - | [dag-state T7 - Runbooks and playbooks for N1 to N10](WO-20261016-0272/WO-20261016-41d0/WO-20261016-1e26-dag-state-t7-runbooks-and-playbooks-for-n1-to-n1.md) |
 | `WO-20261016-2342` | draft | p1 | test | WO-20261016-41d0 | WO-20261016-6082 | [Test - dag-author edit, move, rm, step-add and prio: the rest of the authoring verbs](WO-20261016-0272/WO-20261016-41d0/WO-20261016-2342-test-dag-author-edit-move-rm-step-add-and-prio-t.md) |
 | `WO-20261016-2397` | ready | p1 | feature | WO-20261016-41d0 | WO-20261016-acde | [dag-state T6 - Intake node declarations N1 to N10](WO-20261016-0272/WO-20261016-41d0/WO-20261016-2397-dag-state-t6-intake-node-declarations-n1-to-n10.md) |
 | `WO-20261016-2717` | ready | p1 | test | WO-20261016-41d0 | WO-20261016-61f0 | [Test - dag-state T5 - recover verb](WO-20261016-0272/WO-20261016-41d0/WO-20261016-2717-test-dag-state-t5-recover-verb.md) |
