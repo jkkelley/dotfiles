@@ -33,7 +33,6 @@ Status `ready` with every dependency `done`. Hand one of these straight to an ag
 | `WO-20261016-83fb` | p1 | pr-flow consumer, sweep, config, Make targets and worker playbook (T6) | [WO-20261016-83fb-pr-flow-consumer-sweep-config-make-targets-and-w.md](WO-20261016-ebe4/WO-20261016-83fb-pr-flow-consumer-sweep-config-make-targets-and-w.md) |
 | `WO-20261016-88d3` | p1 | rolodex headers with no FILE drafts exactly the files check flags: same base, same file set | [WO-20261016-88d3-rolodex-headers-with-no-file-drafts-exactly-the-.md](WO-20261016-0272/WO-20261016-88d3-rolodex-headers-with-no-file-drafts-exactly-the-.md) |
 | `WO-20261016-599f` | p1 | timed-run: every target of claude/workflow/Makefile runs through the timing wrapper | [WO-20261016-599f-timed-run-every-target-of-claude-workflow-makefi.md](WO-20261016-0272/WO-20261016-af17/WO-20261016-599f-timed-run-every-target-of-claude-workflow-makefi.md) |
-| `WO-20261016-7e9f` | p1 | timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper | [WO-20261016-7e9f-timed-run-every-target-of-claude-workflow-mk-lin.md](WO-20261016-0272/WO-20261016-af17/WO-20261016-7e9f-timed-run-every-target-of-claude-workflow-mk-lin.md) |
 | `WO-20261016-7ca5` | p1 | timed-run: every target of claude/workflow/mk/resources.mk runs through the timing wrapper | [WO-20261016-7ca5-timed-run-every-target-of-claude-workflow-mk-res.md](WO-20261016-0272/WO-20261016-af17/WO-20261016-7ca5-timed-run-every-target-of-claude-workflow-mk-res.md) |
 
 ## Tree
@@ -100,7 +99,7 @@ WO-20261016-0272  draft       p1 Inbox-triage line build order - DAG of line nod
 |   |-- WO-20261016-599f  ready       p1 timed-run: every target of claude/workflow/Makefile runs th...
 |   |-- WO-20261016-39e6  ready       p1 timed-run: every target of claude/workflow/a2a-guard/a2a-gu...
 |   |-- WO-20261016-23b5  ready       p1 timed-run: every target of claude/workflow/a2a.mk runs thro...
-|   |-- WO-20261016-7e9f  ready       p1 timed-run: every target of claude/workflow/mk/line-watch.mk...
+|   |-- WO-20261016-7e9f  in-review   p1 timed-run: every target of claude/workflow/mk/line-watch.mk...
 |   `-- WO-20261016-7ca5  ready       p1 timed-run: every target of claude/workflow/mk/resources.mk ...
 |-- WO-20261016-6e8e  ready       p1 Line build L0 - treehouse seats: seats lease their worktree
 |-- WO-20261016-ab87  ready       p1 Line build L1 - cluster-ops: NATS, CronJobs, deadman on clu...
@@ -289,7 +288,7 @@ WO-20261016-3610  draft       p1 merge-train batch promotion: dev, UAT, stable p
 | `WO-20261016-5a79` | ready | p1 | feature | WO-20261016-af17 | WO-20261016-fb0c | [merge-train producer: every merge publishes start and end through timed-run](WO-20261016-0272/WO-20261016-af17/WO-20261016-5a79-merge-train-producer-every-merge-publishes-start.md) |
 | `WO-20261016-6e55` | ready | p1 | test | WO-20261016-af17 | WO-20261016-23b5 | [Test - timed-run: every target of claude/workflow/a2a.mk runs through the timing wrapper](WO-20261016-0272/WO-20261016-af17/WO-20261016-6e55-test-timed-run-every-target-of-claude-workflow-a.md) |
 | `WO-20261016-7ca5` | ready | p1 | chore | WO-20261016-af17 | - | [timed-run: every target of claude/workflow/mk/resources.mk runs through the timing wrapper](WO-20261016-0272/WO-20261016-af17/WO-20261016-7ca5-timed-run-every-target-of-claude-workflow-mk-res.md) |
-| `WO-20261016-7e9f` | ready | p1 | chore | WO-20261016-af17 | - | [timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper](WO-20261016-0272/WO-20261016-af17/WO-20261016-7e9f-timed-run-every-target-of-claude-workflow-mk-lin.md) |
+| `WO-20261016-7e9f` | in-review | p1 | chore | WO-20261016-af17 | - | [timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper](WO-20261016-0272/WO-20261016-af17/WO-20261016-7e9f-timed-run-every-target-of-claude-workflow-mk-lin.md) |
 | `WO-20261016-8590` | ready | p1 | test | WO-20261016-af17 | WO-20261016-7ca5 | [Test - timed-run: every target of claude/workflow/mk/resources.mk runs through the timing wrapper](WO-20261016-0272/WO-20261016-af17/WO-20261016-8590-test-timed-run-every-target-of-claude-workflow-m.md) |
 | `WO-20261016-94e2` | ready | p1 | test | WO-20261016-af17 | WO-20261016-39e6 | [Test - timed-run: every target of claude/workflow/a2a-guard/a2a-guard.mk runs through the timing wrapper](WO-20261016-0272/WO-20261016-af17/WO-20261016-94e2-test-timed-run-every-target-of-claude-workflow-a.md) |
 | `WO-20261016-9f87` | ready | p1 | test | WO-20261016-af17 | WO-20261016-2092 | [Test - Local NATS binds 127.0.0.1 only: bus.sh refuses any other bind host](WO-20261016-0272/WO-20261016-af17/WO-20261016-9f87-test-local-nats-binds-127-0-0-1-only-bus-sh-refu.md) |
