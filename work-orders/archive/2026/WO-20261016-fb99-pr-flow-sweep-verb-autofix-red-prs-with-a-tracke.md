@@ -4,7 +4,7 @@
   "slug": "pr-flow-sweep-verb-autofix-red-prs-with-a-tracke",
   "title": "pr-flow sweep verb autofix: red PRs with a tracked-ignored path or a stale contents list get the mechanical fix pushed, post AUTOFIX, make pr-autofix",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-ebe4",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design6 cut for ORD-0814 P1 P2; design approvals ruled done, ORD-0550 O4",
@@ -24,9 +24,7 @@
     "WO-20261016-5082",
     "WO-20261016-b211"
   ],
-  "blocks": [
-    "WO-20261016-acbe"
-  ],
+  "blocks": [],
   "ac_checks": [
     {
       "index": 1,
@@ -73,7 +71,8 @@
   ],
   "provides": [
     "make:pr-autofix"
-  ]
+  ],
+  "superseded_by": "WO-20261016-1b7e"
 }
 ---
 
@@ -241,4 +240,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: code merged in PR 270; close-out blocked (start refuses branch_exists: feat/pr-flow-sweep-verb-autofix-red-prs-with-a-tracke is held by /home/luna/.cache/wt-pr-autofix with unpushed duplicate commits); checks re-run under WO-20261016-1b7e
+- superseded by: `WO-20261016-1b7e`
+
+No branch, no PR and no merge commit exist for this work order.
+
