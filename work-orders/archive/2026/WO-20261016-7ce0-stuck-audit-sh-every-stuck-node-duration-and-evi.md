@@ -1,18 +1,18 @@
 ---
 {
-  "id": "WO-20261016-2c98",
-  "slug": "stuck-watch-mk-and-monitors-json-entry-up-down-s",
-  "title": "stuck-watch.mk and monitors.json entry: up, down, status, deadman-install, uninstall, clean",
+  "id": "WO-20261016-7ce0",
+  "slug": "stuck-audit-sh-every-stuck-node-duration-and-evi",
+  "title": "stuck-audit.sh: every stuck node, duration and evidence path, from the LINE stream",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
-  "created_at": "2026-10-16T04:51:58+00:00",
+  "created_at": "2026-10-16T04:51:56+00:00",
   "parent": "WO-20261016-3570",
-  "branch": "feat/stuck-watch-mk-and-monitors-json-entry-up-down-s",
-  "pr": null,
-  "closed": null,
+  "branch": "feat/stuck-audit-sh-every-stuck-node-duration-and-evi",
+  "pr": 170,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat: lavish is prohibited outside firstmate (~/AGENTS.md owner interaction surface); brief BR-20261016-stuck-watch from the architect is the approval",
@@ -21,14 +21,16 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261016-2d3e",
-    "WO-20261016-7ce0"
+    "WO-20261016-230f"
   ],
-  "blocks": []
+  "blocks": [
+    "WO-20261016-218b",
+    "WO-20261016-2c98"
+  ]
 }
 ---
 
-# WO-20261016-2c98 - stuck-watch.mk and monitors.json entry: up, down, status, deadman-install, uninstall, clean
+# WO-20261016-7ce0 - stuck-audit.sh: every stuck node, duration and evidence path, from the LINE stream
 
 ## Contents
 
@@ -44,19 +46,17 @@
 
 ## Problem
 
-The scripts need Make entry points and one monitors.json entry.
+No morning view of what stalled overnight.
 
 ## Scope
 
 **In**
 
-- claude/workflow/stuck-watch/stuck-watch.mk
-- claude/workflow/Makefile (one include)
-- claude/workflow/config/monitors.json
+- claude/workflow/stuck-watch/stuck-audit.sh
 
 **Out - non-goals**
 
-- script logic
+- writing to the bus
 
 ## Degrees of freedom
 
@@ -64,8 +64,8 @@ The scripts need Make entry points and one monitors.json entry.
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* make stuck-watch-up/down/status, deadman-install/uninstall, stuck-watch-clean exist and are idempotent
-- [ ] `AC-H2` *(human)* monitors.json has a stuck-watch entry
+- [x] `AC-H1` *(human)* make stuck-audit LINE= prints seat, code, first, last, duration, evidence path
+  - observed `2026-10-16` dev audit case: one row per seat+code with first, last, duration_s 660, ticks 2, evidence path; table prints 11m
 
 ## Test plan
 

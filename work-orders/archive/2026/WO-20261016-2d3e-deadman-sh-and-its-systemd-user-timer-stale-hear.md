@@ -4,15 +4,15 @@
   "slug": "deadman-sh-and-its-systemd-user-timer-stale-hear",
   "title": "deadman.sh and its systemd --user timer: stale heartbeat or down bus pages 'stuck-watch dead'",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:51:55+00:00",
   "parent": "WO-20261016-3570",
   "branch": "feat/deadman-sh-and-its-systemd-user-timer-stale-hear",
-  "pr": null,
-  "closed": null,
+  "pr": 170,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat: lavish is prohibited outside firstmate (~/AGENTS.md owner interaction surface); brief BR-20261016-stuck-watch from the architect is the approval",
@@ -65,9 +65,12 @@ A dead watcher is silent.
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* heartbeat older than 3 min -> ntfy priority high
-- [ ] `AC-H2` *(human)* bus down -> ntfy priority high
-- [ ] `AC-H3` *(human)* started by systemd --user timer only
+- [x] `AC-H1` *(human)* heartbeat older than 3 min -> ntfy priority high
+  - observed `2026-10-16` dev deadman-stale: 240 s old heartbeat -> Title stuck-watch dead, Priority high, ntfy=200; UAT AC2: 205 s after last heartbeat on the test topic (/home/luna/.local/state/zenith/log/2026/10/20261016-051034-stuck-watch-uat-stuck-uat.log)
+- [x] `AC-H2` *(human)* bus down -> ntfy priority high
+  - observed `2026-10-16` dev deadman-bus-down: unreachable bus -> Title bus down, Priority high
+- [x] `AC-H3` *(human)* started by systemd --user timer only
+  - observed `2026-10-16` make deadman-install renders stuck-deadman.service/.timer into ~/.config/systemd/user and enables the timer; UAT AC2 fired from that timer
 
 ## Test plan
 
