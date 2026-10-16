@@ -79,6 +79,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-16` infra-design10: shipped in PR 174 (merged 7fc65c8); closed by WO-20261016-4925, do not start this ticket for build work
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._

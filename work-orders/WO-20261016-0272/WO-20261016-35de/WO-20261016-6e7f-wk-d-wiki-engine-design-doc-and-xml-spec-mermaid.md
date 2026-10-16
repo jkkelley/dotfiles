@@ -4,7 +4,7 @@
   "slug": "wk-d-wiki-engine-design-doc-and-xml-spec-mermaid",
   "title": "WK-D: wiki engine design doc and XML spec - mermaid pipeline, status codes, GOOD/NEVER per rule",
   "type": "chore",
-  "status": "draft",
+  "status": "ready",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "infra-design10 cut for ORD-0830 RR-orch-14 and ORD-0921; design approvals ruled done, ORD-0550 O4",
+    "at": "2026-10-16"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [
@@ -22,6 +26,50 @@
   "blocks": [
     "WO-20261016-7a8f",
     "WO-20261016-96c4"
+  ],
+  "ac_checks": [
+    {
+      "index": 1,
+      "command": "bash scripts/spec-check.sh docs/design/wiki.spec.xml",
+      "exit": 0,
+      "expect": "^ok"
+    },
+    {
+      "index": 2,
+      "command": "bash scripts/md-contents.sh check docs/design/wiki.md",
+      "exit": 0,
+      "expect": null
+    },
+    {
+      "index": 3,
+      "command": "grep -c '^## Design principles 101' docs/design/wiki.md",
+      "exit": 0,
+      "expect": "^1$"
+    },
+    {
+      "index": 4,
+      "command": "awk '/^## Design principles 101/{f=1;next} /^## /{f=0} f && /^[0-9]+\\. /' docs/design/wiki.md | wc -l",
+      "exit": 0,
+      "expect": "^40$"
+    },
+    {
+      "index": 5,
+      "command": "grep -oE 'WIKI-0[0-9]{2}' docs/design/wiki.spec.xml | sort -u | wc -l",
+      "exit": 0,
+      "expect": "^16$"
+    },
+    {
+      "index": 6,
+      "command": "grep -c '<fallback' docs/design/wiki.spec.xml",
+      "exit": 0,
+      "expect": "^([5-9]|[1-9][0-9]+)$"
+    },
+    {
+      "index": 7,
+      "command": "git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|docs/design/wiki[.]md|docs/design/wiki[.]spec[.]xml)$'",
+      "exit": 1,
+      "expect": null
+    }
   ]
 }
 ---
@@ -48,12 +96,18 @@ Owner words, verbatim: "MAKE SURE A KNOWLEDGE BASE WIKI OF YIELDPOINT AI IS BUIL
 
 **In**
 
+- touches: docs/design/wiki.md (new) and docs/design/wiki.spec.xml (new); nothing else
+- touches (generated, written only by work-order.sh start/submit/evidence/done, never by hand or git add): this ticket file and its archive path; work-orders/INDEX.md and the parent epic README.md are ignored generated views
 - docs/design/wiki.md: '## Contents', '## Design principles 101' (one line per principle 1 to 40), then Purpose, Inventory (reused: md-contents.sh, spec-check.sh, artifact.mk, golden-rules.sh, timed-run.sh; sources listed in YW-C), Layout, Pipeline, Page format, Verbs, Status codes, Fallbacks, Gates dev/UAT/stable, Migration; every rule with a GOOD and a NEVER line
 - Pipeline mermaid: `graph LR; I[intake] --&gt; R[raw]; R --&gt; P[processed]; P --&gt; X[index]; P --&gt; V[review]; X --&gt; C[check]`
 - Status codes: WIKI-000 ok; WIKI-001 captured; WIKI-002 already captured; WIKI-003 blob sent to the artifact store; WIKI-010 skeleton written; WIKI-011 page unchanged; WIKI-020 index written; WIKI-030 check failed; WIKI-031 no contents list; WIKI-032 broken link; WIKI-033 orphan raw; WIKI-034 uncited section; WIKI-035 page over size; WIKI-036 secret pattern; WIKI-037 TODO-WRITE left; WIKI-040 review page written; exits 0 ok, 2 usage, 3 check failed, 4 io
 - docs/design/wiki.spec.xml: at most 1000 lines, first child <contents>, one element per verb with inputs, outputs, codes, idempotency and fallback
 - Tool: scripts/spec-check.sh (on main). Fallback: none needed, the tool is a file on main read locally; a missing file stops the step with exit 4
 - Tool: scripts/md-contents.sh (on main). Fallback: none needed, the tool is a file on main read locally; a missing file stops the step with exit 4
+- step: branch from origin/main in your own worktree; write the two files exactly as the bullets above fix them, taking every decision from this Problem and the WK and YW tickets under WO-20261016-35de; nothing invented: a missing fact is DESIGN-GAP
+- step: run bash scripts/md-contents.sh write docs/design/wiki.md, then the AC checks only; commit 'docs(design): wiki engine design doc and XML spec (WO-20261016-6e7f)'; no Bump trailer
+- tool: cmd:git, cmd:gh - fallback: missing on the host: stop with ENV-MISSING; GitHub down: retry 3 times, then stop with A2A-003 and its output
+- spec element names, fixed: <contents> first, then one <verb name="intake|process|index|review|check"> each holding <inputs>, <outputs>, <codes>, <idempotency> and <fallback> children (AC-H6 counts <fallback)
 
 **Out - non-goals**
 
@@ -66,15 +120,31 @@ Owner words, verbatim: "MAKE SURE A KNOWLEDGE BASE WIKI OF YIELDPOINT AI IS BUIL
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `bash scripts/spec-check.sh docs/design/wiki.spec.xml` -> exit 0, output contains `ok`. Proof: command output
-- [ ] `AC-H2` *(human)* `bash scripts/md-contents.sh check docs/design/wiki.md` -> exit 0. Proof: command output
-- [ ] `AC-H3` *(human)* `grep -c '^## Design principles 101' docs/design/wiki.md` -> exit 0, output `1`. Proof: command output
+- [ ] `AC-H1` *(human)* the spec is 1000 lines or less, parses and opens with contents
+  - check: `bash scripts/spec-check.sh docs/design/wiki.spec.xml` exit 0 expect /^ok/
+- [ ] `AC-H2` *(human)* the design opens with a contents list
+  - check: `bash scripts/md-contents.sh check docs/design/wiki.md` exit 0
+- [ ] `AC-H3` *(human)* Design principles 101 sits in the design once
+  - check: `grep -c '^## Design principles 101' docs/design/wiki.md` exit 0 expect /^1$/
+- [ ] `AC-H4` *(human)* one line per principle 1 to 40
+  - check: `awk '/^## Design principles 101/{f=1;next} /^## /{f=0} f && /^[0-9]+\. /' docs/design/wiki.md | wc -l` exit 0 expect /^40$/
+- [ ] `AC-H5` *(human)* the 16 fixed status codes WIKI-000 to WIKI-040 are in the spec
+  - check: `grep -oE 'WIKI-0[0-9]{2}' docs/design/wiki.spec.xml | sort -u | wc -l` exit 0 expect /^16$/
+- [ ] `AC-H6` *(human)* every verb names its fallback
+  - check: `grep -c '<fallback' docs/design/wiki.spec.xml` exit 0 expect /^([5-9]|[1-9][0-9]+)$/
+- [ ] `AC-H7` *(human)* the diff holds only the two design files and work-orders files
+  - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|docs/design/wiki[.]md|docs/design/wiki[.]spec[.]xml)$'` exit 1
 
 ## Test plan
 
-```sh
-bash scripts/spec-check.sh docs/design/wiki.spec.xml
-```
+{"scope":"the wiki engine design doc and XML spec","cases":[
+{"id":"TP-1","intent":"a spec over 1000 lines, unparsed or without a first <contents> child breaks item 28","command":"bash scripts/spec-check.sh docs/design/wiki.spec.xml","expected":"exit 0; ok line"},
+{"id":"TP-2","intent":"a design without a contents list breaks the owner Markdown rule","command":"bash scripts/md-contents.sh check docs/design/wiki.md","expected":"exit 0"},
+{"id":"TP-3","intent":"Design principles 101 right below the contents list, one line per principle 1 to 40","command":"awk '/^## Design principles 101/{f=1;next} /^## /{f=0} f && /^[0-9]+\\. /' docs/design/wiki.md | wc -l","expected":"exit 0; 40"},
+{"id":"TP-4","intent":"every fixed status code is carried by the spec","command":"grep -oE 'WIKI-0[0-9]{2}' docs/design/wiki.spec.xml | sort -u | wc -l","expected":"exit 0; 16"},
+{"id":"TP-5","intent":"fallback path: every verb names its fallback (ORD-0558 O1)","command":"grep -c '<fallback' docs/design/wiki.spec.xml","expected":"exit 0; 5 or more"}],
+"isolation":{"runtime":"podman","image":"docker.io/library/debian@sha256:328d16499860ae6cb9b345e2e4cebca08c2a36e4f7278482c7bd1f39d71e5bfd"},
+"out_of_scope":["engine code: WK0 to WK5","lint and the full suite: CI"]}
 
 ## Assumptions
 
