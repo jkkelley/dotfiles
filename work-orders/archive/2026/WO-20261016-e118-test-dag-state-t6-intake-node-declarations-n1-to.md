@@ -4,15 +4,15 @@
   "slug": "test-dag-state-t6-intake-node-declarations-n1-to",
   "title": "Test - dag-state T6 - Intake node declarations N1 to N10",
   "type": "test",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:07:51+00:00",
   "parent": "WO-20261016-41d0",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/test-dag-state-t6-intake-node-declarations-n1-to",
+  "pr": 303,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design8 cut for ORD-0837 RR-orch-18, ORD-0848 Y3 and the ORD-0830 RR-orch-14 DESIGN-GAPs; design approvals ruled done, ORD-0550 O4",
@@ -95,9 +95,11 @@ This test ticket runs the plan of the recut T6 build ticket; it was recut with i
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* TP-1 prints ok-nodes and exits 0
+- [x] `AC-H1` *(human)* TP-1 prints ok-nodes and exits 0
+  - observed `2026-10-16` TP-1 exit 0, printed ok-nodes; log ~/.local/state/zenith/log/2026/10/20261016-102504-dag-t6-test.txt
   - check: `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'for f in claude/workflow/dag/nodes/N*.node.json; do bash claude/workflow/tools/validate-schema.sh claude/workflow/dag/schemas/node.schema.json $f || exit 1; done; echo ok-nodes'` exit 0 expect /ok-nodes/
-- [ ] `AC-H2` *(human)* the run output is written by script to the artifact store with frontmatter
+- [x] `AC-H2` *(human)* the run output is written by script to the artifact store with frontmatter
+  - observed `2026-10-16` ls of log dir greps dag-t6-test, exit 0: 20261016-102504-dag-t6-test.txt with frontmatter
   - check: `bash -c 'ls ~/.local/state/zenith/log/$(date -u +%Y/%m)/ | grep -q dag-t6-test'` exit 0
 
 ## Test plan
