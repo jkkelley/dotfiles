@@ -6,6 +6,24 @@ version: 1.6.0
 
 # project-scaffold
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [When this applies](#when-this-applies)
+- [What gets installed](#what-gets-installed)
+- [Workflow](#workflow)
+  - [1. Scaffold](#1-scaffold)
+  - [2. Log an issue](#2-log-an-issue)
+  - [3. Manage the backlog](#3-manage-the-backlog)
+  - [4. Migrate and check](#4-migrate-and-check)
+- [Contracts every tool honours](#contracts-every-tool-honours)
+- [Reading a scaffolded project](#reading-a-scaffolded-project)
+- [Versioning](#versioning)
+- [Testing](#testing)
+- [Additional reference](#additional-reference)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Install the agent context layer into a project, and own the formats of the files that make it up.
 
 Four markdown files, two entry trees, three scripts, one rule: **an agent never hand-edits a managed file.**

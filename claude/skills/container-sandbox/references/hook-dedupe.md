@@ -1,5 +1,17 @@
 # Hook dedupe across global and project settings
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Contents](#contents)
+- [Verdict](#verdict)
+- [Documented behavior](#documented-behavior)
+- [Empirical test](#empirical-test)
+- [Caveats](#caveats)
+- [Fallback](#fallback)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Contents
 
 - [Verdict](#verdict)

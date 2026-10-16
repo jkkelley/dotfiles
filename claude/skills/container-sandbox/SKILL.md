@@ -6,6 +6,46 @@ version: 1.6.1
 
 # Dependency Isolation Protocol
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [1. Choosing the Sandbox](#1-choosing-the-sandbox)
+- [Verifying a host CLI's behaviour](#verifying-a-host-clis-behaviour)
+  - [The pattern](#the-pattern)
+  - [Isolate the state, or the test is on the host](#isolate-the-state-or-the-test-is-on-the-host)
+  - [Report what was observed, not what was expected](#report-what-was-observed-not-what-was-expected)
+  - [The trap this pattern exists to catch](#the-trap-this-pattern-exists-to-catch)
+- [Verifying a hook that only fires on a real session start](#verifying-a-hook-that-only-fires-on-a-real-session-start)
+  - [Fire the session, do not simulate it](#fire-the-session-do-not-simulate-it)
+  - [Read the hook's output from the transcript, never from the agent's reply](#read-the-hooks-output-from-the-transcript-never-from-the-agents-reply)
+  - [Exit codes tell you nothing here, by design](#exit-codes-tell-you-nothing-here-by-design)
+  - [Clear the churn guard between steps, and say that you did](#clear-the-churn-guard-between-steps-and-say-that-you-did)
+- [Testing a bash automation daemon end-to-end](#testing-a-bash-automation-daemon-end-to-end)
+- [2. Dependency Management (The "No-Clutter" Way)](#2-dependency-management-the-no-clutter-way)
+  - [Node.js (npm)](#nodejs-npm)
+  - [Go](#go)
+- [Terraform / Ministack Sandbox](#terraform--ministack-sandbox)
+  - [Step 1 — Gitignore Pre-Flight](#step-1--gitignore-pre-flight)
+  - [Step 2 — Start Ministack](#step-2--start-ministack)
+  - [Step 3 — Seed a Throwaway terraform.tfvars](#step-3--seed-a-throwaway-terraformtfvars)
+  - [Step 4 — Point Terraform at Ministack](#step-4--point-terraform-at-ministack)
+  - [Step 5 — Validate](#step-5--validate)
+  - [Step 6 — Teardown](#step-6--teardown)
+- [Lifecycle Management](#lifecycle-management)
+- [3. Frontend Dev With API Dependency — Full Stack Compose Rule](#3-frontend-dev-with-api-dependency--full-stack-compose-rule)
+  - [Port convention — always probe for an open port in 30000+ before starting any container](#port-convention--always-probe-for-an-open-port-in-30000-before-starting-any-container)
+  - [Single-container preview (no compose needed) — with 30-minute auto-stop](#single-container-preview-no-compose-needed--with-30-minute-auto-stop)
+  - [Pattern — real backend stack](#pattern--real-backend-stack)
+  - [Critical: Vite proxy env var — use API_PROXY_TARGET, not VITE_API_URL](#critical-vite-proxy-env-var--use-api_proxy_target-not-vite_api_url)
+  - [Pattern — mock backend (no real backend image available)](#pattern--mock-backend-no-real-backend-image-available)
+  - [podman-compose 1.0.6 known limitations](#podman-compose-106-known-limitations)
+  - [Seed data guidelines](#seed-data-guidelines)
+  - [Teardown](#teardown)
+- [Verifying a page at a phone viewport](#verifying-a-page-at-a-phone-viewport)
+- [Testing a local page server with a real browser, in one container](#testing-a-local-page-server-with-a-real-browser-in-one-container)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 **RULE:** Never run `npm install`, `go mod download`, or `pip install` on the host.
 
 **RULE:** All testing runs in Podman. Every command whose purpose is to verify that something works goes in a container, including a single `python3 script.py --help`. There is no threshold below which host execution is acceptable.

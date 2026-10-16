@@ -6,6 +6,21 @@ version: 1.0.3
 
 # Cypress Patterns
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Selector Priority (best → worst)](#selector-priority-best-%E2%86%92-worst)
+- [Core Command Patterns](#core-command-patterns)
+- [Intercept Patterns](#intercept-patterns)
+- [cy.session() Login Pattern](#cysession-login-pattern)
+- [Custom Commands](#custom-commands)
+- [Flaky Test Diagnosis & Fixes](#flaky-test-diagnosis--fixes)
+- [Page Object Model](#page-object-model)
+- [CI Configuration](#ci-configuration)
+- [Anti-Patterns](#anti-patterns)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Selector Priority (best → worst)
 
 ```js

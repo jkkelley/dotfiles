@@ -1,5 +1,28 @@
 # Operator Skill — Implementation Plan
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [File Structure](#file-structure)
+- [Task 1: Scaffold the operator skill directory and frontmatter](#task-1-scaffold-the-operator-skill-directory-and-frontmatter)
+- [Task 2: Add the three reference templates](#task-2-add-the-three-reference-templates)
+- [Task 3: Implement the bootstrap flow](#task-3-implement-the-bootstrap-flow)
+- [Task 4: Implement intent (a) — capture an idea](#task-4-implement-intent-a--capture-an-idea)
+- [Task 5: Implement intent (f) — create a new domain](#task-5-implement-intent-f--create-a-new-domain)
+- [Task 6: Implement intent (d) — start a new project](#task-6-implement-intent-d--start-a-new-project)
+- [Task 7: Implement intent (c) — show domain status](#task-7-implement-intent-c--show-domain-status)
+- [Task 8: Implement intent (e) — close a project](#task-8-implement-intent-e--close-a-project)
+- [Task 9: Implement intent (g) — edit/refine a north-star](#task-9-implement-intent-g--editrefine-a-north-star)
+- [Task 10: Build the `operator-planner` subagent](#task-10-build-the-operator-planner-subagent)
+- [Task 11: Implement intent (b) — plan / "what should I work on?"](#task-11-implement-intent-b--plan--what-should-i-work-on)
+- [Task 12: Implement intent (h) — show today's agenda](#task-12-implement-intent-h--show-todays-agenda)
+- [Task 13: Build the `operator-triage` subagent](#task-13-build-the-operator-triage-subagent)
+- [Task 14: Implement intent (i) — triage inbox](#task-14-implement-intent-i--triage-inbox)
+- [Task 15: Verify install and run end-to-end smoke test](#task-15-verify-install-and-run-end-to-end-smoke-test)
+- [Out of plan (covered in spec §11 as future work)](#out-of-plan-covered-in-spec-11-as-future-work)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a personal work-steering Claude Code skill (`operator`) that captures fleeting ideas, tracks projects across multiple life domains, and recommends what to work on — backed by a private GitHub data repo with pull-on-read/push-on-write sync.

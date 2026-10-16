@@ -6,6 +6,29 @@ version: 1.0.3
 
 # Project Kickoff
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [When This Applies](#when-this-applies)
+- [Hard Rules](#hard-rules)
+- [Step 0 — Read Context](#step-0--read-context)
+- [Step 1 — Interview (one question per turn)](#step-1--interview-one-question-per-turn)
+  - [Q1 — Project identity](#q1--project-identity)
+  - [Q2 — AWS needed?](#q2--aws-needed)
+  - [Q3 — Kubernetes?](#q3--kubernetes)
+  - [Q4 — Database?](#q4--database)
+  - [Q5 — Message bus?](#q5--message-bus)
+  - [Q6 — CI/CD?](#q6--cicd)
+  - [Q7 — DNS / Ingress?](#q7--dns--ingress)
+  - [Q8 — Knowledge base entry?](#q8--knowledge-base-entry)
+- [Step 2 — Generate the Kickoff Checklist](#step-2--generate-the-kickoff-checklist)
+  - [Template](#template)
+- [Homelab Standing Rules (always apply)](#homelab-standing-rules-always-apply)
+- [Step 3 — Save to Knowledge Base](#step-3--save-to-knowledge-base)
+- [Step 4 — Hand Off](#step-4--hand-off)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Capture infrastructure requirements before any code is written. One question at a time.
 Output is a concrete, copy-paste-ready checklist specific to this project.
 

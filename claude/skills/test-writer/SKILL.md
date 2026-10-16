@@ -6,6 +6,18 @@ version: 1.0.3
 
 # Test Writer
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Workflow](#workflow)
+- [Framework defaults by language](#framework-defaults-by-language)
+- [Test structure](#test-structure)
+- [Language-specific conventions](#language-specific-conventions)
+- [Output format](#output-format)
+- [For additional reference](#for-additional-reference)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Workflow
 
 1. **Read the source** — read every file the user provides or that's relevant to the code under test.

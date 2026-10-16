@@ -1,0 +1,5 @@
+# Global agent instruction files outside any repo that carry the golden rules block. ~ allowed.
+# ~/.claude/CLAUDE.md and ~/.codex/AGENTS.md are symlinks to ~/AGENTS.md, resolved so it is written once.
+~/AGENTS.md
+~/.deepseek/instructions.md
+~/OPINIONS.md

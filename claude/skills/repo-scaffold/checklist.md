@@ -1,5 +1,24 @@
 # Post-Scaffold Verification Checklist
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Universal (every stack)](#universal-every-stack)
+- [Node.js / TypeScript](#nodejs--typescript)
+- [Python](#python)
+- [Go](#go)
+- [Java / Kotlin](#java--kotlin)
+- [Docker / Containers](#docker--containers)
+- [Kubernetes / Helm](#kubernetes--helm)
+- [CI/CD](#cicd)
+  - [GitHub Actions](#github-actions)
+  - [Jenkins](#jenkins)
+  - [GitLab CI](#gitlab-ci)
+  - [CircleCI](#circleci)
+- [Secrets & credentials](#secrets--credentials)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Universal (every stack)
 
 - [ ] README: update title, description, badge URLs, setup instructions

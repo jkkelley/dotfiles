@@ -1,11 +1,14 @@
 # Design: agent to agent briefs and results as schema
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 - [Design principles 101](#design-principles-101)
 - [Inventory](#inventory)
 - [DAG](#dag)
 - [Nodes](#nodes)
 - [State and recovery](#state-and-recovery)
+
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Design principles 101

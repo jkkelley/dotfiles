@@ -6,6 +6,18 @@ version: 1.0.3
 
 # Frontend Checklist
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Performance (Core Web Vitals)](#performance-core-web-vitals)
+- [Accessibility (WCAG 2.1 AA)](#accessibility-wcag-21-aa)
+- [Component Patterns](#component-patterns)
+- [CSS Patterns](#css-patterns)
+- [State Management Decision Tree](#state-management-decision-tree)
+- [Pre-Ship Checklist](#pre-ship-checklist)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Performance (Core Web Vitals)
 
 | Metric | Target | Measure |

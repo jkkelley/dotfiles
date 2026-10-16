@@ -1,11 +1,14 @@
 # Agent to agent briefs and results
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 - [Why](#why)
 - [Files](#files)
 - [Status codes](#status-codes)
 - [Commands](#commands)
 - [GOOD and NEVER](#good-and-never)
+
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Why

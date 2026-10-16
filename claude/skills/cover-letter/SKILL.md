@@ -6,6 +6,27 @@ version: 2.0.2
 
 # /cover-letter - Cover Letter Generator
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Prerequisites](#prerequisites)
+- [Phase B - Full per-application workflow](#phase-b---full-per-application-workflow)
+  - [Step 1 - Intake the job description](#step-1---intake-the-job-description)
+  - [Step 2 - Read the pools](#step-2---read-the-pools)
+  - [Step 3 - Hand-pick fragments](#step-3---hand-pick-fragments)
+  - [Step 4 - Draft WHY_THIS_COMPANY](#step-4---draft-why_this_company)
+  - [Step 5 - Choose tone](#step-5---choose-tone)
+  - [Step 6 - Write selection.py](#step-6---write-selectionpy)
+  - [Step 7 - Pre-build checklist](#step-7---pre-build-checklist)
+  - [Step 8 - Build](#step-8---build)
+  - [Step 9 - Verify](#step-9---verify)
+  - [Step 10 - Done (no git action)](#step-10---done-no-git-action)
+  - [Step 11 - Final report](#step-11---final-report)
+- [Adding new fragments to the pools](#adding-new-fragments-to-the-pools)
+- [Constraints](#constraints)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Builds a tailored, one-page `.docx` cover letter from a job description.
 The prose/content package (`content/`) lives in this repo and is
 version-controlled; per-application output (`work_title/applications/`) is

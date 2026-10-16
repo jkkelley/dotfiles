@@ -1,5 +1,14 @@
 # RB-watcher - run a watcher without disturbing what it watches
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [The contract](#the-contract)
+- [Use](#use)
+- [Failure modes](#failure-modes)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Switch: `bin/watch-ctl.sh on|off|status workflow <workflow-id>`; `bin/workflow-watch.sh <id> on|off` delegates to it.
 Every watcher runs in the foreground of a labeled herdr pane, `watch-workflow-<id>` in the `monitors` tab. Nothing is backgrounded (dotfiles CLAUDE.md Rule 18).
 Log and pid: the configured `state_dir`, currently `~/.local/state/dotfiles/execution/`, as `<workflow>-watch.log` and `<workflow>-watch.pid`.

@@ -1,5 +1,17 @@
 # Close-out procedure
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [The procedure](#the-procedure)
+- [Why it is shaped like this](#why-it-is-shaped-like-this)
+- [The order that matters](#the-order-that-matters)
+- [What this replaces](#what-this-replaces)
+- [Roll forward](#roll-forward)
+- [Verifying the procedure holds](#verifying-the-procedure-holds)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 <!-- workflow-version: 1.0.1 -->
 
 How a ticket in this repository goes from started to shipped.

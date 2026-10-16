@@ -1,5 +1,55 @@
 # Inbox sweep - design
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Contents](#contents)
+- [1. Goal](#1-goal)
+- [2. Inventory](#2-inventory)
+- [3. Failures this design removes](#3-failures-this-design-removes)
+- [4. Shape of one run](#4-shape-of-one-run)
+- [5. Run DAG](#5-run-dag)
+  - [R1 init](#r1-init)
+  - [R2 preflight](#r2-preflight)
+  - [R3 seats](#r3-seats)
+  - [R4 watch and bridge](#r4-watch-and-bridge)
+  - [R5 collect](#r5-collect)
+  - [R6 cards](#r6-cards)
+  - [R7 clean](#r7-clean)
+- [6. Status code map](#6-status-code-map)
+- [7. Tool chosen for each step](#7-tool-chosen-for-each-step)
+- [8. Make and script plan](#8-make-and-script-plan)
+- [9. Where everything lives, and how it is cleaned](#9-where-everything-lives-and-how-it-is-cleaned)
+- [10. Build DAG](#10-build-dag)
+- [11. Testing](#11-testing)
+- [12. Owner decisions](#12-owner-decisions)
+  - [D1 Mark read or leave unread](#d1-mark-read-or-leave-unread)
+  - [D2 Make only, or make plus just](#d2-make-only-or-make-plus-just)
+  - [D3 Waking the extension](#d3-waking-the-extension)
+  - [D4 Proton seats](#d4-proton-seats)
+  - [D5 When a sweep runs](#d5-when-a-sweep-runs)
+  - [D6 Retention of run dirs](#d6-retention-of-run-dirs)
+  - [D7 After a LinkedIn draft is approved](#d7-after-a-linkedin-draft-is-approved)
+- [13. Conflicts surfaced](#13-conflicts-surfaced)
+- [14. LinkedIn reply DAG](#14-linkedin-reply-dag)
+  - [Sections in this part](#sections-in-this-part)
+  - [14.1 Goal and boundary](#141-goal-and-boundary)
+  - [14.2 Reply DAG](#142-reply-dag)
+  - [14.3 Nodes](#143-nodes)
+  - [14.4 Failure branches](#144-failure-branches)
+  - [14.5 The edit path](#145-the-edit-path)
+  - [14.6 Status code map](#146-status-code-map)
+  - [14.7 Where everything lives, and how it is cleaned](#147-where-everything-lives-and-how-it-is-cleaned)
+  - [14.8 Build nodes](#148-build-nodes)
+- [15. Versioned nodes and migrations](#15-versioned-nodes-and-migrations)
+  - [15.1 One declaration per node](#151-one-declaration-per-node)
+  - [15.2 Schema versions and migrations](#152-schema-versions-and-migrations)
+  - [15.3 Migration plan](#153-migration-plan)
+- [16. No-bottleneck check](#16-no-bottleneck-check)
+- [17. Lead stage](#17-lead-stage)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Status: APPROVED, owner ruling 2026-10-16 UTC on Bearings card D-04, with the architect's rulings recorded in [section 12](#12-owner-decisions).
 Build tickets are cut from [section 10](#10-build-dag).
 Owner order, 2026-10-15 UTC: "make sure you clean up too and shit is automated with makefiles and scripts, i'm not fucking around, dag this shit out doc design first".

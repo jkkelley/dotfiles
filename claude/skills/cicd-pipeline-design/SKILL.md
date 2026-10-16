@@ -6,6 +6,31 @@ version: 1.0.3
 
 # CI/CD Pipeline Design
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Core mental model: every pipeline is a DAG](#core-mental-model-every-pipeline-is-a-dag)
+- [Image tagging — prevent overwrites between concurrent builds](#image-tagging--prevent-overwrites-between-concurrent-builds)
+  - [Tag strategy by build type](#tag-strategy-by-build-type)
+  - [Branch slug sanitization](#branch-slug-sanitization)
+  - [Promotion pattern (immutable → mutable)](#promotion-pattern-immutable-%E2%86%92-mutable)
+- [Environment isolation — prevent builds from stomping each other](#environment-isolation--prevent-builds-from-stomping-each-other)
+  - [1. Namespace-per-branch (Kubernetes)](#1-namespace-per-branch-kubernetes)
+  - [2. Unique resource naming](#2-unique-resource-naming)
+  - [3. Database isolation](#3-database-isolation)
+  - [4. Port conflict avoidance](#4-port-conflict-avoidance)
+  - [5. Concurrency controls (serialization when isolation isn't possible)](#5-concurrency-controls-serialization-when-isolation-isnt-possible)
+- [Pipeline stages — standard structure](#pipeline-stages--standard-structure)
+- [Secrets management](#secrets-management)
+- [Caching strategy](#caching-strategy)
+- [Additional reference](#additional-reference)
+- [Homelab K8s — AVP + ESO Secrets Contract for Pipelines](#homelab-k8s--avp--eso-secrets-contract-for-pipelines)
+  - [What the pipeline writes to GitOps](#what-the-pipeline-writes-to-gitops)
+  - [What provides secrets to the pod (not the pipeline)](#what-provides-secrets-to-the-pod-not-the-pipeline)
+  - [ArgoCD Application source (all homelab apps)](#argocd-application-source-all-homelab-apps)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Core mental model: every pipeline is a DAG
 
 Before writing any config, map the directed acyclic graph:

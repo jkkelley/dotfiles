@@ -6,6 +6,24 @@ version: 1.0.3
 
 # Task Router
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [When This Applies](#when-this-applies)
+- [Relationship to Other Skills](#relationship-to-other-skills)
+- [Session Plan Routing](#session-plan-routing)
+- [Step 0 — Orient](#step-0--orient)
+- [Step 1 — Choose Dispatch Mode](#step-1--choose-dispatch-mode)
+  - [Direct Execution Mode](#direct-execution-mode)
+  - [Handoff Doc Mode](#handoff-doc-mode)
+- [Step 2 — Standard Handoff Doc Template](#step-2--standard-handoff-doc-template)
+- [Step 3 — PR Gate](#step-3--pr-gate)
+- [Step 4 — Post-Merge Cleanup](#step-4--post-merge-cleanup)
+- [Step 5 — Task Tracking](#step-5--task-tracking)
+- [Red Flags](#red-flags)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Coordinate multi-task projects. One Claude session holds the plan and routes work — either dispatching subagents directly or generating handoff documents for separate Claude sessions to pick up. Every task ends at a PR gate. The router does not merge; the user does.
 
 ## When This Applies

@@ -6,6 +6,27 @@ version: 1.0.0
 
 # Skill registry
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [The three pieces](#the-three-pieces)
+- [What a version bump means](#what-a-version-bump-means)
+- [Commands](#commands)
+  - [The two forms of `verify`](#the-two-forms-of-verify)
+  - [The drift report names skills and tools separately](#the-drift-report-names-skills-and-tools-separately)
+  - [A schema mismatch is its own failure](#a-schema-mismatch-is-its-own-failure)
+  - [Bump once, last](#bump-once-last)
+- [Every SKILL.md carries the read-only notice](#every-skillmd-carries-the-read-only-notice)
+- [The registry is generated, never edited](#the-registry-is-generated-never-edited)
+  - [`type` is derived, never declared](#type-is-derived-never-declared)
+  - [`requires` is comma-separated, and it is not a YAML list](#requires-is-comma-separated-and-it-is-not-a-yaml-list)
+  - [The `tools` block](#the-tools-block)
+- [Applying an update to a project](#applying-an-update-to-a-project)
+- [The obligation this creates on every skill edit](#the-obligation-this-creates-on-every-skill-edit)
+- [Testing](#testing)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Skills are installed into projects as copies.
 A copy has no idea the original moved on, so the moment a skill is edited here, every project holding a copy is silently behind.
 That is not hypothetical: it is the default state of every project in this setup.

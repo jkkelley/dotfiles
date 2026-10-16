@@ -1,5 +1,19 @@
 # Build rules
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Structure](#structure)
+- [Naming](#naming)
+- [Density tokens](#density-tokens)
+- [Fidelity](#fidelity)
+- [Content](#content)
+- [Reuse](#reuse)
+- [Annotation](#annotation)
+- [Safety](#safety)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Read before the first `use_figma` call. These are non-negotiable; violating them
 is what makes wireframes unusable in review.
 

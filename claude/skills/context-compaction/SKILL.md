@@ -6,6 +6,29 @@ version: 2.0.1
 
 # context-compaction
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [What changed in 2.0.0, and why it is a major bump](#what-changed-in-200-and-why-it-is-a-major-bump)
+- [When to invoke](#when-to-invoke)
+- [The shape of the file](#the-shape-of-the-file)
+  - [The rule that makes the window work](#the-rule-that-makes-the-window-work)
+- [Workflow](#workflow)
+  - [1. Install, once per project](#1-install-once-per-project)
+  - [2. Read before writing](#2-read-before-writing)
+  - [3. Author the body, then check it](#3-author-the-body-then-check-it)
+  - [4. Append it](#4-append-it)
+  - [5. Verify](#5-verify)
+- [Retention](#retention)
+- [Contracts](#contracts)
+- [Staleness](#staleness)
+- [OS awareness](#os-awareness)
+- [Testing](#testing)
+- [Wiring into a project](#wiring-into-a-project)
+- [Additional reference](#additional-reference)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 `CONTEXT_STATE.md` is the state any agent hydrates from at the start of a session.
 It is not a summary of a conversation. It is a stack of checkpoints, newest on top, read 10 deep and no further.
 

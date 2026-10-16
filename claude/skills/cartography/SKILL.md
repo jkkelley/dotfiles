@@ -7,6 +7,22 @@ requires: work-order
 
 # Cartography
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Requirements](#requirements)
+- [What a skeleton ticket is](#what-a-skeleton-ticket-is)
+- [How the directory is organised](#how-the-directory-is-organised)
+- [The phases](#the-phases)
+- [Usage](#usage)
+  - [The spec format](#the-spec-format)
+  - [render is the honesty mechanism](#render-is-the-honesty-mechanism)
+- [Working with the other skills](#working-with-the-other-skills)
+- [Testing](#testing)
+- [Bundled resources](#bundled-resources)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Top-down maps of a system, drawn as standalone HTML, where every execution
 ticket on the page is a **real work-order that already exists**.
 

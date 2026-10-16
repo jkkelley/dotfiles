@@ -6,6 +6,22 @@ version: 1.0.3
 
 # Jenkins Job Bootstrap
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Overview](#overview)
+- [When to use](#when-to-use)
+- [Prerequisites (one-time)](#prerequisites-one-time)
+- [Workflow — Adding a new repo](#workflow--adding-a-new-repo)
+- [Files this skill ships](#files-this-skill-ships)
+- [Safety defaults](#safety-defaults)
+- [Common mistakes](#common-mistakes)
+- [Verification after first use](#verification-after-first-use)
+- [Homelab Note: This skill is NOT applicable to this homelab](#homelab-note-this-skill-is-not-applicable-to-this-homelab)
+- [Homelab Note: AVP + GitOps Contract](#homelab-note-avp--gitops-contract)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Overview
 
 Replace manual "New Item → Multibranch Pipeline → fill 12 fields → Save" with a one-line edit to a YAML manifest + a single seed-job build. The seed reads `jobs/repos.yaml` from `jenkins-shared-lib`, iterates the entries, and emits a `multibranchPipelineJob {}` block per repo. Re-runnable, idempotent, GitOps-style.

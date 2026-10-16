@@ -6,6 +6,28 @@ version: 2.1.0
 
 # Hydration prompt
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [The one flow](#the-one-flow)
+- [The script does the mechanical parts](#the-script-does-the-mechanical-parts)
+- [The workbench](#the-workbench)
+  - [The release cannot read the exit code, and that is the whole point](#the-release-cannot-read-the-exit-code-and-that-is-the-whole-point)
+  - [`acquire` refuses a second slot for one ticket](#acquire-refuses-a-second-slot-for-one-ticket)
+  - [Non-goals](#non-goals)
+- [Which file governs](#which-file-governs)
+- [The window](#the-window)
+- [What an entry contains](#what-an-entry-contains)
+  - [Duplicated sections are a defect, not a formatting quibble](#duplicated-sections-are-a-defect-not-a-formatting-quibble)
+- [The launch command](#the-launch-command)
+  - [The prompt is positional. It must never go back to `-p`](#the-prompt-is-positional-it-must-never-go-back-to--p)
+  - [Why it is folded at all](#why-it-is-folded-at-all)
+  - [Why one argument per line, rather than a greedy fill](#why-one-argument-per-line-rather-than-a-greedy-fill)
+- [Pointer](#pointer)
+- [Testing](#testing)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 The last thing a session produces is the first thing the next one reads.
 
 This skill turns that into an artifact rather than a message: an entry at the top

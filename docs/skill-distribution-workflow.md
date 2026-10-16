@@ -1,5 +1,20 @@
 # Skill distribution: dotfiles is the source of truth
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [The rule](#the-rule)
+- [Why this is enforced structurally rather than asked for politely](#why-this-is-enforced-structurally-rather-than-asked-for-politely)
+- [The three moving parts](#the-three-moving-parts)
+  - [1. The project side: the skills directory is gitignored](#1-the-project-side-the-skills-directory-is-gitignored)
+  - [2. The session side: check, then swap](#2-the-session-side-check-then-swap)
+  - [3. The dotfiles side: CI/CD owns the version and the registry](#3-the-dotfiles-side-cicd-owns-the-version-and-the-registry)
+- [The problem this solves](#the-problem-this-solves)
+- [Still open, not designed](#still-open-not-designed)
+- [What this replaces](#what-this-replaces)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Decided 2026-08-22. This is the workflow, not a proposal.
 
 Companion: [worktree-workflow.md](worktree-workflow.md) applies the same discipline to workspaces, and carries the combined task list for what is still unbuilt across both.

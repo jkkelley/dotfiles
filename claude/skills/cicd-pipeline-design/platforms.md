@@ -1,5 +1,39 @@
 # Platform Reference
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Jenkins](#jenkins)
+  - [Key built-in variables](#key-built-in-variables)
+  - [Isolation idioms](#isolation-idioms)
+  - [Parallel stages with isolation](#parallel-stages-with-isolation)
+  - [Concurrency / resource locking](#concurrency--resource-locking)
+  - [Credentials](#credentials)
+- [GitHub Actions](#github-actions)
+  - [Key built-in variables](#key-built-in-variables-1)
+  - [Isolation idioms](#isolation-idioms-1)
+  - [Concurrency — cancel redundant runs, serialize deploys](#concurrency--cancel-redundant-runs-serialize-deploys)
+  - [Matrix builds](#matrix-builds)
+  - [OIDC — keyless cloud auth](#oidc--keyless-cloud-auth)
+  - [Pass artifacts between jobs](#pass-artifacts-between-jobs)
+- [GitLab CI](#gitlab-ci)
+  - [Key built-in variables](#key-built-in-variables-2)
+  - [Isolation idioms](#isolation-idioms-2)
+  - [DAG pipeline (needs — not just stage order)](#dag-pipeline-needs--not-just-stage-order)
+  - [Auto-cancel redundant pipelines](#auto-cancel-redundant-pipelines)
+  - [Resource group (serialize deploys)](#resource-group-serialize-deploys)
+  - [Ephemeral review environments](#ephemeral-review-environments)
+- [CircleCI](#circleci)
+  - [Key built-in variables](#key-built-in-variables-3)
+  - [Isolation idioms](#isolation-idioms-3)
+  - [Reusable defaults with YAML anchors](#reusable-defaults-with-yaml-anchors)
+  - [Workspaces — pass artifacts between jobs](#workspaces--pass-artifacts-between-jobs)
+  - [Parallelism — split tests across containers](#parallelism--split-tests-across-containers)
+  - [Contexts — scoped secrets](#contexts--scoped-secrets)
+  - [Hold / approval gate before prod](#hold--approval-gate-before-prod)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Jenkins
 
 ### Key built-in variables

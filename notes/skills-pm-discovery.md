@@ -1,5 +1,34 @@
 # Discovery: a personal package manager for skills and docs
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [The idea in one paragraph](#the-idea-in-one-paragraph)
+- [What already exists](#what-already-exists)
+- [The current session-start flow, as it actually runs](#the-current-session-start-flow-as-it-actually-runs)
+  - [Six gaps between that and a deterministic loop](#six-gaps-between-that-and-a-deterministic-loop)
+- [The blocking prerequisite](#the-blocking-prerequisite)
+- [Proposed shape](#proposed-shape)
+  - [The manifest, the only new committed file](#the-manifest-the-only-new-committed-file)
+  - [No lockfile](#no-lockfile)
+  - [Two registry additions](#two-registry-additions)
+  - [The dependency edges, complete](#the-dependency-edges-complete)
+  - [The sync script - decided](#the-sync-script---decided)
+  - [What goes in the CLAUDE.md template](#what-goes-in-the-claudemd-template)
+- [The two CLAUDE.md template rewrites](#the-two-claudemd-template-rewrites)
+  - [1. Replace the runbook rule (currently lines 92-111)](#1-replace-the-runbook-rule-currently-lines-92-111)
+  - [2. Replace the session-start check (currently lines 269-336)](#2-replace-the-session-start-check-currently-lines-269-336)
+- [skill-update.sh keeps a job](#skill-updatesh-keeps-a-job)
+- [The sync runs automatically - and the hook lives on the machine](#the-sync-runs-automatically---and-the-hook-lives-on-the-machine)
+  - [Five constraints, all of which fail silently](#five-constraints-all-of-which-fail-silently)
+- [CI replaces the Rule 16 obligation](#ci-replaces-the-rule-16-obligation)
+- [Onboarding existing projects - no stash](#onboarding-existing-projects---no-stash)
+- [Decided](#decided)
+- [Open](#open)
+- [Phases](#phases)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Session type: discovery only.
 No design, no implementation, no tickets.
 Base commit: `a1b7bb1`.

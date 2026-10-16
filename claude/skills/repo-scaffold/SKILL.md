@@ -6,6 +6,22 @@ version: 1.0.3
 
 # Repo Scaffold
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Workflow](#workflow)
+  - [Step 1 — Analyze the source repo](#step-1--analyze-the-source-repo)
+  - [Step 2 — Define the delta](#step-2--define-the-delta)
+  - [Step 3 — Scaffold](#step-3--scaffold)
+  - [Step 4 — Apply targeted tweaks](#step-4--apply-targeted-tweaks)
+  - [Step 5 — Post-scaffold checklist](#step-5--post-scaffold-checklist)
+- [Naming variants — always substitute all of them](#naming-variants--always-substitute-all-of-them)
+- [What to always exclude from copy](#what-to-always-exclude-from-copy)
+- [Additional reference](#additional-reference)
+- [Homelab K8s Checklist Addition](#homelab-k8s-checklist-addition)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Clone an existing repo's structure, conventions, and tooling into a new repo — changing only what needs to change.
 
 ## Workflow

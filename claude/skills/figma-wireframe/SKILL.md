@@ -6,6 +6,24 @@ version: 1.0.3
 
 # Figma Wireframe
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Requirements](#requirements)
+- [Pipeline](#pipeline)
+  - [1. Orient](#1-orient)
+  - [2. Interview](#2-interview)
+  - [3. Write the brief](#3-write-the-brief)
+  - [4. Validate — hard gate](#4-validate--hard-gate)
+  - [5. Plan](#5-plan)
+  - [6. Build](#6-build)
+  - [7. Handoff](#7-handoff)
+- [Rerunning and iterating](#rerunning-and-iterating)
+- [Token discipline](#token-discipline)
+- [Bundled resources](#bundled-resources)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Turns a vague design request into a deterministic, reproducible set of Figma
 frames. The determinism comes from a hard pipeline: **interview -> brief.json ->
 validate -> plan -> build**. Same brief in, same frames out, every time.

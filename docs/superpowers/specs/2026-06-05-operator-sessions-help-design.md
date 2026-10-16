@@ -1,4 +1,29 @@
 # Operator Skill — Sessions & Help Design
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Summary](#summary)
+- [Scope](#scope)
+  - [What this changes](#what-this-changes)
+  - [What this does NOT change](#what-this-does-not-change)
+- [Intent: sessions](#intent-sessions)
+  - [Trigger phrases](#trigger-phrases)
+  - [File path structure](#file-path-structure)
+  - [Append vs create logic](#append-vs-create-logic)
+  - [File format](#file-format)
+  - [Input modes](#input-modes)
+  - [Behavior](#behavior)
+- [Intent: help](#intent-help)
+  - [Trigger phrases](#trigger-phrases-1)
+  - [Behavior](#behavior-1)
+- [references/help-card.md — Content](#referenceshelp-cardmd--content)
+- [Skill Update Convention](#skill-update-convention)
+- [Data layout (updated)](#data-layout-updated)
+- [README.md update (operator repo) — implementation step](#readmemd-update-operator-repo--implementation-step)
+- [Files changed](#files-changed)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 **Date:** 2026-06-05
 
 ## Summary

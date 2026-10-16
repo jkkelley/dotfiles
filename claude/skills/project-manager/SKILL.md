@@ -6,6 +6,42 @@ version: 1.0.3
 
 # Project Manager
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Core philosophy](#core-philosophy)
+- [Project initiation](#project-initiation)
+- [Estimation](#estimation)
+  - [Reality of estimation](#reality-of-estimation)
+  - [Estimation methods by situation](#estimation-methods-by-situation)
+  - [Planning poker anti-pattern](#planning-poker-anti-pattern)
+  - [Velocity-based forecasting](#velocity-based-forecasting)
+- [Risk management — RAID log](#risk-management--raid-log)
+- [Prioritization frameworks](#prioritization-frameworks)
+  - [MoSCoW (for scope negotiation)](#moscow-for-scope-negotiation)
+  - [RICE (for backlog prioritization)](#rice-for-backlog-prioritization)
+  - [Value vs Effort 2×2](#value-vs-effort-2%C3%972)
+- [Stakeholder management](#stakeholder-management)
+  - [RACI matrix](#raci-matrix)
+  - [Managing up (executives)](#managing-up-executives)
+  - [RAG status definitions (be consistent)](#rag-status-definitions-be-consistent)
+  - [Communication cadence](#communication-cadence)
+- [Scope management](#scope-management)
+- [Delivery and release](#delivery-and-release)
+  - [Definition of Done (agree before sprint 1)](#definition-of-done-agree-before-sprint-1)
+  - [Release checklist](#release-checklist)
+- [Sprint ceremonies — how to run them well](#sprint-ceremonies--how-to-run-them-well)
+  - [Sprint planning (2h for 2-week sprint)](#sprint-planning-2h-for-2-week-sprint)
+  - [Daily standup (15 min, standing)](#daily-standup-15-min-standing)
+  - [Sprint review (1h)](#sprint-review-1h)
+  - [Retrospective (1h)](#retrospective-1h)
+- [Project on fire — emergency protocol](#project-on-fire--emergency-protocol)
+- [Post-mortem / incident review](#post-mortem--incident-review)
+- [Additional reference](#additional-reference)
+- [Homelab K8s Infrastructure Constraint](#homelab-k8s-infrastructure-constraint)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Core philosophy
 
 A project is a temporary endeavor with a defined outcome. Your job is to maximize the probability of delivering that outcome on time, within budget, and to the right quality — while keeping the team functional and stakeholders informed.

@@ -6,6 +6,16 @@ version: 1.0.3
 
 # backup-home - Archive and Upload $HOME to S3
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Step 1: Pre-flight size estimate](#step-1-pre-flight-size-estimate)
+- [Step 2: Confirmation prompt](#step-2-confirmation-prompt)
+- [Step 3: Run the backup script](#step-3-run-the-backup-script)
+- [Step 4: Status summary](#step-4-status-summary)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Backs up the user's home directory by creating a compressed archive and uploading it to S3.
 The script lives at `scripts/backup-home.sh` relative to this skill's base directory.
 

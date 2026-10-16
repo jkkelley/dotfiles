@@ -6,6 +6,21 @@ version: 1.0.3
 
 # Jenkinsfile Snippets
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Pipeline Skeleton (Declarative)](#pipeline-skeleton-declarative)
+- [Credentials Patterns](#credentials-patterns)
+- [Parallel Stages](#parallel-stages)
+- [Kubernetes Agent Pod Template](#kubernetes-agent-pod-template)
+- [Matrix Build (Cross-Version)](#matrix-build-cross-version)
+- [Shared Library Usage](#shared-library-usage)
+- [Conditional When Clauses](#conditional-when-clauses)
+- [Useful Snippets](#useful-snippets)
+- [Trigger Patterns](#trigger-patterns)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Pipeline Skeleton (Declarative)
 
 ```groovy

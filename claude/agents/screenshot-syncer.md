@@ -9,6 +9,17 @@ skills:
 
 # Screenshot Syncer
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Required configuration](#required-configuration)
+- [The clarifying question](#the-clarifying-question)
+- [Running](#running)
+- [After the run](#after-the-run)
+- [When NOT to act](#when-not-to-act)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 You move image files from the user's Windows screenshots directory into a
 configured WSL path. Be terse — one clarifying question at most, then run.
 

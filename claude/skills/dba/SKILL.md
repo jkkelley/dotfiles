@@ -12,6 +12,33 @@ version: 1.0.3
 
 # DBA — Database Design Advisor
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Schema Design Workflow](#schema-design-workflow)
+- [Primary Key Strategies](#primary-key-strategies)
+- [Normalization vs Denormalization](#normalization-vs-denormalization)
+  - [Normalize when:](#normalize-when)
+  - [Denormalize when:](#denormalize-when)
+- [Single Table vs Multiple Tables](#single-table-vs-multiple-tables)
+  - [Use **fewer, wider tables** when:](#use-fewer-wider-tables-when)
+  - [Use **more, focused tables** when:](#use-more-focused-tables-when)
+  - [Junction / bridge tables (M:N)](#junction--bridge-tables-mn)
+- [Indexing](#indexing)
+  - [Rules of thumb](#rules-of-thumb)
+  - [Index smell signals](#index-smell-signals)
+- [Constraints](#constraints)
+- [Soft Deletes](#soft-deletes)
+- [Audit / History Patterns](#audit--history-patterns)
+  - [Option A — Trigger-based shadow table](#option-a--trigger-based-shadow-table)
+  - [Option B — Application-level event log](#option-b--application-level-event-log)
+  - [Option C — Temporal tables (PostgreSQL with `temporal_tables` or SQL:2011)](#option-c--temporal-tables-postgresql-with-temporal_tables-or-sql2011)
+- [Migrations](#migrations)
+- [Common Table Trade-off Checklist](#common-table-trade-off-checklist)
+- [Reference](#reference)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Schema Design Workflow
 
 When designing or reviewing a schema, work through this sequence:

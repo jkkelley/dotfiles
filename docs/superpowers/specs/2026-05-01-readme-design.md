@@ -6,6 +6,21 @@ status: approved
 
 # README.md Design
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Overview](#overview)
+- [Approach](#approach)
+- [Sections](#sections)
+  - [1. Hero](#1-hero)
+  - [2. How It Works](#2-how-it-works)
+  - [3. What's In Here](#3-whats-in-here)
+  - [4. Getting Started](#4-getting-started)
+  - [5. Contributing](#5-contributing)
+- [Constraints](#constraints)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Overview
 
 A public-facing README for the dotfiles repo on GitHub. Serves two audiences simultaneously: developers new to Claude Code agents/skills (needs the concept explained) and experienced Claude Code users browsing for a curated library (wants to get to the install fast). Tone: warm but not chatty, confident without being corporate.

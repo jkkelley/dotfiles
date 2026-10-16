@@ -1,5 +1,25 @@
 # Anti-Detection Deep Dive
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Cloudflare](#cloudflare)
+  - [Challenge types and how to beat them](#challenge-types-and-how-to-beat-them)
+  - [Cloudflare cookie harvest pattern](#cloudflare-cookie-harvest-pattern)
+  - [Cloudflare + curl_cffi (no JS challenge, just TLS/H2)](#cloudflare--curl_cffi-no-js-challenge-just-tlsh2)
+- [DataDome](#datadome)
+- [PerimeterX / HUMAN](#perimeterx--human)
+- [CAPTCHA solving services](#captcha-solving-services)
+- [Proxy strategy](#proxy-strategy)
+  - [Proxy type comparison](#proxy-type-comparison)
+  - [Providers (as of 2025–2026)](#providers-as-of-20252026)
+  - [Proxy rotation patterns](#proxy-rotation-patterns)
+  - [Backconnect proxies (rotating gateway)](#backconnect-proxies-rotating-gateway)
+- [Browser profile management](#browser-profile-management)
+- [Fingerprint consistency checklist](#fingerprint-consistency-checklist)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Cloudflare
 
 ### Challenge types and how to beat them

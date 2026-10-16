@@ -1,5 +1,16 @@
 # Container Design — Worked Patterns
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Pattern: OSM/Nominatim-style stack (PBF import → Postgres → app)](#pattern-osmnominatim-style-stack-pbf-import-%E2%86%92-postgres-%E2%86%92-app)
+- [Pattern: Migration-gated app (schema must run before app starts)](#pattern-migration-gated-app-schema-must-run-before-app-starts)
+- [Pattern: Sidecar log forwarder sharing a log volume](#pattern-sidecar-log-forwarder-sharing-a-log-volume)
+- [Pattern: HTTP readiness gate](#pattern-http-readiness-gate)
+- [Pattern: Cleanup trap for one-shot containers](#pattern-cleanup-trap-for-one-shot-containers)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Pattern: OSM/Nominatim-style stack (PBF import → Postgres → app)
 
 Classic three-phase pipeline where a binary importer needs a data volume and the Postgres network simultaneously.

@@ -6,6 +6,34 @@ version: 2.2.0
 
 # Work Order
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Hard rule: never name a ticket without its title](#hard-rule-never-name-a-ticket-without-its-title)
+- [Requirements](#requirements)
+- [How the directory is organised](#how-the-directory-is-organised)
+- [Which document wins](#which-document-wins)
+- [Lifecycle](#lifecycle)
+- [What a ticket says](#what-a-ticket-says)
+  - [Degrees of freedom](#degrees-of-freedom)
+- [Usage](#usage)
+  - [Cutting an epic and its children](#cutting-an-epic-and-its-children)
+  - [Notes: the progress record](#notes-the-progress-record)
+  - [Answering an open question](#answering-an-open-question)
+  - [Evidencing an acceptance criterion](#evidencing-an-acceptance-criterion)
+  - [Repairing a heading](#repairing-a-heading)
+  - [The index as a gate](#the-index-as-a-gate)
+  - [Working with figma-wireframe](#working-with-figma-wireframe)
+- [The close-out](#the-close-out)
+  - [`cleanup`](#cleanup)
+  - [There is no `merge_sha`](#there-is-no-merge_sha)
+  - [What this replaced](#what-this-replaced)
+  - [Where the hydration prompt fits](#where-the-hydration-prompt-fits)
+- [Testing](#testing)
+- [Bundled resources](#bundled-resources)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Tickets an agent can act on without asking a follow-up question. The determinism
 comes from one rule: **the script writes the ticket, never the model.**
 

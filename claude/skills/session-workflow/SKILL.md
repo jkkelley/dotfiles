@@ -6,6 +6,28 @@ version: 1.0.3
 
 # Session Workflow
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [When This Applies](#when-this-applies)
+- [Red Flags](#red-flags)
+- [Step 0 — Orient](#step-0--orient)
+- [Step 1 — Work](#step-1--work)
+- [Step 2 — Test](#step-2--test)
+- [Step 3 — Verify](#step-3--verify)
+- [Step 4 — Checkpoint (ask gate)](#step-4--checkpoint-ask-gate)
+- [Step 5 — Commit & Push & PR](#step-5--commit--push--pr)
+- [Step 6 — Close-Out Gate](#step-6--close-out-gate)
+  - [6a — Hand PR to user for review](#6a--hand-pr-to-user-for-review)
+  - [6b — Log gate (ask first, do not log automatically)](#6b--log-gate-ask-first-do-not-log-automatically)
+  - [6c — Merge confirmation](#6c--merge-confirmation)
+  - [6d — Branch cleanup (ask first, do not run automatically)](#6d--branch-cleanup-ask-first-do-not-run-automatically)
+- [Step 7 — Stop & Hand Off](#step-7--stop--hand-off)
+- [Session-Based Planning Convention](#session-based-planning-convention)
+- [Hard Rules](#hard-rules)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 One task. One session. Always ends with test → verify → checkpoint → PR → stop.
 
 ## When This Applies

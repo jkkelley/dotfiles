@@ -1,5 +1,25 @@
 # Operator Skill — Sessions & Help Implementation Plan
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Repos touched](#repos-touched)
+- [File Map](#file-map)
+- [Task 1: Create feature branch](#task-1-create-feature-branch)
+- [Task 2: Create `references/help-card.md`](#task-2-create-referenceshelp-cardmd)
+- [Task 3: Update SKILL.md — header, data layout, dispatch list, push-on-write, update convention](#task-3-update-skillmd--header-data-layout-dispatch-list-push-on-write-update-convention)
+- [Task 4: Add sessions intent to SKILL.md](#task-4-add-sessions-intent-to-skillmd)
+- [Skill Update Convention](#skill-update-convention)
+- [Task 5: Add help intent to SKILL.md](#task-5-add-help-intent-to-skillmd)
+- [Skill Update Convention](#skill-update-convention-1)
+- [Task 6: Commit dotfiles changes and open PR](#task-6-commit-dotfiles-changes-and-open-pr)
+- [Task 7: Update `$OPERATOR_REPO/README.md`](#task-7-update-operator_reporeadmemd)
+- [Task 8: Create `$OPERATOR_REPO/HELP_README.md`](#task-8-create-operator_repohelp_readmemd)
+- [Task 9: Merge the dotfiles PR](#task-9-merge-the-dotfiles-pr)
+- [Self-Review](#self-review)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add two new intents to the operator skill — `sessions` (log Claude sessions for the day) and `help` (display a capability reference card) — and update both the dotfiles skill and the private operator repo to reflect the new functionality.

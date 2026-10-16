@@ -1,5 +1,22 @@
 # Onboarding checklist: the four repositories carrying the stale session-start block
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [This repository cannot tick a single box below](#this-repository-cannot-tick-a-single-box-below)
+- [State](#state)
+- [The edit, written once](#the-edit-written-once)
+- [The rows](#the-rows)
+  - [1. `gatehouse-click`](#1-gatehouse-click)
+  - [2. `aws-lightsail-k8s-router`](#2-aws-lightsail-k8s-router)
+  - [3. `template-resume-builder`](#3-template-resume-builder)
+  - [4. `claudes-markdown-12-rules` - blocked, do not run](#4-claudes-markdown-12-rules---blocked-do-not-run)
+- [Running one](#running-one)
+- [Closing a row](#closing-a-row)
+- [Why this is not the epic's finish line](#why-this-is-not-the-epics-finish-line)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Four repositories still carry the prose session-start version check that `CLAUDE.md.tmpl` dropped in PR #85.
 Each needs one run of `claude/tools/skill-onboard.sh` inside it, producing one pull request in that repository.
 

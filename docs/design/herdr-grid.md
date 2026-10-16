@@ -1,5 +1,23 @@
 # Herdr grid layout - design
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Contents](#contents)
+- [Design principles 101](#design-principles-101)
+- [Inventory](#inventory)
+- [Layout](#layout)
+- [Commands](#commands)
+- [Seat-up DAG](#seat-up-dag)
+- [Status codes](#status-codes)
+- [Cleanup rules](#cleanup-rules)
+- [State](#state)
+- [GOOD and NEVER](#good-and-never)
+- [Migration of a live workspace](#migration-of-a-live-workspace)
+- [Architect and seat flags](#architect-and-seat-flags)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Status: DRAFT for owner reading.
 Owner order, 2026-10-16 UTC: "since we use herdr, its should always be known to use herdr in a tab layout with 3X3 and the 1(YOU ONLY ON AGENT IN THIS FULL 3 slots)|3 panes|3 panes, everything labeled, make new tabs when not, driven by makefiles and scripts with automated cleanup too".
 The implementation is one script, `claude/workflow/bin/herdr-grid.sh`, called by Make targets.

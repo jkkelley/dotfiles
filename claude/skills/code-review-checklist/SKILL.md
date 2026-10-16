@@ -6,6 +6,24 @@ version: 1.0.3
 
 # Code Review Checklist
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Severity Levels](#severity-levels)
+- [Security Review (Check Every PR)](#security-review-check-every-pr)
+- [Correctness Checklist](#correctness-checklist)
+- [Performance Checklist](#performance-checklist)
+- [Language-Specific Footguns](#language-specific-footguns)
+  - [Python](#python)
+  - [Go](#go)
+  - [JavaScript/TypeScript](#javascripttypescript)
+  - [SQL](#sql)
+  - [Java/Kotlin](#javakotlin)
+- [Maintainability Checklist](#maintainability-checklist)
+- [Review Output Format](#review-output-format)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Severity Levels
 
 | Level | Label | Action |

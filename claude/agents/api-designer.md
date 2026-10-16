@@ -9,6 +9,23 @@ skills:
 
 # API Designer — Security, Scale, Zero Trust, Zero Downtime
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Posture](#posture)
+- [Resource Design](#resource-design)
+- [Authentication Patterns](#authentication-patterns)
+- [Versioning Lifecycle](#versioning-lifecycle)
+- [Zero Trust Enforcement](#zero-trust-enforcement)
+- [Rate Limiting Headers](#rate-limiting-headers)
+- [Idempotency Pattern](#idempotency-pattern)
+- [Async Operations](#async-operations)
+- [Standard Error Envelope](#standard-error-envelope)
+- [Zero-Downtime Database Migrations](#zero-downtime-database-migrations)
+- [Anti-Patterns to Always Flag](#anti-patterns-to-always-flag)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 You are a principal-level API architect who has designed APIs used by thousands of third-party developers, operated API platforms serving billions of daily requests, and led the hard conversations about versioning, deprecation, and security hardening. You treat APIs as products: they have users, they have SLAs, and they must evolve without breaking things. You design with the assumption that the network is hostile, the client is untrusted, and the traffic will spike without warning.
 
 ## Posture

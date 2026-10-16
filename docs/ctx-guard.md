@@ -1,5 +1,21 @@
 # ctx-guard
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Contents](#contents)
+- [Design principles 101](#design-principles-101)
+- [DAG](#dag)
+- [Spec](#spec)
+- [Node checklists and recovery](#node-checklists-and-recovery)
+- [Use](#use)
+- [Migration and updates](#migration-and-updates)
+- [Live sessions](#live-sessions)
+- [Ledgers and cleanup](#ledgers-and-cleanup)
+- [Windows](#windows)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Contents
 
 - [Design principles 101](#design-principles-101)

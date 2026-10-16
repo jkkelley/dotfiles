@@ -10,6 +10,39 @@ version: 1.0.3
 
 # ESO Secret Workflow — Staff-Level Standard
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [When to Invoke](#when-to-invoke)
+- [⚡ HOMELAB CLUSTER OVERRIDE — Read This Before Anything Else](#-homelab-cluster-override--read-this-before-anything-else)
+  - [SSM-FIRST RULE — Mandatory for ALL homelab Vault seeding](#ssm-first-rule--mandatory-for-all-homelab-vault-seeding)
+  - [What is actually deployed](#what-is-actually-deployed)
+  - [Actual naming convention (deviates from generic skill below)](#actual-naming-convention-deviates-from-generic-skill-below)
+  - [Role ARN injection — TWO patterns depending on whether the app uses AVP](#role-arn-injection--two-patterns-depending-on-whether-the-app-uses-avp)
+  - [Bootstrap prereq — already done](#bootstrap-prereq--already-done)
+- [Jenkins Pipeline IRSA — Non-ESO Workloads](#jenkins-pipeline-irsa--non-eso-workloads)
+  - [Rules — read before writing anything](#rules--read-before-writing-anything)
+  - [Naming convention](#naming-convention)
+  - [OIDC issuer SSM path](#oidc-issuer-ssm-path)
+  - [Jenkinsfile pod spec (match jenkins-terraform-sa pattern exactly)](#jenkinsfile-pod-spec-match-jenkins-terraform-sa-pattern-exactly)
+  - [ServiceAccount manifest (homelab-gitops)](#serviceaccount-manifest-homelab-gitops)
+  - [Terraform for the IAM role (in project `_infra/` directory)](#terraform-for-the-iam-role-in-project-_infra-directory)
+  - [Verification](#verification)
+  - [Trust policy `sub` condition for new IAM roles](#trust-policy-sub-condition-for-new-iam-roles)
+- [Concepts](#concepts)
+- [NAMING CONVENTION — Read Before Touching Anything](#naming-convention--read-before-touching-anything)
+- [Flow A: New Namespace Setup](#flow-a-new-namespace-setup)
+- [Flow B: Add a Secret to an Existing Namespace](#flow-b-add-a-secret-to-an-existing-namespace)
+- [Common Failures](#common-failures)
+- [Homelab K8s — Canonical AVP + ESO Architecture](#homelab-k8s--canonical-avp--eso-architecture)
+  - [The two-layer model](#the-two-layer-model)
+  - [ghcr-pull-secret: always Vault-backed ESO (Option A)](#ghcr-pull-secret-always-vault-backed-eso-option-a)
+  - [imageTag exception](#imagetag-exception)
+  - [Vault path structure](#vault-path-structure)
+  - [Rule: nothing hardcoded in git](#rule-nothing-hardcoded-in-git)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## When to Invoke
 
 - A new namespace needs to pull secrets from AWS SSM via ESO

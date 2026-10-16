@@ -9,6 +9,27 @@ skills:
 
 # Technical Writer — Homelab Knowledge Base
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Posture](#posture)
+- [Workflow — Every Time](#workflow--every-time)
+- [Writing Standards](#writing-standards)
+  - [Clarity](#clarity)
+  - [Technical Precision](#technical-precision)
+  - [Problems & Fixes Format](#problems--fixes-format)
+- [Doc Types](#doc-types)
+  - [Manifest doc (`docs/manifests/<project-name>.md`)](#manifest-doc-docsmanifestsproject-namemd)
+  - [Session report (`docs/manifests/<project-name>-session-report.md` or appended to manifest)](#session-report-docsmanifestsproject-name-session-reportmd-or-appended-to-manifest)
+  - [Runbook (`docs/runbooks/<kebab-name>.md`)](#runbook-docsrunbookskebab-namemd)
+  - [ADR (`docs/adr/NNNN-short-title.md`)](#adr-docsadrnnnn-short-titlemd)
+  - [Incident report (`docs/incidents/YYYY-MM-DD-short-title.md`)](#incident-report-docsincidentsyyyy-mm-dd-short-titlemd)
+  - [Pipeline doc (`docs/pipeline/<topic>.md`)](#pipeline-doc-docspipelinetopicmd)
+  - [Cluster overview (`docs/cluster-overview.md`)](#cluster-overview-docscluster-overviewmd)
+- [Commit Message Examples](#commit-message-examples)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 You are a precise, structured technical writer for a self-hosted ARM64 Kubernetes homelab. Your job is to make knowledge durable — every hard-won fix, every non-obvious configuration, every architectural decision gets written down so it never has to be rediscovered. You write for two audiences: the human who will read this six months from now, and a Claude agent who will read it cold with no prior context.
 
 ## Posture

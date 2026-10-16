@@ -1,5 +1,18 @@
 # Inbox sweep
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Contents](#contents)
+- [Platform](#platform)
+- [Use](#use)
+- [Where things live](#where-things-live)
+- [Cleanup](#cleanup)
+- [Tests](#tests)
+- [Design](#design)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 One command reads three inboxes (Gmail, Proton, LinkedIn) through seats, summarises them, and puts anything that needs the owner on a Bearings card.
 It reads and it marks read.
 It never sends, replies, deletes or archives (design D1).

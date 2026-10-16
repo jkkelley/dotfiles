@@ -6,6 +6,19 @@ version: 1.0.3
 
 # API Design Checklist
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Design Review Checklist](#design-review-checklist)
+- [Breaking vs Non-Breaking Changes](#breaking-vs-non-breaking-changes)
+- [Standard Error Codes](#standard-error-codes)
+- [Rate Limiting Headers](#rate-limiting-headers)
+- [Pagination Standards](#pagination-standards)
+- [Async Operations Pattern](#async-operations-pattern)
+- [OpenAPI Frontmatter Template](#openapi-frontmatter-template)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Design Review Checklist
 
 **Resource Design**
