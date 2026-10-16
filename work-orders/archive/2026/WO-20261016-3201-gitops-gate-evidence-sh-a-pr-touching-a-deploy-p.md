@@ -4,15 +4,15 @@
   "slug": "gitops-gate-evidence-sh-a-pr-touching-a-deploy-p",
   "title": "gitops-gate-evidence.sh: a PR touching a deploy path is held until its body names its ticket and carries Gate-Dev and Gate-UAT GATE-PASS lines",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T11:50:54+00:00",
   "parent": "WO-20261016-770f",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/3201-gitops-gate-evidence-sh-a-pr-touching-a-deploy-p",
+  "pr": 346,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design19 cut ORD-1128 K1 and ORD-1140 S3 (brief BR-20261016-infra-design19); design approvals ruled done, ORD-0550 O4; Claude seats never use lavish (global owner rule)",
@@ -145,21 +145,37 @@ GOOD: a PR body with "Ticket: WO-20261016-1234", "Gate-Dev: GATE-PASS dev deadma
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the usage prints
+- [x] `AC-H1` *(human)* the usage prints
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh --help' exit 0 output: usage: gitops-gate-evidence.sh --repo OWNER/NAME --select FILE [--body-file FILE] [--config FILE]
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh --help'` exit 0 expect /gitops-gate-evidence\.sh/
-- [ ] `AC-H2` *(human)* a deploy PR with ticket, dev and UAT lines passes, CRLF body
+- [x] `AC-H2` *(human)* a deploy PR with ticket, dev and UAT lines passes, CRLF body
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "{"defaults":{"evidence":{"ticket_re":"WO-[0-9]{8}-[0-9a-f]{4}","dev_re":"^Gate-Dev: GATE-PASS dev .+","uat_re":"^Gate-UAT: GATE-PASS uat .+"}},"repos":{}}" > $d/c.json && printf "{"deploy":true}" > $d/s.json && printf "Ticket WO-20261016-abcd
+Gate-Dev: GATE-PASS dev line-ops T0-T6
+Gate-UAT: GATE-PASS uat line-ops U1
+" > $d/b.md && bash claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh --repo jkkelley/homelab-gitops --select $d/s.json --config $d/c.json --body-file $d/b.md' exit 0 output: GATE-OK WO-20261016-abcd dev uat
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "{\"defaults\":{\"evidence\":{\"ticket_re\":\"WO-[0-9]{8}-[0-9a-f]{4}\",\"dev_re\":\"^Gate-Dev: GATE-PASS dev .+\",\"uat_re\":\"^Gate-UAT: GATE-PASS uat .+\"}},\"repos\":{}}" > $d/c.json && printf "{\"deploy\":true}" > $d/s.json && printf "Ticket WO-20261016-abcd\r\nGate-Dev: GATE-PASS dev line-ops T0-T6\r\nGate-UAT: GATE-PASS uat line-ops U1\r\n" > $d/b.md && bash claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh --repo jkkelley/homelab-gitops --select $d/s.json --config $d/c.json --body-file $d/b.md'` exit 0 expect /GATE-OK WO-20261016-abcd dev uat/
-- [ ] `AC-H3` *(human)* a deploy PR without UAT evidence is held
+- [x] `AC-H3` *(human)* a deploy PR without UAT evidence is held
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "{"defaults":{"evidence":{"ticket_re":"WO-[0-9]{8}-[0-9a-f]{4}","dev_re":"^Gate-Dev: GATE-PASS dev .+","uat_re":"^Gate-UAT: GATE-PASS uat .+"}},"repos":{}}" > $d/c.json && printf "{"deploy":true}" > $d/s.json && printf "Ticket WO-20261016-abcd
+Gate-Dev: GATE-PASS dev line-ops T0-T6
+" > $d/b.md && bash claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh --repo jkkelley/homelab-gitops --select $d/s.json --config $d/c.json --body-file $d/b.md' exit 1 output: GATE-MISSING uat GATE-HOLD add the ticket id and the Gate-Dev: and Gate-UAT: lines to the PR body, then push a commit (CI reads the body at the event)
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "{\"defaults\":{\"evidence\":{\"ticket_re\":\"WO-[0-9]{8}-[0-9a-f]{4}\",\"dev_re\":\"^Gate-Dev: GATE-PASS dev .+\",\"uat_re\":\"^Gate-UAT: GATE-PASS uat .+\"}},\"repos\":{}}" > $d/c.json && printf "{\"deploy\":true}" > $d/s.json && printf "Ticket WO-20261016-abcd\nGate-Dev: GATE-PASS dev line-ops T0-T6\n" > $d/b.md && bash claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh --repo jkkelley/homelab-gitops --select $d/s.json --config $d/c.json --body-file $d/b.md'` exit 1 expect /GATE-MISSING uat/
-- [ ] `AC-H4` *(human)* a PR touching no deploy path is skipped
+- [x] `AC-H4` *(human)* a PR touching no deploy path is skipped
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "{"defaults":{"evidence":{"ticket_re":"WO-[0-9]{8}-[0-9a-f]{4}","dev_re":"^Gate-Dev: GATE-PASS dev .+","uat_re":"^Gate-UAT: GATE-PASS uat .+"}},"repos":{}}" > $d/c.json && printf "{"deploy":false}" > $d/s.json && printf "no gates
+" > $d/b.md && bash claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh --repo jkkelley/homelab-gitops --select $d/s.json --config $d/c.json --body-file $d/b.md' exit 0 output: GATE-SKIP no-deploy-path
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "{\"defaults\":{\"evidence\":{\"ticket_re\":\"WO-[0-9]{8}-[0-9a-f]{4}\",\"dev_re\":\"^Gate-Dev: GATE-PASS dev .+\",\"uat_re\":\"^Gate-UAT: GATE-PASS uat .+\"}},\"repos\":{}}" > $d/c.json && printf "{\"deploy\":false}" > $d/s.json && printf "no gates\n" > $d/b.md && bash claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh --repo jkkelley/homelab-gitops --select $d/s.json --config $d/c.json --body-file $d/b.md'` exit 0 expect /GATE-SKIP no-deploy-path/
-- [ ] `AC-H5` *(human)* the body is read from GITHUB_EVENT_PATH
+- [x] `AC-H5` *(human)* the body is read from GITHUB_EVENT_PATH
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "{"defaults":{"evidence":{"ticket_re":"WO-[0-9]{8}-[0-9a-f]{4}","dev_re":"^Gate-Dev: GATE-PASS dev .+","uat_re":"^Gate-UAT: GATE-PASS uat .+"}},"repos":{}}" > $d/c.json && printf "{"deploy":true}" > $d/s.json && jq -n --arg b "$(printf "WO-20261016-abcd
+Gate-Dev: GATE-PASS dev x
+Gate-UAT: GATE-PASS uat y")" "{pull_request:{body:$b}}" > $d/e.json && GITHUB_EVENT_PATH=$d/e.json bash claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh --repo jkkelley/homelab-gitops --select $d/s.json --config $d/c.json' exit 0 output: GATE-OK WO-20261016-abcd dev uat
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "{\"defaults\":{\"evidence\":{\"ticket_re\":\"WO-[0-9]{8}-[0-9a-f]{4}\",\"dev_re\":\"^Gate-Dev: GATE-PASS dev .+\",\"uat_re\":\"^Gate-UAT: GATE-PASS uat .+\"}},\"repos\":{}}" > $d/c.json && printf "{\"deploy\":true}" > $d/s.json && jq -n --arg b "$(printf "WO-20261016-abcd\nGate-Dev: GATE-PASS dev x\nGate-UAT: GATE-PASS uat y")" "{pull_request:{body:\$b}}" > $d/e.json && GITHUB_EVENT_PATH=$d/e.json bash claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh --repo jkkelley/homelab-gitops --select $d/s.json --config $d/c.json'` exit 0 expect /GATE-OK WO-20261016-abcd dev uat/
-- [ ] `AC-H6` *(human)* outside a pull request event it skips
+- [x] `AC-H6` *(human)* outside a pull request event it skips
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "{"defaults":{"evidence":{"ticket_re":"WO-[0-9]{8}-[0-9a-f]{4}","dev_re":"^Gate-Dev: GATE-PASS dev .+","uat_re":"^Gate-UAT: GATE-PASS uat .+"}},"repos":{}}" > $d/c.json && printf "{"deploy":true}" > $d/s.json && env -u GITHUB_EVENT_PATH bash claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh --repo jkkelley/homelab-gitops --select $d/s.json --config $d/c.json' exit 0 output: GATE-SKIP not-a-pr
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "{\"defaults\":{\"evidence\":{\"ticket_re\":\"WO-[0-9]{8}-[0-9a-f]{4}\",\"dev_re\":\"^Gate-Dev: GATE-PASS dev .+\",\"uat_re\":\"^Gate-UAT: GATE-PASS uat .+\"}},\"repos\":{}}" > $d/c.json && printf "{\"deploy\":true}" > $d/s.json && env -u GITHUB_EVENT_PATH bash claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh --repo jkkelley/homelab-gitops --select $d/s.json --config $d/c.json'` exit 0 expect /GATE-SKIP not-a-pr/
-- [ ] `AC-H7` *(human)* shellcheck passes
+- [x] `AC-H7` *(human)* shellcheck passes
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'shellcheck -x claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh' exit 0 output:
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'shellcheck -x claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh'` exit 0
-- [ ] `AC-H8` *(human)* the diff holds only the In files
+- [x] `AC-H8` *(human)* the diff holds only the In files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/gitops-ci/bin/gitops-gate-evidence.sh)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/gitops-ci/bin/gitops-gate-evidence\.sh)$'` exit 1
 
 ## Test plan
