@@ -21,7 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261016-1099"
+    "WO-20261016-1099",
+    "WO-20261016-49e1"
   ],
   "blocks": [
     "WO-20261016-03ef",
@@ -180,6 +181,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-16` infra-design22 DESIGN-GAP: 64f2 AC-FAIL 2 is a run_checks defect (per-line grep, multi-line expect), fixed by WO-20261016-49e1; a1ca now depends on it. Resume from the seat's state: 64f2 in-review in ~/.cache/wt-a1ca on feat/wo-a1ca-f44-closeout (uncommitted, unpushed); after 49e1 merges, rebase on origin/main and rerun check --code-dir on 64f2, then 5751 9ad9 ddf1. Deviation F56 (stale feat/64f2-* removed from ~/.cache/wt-wo-64f2-df) recorded.
 - `2026-10-16` infra-design20 F55: ddf1 edge dropped (a1ca closes ddf1; ddf1 done is F44-blocked, so the edge was a deadlock). 64f2 now depends_on a1ca so next does not hand it to a seat: a1ca owns its start, submit and done; start does not check depends_on.
 
 ## Outcome
