@@ -108,7 +108,7 @@ assert_contains "$sk/references/ticket.tmpl" '%%DEGREES_OF_FREEDOM_UNWIRED%%' \
 d5=$(new_project)
 run 3 "an unwired degrees-of-freedom token refuses the write" \
   bash "$sk/scripts/work-order.sh" new --project "$d5" --title "Guarded" --type chore \
-    --top-level --problem P --out X --ac "it works"
+    --top-level --problem P --out X --ac "it works" --ac-check true --ac-exit 0 --owner-words W --context C
 run 0 "and no ticket file was written" bash -c \
   "[ -z \"\$(find '$d5/work-orders' -name 'WO-*.md' 2>/dev/null)\" ]"
 finish

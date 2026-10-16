@@ -28,7 +28,11 @@
 - [230-scratch-dir](#230-scratch-dir)
 - [240-test-plan-gate](#240-test-plan-gate)
 - [250-degrees-of-freedom](#250-degrees-of-freedom)
+- [260-owner-words-context](#260-owner-words-context)
+- [270-ac-check](#270-ac-check)
+- [280-approve-resolves-tools](#280-approve-resolves-tools)
 - [290-generated-views-untracked](#290-generated-views-untracked)
+- [The wo() defaults](#the-wo-defaults)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -196,7 +200,29 @@ Two `--freedom` lines render as `[free]` lines in order between Scope and Accept
 Why: a ticket that is silent about what the implementer may decide reads as "use your judgement", and a Contents list typed by hand drifts the first time a section is added.
 The Contents reference is computed from the rendered body, never typed into the test, so the assertion is that the map agrees with the territory whatever the territory is.
 
+## 260-owner-words-context
+
+`new` without `--owner-words` exits 3 `missing_owner_words`, without `--context` exits 3 `missing_context`, a blank value does not count, and a refused run writes nothing; with both, the Owner words quotes, the Context section and the Contents entry are rendered.
+Why: the owner's words and the full context are what stop an idea being lost between design and build (item 30).
+Every refusal calls `work-order.sh` directly, because `wo` would supply the defaults whose absence is under test.
+
+## 270-ac-check
+
+An `--ac` with no `--ac-check` exits 3 `missing_ac_check`; a check before any `--ac` is a usage error; `ac_checks` and the `check:` sub-bullet are written; `check` refuses a ready ticket, exits 1 with `AC-FAIL` for a wrong exit code or unmatched output, ticks a pass with command, exit code and output, and `--index` runs one; `done` refuses with `ac_check_failed` while a check fails and closes an all-green ticket; `amend --ac` needs a check.
+Why: a box ticked by hand is a claim, not a proof, and a gate that `done` does not enforce is not a gate.
+
+## 280-approve-resolves-tools
+
+`approve` passes when make targets (one reached through `include`), a script and a command resolve, and refuses with exit 3 `tool_missing` naming a missing make target, script, command or AC check command, leaving the ticket `draft`; a target listed under `--provides` passes; a file only in the working tree does not count as on main.
+Why: a ready ticket that names a tool which is not on main sends a build seat off to invent it (ORD-0555).
+
 ## 290-generated-views-untracked
 
 `next` and `tree` rebuild `INDEX.md` when it is absent, and `reindex --check` passes without it but still fails on a loose top-level ticket.
 Why: the generated views are untracked, so a fresh clone has none and two parallel ticket PRs must never conflict on a shared file.
+
+## The wo defaults
+
+`assert.sh`'s `wo` adds inert defaults to `new` and `amend`: `--owner-words 'test owner words'` and `--context 'test context'` on `new` when absent, and `--ac-check true --ac-exit 0` after every non-empty `--ac` not already followed by `--ac-check`.
+Why: the older cases test other behaviour, so the required flags must not change what they prove.
+Cases 150 and 250 call `work-order.sh` directly and so pass the flags themselves; 260 and 270 do too, for every refusal they assert.

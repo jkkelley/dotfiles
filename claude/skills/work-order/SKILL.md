@@ -20,6 +20,7 @@ version: 2.3.0
   - [Cutting an epic and its children](#cutting-an-epic-and-its-children)
   - [Notes: the progress record](#notes-the-progress-record)
   - [Answering an open question](#answering-an-open-question)
+  - [Owner words, context and scripted checks](#owner-words-context-and-scripted-checks)
   - [Evidencing an acceptance criterion](#evidencing-an-acceptance-criterion)
   - [Repairing a heading](#repairing-a-heading)
   - [The index as a gate](#the-index-as-a-gate)
@@ -322,6 +323,23 @@ closed with no recorded answer is indistinguishable from a deleted one and takes
 the audit trail with it, so anything of that shape would be the gate removed
 rather than satisfied. The question text is preserved and the answer is written
 underneath it with the date.
+
+### Owner words, context and scripted checks
+
+`new` requires `--owner-words` (the owner's words verbatim, repeatable) and `--context` (repeatable), and every `--ac` needs `--ac-check "<command>" --ac-exit <code> [--ac-expect <regex>]` right after it.
+A missing one is refused with exit 3: `missing_owner_words`, `missing_context`, `missing_ac_check`.
+`--provides` names a tool the ticket itself creates.
+
+```bash
+bash $WO new --top-level --title "..." --type feature --problem "..." --out "..." \
+  --owner-words "what the owner said, verbatim" --context "the full background" \
+  --ac "retries three times" --ac-check "bash tests/retry.sh" --ac-exit 0 --ac-expect 'ok 3'
+bash $WO check --id WO-20260805-3f2a          # runs every check, ticks what passes, prints AC-PASS / AC-FAIL
+```
+
+`check` runs in `in-progress` and `in-review`; `done` refuses (`ac_check_failed`) while any check fails.
+`approve` refuses (`tool_missing`) when a backticked command in a `step:` line or an AC check names a Make target or script that is not on `origin/main` and not listed under `--provides`.
+See `references/lifecycle.md`.
 
 ### Evidencing an acceptance criterion
 

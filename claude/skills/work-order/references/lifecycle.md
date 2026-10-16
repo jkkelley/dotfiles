@@ -13,6 +13,7 @@
   - [7. `stale`](#7-stale)
 - [Outside the status set](#outside-the-status-set)
 - [Status-gated record verbs](#status-gated-record-verbs)
+- [Owner words, context, scripted checks and tool resolution](#owner-words-context-scripted-checks-and-tool-resolution)
 - [The frozen block](#the-frozen-block)
 - [close](#close)
 
@@ -182,6 +183,33 @@ It replaces the In, Out, Degrees of freedom, Acceptance criteria or Test plan se
 An approved ticket is amended by `reopen`, or by a new ticket that says why: a ticket whose scope can move after approval is not a contract.
 Each repeatable flag replaces its whole section, an empty `Out` list is refused exactly as in `new`, and a wireframe-derived frozen block is carried through untouched because it is derived from `build-plan.json` rather than from the caller.
 `--freedom ""` is the one empty replacement that is accepted: it withdraws every declared freedom and the section falls back to its single `[fixed]` line, because a ticket with no freedoms is a complete ticket where a ticket with no non-goals is not.
+
+## Owner words, context, scripted checks and tool resolution
+
+Item 30 of the owner's design principles: a job carries the owner's words and the full context, and every acceptance criterion is a scripted check with its exit condition.
+`new` therefore requires them, and refuses with exit 3 before anything is written.
+
+- `--owner-words T` (repeatable, verbatim) renders under `## Owner words` as `> T` lines. Missing: `missing_owner_words`.
+- `--context T` (repeatable) renders under `## Context`. Missing: `missing_context`.
+- `--ac T --ac-check CMD --ac-exit N [--ac-expect REGEX]` binds the check to the `--ac` just before it, on `new` and on `amend`. An `--ac` with no `--ac-check` is refused with `missing_ac_check`. An empty `--ac ""` on `amend` is the withdrawal and needs none. Criteria from `--from-figma` (the frozen block) carry no check and are exempt. The check renders as a `check:` sub-bullet and lands in the frontmatter as `ac_checks: [{index, command, exit, expect}]`.
+- `--provides T` (repeatable) names a tool, script or Make target that this ticket itself creates. Frontmatter `provides`.
+
+`check --id ID [--index N]` is legal in `in-progress` and `in-review`.
+It runs each check with `bash -c CMD` from the project root under `timeout 600`.
+A check passes when the exit code equals `--ac-exit` and, if `--ac-expect` was given, the output matches the regex.
+A pass ticks the criterion through the same code path as `evidence`, with the observation `check: CMD exit RC output: <first 20 lines>`.
+It prints `AC-PASS <i>` or `AC-FAIL <i> rc=<rc>`, skips criteria with no check, and exits 0 when every check passes, 1 otherwise.
+
+`done` runs the checks first and refuses with `ac_check_failed <i>` (exit 3) while any fails.
+It verifies and does not tick: a box is ticked by `check` or `evidence`, so `done` never ticks one nobody ran a check for.
+
+`approve` refuses a ticket whose tools do not resolve (exit 3, `tool_missing`, naming the tool), and the ticket stays `draft`.
+It reads every backticked command in the `step:` lines of In, plus every `ac_checks` command.
+`make [-C D] [-f F] T`: `T` must be defined in `F` (default `D/Makefile`, following `include`) on `origin/main`, read with `git show origin/main:<file>`.
+`bash P`: `P` must exist on `origin/main`.
+Any other first word must resolve with `command -v`.
+A tool listed under `provides` is exempt.
+A project with no `origin/main` resolves against `HEAD`.
 
 ## The frozen block
 

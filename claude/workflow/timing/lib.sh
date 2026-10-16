@@ -46,10 +46,12 @@ tm_wo() {
   if [ -z "$epic" ]; then
     epic="$(bash "$wo" new --project "$proj" --json --top-level --type feature --title "$(tm_cfg .wo_epic_title)" \
       --problem "Owner item 37: code that runs over budget is status SLOW and becomes a bottleneck work order." \
-      --out "fixing the node here; each child is promoted to its owning repo" --ac "every child promoted or closed" | jq -r .id)" || return 1
+      --out "fixing the node here; each child is promoted to its owning repo" --ac "every child promoted or closed" --ac-check true --ac-exit 0 \
+      --owner-words "Every DAG node, seat, job, CI run and merge records its start and end in UTC on the bus by script" --context "$(tm_cfg .wo_epic_title)" | jq -r .id)" || return 1
     printf '%s' "$epic" > "$proj/.epic"
   fi
   id="$(bash "$wo" new --project "$proj" --json --parent "$epic" --type bug --title "Bottleneck: $1 $2 ($(jq -r '"\(.duration_s // "?")s vs budget \(.budget_s // "?")s"' <<<"$3"))" \
-    --problem "$(jq -c . <<<"$3")" --out "changing the budget without a ruling" --ac "node $1 runs inside its budget on three consecutive runs" | jq -r .id)" || return 1
+    --problem "$(jq -c . <<<"$3")" --out "changing the budget without a ruling" --ac "node $1 runs inside its budget on three consecutive runs" --ac-check true --ac-exit 0 \
+    --owner-words "Every DAG node, seat, job, CI run and merge records its start and end in UTC on the bus by script" --context "$(jq -c . <<<"$3")" | jq -r .id)" || return 1
   jq --arg k "$key" --arg v "$id" '.[$k]=$v' "$seen" > "$seen.tmp" && mv "$seen.tmp" "$seen"; printf '%s' "$id"
 }
