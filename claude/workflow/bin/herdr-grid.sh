@@ -268,6 +268,13 @@ cmd_claim() { # claim <line> <seat> [cmd]; prints the pane id
 
 cmd_seat_up() {
   local line="$1" seat="$2" cmd="${3:-}" pane
+  # Breadcrumb ORD-0548 O4 (WO-20261016-ec34): a build seat starts only on a brief that names a ready work order.
+  # The check runs before the claim so a refused seat holds no slot and no pane is renamed.
+  # Rejected: checking after the start, because the seat would already be running and inventing. Cost: one make call per BUILD=1 seat-up.
+  if [ "${BUILD:-}" = 1 ]; then
+    [ -n "${BRIEF:-}" ] || { printf 'DESIGN-GAP seat %s: BUILD=1 needs BRIEF=\n' "$seat"; return 3; }
+    make -s -C "$HERE/.." -f a2a.mk brief-check FILE="$BRIEF" BUILD=1 >&2 || { printf 'DESIGN-GAP seat %s not started\n' "$seat"; return 3; }
+  fi
   [ -z "$cmd" ] || cmd="$(seat_cmd "$cmd")" || return 1
   if [ -n "$cmd" ]; then
     local tmp; tmp="$(seat_tmp "$line" "$seat")"
