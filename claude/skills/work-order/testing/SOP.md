@@ -37,6 +37,7 @@
 - [420-code-dir-checks](#420-code-dir-checks)
 - [430-approve-make-wildcard-include](#430-approve-make-wildcard-include)
 - [450-code-dir-worktree](#450-code-dir-worktree)
+- [460-ac-expect-multiline](#460-ac-expect-multiline)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
