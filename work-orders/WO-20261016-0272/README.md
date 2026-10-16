@@ -8,7 +8,7 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-75b7` | ready | p0 | - | [claude/workflow CI sharded by suite: diff-selected matrix, full on main and nightly, cached image, timed by step-time.sh](WO-20261016-75b7-claude-workflow-ci-sharded-by-suite-diff-selecte.md) |
+| `WO-20261016-75b7` | in-review | p0 | - | [claude/workflow CI sharded by suite: diff-selected matrix, full on main and nightly, cached image, timed by step-time.sh](WO-20261016-75b7-claude-workflow-ci-sharded-by-suite-diff-selecte.md) |
 | `WO-20261016-2ffe` | ready | p0 | WO-20261016-1c04 | [make pr-regen-index REPO= BRANCHES=: regen-merge.sh ported as the index-regen fallback](WO-20261016-2ffe-make-pr-regen-index-repo-branches-regen-merge-sh.md) |
 | `WO-20261016-1c04` | in-review | p0 | WO-20261016-565d | [make wo-untrack-generated REPO=: untrack the generated work-order views, plan before apply](WO-20261016-1c04-make-wo-untrack-generated-repo-untrack-the-gener.md) |
 | `WO-20261016-565d` | in-review | p0 | WO-20261016-6ef4 | [work-order skill: INDEX.md and epic READMEs become untracked build outputs, regenerated on demand](WO-20261016-565d-work-order-skill-index-md-and-epic-readmes-becom.md) |
