@@ -8,7 +8,7 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-73cd` | ready | p0 | - | [workflow-spawn.sh refuses every inbox sweep and send seat: no seat named in project.json](WO-20261016-73cd-workflow-spawn-sh-refuses-every-inbox-sweep-and-.md) |
+| `WO-20261016-73cd` | in-progress | p0 | - | [workflow-spawn.sh refuses every inbox sweep and send seat: no seat named in project.json](WO-20261016-73cd-workflow-spawn-sh-refuses-every-inbox-sweep-and-.md) |
 | `WO-20261016-e2e8` | draft | p1 | WO-20261016-73cd | [Inbox sweep B11 - live end-to-end run](WO-20261016-e2e8-inbox-sweep-b11-live-end-to-end-run.md) |
 | `WO-20261016-5328` | draft | p1 | - | [Inbox sweep B12 - spike, can the extension be woken without the owner](WO-20261016-5328-inbox-sweep-b12-spike-can-the-extension-be-woken.md) |
 | `WO-20261016-80aa` | draft | p1 | WO-20261016-73cd | [Inbox sweep B18 - live first LinkedIn send](WO-20261016-80aa-inbox-sweep-b18-live-first-linkedin-send.md) |

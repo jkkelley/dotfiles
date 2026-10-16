@@ -136,3 +136,32 @@ sweep_bearings_server() {
     fi
   fi
 }
+
+# sweep_seat_config <out> <seat> <role> <tab_label> <dir>
+# Declares one run-time seat in a run-local copy of claude/workflow/config/project.json and prints <out>; callers start
+# the seat with WORKFLOW_CONFIG=<out>, the spawner's existing config override (claude/workflow/bin/workflow-lib.sh:29).
+# BREADCRUMB (WO-20261016-73cd, architect ruling R1, 2026-10-16T04:25Z): workflow-spawn.sh:55-56 looks a seat up by exact
+# name in project.json, which declared only builder, reviewer, orch-builder, architect and smoke, so every live sweep and
+# send seat died with "no seat named gmail" (the suites stub the spawner, so none saw it). The seats are named at run time
+# (proton-<label> from the owner's config, agent-reply-<id> per approval), and Proton labels are owner data that must not
+# enter this public repo, so they cannot be declared in the tracked file. Rejected: editing workflow-spawn.sh (herdr-grid
+# owns it, and the override already exists) and fixed slot names (every reader of a seat name would need a slot map).
+# The seat's dir only has to exist: the spawner skips `git worktree add` for an existing dir, and a claude-win-chrome
+# seat runs under the Windows home anyway. The workspace label is the caller's own herdr workspace when there is one,
+# because the tracked label names a workspace that may not exist on this machine. Cost: a copy per run, pruned with it.
+sweep_seat_config() {
+  local out="$1" seat="$2" role="$3" tab="$4" dir="$5" base ws=""
+  base="${WORKFLOW_CONFIG:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/config/project.json}"
+  mkdir -p "$dir" "$(dirname "$out")" || return 1
+  if [ ! -f "$out" ]; then
+    if [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v herdr >/dev/null 2>&1; then
+      ws="$(herdr workspace list 2>/dev/null | jq -r --arg w "$HERDR_WORKSPACE_ID" \
+        'first(.result.workspaces[]? | select(.workspace_id == $w) | .label) // empty' 2>/dev/null)" || ws=""
+    fi
+    jq --arg ws "$ws" 'if $ws == "" then . else .workflow.herdr.workspace_label = $ws end' "$base" >"$out" || return 1
+  fi
+  sweep_json_set "$out" '.workflow.seats = ([.workflow.seats[] | select(.name != $n)]
+      + [{name:$n, role:$r, tab_label:$t, worktree:$d, branch:"main"}])' \
+    --arg n "$seat" --arg r "$role" --arg t "$tab" --arg d "$dir" || return 1
+  printf '%s\n' "$out"
+}

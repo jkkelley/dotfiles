@@ -24,3 +24,4 @@ reply-send	bin/reply-send.sh,bin/reply-verify.sh,bin/sweep-lib.sh,templates/brie
 followup	bin/lead-followup.sh,bin/reply-cards.sh,bin/sweep-lib.sh,templates/followup.txt,nodes/S6.node.json,tests/unit/test_followup.sh	bash tests/unit/test_followup.sh
 reply-send	bin/reply-send.sh,bin/reply-verify.sh,bin/sweep-lib.sh,templates/brief-linkedin-send.md,templates/brief-linkedin-clear.md,schemas/send-result.schema.json,nodes/L6.node.json,tests/lib/,tests/unit/test_reply_send.sh	bash tests/unit/test_reply_send.sh
 controller	bin/sweep.sh,Makefile,tests/unit/test_controller.sh	bash tests/unit/test_controller.sh
+seats	bin/sweep-lib.sh,bin/sweep.sh,bin/reply-send.sh,../bin/workflow-spawn.sh,../config/project.json,tests/unit/test_seats.sh	bash tests/unit/test_seats.sh
