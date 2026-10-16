@@ -65,6 +65,23 @@
     "A2A-004": {
       "means": "SOP breach recorded in a result file, paged as is",
       "acts": "architect"
+    },
+    "QUEUED-STALE": {
+      "means": "seat has queued input unchanged for pane_look.queued_stale_s",
+      "acts": "orchestrator"
+    },
+    "IDLE-STALE": {
+      "means": "seat pane idle (no moving spinner) for pane_look.idle_stale_s and no result file",
+      "acts": "orchestrator"
     }
+  },
+  "pane_look": {
+    "judge_every_s": 60,
+    "snapshot_every_s": 600,
+    "queued_stale_s": 300,
+    "idle_stale_s": 60,
+    "spinner_re": "^[^[:alnum:][:space:]] [A-Z][a-z]+… \\(([0-9]+h )?([0-9]+m )?[0-9]+s",
+    "queued_re": "^❯ (Press up to edit queued messages|.+)$",
+    "artifact_key": "pane-look"
   }
 }

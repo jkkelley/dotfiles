@@ -1,0 +1,9 @@
+  ctrl+enter to send now
+
+✢ Concocting… (1h 41m 10s · ↓ 42.2k tokens)
+  ⎿  Tip: Use /clear to start fresh when switching topics
+
+────────────────────────────────────────
+❯ Press up to edit queued messages
+────────────────────────────────────────
+  role: x | Opus 5.5 | ⏵⏵ bypass permissions on

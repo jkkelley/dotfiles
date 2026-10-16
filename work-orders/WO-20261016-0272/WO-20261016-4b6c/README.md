@@ -15,4 +15,4 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-38a6` | ready | p1 | WO-20261016-5569 | [Test - seat-up waits for the agent to be idle or working, never idle only](WO-20261016-38a6-test-seat-up-waits-for-the-agent-to-be-idle-or-w.md) |
 | `WO-20261016-8c8c` | ready | p1 | - | [brief-check BUILD=1 refuses a brief without a ready work order id (DESIGN-GAP)](WO-20261016-8c8c-brief-check-build-1-refuses-a-brief-without-a-re.md) |
 | `WO-20261016-ec34` | ready | p1 | WO-20261016-5569 WO-20261016-8c8c | [seat-up refuses a build seat whose brief has no ready work order (DESIGN-GAP)](WO-20261016-ec34-seat-up-refuses-a-build-seat-whose-brief-has-no-.md) |
-| `WO-20261016-5569` | ready | p1 | - | [seat-up waits for the agent to be idle or working, never idle only](WO-20261016-5569-seat-up-waits-for-the-agent-to-be-idle-or-workin.md) |
+| `WO-20261016-5569` | in-review | p1 | - | [seat-up waits for the agent to be idle or working, never idle only](WO-20261016-5569-seat-up-waits-for-the-agent-to-be-idle-or-workin.md) |

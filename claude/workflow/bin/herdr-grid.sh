@@ -263,7 +263,11 @@ cmd_seat_up() {
   pane="$(cmd_claim "$line" "$seat")" || return 1
   if [ -n "$cmd" ]; then
     hj pane run "$pane" "$cmd" >/dev/null || return 1
-    hj agent wait "$pane" --until idle --timeout "$START_TIMEOUT_MS" >/dev/null || { log "seat $seat: agent never reached idle in $pane"; return 1; }
+    # Breadcrumb 2026-10-16T05:42Z: `make seat-up` exited 1 at claude/workflow/Makefile:63 for seat stuck-watch-2 while the seat ran fine.
+    # A seat whose CMD carries its prompt is working at once, so waiting for idle alone timed out after 60 s and returned
+    # before the agent rename and the agent-seen stamp. Any detected state proves the agent started, so wait on idle or working.
+    # Rejected: a longer timeout, which still fails on a long first turn. Cost: none.
+    hj agent wait "$pane" --until idle --until working --timeout "$START_TIMEOUT_MS" >/dev/null || { log "seat $seat: agent never reached idle in $pane"; return 1; }
     # An agent already holding the name is not displaced (herdr answers agent_name_taken); report and keep the label.
     hj agent rename "$pane" "$seat" >/dev/null || return 1
     mkdir -p "$STATE/$line" && date -u +%Y-%m-%dT%H:%M:%SZ > "$(state_file "$line" "$seat")"
