@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "N9",
+  "version": "1.0.0",
+  "title": "merge",
+  "script": "claude/workflow/dag/bin/dag-merge.sh",
+  "depends_on": [
+    "N8"
+  ],
+  "input": {
+    "path": "records/N9.input.json",
+    "schema_version": 1
+  },
+  "output": {
+    "path": "records/N9.output.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Approval on record",
+      "proof": "file in approval_dir names the design id and version"
+    },
+    {
+      "box": "Merged",
+      "proof": "gh pr view state MERGED"
+    }
+  ],
+  "bundle": {
+    "checklist_doc": "claude/workflow/dag/nodes/N9.node.json",
+    "runbook": "claude/workflow/runbooks/RB-dag-intake.md",
+    "playbook": "claude/workflow/dag/playbooks/PB-intake.md",
+    "docs": [
+      "docs/design/dag-state.md",
+      "docs/design/dag-state.spec.xml",
+      "docs/design/dag-state-nodes.spec.xml",
+      "claude/workflow/dag/schemas/node.schema.json",
+      "claude/workflow/dag/schemas/state.schema.json"
+    ]
+  },
+  "retry": {
+    "max": 0,
+    "waits_seconds": [],
+    "idempotent": false
+  },
+  "serial": null,
+  "parallel": "none"
+}

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "N2",
+  "version": "1.0.0",
+  "title": "worktree-branch",
+  "script": "claude/workflow/dag/bin/dag-take.sh",
+  "depends_on": [
+    "N1"
+  ],
+  "input": {
+    "path": "records/N2.input.json",
+    "schema_version": 1
+  },
+  "output": {
+    "path": "records/N2.output.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Lease held",
+      "proof": "slot.sh status shows the holder"
+    },
+    {
+      "box": "Branch is a new feature branch off base_branch",
+      "proof": "git rev-parse --abbrev-ref HEAD in the worktree equals state branch"
+    }
+  ],
+  "bundle": {
+    "checklist_doc": "claude/workflow/dag/nodes/N2.node.json",
+    "runbook": "claude/workflow/runbooks/RB-dag-intake.md",
+    "playbook": "claude/workflow/dag/playbooks/PB-intake.md",
+    "docs": [
+      "docs/design/dag-state.md",
+      "docs/design/dag-state.spec.xml",
+      "docs/design/dag-state-nodes.spec.xml",
+      "claude/workflow/dag/schemas/node.schema.json",
+      "claude/workflow/dag/schemas/state.schema.json"
+    ]
+  },
+  "retry": {
+    "max": 3,
+    "waits_seconds": [
+      5,
+      30,
+      120
+    ],
+    "idempotent": true
+  },
+  "serial": "Every later node works inside this worktree",
+  "parallel": "per ticket"
+}

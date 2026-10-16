@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "N7",
+  "version": "1.0.0",
+  "title": "close-out",
+  "script": "claude/workflow/dag/bin/dag-ship.sh",
+  "depends_on": [
+    "N6"
+  ],
+  "input": {
+    "path": "records/N7.input.json",
+    "schema_version": 1
+  },
+  "output": {
+    "path": "records/N7.output.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Ticket done and archived",
+      "proof": "work-order.sh show status done"
+    },
+    {
+      "box": "Pushed to the PR branch",
+      "proof": "git rev-parse HEAD equals gh pr view headRefOid"
+    }
+  ],
+  "bundle": {
+    "checklist_doc": "claude/workflow/dag/nodes/N7.node.json",
+    "runbook": "claude/workflow/runbooks/RB-dag-intake.md",
+    "playbook": "claude/workflow/dag/playbooks/PB-intake.md",
+    "docs": [
+      "docs/design/dag-state.md",
+      "docs/design/dag-state.spec.xml",
+      "docs/design/dag-state-nodes.spec.xml",
+      "claude/workflow/dag/schemas/node.schema.json",
+      "claude/workflow/dag/schemas/state.schema.json"
+    ]
+  },
+  "retry": {
+    "max": 0,
+    "waits_seconds": [],
+    "idempotent": false
+  },
+  "serial": "Rides the same PR, after submit",
+  "parallel": "none"
+}

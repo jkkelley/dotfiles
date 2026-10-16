@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "N1",
+  "version": "1.0.0",
+  "title": "claim",
+  "script": "claude/workflow/dag/bin/dag-take.sh",
+  "depends_on": [],
+  "input": {
+    "path": "records/N1.input.json",
+    "schema_version": 1
+  },
+  "output": {
+    "path": "records/N1.output.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "State validates against state.schema.json",
+      "proof": "validator exit 0 in ledger row init"
+    },
+    {
+      "box": "Design hash pinned",
+      "proof": "design.sha256 equals sha256 of nodes.lock/"
+    },
+    {
+      "box": "Ticket title recorded in full",
+      "proof": "ticket.title non-empty in state.json"
+    }
+  ],
+  "bundle": {
+    "checklist_doc": "claude/workflow/dag/nodes/N1.node.json",
+    "runbook": "claude/workflow/runbooks/RB-dag-intake.md",
+    "playbook": "claude/workflow/dag/playbooks/PB-intake.md",
+    "docs": [
+      "docs/design/dag-state.md",
+      "docs/design/dag-state.spec.xml",
+      "docs/design/dag-state-nodes.spec.xml",
+      "claude/workflow/dag/schemas/node.schema.json",
+      "claude/workflow/dag/schemas/state.schema.json"
+    ]
+  },
+  "retry": {
+    "max": 3,
+    "waits_seconds": [
+      5,
+      30,
+      120
+    ],
+    "idempotent": true
+  },
+  "serial": "The run dir must exist before any node",
+  "parallel": "per ticket"
+}

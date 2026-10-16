@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "N10",
+  "version": "1.0.0",
+  "title": "cleanup",
+  "script": "claude/workflow/dag/bin/dag-ship.sh",
+  "depends_on": [
+    "N9"
+  ],
+  "input": {
+    "path": "records/N10.input.json",
+    "schema_version": 1
+  },
+  "output": {
+    "path": "records/N10.output.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Branch gone local and remote",
+      "proof": "git branch --list and ls-remote print nothing"
+    },
+    {
+      "box": "Lease released and worktree removed",
+      "proof": "slot.sh status shows free; path absent"
+    },
+    {
+      "box": "State archived",
+      "proof": "run dir moved under archive/ with DG-COMPLETE in the ledger"
+    }
+  ],
+  "bundle": {
+    "checklist_doc": "claude/workflow/dag/nodes/N10.node.json",
+    "runbook": "claude/workflow/runbooks/RB-dag-intake.md",
+    "playbook": "claude/workflow/dag/playbooks/PB-intake.md",
+    "docs": [
+      "docs/design/dag-state.md",
+      "docs/design/dag-state.spec.xml",
+      "docs/design/dag-state-nodes.spec.xml",
+      "claude/workflow/dag/schemas/node.schema.json",
+      "claude/workflow/dag/schemas/state.schema.json"
+    ]
+  },
+  "retry": {
+    "max": 3,
+    "waits_seconds": [
+      5,
+      30,
+      120
+    ],
+    "idempotent": true
+  },
+  "serial": null,
+  "parallel": "none"
+}

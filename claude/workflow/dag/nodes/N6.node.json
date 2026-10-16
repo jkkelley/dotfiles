@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "N6",
+  "version": "1.0.0",
+  "title": "open-pr",
+  "script": "claude/workflow/dag/bin/dag-ship.sh",
+  "depends_on": [
+    "N5"
+  ],
+  "input": {
+    "path": "records/N6.input.json",
+    "schema_version": 1
+  },
+  "output": {
+    "path": "records/N6.output.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "PR exists",
+      "proof": "gh pr view number matches state pr.number"
+    },
+    {
+      "box": "PR body has no agent footer",
+      "proof": "grep for the footer exits 1"
+    }
+  ],
+  "bundle": {
+    "checklist_doc": "claude/workflow/dag/nodes/N6.node.json",
+    "runbook": "claude/workflow/runbooks/RB-dag-intake.md",
+    "playbook": "claude/workflow/dag/playbooks/PB-intake.md",
+    "docs": [
+      "docs/design/dag-state.md",
+      "docs/design/dag-state.spec.xml",
+      "docs/design/dag-state-nodes.spec.xml",
+      "claude/workflow/dag/schemas/node.schema.json",
+      "claude/workflow/dag/schemas/state.schema.json"
+    ]
+  },
+  "retry": {
+    "max": 0,
+    "waits_seconds": [],
+    "idempotent": false
+  },
+  "serial": "submit must precede done",
+  "parallel": "none"
+}

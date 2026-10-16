@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "N3",
+  "version": "1.0.0",
+  "title": "start-ticket",
+  "script": "claude/workflow/dag/bin/dag-take.sh",
+  "depends_on": [
+    "N2"
+  ],
+  "input": {
+    "path": "records/N3.input.json",
+    "schema_version": 1
+  },
+  "output": {
+    "path": "records/N3.output.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Ticket status in-progress",
+      "proof": "work-order.sh show --json status field"
+    }
+  ],
+  "bundle": {
+    "checklist_doc": "claude/workflow/dag/nodes/N3.node.json",
+    "runbook": "claude/workflow/runbooks/RB-dag-intake.md",
+    "playbook": "claude/workflow/dag/playbooks/PB-intake.md",
+    "docs": [
+      "docs/design/dag-state.md",
+      "docs/design/dag-state.spec.xml",
+      "docs/design/dag-state-nodes.spec.xml",
+      "claude/workflow/dag/schemas/node.schema.json",
+      "claude/workflow/dag/schemas/state.schema.json"
+    ]
+  },
+  "retry": {
+    "max": 3,
+    "waits_seconds": [
+      5,
+      30,
+      120
+    ],
+    "idempotent": true
+  },
+  "serial": null,
+  "parallel": "per ticket"
+}
