@@ -1,5 +1,5 @@
 {
-  "$comment": "pr-flow per repository (pr-process.md section 10). Every key is overridable by VAR=value on the Make target. clone is the local checkout regen-conflicts and merge.sh's cleanup run in; ci feeds pr-flow-ci-render.sh when the templates are installed.",
+  "$comment": "pr-flow per repository (pr-process.md section 10). Every key is overridable by VAR=value on the Make target. clone is the local checkout regen-conflicts and merge.sh's cleanup run in; ci feeds pr-flow-ci-render.sh when the templates are installed. stale_red.mode is update-branch (merge base into head, new pull_request event, fresh merge ref), rerun (gh run rerun --failed, same merge ref, for flakes) or off.",
   "defaults": {
     "line": "pr-flow",
     "merge": "action",
@@ -15,6 +15,9 @@
       "slots": false
     },
     "backstop_s": 120,
+    "stale_red": {
+      "mode": "update-branch"
+    },
     "budgets": {
       "N4": {
         "budget_s": 120,
@@ -91,10 +94,10 @@
       "clone": "~/projects/business",
       "ci": {
         "pr_targets": [
-          "tracked-ignored-check"
+          "none"
         ],
         "main_targets": [
-          "tracked-ignored-check"
+          "none"
         ],
         "installed": [
           "ci",
