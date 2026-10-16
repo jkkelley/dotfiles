@@ -13,7 +13,7 @@ ROOT  := $(abspath $(CURDIR)/../../..)
 RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:ro,Z" -w /work/claude/workflow/inbox-sweep -e HOME=/tmp
 
 .DEFAULT_GOAL := help
-.PHONY: help image test test-all herdr-first spec-lint nodes-check bottleneck-check
+.PHONY: help image test test-all herdr-first spec-lint nodes-check bottleneck-check migrate migrate-rollback
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-12s %s\n", $$1, $$2}'
@@ -39,3 +39,14 @@ nodes-check: image ## Node declarations validate, scripts name declared nodes, d
 
 bottleneck-check: image ## List every node's serial reason; fail on a serial node with none
 	@$(RUN) $(IMAGE) bash bin/node-lib.sh bottleneck-check
+
+# migrate and migrate-rollback are operational, not verification: they write the owner's run records, so they run on the
+# host (the test image mounts the tree read-only, and the records are not in the tree). Their tests run in Podman via `make test`.
+migrate: ## Copy-forward every pending record file under DIR to the pinned schema version (writes beside the originals)
+	@test -n "$(DIR)" || { echo "usage: make migrate DIR=<records dir>" >&2; exit 2; }
+	@bash bin/migrate.sh migrate "$(DIR)"
+
+migrate-rollback: ## Pin NODE back to TO, RECORD back to schema version SV, set aside newer copies in DIR
+	@test -n "$(NODE)" && test -n "$(TO)" && test -n "$(RECORD)" && test -n "$(SV)" && test -n "$(DIR)" \
+	  || { echo "usage: make migrate-rollback NODE=<id> TO=<semver> RECORD=<name> SV=<schema version> DIR=<records dir>" >&2; exit 2; }
+	@bash bin/migrate.sh rollback "$(NODE)" "$(TO)" "$(RECORD)" "$(SV)" "$(DIR)"

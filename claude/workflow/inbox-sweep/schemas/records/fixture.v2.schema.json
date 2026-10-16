@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "inbox-sweep.records.fixture.v2.schema.json",
+  "title": "Fixture record v2 (B21)",
+  "description": "v1 plus an envelope naming where the record came from. text and text_sha256 are untouched by design: an approval binds the text, never the schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "text", "text_sha256", "envelope"],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "id": { "type": "string", "minLength": 1 },
+    "text": { "type": "string" },
+    "text_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["migrated_from"],
+      "properties": { "migrated_from": { "type": "integer", "minimum": 1 } }
+    }
+  }
+}

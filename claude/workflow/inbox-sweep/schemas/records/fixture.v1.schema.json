@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "inbox-sweep.records.fixture.v1.schema.json",
+  "title": "Fixture record v1 (B21)",
+  "description": "A stand-in for an approvals.jsonl row, so the migration runner is proven before any real record needs it. Binds an approved text by sha256, as the real approval rows do (design 15.3).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "text", "text_sha256"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "text": { "type": "string" },
+    "text_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}
