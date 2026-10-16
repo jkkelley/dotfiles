@@ -4,15 +4,15 @@
   "slug": "merge-train-becomes-a-thin-wrapper-over-pr-flow-",
   "title": "merge-train becomes a thin wrapper over pr-flow merge.sh (T8)",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:39:13+00:00",
   "parent": "WO-20261016-ebe4",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/merge-train-becomes-a-thin-wrapper-over-pr-flow-",
+  "pr": 193,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat; design PR 169 merged under ORD-0550 is the approval",
@@ -64,8 +64,10 @@ Build ticket from claude/workflow/docs/pr-process/pr-process.md section 13; file
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the named test cases pass in podman
-- [ ] `AC-H2` *(human)* files touched equal the Scope list
+- [x] `AC-H1` *(human)* the named test cases pass in podman
+  - observed `2026-10-16` make -C tools/merge-train test: test_merge_train.sh pass=9 fail=0, shellcheck clean
+- [x] `AC-H2` *(human)* files touched equal the Scope list
+  - observed `2026-10-16` files: tools/merge-train/merge-train.sh, tools/merge-train/tests/test_merge_train.sh
 
 ## Test plan
 
