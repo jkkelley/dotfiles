@@ -4,13 +4,13 @@
   "slug": "a2a-st-close-pr-292-merged-8454-s-code-re-run-it",
   "title": "A2A-ST close: PR 292 merged 8454's code; re-run its checks with AC-H2 on a JSONL state row, move 8454's edges here and cancel 8454 as superseded",
   "type": "chore",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:28:14+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
+  "branch": "feat/a2a-st-close-pr-292-merged-8454-s-code-re-run-it",
   "pr": null,
   "closed": null,
   "approval": {
@@ -21,7 +21,11 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [],
+  "blocks": [
+    "WO-20261016-48af",
+    "WO-20261016-9821",
+    "WO-20261016-7838"
+  ],
   "ac_checks": [
     {
       "index": 1,
