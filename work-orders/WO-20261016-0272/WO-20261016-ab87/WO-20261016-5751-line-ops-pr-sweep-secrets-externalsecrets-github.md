@@ -4,14 +4,14 @@
   "slug": "line-ops-pr-sweep-secrets-externalsecrets-github",
   "title": "line-ops pr-sweep secrets: ExternalSecrets github-token and ghcr-pull-secret from Vault homelab/apps/line-ops, PVC pr-sweep-work, seed doc keys",
   "type": "feature",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:53:42+00:00",
   "parent": "WO-20261016-ab87",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/5751-line-ops-pr-sweep-secrets-externalsecrets-github",
+  "pr": 104,
   "closed": null,
   "approval": {
     "via": "override",
@@ -139,15 +139,20 @@ Owner edge: until the owner seeds the two keys, both ExternalSecrets report Secr
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* both overlays render (what make -C apps/line-ops render runs)
+- [x] `AC-H1` *(human)* both overlays render (what make -C apps/line-ops render runs)
+  - observed `2026-10-16` run in homelab-gitops worktree: RENDER-OK exit 0 (make -C apps/line-ops render, lint LINT-OK); PR 104
   - check: `kubectl kustomize apps/line-ops/overlays/stable >/dev/null && kubectl kustomize apps/line-ops/overlays/uat >/dev/null && echo RENDER-OK` exit 0 expect /RENDER-OK/
-- [ ] `AC-H2` *(human)* the uat render carries both ExternalSecrets and the PVC
+- [x] `AC-H2` *(human)* the uat render carries both ExternalSecrets and the PVC
+  - observed `2026-10-16` grep -cE name-pattern on uat render: 3, exit 0
   - check: `kubectl kustomize apps/line-ops/overlays/uat | grep -cE '^ name: (github-token|ghcr-pull-secret|pr-sweep-work)$'` exit 0 expect /^3$/
-- [ ] `AC-H3` *(human)* every key comes from the one path the line-ops policy reads
+- [x] `AC-H3` *(human)* every key comes from the one path the line-ops policy reads
+  - observed `2026-10-16` grep|sort -u|wc -l: 2, exit 0
   - check: `grep -oE 'key: homelab/apps/line-ops, property: github-(pat|username)' apps/line-ops/base/pr-sweep-secrets.yaml | sort -u | wc -l` exit 0 expect /^2$/
-- [ ] `AC-H4` *(human)* the seed doc names both keys
+- [x] `AC-H4` *(human)* the seed doc names both keys
+  - observed `2026-10-16` grep -cE github-(username|pat) on seed doc: 2, exit 0
   - check: `grep -cE 'github-(username|pat)' docs/line-ops/vault-seed-line-ops.md` exit 0 expect /^[2-9]/
-- [ ] `AC-H5` *(human)* the diff holds only In files
+- [x] `AC-H5` *(human)* the diff holds only In files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(apps/line-ops/base/(pr-sweep-secrets.yaml|kustomization.yaml|vault-store.yaml)|docs/line-ops/vault-seed-line-ops.md)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(apps/line-ops/base/(pr-sweep-secrets\.yaml|kustomization\.yaml|vault-store\.yaml)|docs/line-ops/vault-seed-line-ops\.md)$'` exit 1
 
 ## Test plan
