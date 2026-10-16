@@ -4,15 +4,15 @@
   "slug": "gate-sh-ticket-open-a-pr-whose-head-carries-a-wo",
   "title": "gate.sh ticket-open: a PR whose head carries a work-order still in-progress or in-review is held TICKET-OPEN, merge.sh holds on it, and lib-merge.sh fixture heads are real commits on origin",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:53:18+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/0233-gate-sh-ticket-open-a-pr-whose-head-carries-a-wo",
+  "pr": 322,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design16 recut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -130,13 +130,17 @@ The seat worktree /home/luna/.local/state/zenith/wt/ticket-open (branch feat/wk-
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* gate, merge, merge-hold and merge-cleanup cases pass
+- [x] `AC-H1` *(human)* gate, merge, merge-hold and merge-cleanup cases pass
+  - observed `2026-10-16` make pr-flow-test CASES='gate merge merge-hold merge-cleanup' exit 0: ok gate, merge, merge-hold, merge-cleanup
   - check: `make -C claude/workflow pr-flow-test CASES='gate merge merge-hold merge-cleanup'` exit 0
-- [ ] `AC-H2` *(human)* pr-flow scripts lint clean
+- [x] `AC-H2` *(human)* pr-flow scripts lint clean
+  - observed `2026-10-16` make pr-flow-lint exit 0
   - check: `make -C claude/workflow pr-flow-lint` exit 0
-- [ ] `AC-H3` *(human)* every changed script has a rolodex header
+- [x] `AC-H3` *(human)* every changed script has a rolodex header
+  - observed `2026-10-16` make rolodex-check BASE=origin/main exit 0
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` grep -vE filter over git diff --name-only origin/main...HEAD printed nothing, exit 1
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/pr-flow/(bin/gate\.sh|bin/merge\.sh|tests/gate\.test\.sh|tests/merge-hold\.test\.sh|tests/lib-merge\.sh))$'` exit 1
 
 ## Test plan
