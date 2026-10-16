@@ -45,17 +45,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      # target `none`: a repository with no Make target yet still gets ci-ok, and nothing else runs.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: matrix.target != 'none'
         with:
           path: @@CACHE_PATHS@@
           key: ci-${{ runner.os }}-${{ hashFiles(@@CACHE_KEYS@@) }}
           restore-keys: ci-${{ runner.os }}-
 
       - name: make setup
-        if: "'@@SETUP@@' != ''"
+        if: matrix.target != 'none' && '@@SETUP@@' != ''
         run: make @@SETUP@@
 
       - name: make ${{ matrix.target }}
+        if: matrix.target != 'none'
         run: make ${{ matrix.target }} ${BASE_REF:+BASE_REF=$BASE_REF}
 
   ci-ok:

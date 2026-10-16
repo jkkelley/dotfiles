@@ -20,9 +20,9 @@ brief-new: ## Build a brief: OUT= [CONFIG=] [ID= FROM= TO= SUBJECT= RESULT_FILE=
 	  $(if $(TO),--to "$(TO)") $(if $(SUBJECT),--subject "$(SUBJECT)") $(if $(RESULT_FILE),--result-file "$(RESULT_FILE)") \
 	  $(if $(DONE_TOKEN),--done-token "$(DONE_TOKEN)") $(if $(AC),--ac "$(AC)")
 
-brief-check: ## Validate a brief: FILE= (schema, every AC has a proof_kind). The spawner's one call.
-	@test -n "$(FILE)" || { echo "usage: make brief-check FILE=<brief.json>" >&2; exit 2; }
-	@$(BRIEF_SH) check "$(FILE)"
+brief-check: ## Validate a brief: FILE= [BUILD=1 [WO_PROJECT=<dir>]] (schema; BUILD=1 also needs a ready work order, else DESIGN-GAP exit 3)
+	@test -n "$(FILE)" || { echo "usage: make brief-check FILE=<brief.json> [BUILD=1] [WO_PROJECT=<dir>]" >&2; exit 2; }
+	@$(BRIEF_SH) check "$(FILE)" $(if $(BUILD),--build) $(if $(WO_PROJECT),--wo-project "$(WO_PROJECT)")
 
 result-check: ## Validate a result: FILE= [BRIEF=] (done, every AC ticked with proof)
 	@test -n "$(FILE)" || { echo "usage: make result-check FILE=<result.json> [BRIEF=<brief.json>]" >&2; exit 2; }

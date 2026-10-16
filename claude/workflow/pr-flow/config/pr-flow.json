@@ -1,0 +1,106 @@
+{
+  "$comment": "pr-flow per repository (pr-process.md section 10). Every key is overridable by VAR=value on the Make target. clone is the local checkout regen-conflicts and merge.sh's cleanup run in; ci feeds pr-flow-ci-render.sh when the templates are installed.",
+  "defaults": {
+    "line": "pr-flow",
+    "merge": "action",
+    "records": "bus",
+    "ticket_re": "(WO-[0-9]{8}-[0-9a-f]{4})",
+    "required_check": "ci-ok",
+    "ignore_paths": "events",
+    "regen": {
+      "paths": "",
+      "cmd": ""
+    },
+    "cleanup": {
+      "slots": false
+    },
+    "backstop_s": 120,
+    "budgets": {
+      "N4": {
+        "budget_s": 120,
+        "timeout_s": 300
+      },
+      "sweep": {
+        "budget_s": 60,
+        "timeout_s": 240
+      }
+    },
+    "ci": {
+      "workflows": [
+        "ci"
+      ],
+      "dispatch": "",
+      "pr_targets": [
+        "lint",
+        "test"
+      ],
+      "main_targets": [
+        "lint-all",
+        "test-all"
+      ],
+      "setup": "",
+      "cache_paths": "~/.cache",
+      "cache_keys": "'**/uv.lock', '**/package-lock.json'"
+    }
+  },
+  "repos": {
+    "jkkelley/dotfiles": {
+      "clone": "~/dotfiles",
+      "required_check": "what has to run",
+      "regen": {
+        "paths": "work-orders/INDEX.md work-orders/*/README.md",
+        "cmd": "bash claude/skills/work-order/scripts/work-order.sh reindex"
+      },
+      "ci": {
+        "workflows": [
+          "skill PR gate",
+          "skill PR intent",
+          "rolodex check",
+          "a2a lint"
+        ],
+        "dispatch": "skill-publish.yml",
+        "installed": [
+          "merge-on-green"
+        ]
+      }
+    },
+    "jkkelley/ypconsult-01-src": {
+      "clone": "~/projects/ypconsult-01-src",
+      "ci": {
+        "pr_targets": [
+          "lint",
+          "typecheck",
+          "test",
+          "validate"
+        ],
+        "main_targets": [
+          "lint-all",
+          "typecheck-all",
+          "test-all",
+          "validate"
+        ],
+        "setup": "setup",
+        "cache_paths": "~/.cache/uv",
+        "installed": [
+          "ci",
+          "merge-on-green"
+        ]
+      }
+    },
+    "jkkelley/business": {
+      "clone": "~/projects/business",
+      "ci": {
+        "pr_targets": [
+          "none"
+        ],
+        "main_targets": [
+          "none"
+        ],
+        "installed": [
+          "ci",
+          "merge-on-green"
+        ]
+      }
+    }
+  }
+}
