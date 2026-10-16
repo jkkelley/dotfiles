@@ -4,15 +4,15 @@
   "slug": "work-order-sh-approve-code-dir-dir-resolves-step",
   "title": "work-order.sh approve --code-dir DIR resolves step and AC tools in the checkout of the ticket repo, not the ticket project",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:43:31+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/e297-work-order-sh-approve-code-dir-dir-resolves-step",
+  "pr": 332,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design11 cut for ORD-0932-next Q2 and the ORD-0830 RR-orch-14 DESIGN-GAPs; design approvals ruled done, ORD-0550 O4",
@@ -113,11 +113,14 @@ Rejected: guessing ~/projects/<name> from .repo, because a guessed checkout can 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* case 370 and the whole skill suite pass
+- [x] `AC-H1` *(human)* case 370 and the whole skill suite pass
+  - observed `2026-10-16` check: bash claude/skills/work-order/testing/run-tests.sh exit 0 output: work-order test suite image: localhost/work-order-test:1 skill: /home/luna/.cache/wt-e297/claude/skills/work-order (read-only) scratch: /tmp/work-order-test.tXgZn3 (removed on exit) 010-new-happy.sh ok new exits 0 on the documented example (exit 0) ok INDEX.md is generated ok INDEX lists the new ticket ok starts in draft ok renders the non-goals section ok records the non-goal ok records the human criterion ok frontmatter parses as JSON (exit 0) created /work/proj.XsKGGb/work-orders/WO-20260805-f57b/WO-20260805-f57b-empty-cart-state.md (status: draft, evidence: human) ok same input and clock produce an identical ticket 010-new-happy: 9 checks, 0 failed 020-new-refuses.sh
   - check: `bash claude/skills/work-order/testing/run-tests.sh` exit 0 expect /all cases passed/
-- [ ] `AC-H2` *(human)* approve takes --code-dir
+- [x] `AC-H2` *(human)* approve takes --code-dir
+  - observed `2026-10-16` check: grep -c -- '--code-dir) ' claude/skills/work-order/scripts/work-order.sh exit 0 output: 1
   - check: `grep -c -- '--code-dir) ' claude/skills/work-order/scripts/work-order.sh` exit 0 expect /^1$/
-- [ ] `AC-H3` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H3` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` check: bash -c '! git diff --name-only origin/main...HEAD | grep -vE "^(work-orders/.*|claude/skills/work-order/scripts/work-order[.]sh|claude/skills/work-order/testing/cases/370-approve-code-dir[.]sh)$"' exit 0 output:
   - check: `bash -c '! git diff --name-only origin/main...HEAD | grep -vE "^(work-orders/.*|claude/skills/work-order/scripts/work-order[.]sh|claude/skills/work-order/testing/cases/370-approve-code-dir[.]sh)$"'` exit 0
 
 ## Test plan

@@ -4,15 +4,15 @@
   "slug": "approve-s-make-resolver-follows-include-wildcard",
   "title": "approve's make resolver follows -include $(wildcard DIR/*.mk) when DIR is the including makefile's own directory, so wiki-process resolves",
   "type": "bug",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:44:16+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/0f38-approve-s-make-resolver-follows-include-wildcard",
+  "pr": 321,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design15 cut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -111,11 +111,14 @@ Order brief BR-20261016-infra-design15; found by infra-design15 cutting the 168d
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a target behind a self-dir wildcard include resolves, and a missing one still refuses
+- [x] `AC-H1` *(human)* a target behind a self-dir wildcard include resolves, and a missing one still refuses
+  - observed `2026-10-16` run-tests.sh exit 0, 431 checks, 430-approve-make-wildcard-include passed
   - check: `bash claude/skills/work-order/testing/run-tests.sh` exit 0 expect /430-approve-make-wildcard-include/
-- [ ] `AC-H2` *(human)* rolodex pointers hold
+- [x] `AC-H2` *(human)* rolodex pointers hold
+  - observed `2026-10-16` make rolodex-check BASE=origin/main exit 0
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H3` *(human)* the diff holds only the In files
+- [x] `AC-H3` *(human)* the diff holds only the In files
+  - observed `2026-10-16` grep exit 1, no other files
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/skills/work-order/(scripts/work-order\.sh|testing/SOP\.md|testing/cases/430-approve-make-wildcard-include\.sh))$'` exit 1
 
 ## Test plan

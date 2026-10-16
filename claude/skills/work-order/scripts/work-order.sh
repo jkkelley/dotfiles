@@ -52,7 +52,7 @@ Usage:
   work-order.sh reindex [--project DIR] [--check] [--json]
   work-order.sh reflow  [--project DIR] [--dry-run] [--json]
   work-order.sh repair  [--project DIR] [--dry-run] [--json]
-  work-order.sh approve [--project DIR] --id WO-... [--no-lavish --reason T] [--json]
+  work-order.sh approve [--project DIR] --id WO-... [--code-dir DIR] [--no-lavish --reason T] [--json]
   work-order.sh start   [--project DIR] --id WO-... [--json]
   work-order.sh submit  [--project DIR] --id WO-... --pr N [--json]
   work-order.sh done    [--project DIR] --id WO-... [--json]
@@ -247,7 +247,7 @@ command="$1"; shift
 title=""; type=""; problem=""; test_plan=""; test_plan_file=""; priority="p2"
 id=""; pr=""; reason=""; status_filter=""; from_figma=""; frames_glob="*"; pr_repo=""
 parent=""; text=""; answer=""; observed=""; index=""; match=""; superseded_by=""
-tree_id=""; line_name=""; offline=0; ticket_repo=""; clear_repo=0
+tree_id=""; line_name=""; offline=0; ticket_repo=""; clear_repo=0; code_dir=""
 declare -a label_items=() add_labels=() remove_labels=()
 no_lavish=0; dry_run=0; detach=0; check=0; top_level=0
 declare -a in_items=() out_items=() ac_items=() freedom_items=() surfaces=() assumptions=() questions=()
@@ -313,6 +313,7 @@ while (($#)); do
     --reason) reason="${2-}"; shift 2 ;;
     --status) status_filter="${2-}"; shift 2 ;;
     --repo) ticket_repo="${2-}"; shift 2 ;;
+    --code-dir) code_dir="${2-}"; shift 2 ;;
     --clear-repo) clear_repo=1; shift ;;
     --pr-repo) pr_repo="${2-}"; shift 2 ;;
     --no-lavish) no_lavish=1; shift ;;
@@ -949,10 +950,10 @@ cmd_amend() {
 # tool_ref - the git ref tools resolve against: origin/main when the project has
 # it, else HEAD, else "" (not a git repo: the working tree).
 tool_ref() {
-  git -C "$project" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
-  if git -C "$project" rev-parse --verify -q origin/main >/dev/null 2>&1; then
+  git -C "$tool_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  if git -C "$tool_root" rev-parse --verify -q origin/main >/dev/null 2>&1; then
     printf 'origin/main'
-  elif git -C "$project" rev-parse --verify -q HEAD >/dev/null 2>&1; then
+  elif git -C "$tool_root" rev-parse --verify -q HEAD >/dev/null 2>&1; then
     printf 'HEAD'
   fi
 }
@@ -960,8 +961,8 @@ tool_ref() {
 # tool_cat <ref> <path> - the file as the ref has it, failing when it is absent.
 tool_cat() {
   local path="${2#./}"
-  if [[ -n $1 ]]; then git -C "$project" show "$1:$path" 2>/dev/null
-  else cat -- "$project/$path" 2>/dev/null
+  if [[ -n $1 ]]; then git -C "$tool_root" show "$1:$path" 2>/dev/null
+  else cat -- "$tool_root/$path" 2>/dev/null
   fi
 }
 
@@ -979,8 +980,23 @@ provided() {
 # make_has_target <ref> <makefile-path> <dir> <target> <depth> - the target is
 # defined in the makefile or in one it includes (paths relative to <dir>, where
 # make runs).
+#
+# Breadcrumb, WO-20261016-0f38: the 168d close-out's approve refused
+# "tool_missing wiki-process" although `make -n wiki-process` exits 0 on main.
+# The target lives in claude/tools/wiki/mk/process.mk, reached from the root
+# Makefile through wiki.mk's `-include $(wildcard $(WIKI_DIR)mk/*.mk)`, and the
+# include loop skipped every path holding a `$`, so the file was never read and
+# approve sent the build seat nowhere. Fix: map each `NAME := $(dir $(lastword
+# $(MAKEFILE_LIST)))` line to the including makefile's own directory, substitute
+# $(NAME) in include paths, and expand a `$(wildcard GLOB)` over the ref's files.
+# Rejected: running `make -n`, because that executes the project's makefile at
+# approve time, which approve must not do. Cost: only the self-dir idiom and
+# wildcard are understood; any include still holding `$` is skipped as before.
 make_has_target() {
-  local ref="$1" mf="$2" dir="$3" target="$4" depth="$5" text inc
+  local ref="$1" mf="$2" dir="$3" target="$4" depth="$5" text inc sd name val f g full
+  local selfpat='^([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*:?=[[:space:]]*\$\(dir[[:space:]]+\$\(lastword[[:space:]]+\$\(MAKEFILE_LIST\)\)\)'
+  local -a selfnames=() selfvals=() hits=()
+  local -i i
   text=$(tool_cat "$ref" "$mf") || return 1
   if printf '%s\n' "$text" | awk -v t="$target" '
       /^[^[:space:]#][^=]*:($|[^=])/ {
@@ -991,10 +1007,43 @@ make_has_target() {
     return 0
   fi
   ((depth < 5)) || return 1
+  # The including makefile's own directory, relative to <dir>, with a trailing /.
+  sd=$(dirname -- "$mf")
+  if [[ -n $dir && $sd == "$dir" ]]; then sd=""
+  elif [[ -n $dir && $sd == "$dir"/* ]]; then sd="${sd#"$dir"/}"
+  fi
+  [[ $sd == . ]] && sd=""
+  [[ -z $sd ]] || sd="$sd/"
+  while IFS= read -r f; do
+    if [[ $f =~ $selfpat ]]; then selfnames+=("${BASH_REMATCH[1]}"); selfvals+=("$sd"); fi
+  done <<<"$text"
   while IFS= read -r inc; do
-    [[ -n $inc && $inc != *'$'* && $inc != *'*'* ]] || continue
+    [[ -n $inc ]] || continue
+    for i in "${!selfnames[@]}"; do inc="${inc//\$\(${selfnames[i]}\)/${selfvals[i]}}"; done
+    hits=()
+    if [[ $inc =~ ^\$\(wildcard[[:space:]]+([^[:space:]]*)\)([[:space:]]|$) ]]; then
+      g="${BASH_REMATCH[1]}"
+      [[ $g != *'$'* && -n $g ]] || continue
+      full="${dir:+$dir/}$g"
+      if [[ -n $ref ]]; then
+        while IFS= read -r f; do
+          # shellcheck disable=SC2053
+          [[ $f == $full ]] && hits+=("$f")
+        done < <(git -C "$project" ls-tree --name-only "$ref" -- "$(dirname -- "$full")/" 2>/dev/null)
+      else
+        for f in "$project"/$full; do
+          [[ -f $f ]] && hits+=("${f#"$project"/}")
+        done
+      fi
+      for f in "${hits[@]+"${hits[@]}"}"; do
+        make_has_target "$ref" "$f" "$dir" "$target" $((depth + 1)) && return 0
+      done
+      continue
+    fi
+    inc="${inc%%[[:space:]]*}"
+    [[ $inc != *'$'* && $inc != *'*'* ]] || continue
     make_has_target "$ref" "${dir:+$dir/}$inc" "$dir" "$target" $((depth + 1)) && return 0
-  done < <(printf '%s\n' "$text" | sed -nE 's/^-?include[[:space:]]+([^[:space:]]+).*/\1/p')
+  done < <(printf '%s\n' "$text" | sed -nE 's/^-?include[[:space:]]+(.*)$/\1/p')
   return 1
 }
 
@@ -1027,8 +1076,8 @@ resolve_tool() {
   if [[ $first == bash && -n ${w[1]-} && ${w[1]} != -* ]]; then
     local path="${w[1]#./}"
     provided "$path" "path:$path" "$(basename -- "$path")" && return 0
-    if [[ -n $ref ]]; then git -C "$project" cat-file -e "$ref:$path" 2>/dev/null && return 0
-    else [[ -e $project/$path ]] && return 0
+    if [[ -n $ref ]]; then git -C "$tool_root" cat-file -e "$ref:$path" 2>/dev/null && return 0
+    else [[ -e $tool_root/$path ]] && return 0
     fi
     ps_die "$PS_VALIDATION" "tool_missing" \
       "tool_missing $path: script not found on ${ref:-the working tree}, and not listed under provides"
@@ -1039,9 +1088,42 @@ resolve_tool() {
     "tool_missing $first: command does not resolve, and is not listed under provides"
 }
 
+# code_repo_slug <dir> - O/R of the dir's origin remote, from git@github.com:O/R(.git)
+# or https://github.com/O/R(.git); empty when it has no origin.
+code_repo_slug() {
+  local u; u=$(git -C "$1" remote get-url origin 2>/dev/null) || return 0
+  u="${u%/}"; u="${u%.git}"; u="${u#git@github.com:}"; u="${u#https://github.com/}"
+  printf '%s' "$u"
+}
+
+# BREADCRUMB (WO-20261016-e297). What broke: require_tools_resolve resolved every
+# make target and script against $project, the ticket project. A business ticket
+# whose code lives in ypli-01-src or ypconsult-01-src names targets of that repo's
+# Makefile, so approve refused it: tool_missing lint (yp-design6 repro,
+# seats/yp-design6.result.json tool_gap). Design seats then approved with an old
+# pinned copy that has no tool check, which is the gate silently off.
+# Fix: when the ticket .repo is set, --code-dir DIR (a checkout of that repo,
+# proven by its origin remote) is the tool root. Rejected: guessing
+# ~/projects/<name> from .repo, since a guessed checkout can be stale or another
+# clone and the gate would pass on the wrong tree; rejected: skipping the check for
+# cross-repo tickets, which is the gate off (ORD-0555). Cost: the caller names the
+# checkout on every approve of a cross-repo ticket.
 # require_tools_resolve <file> - the approve gate.
 require_tools_resolve() {
-  local file="$1" ref cmd span
+  local file="$1" ref cmd span trepo
+  trepo=$(wo_field "$file" '.repo')
+  declare -g tool_root="$project"
+  if [[ -n $trepo ]]; then
+    [[ -n $code_dir ]] || ps_die "$PS_USAGE" "code_dir_required" \
+      "code_dir_required: ticket repo is $trepo; pass --code-dir DIR, a checkout of it"
+    local actual; actual=$(code_repo_slug "$code_dir")
+    [[ $actual == "$trepo" ]] || ps_die "$PS_VALIDATION" "code_dir_mismatch" \
+      "code_dir_mismatch: ticket repo is $trepo, --code-dir origin is ${actual:-none}"
+    tool_root="$code_dir"
+  elif [[ -n $code_dir ]]; then
+    ps_die "$PS_USAGE" "code_dir_without_repo" \
+      "code_dir_without_repo: the ticket has no repo field, so --code-dir does not apply"
+  fi
   ref=$(tool_ref)
   declare -ga tool_provides=()
   while IFS= read -r span; do tool_provides+=("$span"); done < <(wo_fm "$file" | jq -r '(.provides // [])[]')
