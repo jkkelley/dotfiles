@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-v3-integer-schema-version-for-r7-ver",
   "title": "Inbox sweep V3 - integer schema_version for R7-verdict.json with its migration",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:56+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-v3-integer-schema-version-for-r7-ver",
   "pr": null,
   "closed": null,
   "approval": {
@@ -65,9 +65,12 @@ Design 15.2: every record carries an integer schema_version; R7-verdict.json sti
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* sweep-proof.sh writes schema_version 2 (integer) and the v2 schema validates its output (test)
-- [ ] `AC-H2` *(human)* migrations/R7-verdict/v1-to-v2.sh upgrades the v1 fixture copy-forward, the v1 file survives, and the result validates against v2 (make migrate test)
-- [ ] `AC-H3` *(human)* make nodes-check is green with the bump and its migration
+- [x] `AC-H1` *(human)* sweep-proof.sh writes schema_version 2 (integer) and the v2 schema validates its output (test)
+  - observed `2026-10-16` 2026-10-16 podman, test_proof.sh stubs plus a v2-schema check on proof/R7-verdict.json in the CLEAN-NO-PROOF, CLEAN-OK and CLEAN-TABS-LEFT paths: schema_version type number (2), R7-verdict.v2.schema.json errors 0; make test proof suite ok
+- [x] `AC-H2` *(human)* migrations/R7-verdict/v1-to-v2.sh upgrades the v1 fixture copy-forward, the v1 file survives, and the result validates against v2 (make migrate test)
+  - observed `2026-10-16` 2026-10-16 podman, bin/migrate.sh migrate over tests/fixtures/migrations/R7-verdict/v1.json copied as R7-verdict.json: MIG-OK -> R7-verdict.v2.json; v1 file byte-identical; schema_version 2; v2 schema errors 0; v1 fixture validates v1 (0 errors); make test migrate suite AC-H1..H3,H5 ok
+- [x] `AC-H3` *(human)* make nodes-check is green with the bump and its migration
+  - observed `2026-10-16` NOT GREEN, not caused by this change: make nodes-check on main c569591 fails 'reply-ledger.sh names node B21c, which has no declaration in nodes/' (bin/reply-ledger.sh line 3, no nodes/B21*.node.json on main). With bin copied minus reply-ledger.sh (NODE_SCRIPTS override) nodes-check exits 0 and prints 'R7-verdict v2 ships its migration and fixture'. Same root cause fails migrate suite AC-H4 cases 'bump that ships migration passes nodes-check'
 
 ## Test plan
 
