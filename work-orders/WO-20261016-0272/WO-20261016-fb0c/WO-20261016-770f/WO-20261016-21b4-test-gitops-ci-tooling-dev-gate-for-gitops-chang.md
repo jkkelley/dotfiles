@@ -4,7 +4,7 @@
   "slug": "test-gitops-ci-tooling-dev-gate-for-gitops-chang",
   "title": "Test - gitops-ci tooling: dev gate for gitops-changed, gitops-check and gitops-gate-evidence, eleven cases in podman with fakes",
   "type": "test",
-  "status": "draft",
+  "status": "ready",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "infra-design21 cut DESIGN-GAP d38a and ORD-1140 S3 (brief BR-20261016-infra-design21); design approvals ruled done, ORD-0550 O4; Claude seats never use lavish (global owner rule)",
+    "at": "2026-10-16"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [
