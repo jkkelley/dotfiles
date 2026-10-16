@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-b22-lead-ledger-sh-and-lead-qualify-",
   "title": "Inbox sweep B22 - lead-ledger.sh and lead-qualify.sh",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T03:03:24+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-b22-lead-ledger-sh-and-lead-qualify-",
   "pr": null,
   "closed": null,
   "approval": {
@@ -66,10 +66,14 @@ Inbound LinkedIn threads are not tracked as leads, and nothing decides which des
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every inbound thread gets exactly one LD- row (test)
-- [ ] `AC-H2` *(human)* a thread the rubric rejects gets LD-NOT-A-FIT and no draft (test)
-- [ ] `AC-H3` *(human)* the rubric is read from the file, never inlined (grep)
-- [ ] `AC-H4` *(human)* every record this ticket writes carries an integer schema_version (design 15.2) (test)
+- [x] `AC-H1` *(human)* every inbound thread gets exactly one LD- row (test)
+  - observed `2026-10-16` test_lead: 3 threads -> 3 LD-NEW rows, rerun changes nothing, later thread adds exactly one row (all ok)
+- [x] `AC-H2` *(human)* a thread the rubric rejects gets LD-NOT-A-FIT and no draft (test)
+  - observed `2026-10-16` test_lead: not-a-fit thread is LD-NOT-A-FIT with reason, gate exits 1, no drafts and no questions.json written
+- [x] `AC-H3` *(human)* the rubric is read from the file, never inlined (grep)
+  - observed `2026-10-16` test_lead: grep for rubric phrases in both scripts finds none; rubric parsed from owner-words.md section with sha256 in each row
+- [x] `AC-H4` *(human)* every record this ticket writes carries an integer schema_version (design 15.2) (test)
+  - observed `2026-10-16` test_lead: every leads.jsonl row has integer schema_version; make test-all ran 20 suites, none failed
 
 ## Test plan
 
