@@ -72,6 +72,14 @@
       "interval": 0,
       "command": "make -C ${repo} pr-flow-consume",
       "down": "make -C ${repo} pr-flow-consume-stop"
+    },
+    {
+      "name": "pane-look",
+      "owner": "stuck-watch",
+      "slot": "3.3",
+      "interval": 0,
+      "command": "make -C ${repo} pane-look-loop LINE=${line} WS=${ws}",
+      "publishes": "line.${line}.stuck.QUEUED-STALE, line.${line}.stuck.IDLE-STALE"
     }
   ]
 }

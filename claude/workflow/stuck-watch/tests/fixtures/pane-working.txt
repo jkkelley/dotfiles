@@ -1,0 +1,9 @@
+  ctrl+enter to send now
+
+✢ Concocting… (50m 47s · ↓ 23.8k tokens)
+  ⎿  Tip: Use /clear to start fresh when switching topics
+
+────────────────────────────────────────
+❯ 
+────────────────────────────────────────
+  role: x | Opus 5.5 | ⏵⏵ bypass permissions on

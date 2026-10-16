@@ -8,7 +8,7 @@ SW_LINES = $(or $(LINES),$(LINE),$(shell jq -r '.lines|join(" ")' $(SW_HOME)/con
 SW_ENV = $(if $(NTFY_TOPIC_VAR),NTFY_TOPIC_VAR=$(NTFY_TOPIC_VAR))
 sw_need = $(if $(LINE),,$(error LINE= is required))
 .PHONY: stuck-watch-loop stuck-watch-up stuck-watch-down stuck-watch-status stuck-audit deadman-install deadman-uninstall deadman-status \
-  stuck-watch-clean stuck-watch-test stuck-watch-dev stuck-watch-uat stuck-watch-stable stuck-watch-rollback
+  stuck-watch-clean pane-look-loop pane-look-test stuck-watch-test stuck-watch-dev stuck-watch-uat stuck-watch-stable stuck-watch-rollback
 
 stuck-watch-up: ## make stuck-watch-up LINE= [WS=]: the line monitor tab with stuck-watch at its slot (bin/monitors.sh)
 	$(sw_need)
@@ -54,4 +54,10 @@ stuck-watch-stable: ## Gate 3: watcher up for every line in config .lines, deadm
 stuck-watch-rollback: ## Roll stable back: every watcher down, deadman timer removed
 	@for l in $(SW_LINES); do $(MAKE) --no-print-directory stuck-watch-down LINE=$$l; done
 	@$(MAKE) --no-print-directory deadman-uninstall
+pane-look-loop: ## make pane-look-loop LINE= WS=: the monitors.json entry; seat panes judged from the spinner, foreground
+	$(sw_need)
+	$(if $(WS),,$(error WS= is required))
+	@bash $(SW_HOME)/pane-look.sh --line "$(LINE)" --ws "$(WS)"
+pane-look-test: image ## pane-look against fixture panes, stub herdr and bus, --network=none [CASE=]
+	@$(RUN) bash -c 'shellcheck -x stuck-watch/pane-look.sh stuck-watch/tests/test_pane_look.sh && CASE="$(CASE)" bash stuck-watch/tests/test_pane_look.sh'
 test: stuck-watch-test
