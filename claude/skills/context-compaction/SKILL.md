@@ -34,6 +34,8 @@ It is not a summary of a conversation. It is a stack of checkpoints, newest on t
 
 **A checkpoint is appended above the last one. Nothing below the top is ever rewritten.**
 
+**The file never lives in the repository.** It lives in the artifact store and the project holds a gitignored link named `CONTEXT_STATE.md`. See [Where the file lives](#where-the-file-lives).
+
 ## What changed in 2.0.0, and why it is a major bump
 
 Version 1 described `CONTEXT_STATE.md` as a single mutable state and told an agent to hand-write it from a schema.
@@ -87,6 +89,31 @@ CONTEXT_STATE.md
 Reading top-down therefore accumulates history the same way `ISSUES.md` does.
 The top block is current state; everything below is how you got here.
 
+## Where the file lives
+
+Owner order, 2026-10-16 UTC, Design principles 101 item 23: "any files we ever need to create, they never go in the git repo, artifacts get smartly linked to the outside like packages do on linux".
+
+| Thing | Path |
+| --- | --- |
+| The file | `$ROOT/context/YYYY/MM/YYYYMMDD-HHMMSS-<repo>-context-state.md`, opening with artifact frontmatter |
+| Repo index link | `$ROOT/repos/<repo>/context/YYYY/MM/<same name>` |
+| In the project | `CONTEXT_STATE.md`, a symlink to the file, listed in `.gitignore` |
+
+`$ROOT` is `--root DIR`, else `$ARTIFACT_ROOT`, else `${XDG_STATE_HOME:-~/.local/state}/zenith`, the same store as dotfiles `claude/tools/artifact`.
+Every reader keeps reading `CONTEXT_STATE.md` by name; writes resolve the link, so it is never replaced by a regular file.
+
+A project that still holds a regular `CONTEXT_STATE.md` keeps working and gets a warning on every write. Move it out once:
+
+```sh
+scripts/checkpoint.sh migrate --project <dir>     # or: just migrate <dir>
+```
+
+It copies the file into the store byte for byte below new frontmatter, checks the copy, untracks the original if git tracked it, and leaves the link.
+Commit the `.gitignore` line and the removal it reports. Re-running is a no-op.
+`scripts/checkpoint.sh path --project <dir>` prints where the file really lives.
+
+On Windows Git Bash a symlink needs Developer Mode and `MSYS=winsymlinks:nativestrict`; without them `init` and `migrate` fail loudly rather than leave a copy that drifts.
+
 ## Workflow
 
 ### 1. Install, once per project
@@ -95,7 +122,7 @@ The top block is current state; everything below is how you got here.
 scripts/checkpoint.sh init --project <dir>
 ```
 
-Writes the preamble and no checkpoint. An existing file is left byte-identical.
+Writes the preamble and no checkpoint into the store, links it into the project, adds the link to `.gitignore`, and prints the store path. An existing file or link is left byte-identical.
 
 ### 2. Read before writing
 
@@ -181,7 +208,7 @@ Every recipe has a plain `bash scripts/checkpoint.sh ...` equivalent.
 just test
 ```
 
-41 checks in Podman, per Rule 14.
+57 checks in Podman, per Rule 14.
 The load-bearing one asserts that after a second checkpoint is written, the first is still byte-identical.
 That is the regression version 1 shipped with.
 
@@ -191,7 +218,7 @@ Add to the project's `CLAUDE.md`:
 
 ```markdown
 ## Session State
-See `CONTEXT_STATE.md`. Read the top checkpoint and stop.
+See `CONTEXT_STATE.md` (a link into the artifact store). Read the top checkpoint and stop.
 It restates current state in full; everything below it is history.
 ```
 

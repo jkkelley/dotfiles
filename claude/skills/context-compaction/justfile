@@ -50,3 +50,11 @@ read PROJECT *FLAGS:
 # The gate: ordering, uniqueness, and a complete top checkpoint.
 verify PROJECT:
     @bash "$(dirname "{{justfile()}}")/scripts/checkpoint.sh" verify --project "{{PROJECT}}"
+
+# Move an in-repo CONTEXT_STATE.md into the artifact store and leave the gitignored link.
+migrate PROJECT:
+    @bash "$(dirname "{{justfile()}}")/scripts/checkpoint.sh" migrate --project "{{PROJECT}}"
+
+# Print where a project's CONTEXT_STATE.md really lives.
+path PROJECT:
+    @bash "$(dirname "{{justfile()}}")/scripts/checkpoint.sh" path --project "{{PROJECT}}"
