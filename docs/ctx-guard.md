@@ -29,6 +29,7 @@
 14. XML spec and mermaid DAG: below; GOOD build matches the DAG. NEVER a step with no node.
 15. Migration is the test: install, upgrade (guard release promote) and removal are each one target; no workflow needs a hand rebuild.
 17. Config and arguments: inputs come from `CTX_GUARD_*` variables, a conf file or arguments, passed as `make VAR=value`; nothing hard-coded.
+18. Schemas with defined AC: the result is JSON with `acceptance_criteria [{id, statement, proof_kind, proof}]`; switches to `result.schema.json` when it merges.
 
 ## DAG
 
