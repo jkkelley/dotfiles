@@ -6,3 +6,4 @@ lint	bin/,tests/	shellcheck -x -P SCRIPTDIR bin/*.sh tests/run.sh tests/lib/*.sh
 briefs	templates/,tests/unit/test_briefs.sh	bash tests/unit/test_briefs.sh
 schemas	schemas/,tests/fixtures/,tests/unit/test_schemas.sh	bash tests/unit/test_schemas.sh
 proof	bin/sweep-proof.sh,bin/screen.ps1,tests/lib/stub-powershell-exe.sh,tests/lib/stub-claude.sh,tests/lib/stub-wslpath.sh,tests/unit/test_proof.sh	bash tests/unit/test_proof.sh
+clean	bin/sweep-clean.sh,bin/sweep-lib.sh,tests/lib/,tests/unit/test_clean.sh	bash tests/unit/test_clean.sh

@@ -8,7 +8,7 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-c78f` | ready | p1 | - | [Inbox sweep B10 - sweep-clean.sh clean and prune verbs](WO-20261016-c78f-inbox-sweep-b10-sweep-clean-sh-clean-and-prune-v.md) |
+| `WO-20261016-c78f` | in-progress | p1 | - | [Inbox sweep B10 - sweep-clean.sh clean and prune verbs](WO-20261016-c78f-inbox-sweep-b10-sweep-clean-sh-clean-and-prune-v.md) |
 | `WO-20261016-e2e8` | draft | p1 | WO-20261016-61ae | [Inbox sweep B11 - live end-to-end run](WO-20261016-e2e8-inbox-sweep-b11-live-end-to-end-run.md) |
 | `WO-20261016-5328` | draft | p1 | - | [Inbox sweep B12 - spike, can the extension be woken without the owner](WO-20261016-5328-inbox-sweep-b12-spike-can-the-extension-be-woken.md) |
 | `WO-20261016-4376` | ready | p1 | - | [Inbox sweep B3 - sweep-init.sh run dir, run.json and rendered briefs](WO-20261016-4376-inbox-sweep-b3-sweep-init-sh-run-dir-run-json-an.md) |
