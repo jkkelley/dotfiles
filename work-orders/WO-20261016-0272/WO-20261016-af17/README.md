@@ -8,10 +8,9 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-e832` | ready | p1 | - | [CI producer: ci-events.sh publishes GitHub Actions run start and end to the bus](WO-20261016-e832-ci-producer-ci-events-sh-publishes-github-action.md) |
 | `WO-20261016-a16d` | ready | p1 | - | [File the herdr agent_status mid-turn bug with its evidence](WO-20261016-a16d-file-the-herdr-agent-status-mid-turn-bug-with-it.md) |
 | `WO-20261016-2092` | ready | p1 | - | [Local NATS binds 127.0.0.1 only: bus.sh refuses any other bind host](WO-20261016-2092-local-nats-binds-127-0-0-1-only-bus-sh-refuses-a.md) |
-| `WO-20261016-e709` | ready | p1 | WO-20261016-e832 | [Test - CI producer: ci-events.sh publishes GitHub Actions run start and end to the bus](WO-20261016-e709-test-ci-producer-ci-events-sh-publishes-github-a.md) |
+| `WO-20261016-e709` | ready | p1 | - | [Test - CI producer: ci-events.sh publishes GitHub Actions run start and end to the bus](WO-20261016-e709-test-ci-producer-ci-events-sh-publishes-github-a.md) |
 | `WO-20261016-9f87` | ready | p1 | WO-20261016-2092 | [Test - Local NATS binds 127.0.0.1 only: bus.sh refuses any other bind host](WO-20261016-9f87-test-local-nats-binds-127-0-0-1-only-bus-sh-refu.md) |
 | `WO-20261016-e375` | ready | p1 | WO-20261016-5a79 | [Test - merge-train producer: every merge publishes start and end through timed-run](WO-20261016-e375-test-merge-train-producer-every-merge-publishes-.md) |
 | `WO-20261016-cc22` | ready | p1 | WO-20261016-cc95 | [Test - pane-look monitor: QUEUED-STALE and IDLE-STALE judged from the pane spinner, never agent_status](WO-20261016-cc22-test-pane-look-monitor-queued-stale-and-idle-sta.md) |
