@@ -158,7 +158,12 @@ cmd_run() {
         synth "$seat" SKIPPED "browser preflight failed"
         continue
       fi
-      if sweep_retry 3 "spawn-$seat" "$spawn" "inbox-sweep-$source" "$seat" --brief-file "$RUN/briefs/$seat.md" --ticket "IS-$run" >>"$LOG" 2>&1; then
+      # Run-local seat declaration (sweep_seat_config, WO-20261016-73cd): the tracked project.json cannot name these seats.
+      if ! sweep_seat_config "$RUN/seats/project.json" "$seat" "inbox-sweep-$source" "agent-sweep-$seat" "$RUN/seats/$seat" >/dev/null; then
+        synth "$seat" FAILED-SEAT "could not declare the seat in the run-local config"
+        continue
+      fi
+      if WORKFLOW_CONFIG="$RUN/seats/project.json" sweep_retry 3 "spawn-$seat" "$spawn" "inbox-sweep-$source" "$seat" --brief-file "$RUN/briefs/$seat.md" --ticket "IS-$run" >>"$LOG" 2>&1; then
         # workflow-spawn.sh keeps no pane on stdout the controller can rely on; its seat-link file names the pane.
         pane="$(jq -rs --arg t "IS-$run" --arg s "$seat" 'map(select(.ticket == $t and .seat == $s)) | first | .pane // empty' "$seats_dir"/*/seat-link 2>/dev/null)"
         sweep_json_set "$RUN/run.json" '(.seats[] | select(.seat==$s)) |= (.pane = (if $p == "" then null else $p end))' --arg s "$seat" --arg p "$pane" || true

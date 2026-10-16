@@ -238,7 +238,11 @@ render_brief() {
 # from herdr. NOT exercised by the suite; B18 is where this meets a real herdr.
 # shellcheck disable=SC2317 # reached through $seat_start, which shellcheck cannot follow
 default_seat_start() { # <brief-file> <seat-name> <ticket>
-  bash "$SWEEP/../bin/workflow-spawn.sh" inbox-sweep-linkedin-send --ticket "$3" --brief-file "$1" >&2 || return 1
+  # The seat is named and declared per run (sweep_seat_config, WO-20261016-73cd); without the name the spawner matched by
+  # role, found no seat, and `herdr agent get "$2"` below could never have named the started agent.
+  local cfg
+  cfg="$(sweep_seat_config "$FOLDER/seats/project.json" "$2" "inbox-sweep-linkedin-send" "$2" "$FOLDER/seats/$2")" || return 1
+  WORKFLOW_CONFIG="$cfg" bash "$SWEEP/../bin/workflow-spawn.sh" inbox-sweep-linkedin-send "$2" --ticket "$3" --brief-file "$1" >&2 || return 1
   herdr agent get "$2" | jq -r '.result.agent.pane_id // empty'
 }
 read_pane() { # prints the pane text; the CLI may wrap it in JSON
