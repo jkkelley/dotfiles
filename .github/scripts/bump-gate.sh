@@ -2,7 +2,7 @@
 # rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
 # name: bump-gate.sh
 # purpose: the reading half of .github/workflows/skill-pr-gate.yml.
-# inputs: --base --body-file --entrypoint --help --network --parse
+# inputs: --base --body-file --entrypoint --help --network --parse --ref
 # outputs: stdout, exit code
 # writes-to: a mktemp scratch path
 # cleanup: removes its own temp files on exit
@@ -56,6 +56,7 @@ usage() {
 $SELF resolve   --base <ref> --title-file <f> --body-file <f> [--repo <dir>]
 $SELF detect    --base <ref> [--repo <dir>]
 $SELF run-suite <skill-dir> [--print]
+$SELF base      --ref <ref> [--repo <dir>]
 
   resolve    Validate the Bump: trailers against what the branch actually
              changed, resolve a level for every changed skill, print the
@@ -65,6 +66,9 @@ $SELF run-suite <skill-dir> [--print]
                skills=["a","b"]   changed skills that ship testing/run-tests.sh
                tools=true|false   anything under claude/tools/ changed
                gate=true|false    anything under .github/ changed
+
+  base       Print git merge-base <ref> HEAD. Exit 2, reason on stderr, when
+             the ref does not resolve or shares no history with HEAD.
 
   run-suite  Run one suite. --print reports the dispatch (self|wrapped)
              without running anything.
@@ -301,6 +305,29 @@ cmd_run_suite() {
   fi
 }
 
+# ── base ───────────────────────────────────────────────────────────────────────
+
+# WO-20261016-8507. The merge base is what a pull request actually changed: on a
+# merge ref it equals the current tip of the target branch, so a skill-publish
+# commit that landed on main after the branch was cut is not read as the
+# branch's own edit of a version: line or registry.json.
+cmd_base() {
+  local ref=""
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --ref)  ref=${2:-}; shift 2 ;;
+      --repo) REPO=${2:-}; shift 2 ;;
+      *)      die "unknown option: $1" ;;
+    esac
+  done
+  resolve_repo
+  [[ -n $ref ]] || die "--ref is required"
+  git -C "$REPO" rev-parse --verify -q "$ref^{commit}" >/dev/null \
+    || die "no such ref: $ref"
+  git -C "$REPO" merge-base "$ref" HEAD \
+    || die "no merge base between $ref and HEAD"
+}
+
 # ── dispatch ───────────────────────────────────────────────────────────────────
 
 (($#)) || { usage >&2; exit 2; }
@@ -310,5 +337,6 @@ case $cmd in
   resolve)   cmd_resolve "$@" ;;
   detect)    cmd_detect "$@" ;;
   run-suite) cmd_run_suite "$@" ;;
+  base)      cmd_base "$@" ;;
   *)         usage >&2; die "unknown command: $cmd" ;;
 esac
