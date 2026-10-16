@@ -16,7 +16,6 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-de23` | ready | p1 | WO-20261016-1130 | [Inbox sweep B17a - reply-verify.sh character check and token](WO-20261016-de23-inbox-sweep-b17a-reply-verify-sh-character-check.md) |
 | `WO-20261016-4682` | ready | p1 | WO-20261016-24c5 WO-20261016-de23 WO-20261016-dd75 | [Inbox sweep B17b - reply-send.sh controller and make reply targets](WO-20261016-4682-inbox-sweep-b17b-reply-send-sh-controller-and-ma.md) |
 | `WO-20261016-80aa` | draft | p1 | WO-20261016-4682 | [Inbox sweep B18 - live first LinkedIn send](WO-20261016-80aa-inbox-sweep-b18-live-first-linkedin-send.md) |
-| `WO-20261016-75d9` | in-progress | p1 | - | [Inbox sweep B19 - spec-lint keeps every spec at 1000 lines or fewer](WO-20261016-75d9-inbox-sweep-b19-spec-lint-keeps-every-spec-at-10.md) |
 | `WO-20261016-07bb` | ready | p1 | - | [Inbox sweep B20a - node schema, loader, nodes-check and bottleneck-check with R1 to R7 declared](WO-20261016-07bb-inbox-sweep-b20a-node-schema-loader-nodes-check-.md) |
 | `WO-20261016-dd0c` | ready | p1 | WO-20261016-07bb | [Inbox sweep B20b - L1 to L12 and S1 to S7 declarations and nodes.lock at run init](WO-20261016-dd0c-inbox-sweep-b20b-l1-to-l12-and-s1-to-s7-declarat.md) |
 | `WO-20261016-dd75` | ready | p1 | WO-20261016-07bb | [Inbox sweep B21 - migrate.sh copy-forward runner and rollback](WO-20261016-dd75-inbox-sweep-b21-migrate-sh-copy-forward-runner-a.md) |
