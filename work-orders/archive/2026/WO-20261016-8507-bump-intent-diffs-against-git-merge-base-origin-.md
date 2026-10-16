@@ -4,15 +4,15 @@
   "slug": "bump-intent-diffs-against-git-merge-base-origin-",
   "title": "bump intent diffs against git merge-base origin/main HEAD (bump-gate.sh base), so a skill-publish commit on main never reads as the branch's own version edit",
   "type": "bug",
-  "status": "ready",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:27:22+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/bump-intent-diffs-against-git-merge-base-origin-",
+  "pr": 309,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design14 cut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -120,13 +120,17 @@ Test, appended to .github/scripts/testing/run-tests.sh as one case in its existi
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the bump-gate fixture suite passes with the merge-base case
+- [x] `AC-H1` *(human)* the bump-gate fixture suite passes with the merge-base case
+  - observed `2026-10-16` run-tests.sh in podman: 150 passed, 0 failed, exit 0
   - check: `bash .github/scripts/testing/run-tests.sh` exit 0
-- [ ] `AC-H2` *(human)* no step of skill-pr-intent.yml reads the event base sha
+- [x] `AC-H2` *(human)* no step of skill-pr-intent.yml reads the event base sha
+  - observed `2026-10-16` grep -c prints 0, exit 1
   - check: `grep -c 'github.event.pull_request.base.sha' .github/workflows/skill-pr-intent.yml` exit 1 expect /^0$/
-- [ ] `AC-H3` *(human)* the merge base step is present
+- [x] `AC-H3` *(human)* the merge base step is present
+  - observed `2026-10-16` grep -c prints 1, exit 0
   - check: `grep -c 'bump-gate.sh base --ref' .github/workflows/skill-pr-intent.yml` exit 0 expect /^1$/
-- [ ] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` grep -v filter prints nothing, exit 1
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|\.github/scripts/(bump-gate\.sh|testing/run-tests\.sh)|\.github/workflows/skill-pr-intent\.yml)$'` exit 1
 
 ## Test plan

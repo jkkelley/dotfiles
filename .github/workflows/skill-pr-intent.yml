@@ -48,9 +48,23 @@ jobs:
           printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title.txt"
           printf '%s\n' "$PR_BODY"  > "$RUNNER_TEMP/pr-body.txt"
 
-      - name: resolve every changed skill to a level
+      # WO-20261016-8507. BASE used to be the event's PR base sha.
+      # When skill-publish committed a version allocation to main after the
+      # branch was cut, that sha was older than the main the merge ref is built
+      # on, so the diff showed registry.json and a version: line as edited by
+      # the branch and this job failed (PRs 274, 277, 297, 298), clearing only
+      # after the author merged main in. The merge base equals the current base
+      # on a merge ref, so the publish commit is on both sides and drops out.
+      # Rejected: re-running after merging main in - a hand step.
+      - name: BASE is the merge base with the target branch
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
+          echo "BASE=$(bash .github/scripts/bump-gate.sh base --ref origin/$BASE_REF)" >> "$GITHUB_ENV"
+
+      - name: resolve every changed skill to a level
         run: |
           set -euo pipefail
           bash .github/scripts/bump-gate.sh resolve \
@@ -66,8 +80,6 @@ jobs:
       # edits a skill moves its content hash while correctly leaving the
       # registry alone, and plain verify calls that drift.
       - name: no hand-edited version, no hand-edited registry
-        env:
-          BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
           bash claude/skills/skill-registry/scripts/skill-version.sh verify \

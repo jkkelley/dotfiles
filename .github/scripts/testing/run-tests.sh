@@ -702,6 +702,30 @@ want_rc 'publish where the repo has no skill-version.sh exits 2' 2 $?
 bash "$PUB" plan --repo "$P" --nonsense x >/dev/null 2>&1
 want_rc 'publish with an unknown option exits 2' 2 $?
 
+# ── the merge base ─────────────────────────────────────────────────────────────
+hd 'bump-gate.sh base - a publish commit on main is not the branch'"'"'s edit'
+
+# WO-20261016-8507. The branch is cut from main, then main gets the publisher's
+# commit (registry.json and a version: line). HEAD is the merge of the branch
+# into main, as on a pull_request merge ref.
+P=$(mkpub mb1); OLD=$(head_of "$P")
+git -C "$P" checkout -q -b feature
+printf 'x\n' >> "$P/docs/README.md"; pcommit "$P" 'docs: branch change'
+git -C "$P" checkout -q main
+svin "$P" bump alpha --patch >/dev/null
+pcommit "$P" 'chore(skills): publish alpha' 'Skill-Publish'
+git -C "$P" merge -q --no-ff feature -m 'merge ref'
+svin "$P" verify --structure --base "$OLD" >/dev/null 2>&1
+want_rc 'old base sha: the publish commit reads as the branch'"'"'s edit' 1 $?
+MB=$(bash "$GATE" base --ref main --repo "$P" 2>&1); RC=$?
+want_rc 'base: prints the merge base, exit 0' 0 $RC "$MB"
+(cd "$P" && bash "$SVREL" verify --structure --base "$MB" >/dev/null 2>&1)
+want_rc 'merge base: the publish commit drops out' 0 $?
+bash "$GATE" base --ref nonesuch --repo "$P" >/dev/null 2>&1
+want_rc 'base: unresolvable ref exits 2' 2 $?
+bash "$GATE" base --repo "$P" >/dev/null 2>&1
+want_rc 'base: no --ref exits 2' 2 $?
+
 # ── ─────────────────────────────────────────────────────────────────────────────
 printf '\n%d passed, %d failed\n\n' "$PASS" "$FAIL"
 [[ $FAIL -eq 0 ]]
