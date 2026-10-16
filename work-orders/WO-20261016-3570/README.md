@@ -9,5 +9,5 @@ One level down only. A child of a child is listed in its own directory, not here
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
 | `WO-20261016-02d3` | ready | p2 | - | [line-timing test: report from a KV dump](WO-20261016-02d3-line-timing-test-report-from-a-kv-dump.md) |
-| `WO-20261016-7d69` | ready | p2 | - | [node-timing tests: slow and fast](WO-20261016-7d69-node-timing-tests-slow-and-fast.md) |
+| `WO-20261016-7d69` | in-progress | p2 | - | [node-timing tests: slow and fast](WO-20261016-7d69-node-timing-tests-slow-and-fast.md) |
 | `WO-20261016-460b` | in-progress | p2 | - | [timed-run tests: timeout with 3 retries, start and end](WO-20261016-460b-timed-run-tests-timeout-with-3-retries-start-and.md) |
