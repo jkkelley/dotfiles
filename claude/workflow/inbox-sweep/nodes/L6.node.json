@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "id": "L6",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "script": "claude/workflow/inbox-sweep/bin/reply-send.sh",
   "input_schema": {
-    "path": "<win-home>/inbox-triage-<yyyymmdd>/send-<id>.txt",
+    "path": "<win-home>/inbox-triage-<yyyymmdd>/send-<id>.txt, one batch of up to reply_batch_max files",
     "schema_version": 1
   },
   "output_schema": {
@@ -17,16 +17,16 @@
       "proof": "`preflight.json` code."
     },
     {
-      "box": "The brief names exactly one file and one thread URL",
-      "proof": "grep count in the rendered brief is 1 and 1."
+      "box": "The brief names every file of the batch and each file's one thread URL",
+      "proof": "grep count of `Approval file:` in the rendered brief equals the batch size, and so does `Thread URL:`."
     },
     {
       "box": "Ledger has no `RP-SENT` for this sha256 and thread",
       "proof": "`jq` over `ledger.jsonl` returns zero rows (the exactly-once check)."
     },
     {
-      "box": "The pane shows the id, recipient, text and sha256",
-      "proof": "`herdr pane read` of `agent-reply-<id>`."
+      "box": "The pane shows the id, recipient, text and sha256 of every reply, then RP-AWAITING-CONFIRM batch <batch-id>",
+      "proof": "`herdr pane read` of `agent-reply-batch-<batch-id>`."
     }
   ],
   "serial": null,

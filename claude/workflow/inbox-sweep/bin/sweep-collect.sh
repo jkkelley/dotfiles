@@ -4,10 +4,12 @@
 #
 #   sweep-collect.sh --run <run-id> [--controller-error]
 #
-# Input:  <run>/run.json (the seat list), <run>/results/*.json, <run>/preflight.json, <run>/proof/R7-verdict.json
+# Input:  <run>/run.json (the seat list), <run>/steps/*.jsonl, <run>/checklist/*.jsonl, <run>/results/*.json, <run>/preflight.json, <run>/proof/R7-verdict.json
 # Output: <run>/summary.json {schema_version, run_id, status, seats:[{seat, status, before, after, processed, flagged}], finished_at}
 #         <run>/summary.md      a contents list, a run section, then one table per source, newest item first
-#         <run>/checklist.jsonl two R5 rows (status derived, every seat counted)
+#         <run>/checklist/R5.jsonl two R5 rows (status derived, every seat counted)
+# Also reads every <run>/steps/*.jsonl and <run>/checklist/*.jsonl (ruling R3: one file per node, no shared writer) and
+# puts their row counts in summary.json as steps, steps_failed and checklist_rows. The counts never feed the run code.
 #
 # Run status is derived exactly as spec codes/run/derive, first match wins:
 #   controller error, PF-NO-HERDR or PF-NO-OWNER-WORDS      RUN-FAILED
@@ -96,11 +98,22 @@ status="$(jq -r --argjson ce "$controller_error" --argjson pf "$pf_stop" --arg c
 finished_at="$(sweep_now)"
 mkdir -p "$RUN"
 
+# Per-node records (WO-20261016-824b): a missing directory is zero rows, not an error, because a run whose nodes never
+# retried has no steps/ at all. An unparseable line is skipped by `-R fromjson?` rather than failing the collect.
+read_rows() { # read_rows <dir>: every row of every *.jsonl in <dir> as one JSON array
+  local files=()
+  [ -d "$1" ] && files=("$1"/*.jsonl)
+  if [ "${#files[@]}" -gt 0 ] && [ -f "${files[0]}" ]; then cat "${files[@]}" | jq -R 'fromjson? // empty' | jq -s .; else echo '[]'; fi
+}
+step_rows="$(read_rows "$RUN/steps")"
+check_rows="$(read_rows "$RUN/checklist")"
+
 # --- summary.json ----------------------------------------------------------------------------------------------------
 tmp="$(mktemp "$RUN/.summary.XXXXXX")"
-jq --arg run "$run_id" --arg st "$status" --arg at "$finished_at" \
+jq --arg run "$run_id" --arg st "$status" --arg at "$finished_at" --argjson steps "$step_rows" --argjson checks "$check_rows" \
   '{schema_version:"1.0.0", run_id:$run, status:$st,
-    seats:map({seat, status, before, after, processed, flagged}), finished_at:$at}' <<<"$recs" >"$tmp"
+    seats:map({seat, status, before, after, processed, flagged}), finished_at:$at,
+    steps:($steps | length), steps_failed:([$steps[] | select(.status == "failed")] | length), checklist_rows:($checks | length)}' <<<"$recs" >"$tmp"
 mv "$tmp" "$RUN/summary.json"
 
 # --- summary.md ------------------------------------------------------------------------------------------------------

@@ -4,15 +4,15 @@
   "slug": "inbox-sweep-b21f1-steps-and-checklist-rows-go-to",
   "title": "Inbox sweep B21f1 - steps and checklist rows go to per-node files",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:24+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/inbox-sweep-b21f1-steps-and-checklist-rows-go-to",
+  "pr": 163,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Architect rulings R3 and R4, 2026-10-16T04:25Z, recorded in design 18 (PR 153); Claude seats never use lavish",
@@ -64,9 +64,12 @@ Ruling R3: run.json.steps and checklist.jsonl are written by every script throug
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* sweep_retry appends to <run>/steps/<node>.jsonl and sweep_check to <run>/checklist/<node>.jsonl, never run.json or checklist.jsonl (test)
-- [ ] `AC-H2` *(human)* each row carries an integer schema_version (test)
-- [ ] `AC-H3` *(human)* sweep-collect.sh reads every steps/ and checklist/ file and its fixtures still derive the same run codes (test)
+- [x] `AC-H1` *(human)* sweep_retry appends to <run>/steps/<node>.jsonl and sweep_check to <run>/checklist/<node>.jsonl, never run.json or checklist.jsonl (test)
+  - observed `2026-10-16` make -C claude/workflow/inbox-sweep test: lib ok. sweep_retry writes steps/<node>.jsonl (SWEEP_NODE, default run) and sweep_check writes checklist/<node>.jsonl; run.json unchanged, shared checklist.jsonl never created
+- [x] `AC-H2` *(human)* each row carries an integer schema_version (test)
+  - observed `2026-10-16` make -C claude/workflow/inbox-sweep test: lib ok. step and checklist rows carry schema_version 1 (integer)
+- [x] `AC-H3` *(human)* sweep-collect.sh reads every steps/ and checklist/ file and its fixtures still derive the same run codes (test)
+  - observed `2026-10-16` make -C claude/workflow/inbox-sweep test: collect ok. sweep-collect.sh reads steps/ and checklist/ files, derive 1-5 run code fixtures unchanged, lint ok
 
 ## Test plan
 
