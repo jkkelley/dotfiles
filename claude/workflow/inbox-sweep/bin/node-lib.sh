@@ -13,7 +13,10 @@
 # A script opts in with a header line `# node: R4`. nodes-check then fails when it names a node with no declaration.
 # Opt-in, not a scan for every script, because the scripts are other tickets' files and a header line is the whole cost.
 #
-# Not here yet, and owned by B21 (spec node WO migration runner): the check that a schema_version raise ships a migration.
+# A schema_version raise is a new schemas/records/<name>.v<N>.schema.json (N >= 2); it must ship migrations/<name>/v<N-1>-to-v<N>.sh
+# and the previous version's fixture tests/fixtures/migrations/<name>/v<N-1>.json (the test's input). REC_DIR, MIG_DIR and MIG_FIX
+# point these elsewhere for tests. Why the fixture stands for "a test": migrate's suite upgrades every fixture it finds there, so
+# a version with no fixture is a version nothing upgrades.
 # nodes.lock at init is written by sweep-init.sh (B20b). The design tables for L1 to L12 and S1 to S7 are prose rows, not
 # the `### Rn` checkbox lists the table check parses, so an L or S declaration is checked against the schema and its
 # script but has no table to disagree with. Their checklists were cut from the rows of design sections 14.3 and 17.
@@ -28,10 +31,11 @@ _node_here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 node_check() {
   local dir="${NODE_DIR:-$_node_here/nodes}" schema="${NODE_SCHEMA:-$_node_here/schemas/node.schema.json}"
   local design="${NODE_DESIGN:-$_node_here/../../../docs/design/inbox-sweep.md}" scripts="${NODE_SCRIPTS:-$_node_here/bin}"
-  python3 -I - "$dir" "$schema" "$design" "$scripts" "$_node_here/../../.." <<'PY'
+  local rec="${REC_DIR:-$_node_here/schemas/records}" mig="${MIG_DIR:-$_node_here/migrations}" fix="${MIG_FIX:-$_node_here/tests/fixtures/migrations}"
+  python3 -I - "$dir" "$schema" "$design" "$scripts" "$_node_here/../../.." "$rec" "$mig" "$fix" <<'PY'
 import json, pathlib, re, sys
 from jsonschema import Draft202012Validator
-d, schema, design, scripts, repo = (pathlib.Path(a) for a in sys.argv[1:6])
+d, schema, design, scripts, repo, rec, mig, fix = (pathlib.Path(a) for a in sys.argv[1:9])
 bad = 0
 def no(m):
     global bad; bad = 1; print("FAIL " + m)
@@ -73,6 +77,15 @@ for n, rows in sorted(sec.items()):
         miss = [r["box"] for r in rows if r not in decl[n]["checklist"]]
         extra = [r["box"] for r in decl[n]["checklist"] if r not in rows]
         no(f"{n} declaration and design table disagree; only in design: {miss}; only in declaration: {extra}")
+# a schema_version raise without its migration and the fixture its test upgrades
+for f in sorted(rec.glob("*.v*.schema.json")):
+    m = re.fullmatch(r"(.+)\.v(\d+)\.schema\.json", f.name)
+    if not m or int(m[2]) < 2: continue
+    name, n = m[1], int(m[2])
+    script, fixture = mig / name / f"v{n-1}-to-v{n}.sh", fix / name / f"v{n-1}.json"
+    if not script.exists(): no(f"{f.name} raises {name} to v{n} with no migration {name}/v{n-1}-to-v{n}.sh")
+    elif not fixture.exists(): no(f"{f.name} raises {name} to v{n} with no test fixture {name}/v{n-1}.json")
+    else: ok(f"{name} v{n} ships its migration and fixture")
 sys.exit(bad)
 PY
 }
