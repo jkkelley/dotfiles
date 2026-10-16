@@ -63,7 +63,8 @@ Node a2a of the inbox-triage line build order, layer L0. State: PR 175, seat up.
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* Node a2a merged on main with CI green
+- [x] `AC-H1` *(human)* Node a2a merged on main with CI green
+  - observed `2026-10-16` gh pr view 175: state MERGED, merge 6aea386fe3d8, checks SUCCESS/SKIPPED; main log 6aea386 feat(workflow): a2a-guard
 
 ## Test plan
 

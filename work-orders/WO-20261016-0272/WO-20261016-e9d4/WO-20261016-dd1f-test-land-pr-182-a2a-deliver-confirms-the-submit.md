@@ -63,8 +63,10 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+- [x] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make -C claude/workflow a2a-guard-test on origin/main 2b57f8f: all cases ok incl. A2A-DELIVERED-RETRIED and A2A-UNCONFIRMED; full output in /home/luna/.local/state/zenith/log/2026/10/20261016-093504-wo-dd1f-a2a-guard-test-run.txt
+- [x] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+  - observed `2026-10-16` run output written by artifact.sh with frontmatter: /home/luna/.local/state/zenith/log/2026/10/20261016-093504-wo-dd1f-a2a-guard-test-run.txt
 
 ## Test plan
 
