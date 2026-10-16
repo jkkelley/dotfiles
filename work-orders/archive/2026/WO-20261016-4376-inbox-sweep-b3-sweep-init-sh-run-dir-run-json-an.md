@@ -4,15 +4,15 @@
   "slug": "inbox-sweep-b3-sweep-init-sh-run-dir-run-json-an",
   "title": "Inbox sweep B3 - sweep-init.sh run dir, run.json and rendered briefs",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T01:19:09+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/inbox-sweep-b3-sweep-init-sh-run-dir-run-json-an",
+  "pr": 113,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner approved the design on Bearings card D-04, 2026-10-16 UTC; Claude seats never use lavish (global owner rule)",
@@ -67,9 +67,12 @@ A run needs its dir, run.json and one rendered brief per seat before anything st
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* missing owner words exits 3 with PF-NO-OWNER-WORDS (test)
-- [ ] `AC-H2` *(human)* run id matches ^[0-9]{8}T[0-9]{6}Z$ (test)
-- [ ] `AC-H3` *(human)* one brief per enabled seat, one per Proton account with a 2-account config (test)
+- [x] `AC-H1` *(human)* missing owner words exits 3 with PF-NO-OWNER-WORDS (test)
+  - observed `2026-10-16` test_init: 'ok missing owner words exits 3', 'ok missing owner words names PF-NO-OWNER-WORDS', 'ok a refused init creates no run dir, no root and no latest link'
+- [x] `AC-H2` *(human)* run id matches ^[0-9]{8}T[0-9]{6}Z$ (test)
+  - observed `2026-10-16` test_init: 'ok run id matches ^[0-9]{8}T[0-9]{6}Z$' and 'ok run.json run_id equals the dir name'
+- [x] `AC-H3` *(human)* one brief per enabled seat, one per Proton account with a 2-account config (test)
+  - observed `2026-10-16` test_init: 'ok one brief per enabled seat, two for the 2-account Proton config' (gmail linkedin proton-first proton-second), 'ok run.json lists 4 seats'
 
 ## Test plan
 
