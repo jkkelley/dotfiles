@@ -4,15 +4,15 @@
   "slug": "work-order-sh-next-returns-only-seat-ready-leave",
   "title": "work-order.sh next returns only seat-ready leaves: no epics, no merged PR or branch, --line NAME keeps tickets labeled line:NAME; set verb writes labels (ORD-0932 Q2)",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:43:18+00:00",
   "parent": "WO-20261016-fb0c",
   "branch": "feat/work-order-sh-next-returns-only-seat-ready-leave",
-  "pr": null,
-  "closed": null,
+  "pr": 290,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design11 cut for ORD-0932-next Q2 and the ORD-0830 RR-orch-14 DESIGN-GAPs; design approvals ruled done, ORD-0550 O4",
@@ -121,13 +121,17 @@ Rejected: deriving the line from the parent tree at read time, because the owner
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* case 350 and the whole skill suite pass
+- [x] `AC-H1` *(human)* case 350 and the whole skill suite pass
+  - observed `2026-10-16` scripted check passed
   - check: `bash claude/skills/work-order/testing/run-tests.sh` exit 0 expect /all cases passed/
-- [ ] `AC-H2` *(human)* the set verb is dispatched
+- [x] `AC-H2` *(human)* the set verb is dispatched
+  - observed `2026-10-16` scripted check passed
   - check: `grep -c 'set) cmd_set' claude/skills/work-order/scripts/work-order.sh` exit 0 expect /^1$/
-- [ ] `AC-H3` *(human)* next takes --line
+- [x] `AC-H3` *(human)* next takes --line
+  - observed `2026-10-16` scripted check passed
   - check: `grep -c -- '--line) ' claude/skills/work-order/scripts/work-order.sh` exit 0 expect /^1$/
-- [ ] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` scripted check passed
   - check: `bash -c '! git diff --name-only origin/main...HEAD | grep -vE "^(work-orders/.*|claude/skills/work-order/scripts/work-order[.]sh|claude/skills/work-order/testing/cases/350-next-seat-ready[.]sh)$"'` exit 0
 
 ## Test plan
