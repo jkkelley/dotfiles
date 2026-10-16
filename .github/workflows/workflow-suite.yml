@@ -1,0 +1,113 @@
+# The claude/workflow suite, sharded by suite (ORD-0715 C1; Design principles 101 items 1, 6, 37).
+#
+# What broke: skill-pr-gate.yml ran `make -C claude/workflow test` serially in one job on any claude/workflow path.
+# Measured run 2026-10-16T07:02:20Z to 07:10:29Z: 8 min 9 s.
+# Why this fix: one matrix job per suite shard, selected by the diff (tools/ci-select.sh, config/ci-shards.json),
+# the full matrix on main and nightly, the test image cached, superseded runs cancelled, each shard timed by
+# bin/step-time.sh. Budget: 3 minutes per PR.
+# Cost: one runner per selected shard. GitHub runners cannot reach the local bus, so timings go to a JSONL file
+# (tools/ci-time-pub.sh, the item 28 file-queue fallback) uploaded as artifact step-time-<shard>.
+name: workflow suite
+
+on:
+  workflow_call:
+    inputs:
+      shards:
+        type: string
+        required: false
+        default: ''
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workflow-suite-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - id: plan
+        env:
+          SHARDS: ${{ inputs.shards }}
+        run: |
+          set -euo pipefail
+          if [ -n "$SHARDS" ]; then
+            echo "shards=$SHARDS" >> "$GITHUB_OUTPUT"
+          else
+            bash claude/workflow/tools/ci-select.sh --full </dev/null | grep '^shards=' >> "$GITHUB_OUTPUT"
+          fi
+
+  suite:
+    name: ${{ matrix.shard }}
+    needs: plan
+    if: needs.plan.outputs.shards != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: podman
+        run: bash .github/scripts/require-podman.sh
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/workflow-image.tar
+          key: workflow-image-${{ hashFiles('claude/workflow/tests/container/Containerfile') }}
+
+      - name: image
+        run: |
+          set -euo pipefail
+          tar="$RUNNER_TEMP/workflow-image.tar"
+          if [ -f "$tar" ]; then
+            podman load -i "$tar"
+          else
+            make -C claude/workflow image
+            podman save -o "$tar" localhost/dotfiles-workflow-test:1
+          fi
+
+      - name: ${{ matrix.shard }}
+        env:
+          SHARD: ${{ matrix.shard }}
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          cfg=claude/workflow/config/ci-shards.json
+          q() { jq -r --arg s "$SHARD" ".shards[] | select(.name == \$s) | $1" "$cfg"; }
+          dir="$(q .dir)"; target="$(q .target)"; pr_target="$(q '.pr_target // empty')"
+          budget="$(jq -r .budget_s "$cfg")"; timeout="$(jq -r .timeout_s "$cfg")"; retries="$(jq -r .retries "$cfg")"
+          args=()
+          if [ "$EVENT" = pull_request ] && [ -n "$pr_target" ]; then
+            target="$pr_target"; args=("BASE=origin/$BASE_REF")
+          fi
+          export CI_TIME_FILE="$RUNNER_TEMP/step-time.jsonl"
+          export STEP_TIME_PUB='bash claude/workflow/tools/ci-time-pub.sh'
+          bash claude/workflow/bin/step-time.sh --line ci --node "workflow-$SHARD" \
+            --budget "$budget" --timeout "$timeout" --retries "$retries" \
+            -- make -o image -C "$dir" "$target" "${args[@]}"
+
+      - if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: step-time-${{ matrix.shard }}
+          path: ${{ runner.temp }}/step-time.jsonl
+          retention-days: 7
+          if-no-files-found: ignore
