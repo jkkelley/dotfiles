@@ -53,7 +53,7 @@ check "$RUN_ID" "$(jq -r .run_id "$SWEEP_RUN_DIR/preflight.json")" "preflight.js
 check 1 "$(jq -r .schema_version "$SWEEP_RUN_DIR/preflight.json")" "preflight.json carries schema_version 1"
 check yes "$(jq -r '.checked_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$") | if . then "yes" else "no" end' "$SWEEP_RUN_DIR/preflight.json")" "checked_at is UTC"
 check "2.0.0 (Claude Code)" "$(jq -r '.checks[] | select(.id=="claude-exe") | .evidence' "$SWEEP_RUN_DIR/preflight.json")" "claude.exe version string is the evidence"
-check 4 "$(jq -s 'map(select(.node=="R2")) | length' "$SWEEP_RUN_DIR/checklist.jsonl")" "four R2 checklist rows, one per passed box"
+check 4 "$(cat "$SWEEP_RUN_DIR"/checklist/*.jsonl | jq -s 'map(select(.node=="R2")) | length')" "four R2 checklist rows, one per passed box"
 
 # PF-NO-HERDR: not inside herdr; exit 3, no probe behind it, but a record
 fresh nohdr; unset HERDR_ENV
@@ -86,7 +86,7 @@ check "0 PF-NO-BROWSER" "$rc $(code_of extension)" "PF-NO-BROWSER: [] three time
 check 3 "$(probes)" "PF-NO-BROWSER: the probe was called exactly 3 times (calls.log)"
 check 3 "$(jq -r '.checks[] | select(.id=="extension") | .attempts' "$SWEEP_RUN_DIR/preflight.json")" "PF-NO-BROWSER: attempts recorded as 3"
 check 3 "$(grep -c '^\[attempt ' "$SWEEP_RUN_DIR/logs/preflight.log")" "PF-NO-BROWSER: raw output of each attempt is in logs/preflight.log"
-check 3 "$(jq -r '.steps[] | select(.step=="probe-extension") | .attempts' "$SWEEP_RUN_DIR/run.json")" "PF-NO-BROWSER: the retried step is recorded in run.json"
+check 3 "$(cat "$SWEEP_RUN_DIR"/steps/*.jsonl | jq -rs 'map(select(.step=="probe-extension")) | .[0].attempts')" "PF-NO-BROWSER: the retried step is recorded in steps/*.jsonl"
 
 # a sleeping extension that wakes on the 2nd try passes, and stops probing
 fresh wakes; seq_file "2.0.0" "[]" "$GOOD"
