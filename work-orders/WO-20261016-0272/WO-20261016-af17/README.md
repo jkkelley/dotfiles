@@ -8,7 +8,7 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-e832` | ready | p1 | - | [CI producer: ci-events.sh publishes GitHub Actions run start and end to the bus](WO-20261016-e832-ci-producer-ci-events-sh-publishes-github-action.md) |
+| `WO-20261016-e832` | in-progress | p1 | - | [CI producer: ci-events.sh publishes GitHub Actions run start and end to the bus](WO-20261016-e832-ci-producer-ci-events-sh-publishes-github-action.md) |
 | `WO-20261016-a16d` | ready | p1 | - | [File the herdr agent_status mid-turn bug with its evidence](WO-20261016-a16d-file-the-herdr-agent-status-mid-turn-bug-with-it.md) |
 | `WO-20261016-2092` | ready | p1 | - | [Local NATS binds 127.0.0.1 only: bus.sh refuses any other bind host](WO-20261016-2092-local-nats-binds-127-0-0-1-only-bus-sh-refuses-a.md) |
 | `WO-20261016-e709` | ready | p1 | WO-20261016-e832 | [Test - CI producer: ci-events.sh publishes GitHub Actions run start and end to the bus](WO-20261016-e709-test-ci-producer-ci-events-sh-publishes-github-a.md) |

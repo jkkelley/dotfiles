@@ -4,13 +4,13 @@
   "slug": "ci-producer-ci-events-sh-publishes-github-action",
   "title": "CI producer: ci-events.sh publishes GitHub Actions run start and end to the bus",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:05:01+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
+  "branch": "feat/ci-producer-ci-events-sh-publishes-github-action",
   "pr": null,
   "closed": null,
   "approval": {
@@ -74,8 +74,10 @@ Item 37: every CI run records its start and end on the bus. GitHub runners canno
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow timing-test CASE=ci-events` exits 0 and prints `ok a new run publishes ci start once` and `ok a completed run publishes ci end with duration_s once` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* a second --once with the same fixture publishes nothing (`ok ci-events is idempotent`) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `make -C claude/workflow timing-test CASE=ci-events` exits 0 and prints `ok a new run publishes ci start once` and `ok a completed run publishes ci end with duration_s once` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -C claude/workflow timing-test CASE=ci-events -> exit 0; ok a new run publishes ci start once; ok a completed run publishes ci end with duration_s once; ok ci-events is idempotent; pass=4 fail=0
+- [x] `AC-H2` *(human)* a second --once with the same fixture publishes nothing (`ok ci-events is idempotent`) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -C claude/workflow timing-test CASE=ci-events -> exit 0; ok a new run publishes ci start once; ok a completed run publishes ci end with duration_s once; ok ci-events is idempotent; pass=4 fail=0 (second --once with same fixture published nothing)
 
 ## Test plan
 
