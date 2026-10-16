@@ -102,6 +102,13 @@
       "maximum": 90,
       "default": 14,
       "description": "Design D6. make prune removes run dirs older than this."
+    },
+    "reply_batch_max": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 25,
+      "default": 10,
+      "description": "Design 18.4. Replies per LinkedIn send batch; one seat and one owner line per batch, the rest stay RP-READY for the next batch."
     }
   }
 }

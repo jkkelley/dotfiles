@@ -23,14 +23,18 @@ check 1 "$rc" "always-failing command: sweep_retry exits 1"
 check 3 "$(wc -l <"$T/calls")" "always-failing command runs exactly 3 times, not 2 and not 4"
 check "10 30" "$(tr '\n' ' ' <"$T/waits" | sed 's/ $//')" "waits are 10 then 30 between attempts, none after the last"
 check '{"step":"probe-extension","status":"failed","attempts":3}' \
-  "$(jq -c '.steps[0] | {step,status,attempts}' "$SWEEP_RUN_DIR/run.json")" "the failed step is recorded with 3 attempts"
-check yes "$(jq -r '.steps[0].at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$") | if . then "yes" else "no" end' "$SWEEP_RUN_DIR/run.json")" "the step row carries a UTC timestamp"
-check 20261016T000000Z "$(jq -r .run_id "$SWEEP_RUN_DIR/run.json")" "recording keeps the rest of run.json"
+  "$(jq -c '{step,status,attempts}' "$SWEEP_RUN_DIR/steps/run.jsonl")" "the failed step is recorded with 3 attempts in steps/<node>.jsonl"
+check yes "$(jq -r '.at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$") | if . then "yes" else "no" end' "$SWEEP_RUN_DIR/steps/run.jsonl")" "the step row carries a UTC timestamp"
+check '{"run_id":"20261016T000000Z"}' "$(jq -c . "$SWEEP_RUN_DIR/run.json")" "AC-H1: sweep_retry leaves run.json untouched, no .steps"
+check 1 "$(jq -r .schema_version "$SWEEP_RUN_DIR/steps/run.jsonl")" "AC-H2: a step row carries integer schema_version 1"
+SWEEP_NODE=R2 sweep_retry 1 probe true
+check ok "$(jq -r .status "$SWEEP_RUN_DIR/steps/R2.jsonl")" "AC-H1: SWEEP_NODE names the node's own steps file"
+fresh; rm -rf "$SWEEP_RUN_DIR/steps"
 
 fresh
 sweep_retry 3 flaky fail_twice; rc=$?
 check 0 "$rc" "a command that succeeds on attempt 3 exits 0"
-check '{"status":"ok","attempts":3}' "$(jq -c '.steps[0] | {status,attempts}' "$SWEEP_RUN_DIR/run.json")" "success after retries is recorded ok with its attempt count"
+check '{"status":"ok","attempts":3}' "$(jq -c '{status,attempts}' "$SWEEP_RUN_DIR/steps/run.jsonl")" "success after retries is recorded ok with its attempt count"
 
 fresh
 sweep_retry 3 first-try true; check 0 "$(wc -l <"$T/waits")" "success on the first attempt waits for nothing"
@@ -51,8 +55,12 @@ export SWEEP_RUN_DIR="$T/run"
 fresh
 sweep_check B0 "stubs log calls" "calls.log line 1"
 sweep_check B0 "second box" "proof two"
-check 2 "$(wc -l <"$SWEEP_RUN_DIR/checklist.jsonl")" "sweep_check appends one row per call"
-check '{"node":"B0","box":"stubs log calls","proof":"calls.log line 1"}' "$(sed -n 1p "$SWEEP_RUN_DIR/checklist.jsonl" | jq -c '{node,box,proof}')" "a checklist row holds node, box and proof"
+sweep_check B1 "other node" "proof three"
+check 2 "$(wc -l <"$SWEEP_RUN_DIR/checklist/B0.jsonl")" "AC-H1: sweep_check appends one row per call to checklist/<node>.jsonl"
+check 1 "$(wc -l <"$SWEEP_RUN_DIR/checklist/B1.jsonl")" "AC-H1: another node gets its own file"
+check no "$([ -e "$SWEEP_RUN_DIR/checklist.jsonl" ] && echo yes || echo no)" "AC-H1: the shared checklist.jsonl is never written"
+check '{"node":"B0","box":"stubs log calls","proof":"calls.log line 1"}' "$(sed -n 1p "$SWEEP_RUN_DIR/checklist/B0.jsonl" | jq -c '{node,box,proof}')" "a checklist row holds node, box and proof"
+check 1 "$(jq -r '.schema_version | if type=="number" then . else 0 end' "$SWEEP_RUN_DIR/checklist/B0.jsonl" | sort -u)" "AC-H2: a checklist row carries integer schema_version 1"
 sweep_check B0 only-two 2>/dev/null; check 2 "$?" "sweep_check with the wrong argument count is refused"
 
 fresh
