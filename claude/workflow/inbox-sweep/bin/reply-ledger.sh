@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # jq filters use $var; they are jq variables, single quotes are the point
-# node: B21c
+# (no node marker: B21c was a build ticket id, not a design node, and failed nodes-check on main b4d1b2e; the spec names
+#  only this script as the owner of ledger.jsonl, so no node is claimed - WO-20261016-529a)
 # name: reply-ledger.sh
 # purpose: the one writer of ledger.jsonl; validates every row from stdin, then appends them all or none
 # inputs: append --file <ledger.jsonl>, JSON rows on stdin
