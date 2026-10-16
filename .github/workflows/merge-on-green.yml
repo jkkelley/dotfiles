@@ -1,0 +1,92 @@
+# purpose: merge a pull request the moment every check on its head is green - pr-flow node N4, no review gate
+#
+# Rendered by claude/workflow/pr-flow/bin/pr-flow-ci-render.sh from the dotfiles template; edit the template, never
+# the copy in a repository. Design: claude/workflow/docs/pr-process/pr-process.md sections 6 and 8, rule R6.
+#
+# Breadcrumb (BR-20261016-merge-port, 2026-10-16 UTC): `gh pr merge --auto` is refused on every repository this
+# serves - dotfiles main is unprotected (gh api .../branches/main/protection returns 404) and the private repos
+# have allow_auto_merge false. A workflow_run trigger needs neither, so it is the merge. Rejected: a branch
+# protection rule plus --auto, which the free plan refuses on private repositories.
+#
+# The gate is coq's (factory/bin/gate.sh same-head, line/bin/merge.sh do_pr), minus review.passed:
+#   - the open PR whose head is this run's head_sha, and only that head (--match-head-commit), so a green run on an
+#     older head never merges a newer one;
+#   - mergeable not CONFLICTING (coq choice 2; ypconsult-01-src #34 was listed would-merge while conflicting);
+#   - every check run on the head completed, none failed, and REQUIRED_CHECK among them passed (ypconsult-01-src
+#     #37 merged with zero checks). A pending check holds: the workflow that finishes last fires this again.
+#
+# Cost: a merge made with GITHUB_TOKEN starts no push workflow on main (GitHub's recursion guard). Every workflow
+# that must run after a merge is listed in DISPATCH and started by workflow_dispatch, which the guard exempts, with
+# input `before` set to the base branch sha read just before the merge (what github.event.before is on a push), and
+# only when the PR targeted the default branch. A dispatched workflow therefore declares a `before` input.
+name: merge on green
+
+on:
+  workflow_run:
+    workflows: ["skill PR gate","skill PR intent","rolodex check","a2a lint"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+  checks: read
+
+# One merge decision per head at a time, so two workflows finishing together cannot both try the merge.
+concurrency:
+  group: merge-on-green-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      REQUIRED_CHECK: "what has to run"
+      DISPATCH: "skill-publish.yml"
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - name: merge when green
+        run: |
+          # >>> merge-on-green
+          set -euo pipefail
+          say() { printf '%s pr=%s sha=%s %s\n' "$1" "${pr:--}" "$HEAD_SHA" "${2:-}"; }
+          retry() { local n; for n in 1 2 3; do "$@" && return 0; sleep $((n * 2)); done; return 1; }
+          pr="$(retry gh api "repos/$REPO/commits/$HEAD_SHA/pulls" --jq '[.[] | select(.state == "open") | .number][0] // empty')" \
+            || { say 423 "blocked: gh failed 3 times listing PRs"; exit 1; }
+          [ -n "$pr" ] || { say 3 "held: no open PR has this head"; exit 0; }
+          for n in 1 2 3 4 5; do
+            view="$(retry gh pr view "$pr" -R "$REPO" --json headRefOid,mergeable,state,baseRefName --jq '"\(.headRefOid) \(.mergeable) \(.state) \(.baseRefName)"')" \
+              || { say 423 "blocked: gh failed 3 times reading the PR"; exit 1; }
+            read -r head mergeable state baseref <<<"$view"
+            [ "$mergeable" = UNKNOWN ] || break
+            sleep $((n * 3))
+          done
+          [ "$state" = OPEN ] || { say 0 "already-merged: state $state"; exit 0; }
+          [ "$head" = "$HEAD_SHA" ] || { say 3 "held: head moved to $head"; exit 0; }
+          [ "$mergeable" != CONFLICTING ] || { say 409 "merge.conflict"; exit 0; }
+          checks="$(retry gh api "repos/$REPO/commits/$HEAD_SHA/check-runs?per_page=100" \
+            --jq '[.check_runs[] | {n: .name, s: .status, c: (.conclusion // "")}]')" \
+            || { say 423 "blocked: gh failed 3 times reading checks"; exit 1; }
+          pending="$(jq -r '[.[] | select(.s != "completed") | .n] | join(",")' <<<"$checks")"
+          [ -z "$pending" ] || { say 3 "held: pending $pending"; exit 0; }
+          failed="$(jq -r '[.[] | select(.c | IN("success", "skipped", "neutral") | not) | .n] | join(",")' <<<"$checks")"
+          [ -z "$failed" ] || { say 3 "held: failed $failed"; exit 0; }
+          jq -e --arg r "$REQUIRED_CHECK" 'any(.[]; .n == $r and .c == "success")' <<<"$checks" >/dev/null \
+            || { say 3 "held: required check $REQUIRED_CHECK has not passed"; exit 0; }
+          before="$(retry gh api "repos/$REPO/git/ref/heads/$baseref" --jq .object.sha)" || before=""
+          if ! gh pr merge "$pr" -R "$REPO" --squash --delete-branch --match-head-commit "$HEAD_SHA"; then
+            st="$(gh pr view "$pr" -R "$REPO" --json state --jq .state || true)"
+            [ "$st" = MERGED ] && { say 0 "already-merged"; exit 0; }
+            say 423 "blocked: gh pr merge failed"; exit 1
+          fi
+          say 200 "merged"
+          [ "$baseref" = "$DEFAULT_BRANCH" ] || exit 0
+          for wf in $DISPATCH; do
+            retry gh workflow run "$wf" -R "$REPO" --ref "$DEFAULT_BRANCH" -f before="$before" || say 423 "blocked: dispatch $wf failed"
+          done
+          # <<< merge-on-green

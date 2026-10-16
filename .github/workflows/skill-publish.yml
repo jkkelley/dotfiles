@@ -31,6 +31,16 @@ name: skill publish
 on:
   push:
     branches: [main]
+  # Breadcrumb (BR-20261016-merge-port, 2026-10-16 UTC): merge-on-green.yml merges with GITHUB_TOKEN, and GitHub
+  # starts no push workflow for a GITHUB_TOKEN push, so after such a merge this file never ran and no version was
+  # allocated. merge-on-green dispatches it instead, passing `before` = main's sha just before the merge, which is
+  # what github.event.before is on a push. Rejected: a personal token for the merge, which puts a credential in CI.
+  workflow_dispatch:
+    inputs:
+      before:
+        description: main's sha before the merge (github.event.before on a push)
+        required: false
+        default: ""
 
 # The one exception to "nothing writes to main". Named here rather than left
 # implied, so that a second workflow wanting the same permission has to argue
@@ -77,7 +87,7 @@ jobs:
       # pull request someone is already looking at; this one is not.
       - name: allocate
         env:
-          BEFORE: ${{ github.event.before }}
+          BEFORE: ${{ github.event.before || inputs.before }}
         run: |
           set -euo pipefail
           bash .github/scripts/publish.sh apply --before "$BEFORE" 2>&1 \
