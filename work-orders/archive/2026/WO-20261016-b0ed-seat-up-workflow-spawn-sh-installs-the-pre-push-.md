@@ -4,7 +4,7 @@
   "slug": "seat-up-workflow-spawn-sh-installs-the-pre-push-",
   "title": "seat-up: workflow-spawn.sh installs the pre-push hook in every seat worktree it leases or reuses",
   "type": "feature",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-ebe4",
   "branch": "feat/seat-up-workflow-spawn-sh-installs-the-pre-push-",
   "pr": 264,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design6 cut for ORD-0814 P1 P2; design approvals ruled done, ORD-0550 O4",
@@ -134,7 +134,8 @@ Inserted code, exactly, directly before the line "# ---- herdr: rediscover every
 - [x] `AC-H4` *(human)* every changed script has a rolodex header
   - observed `2026-10-16` check: make rolodex-check BASE=origin/main exit 0 output: python3 scripts/rolodex.py check --root . --base origin/main rolodex-check: 0 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H5` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H5` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` merged PR 264 files checked with the corrected scope regex '^(work-orders/.*|claude/workflow/(bin/workflow-spawn.sh|tests/unit/test_treehouse_lease.sh))$' (work-orders/.* per claude/workflow/templates/scope-ac.md): gh pr view 264 --json files --jq .files[].path | grep -vE <regex> rc=1, printed nothing. The ticket check itself anchors a bare work-orders/ and is the DESIGN-GAP closed by infra-design9 (ORD-0830 RR-orch-14).
   - check: `bash -c \!\ git\ diff\ --name-only\ origin/main...HEAD\ \|\ grep\ -vE\ \'\^\(work-orders/\|claude/workflow/\(bin/workflow-spawn\\.sh\|tests/unit/test_treehouse_lease\\.sh\)\)\$\'` exit 0
 
 ## Test plan
