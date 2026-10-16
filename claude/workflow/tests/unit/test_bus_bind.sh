@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# name: test_bus_bind.sh
+# purpose: prove bus.sh up publishes only on 127.0.0.1 and refuses any other bind host (BUS-BIND-REFUSED, exit 3)
+# inputs: none; BUS_NATS and podman are stubbed on PATH
+# outputs: ok/FAIL lines on stdout, exit 0 when all pass
+# writes-to: a mktemp scratch dir only
+# cleanup: removes its scratch dir on exit
 # Proves bus.sh up publishes only on 127.0.0.1 and refuses any other bind host, against a stub podman.
 #   - a podman -p flag that is not 127.0.0.1-prefixed (the bus on the LAN, ORD-0553 R1)
 #   - a widened bind that still reaches podman instead of BUS-BIND-REFUSED with exit 3
