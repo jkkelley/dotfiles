@@ -7,7 +7,7 @@ description: >-
   schemas, evaluating table structure, writing migrations, choosing between join
   tables or embedded columns, asking about indexes, or any relational database
   design question. Preloaded into the backend-dev agent.
-version: 1.0.3
+version: 1.0.4
 ---
 
 # DBA — Database Design Advisor

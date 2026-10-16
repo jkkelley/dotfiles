@@ -1,7 +1,7 @@
 ---
 name: jenkinsfile-snippets
 description: Jenkinsfile patterns, pipeline snippets, and CI/CD recipes. Preloaded into the jenkins-ci agent.
-version: 1.0.3
+version: 1.0.4
 ---
 
 # Jenkinsfile Snippets
