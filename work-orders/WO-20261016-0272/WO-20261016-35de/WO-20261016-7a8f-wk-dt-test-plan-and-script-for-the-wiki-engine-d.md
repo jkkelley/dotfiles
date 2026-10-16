@@ -4,13 +4,13 @@
   "slug": "wk-dt-test-plan-and-script-for-the-wiki-engine-d",
   "title": "WK-Dt: test plan and script for the wiki engine design doc and spec",
   "type": "test",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:18:35+00:00",
   "parent": "WO-20261016-35de",
-  "branch": null,
+  "branch": "feat/wk-dt-test-plan-and-script-for-the-wiki-engine-d",
   "pr": null,
   "closed": null,
   "approval": {
@@ -87,11 +87,14 @@ Test sibling of WK-D. The tester runs exactly this plan from ~/dotfiles on the W
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* TP-1 the spec passes spec-check (1000 lines or less, parses, contents first)
+- [x] `AC-H1` *(human)* TP-1 the spec passes spec-check (1000 lines or less, parses, contents first)
+  - observed `2026-10-16` check: bash scripts/spec-check.sh docs/design/wiki.spec.xml exit 0 output: ok docs/design/wiki.spec.xml (145 lines)
   - check: `bash scripts/spec-check.sh docs/design/wiki.spec.xml` exit 0
-- [ ] `AC-H2` *(human)* TP-2 the design doc opens with its contents list
+- [x] `AC-H2` *(human)* TP-2 the design doc opens with its contents list
+  - observed `2026-10-16` check: bash scripts/md-contents.sh check docs/design/wiki.md exit 0 output: npm notice npm notice New major version of npm available! 10.9.9 -> 12.2.0 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0 npm notice To update run: npm install -g npm@12.2.0 npm notice md-contents: 1 file(s) ok
   - check: `bash scripts/md-contents.sh check docs/design/wiki.md` exit 0
-- [ ] `AC-H3` *(human)* TP-3 the spec names a fallback at least five times (ORD-0558 O1)
+- [x] `AC-H3` *(human)* TP-3 the spec names a fallback at least five times (ORD-0558 O1)
+  - observed `2026-10-16` check: grep -c fallback docs/design/wiki.spec.xml exit 0 output: 13
   - check: `grep -c fallback docs/design/wiki.spec.xml` exit 0 expect /^([5-9]|[1-9][0-9]+)$/
 
 ## Test plan
