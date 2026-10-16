@@ -4,14 +4,14 @@
   "slug": "seat-up-workflow-spawn-sh-installs-the-pre-push-",
   "title": "seat-up: workflow-spawn.sh installs the pre-push hook in every seat worktree it leases or reuses",
   "type": "feature",
-  "status": "in-progress",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T08:28:20+00:00",
   "parent": "WO-20261016-ebe4",
   "branch": "feat/seat-up-workflow-spawn-sh-installs-the-pre-push-",
-  "pr": null,
+  "pr": 264,
   "closed": null,
   "approval": {
     "via": "override",
@@ -122,13 +122,17 @@ Inserted code, exactly, directly before the line "# ---- herdr: rediscover every
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the lease suite passes with the two new checks
+- [x] `AC-H1` *(human)* the lease suite passes with the two new checks
+  - observed `2026-10-16` check: make -C claude/workflow lease exit 0 output: make: Entering directory '/home/luna/.cache/wt-prepush-hook/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 ok no slot and no directory: the seat leases one, as holder ok the lease asks for JSON so the path is read, not guessed ok git worktree add is gone ok the seat's gate watcher runs in the leased slot ok the fresh slot gets the pre-push hook ok a rerun reuses the slot the seat already leases ok and takes no second slot ok another holder's slot is never taken over ok a reused slot gets the pre-push hook too ok an existing configured directory is still used as is ok and no slot is leased beside it ok no treehouse refuses loudly, no fallback ok treehouse-lease: 12 checks make: Leaving directory '/home/luna/.cache/wt-prepush-hook/claude/workflow'
   - check: `make -C claude/workflow lease` exit 0 expect /ok treehouse-lease/
-- [ ] `AC-H2` *(human)* the spawner stays shellcheck clean
+- [x] `AC-H2` *(human)* the spawner stays shellcheck clean
+  - observed `2026-10-16` check: make -C claude/workflow lint exit 0 output: make: Entering directory '/home/luna/.cache/wt-prepush-hook/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 make: Leaving directory '/home/luna/.cache/wt-prepush-hook/claude/workflow'
   - check: `make -C claude/workflow lint` exit 0
-- [ ] `AC-H3` *(human)* the spawner calls the install exactly once
+- [x] `AC-H3` *(human)* the spawner calls the install exactly once
+  - observed `2026-10-16` check: grep -c pre-push/pre-push.sh claude/workflow/bin/workflow-spawn.sh exit 0 output: 1
   - check: `grep -c pre-push/pre-push.sh claude/workflow/bin/workflow-spawn.sh` exit 0 expect /^1$/
-- [ ] `AC-H4` *(human)* every changed script has a rolodex header
+- [x] `AC-H4` *(human)* every changed script has a rolodex header
+  - observed `2026-10-16` check: make rolodex-check BASE=origin/main exit 0 output: python3 scripts/rolodex.py check --root . --base origin/main rolodex-check: 0 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
 - [ ] `AC-H5` *(human)* the diff holds only In files and generated work-orders files
   - check: `bash -c \!\ git\ diff\ --name-only\ origin/main...HEAD\ \|\ grep\ -vE\ \'\^\(work-orders/\|claude/workflow/\(bin/workflow-spawn\\.sh\|tests/unit/test_treehouse_lease\\.sh\)\)\$\'` exit 0
