@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dag.invalid/node.schema.json",
+  "title": "DAG node declaration",
+  "description": "One node of a process DAG. Generalises inbox-sweep/schemas/node.schema.json: the id is free-form, edges are explicit (depends_on), and the bundle of documents the node needs is declared in the node file.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "version", "script", "depends_on", "input", "output", "checklist", "bundle", "retry", "serial", "parallel"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^N[0-9]{1,2}[a-z]?$" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "title": { "type": "string", "minLength": 1 },
+    "script": { "type": "string", "minLength": 1, "description": "Repo-root relative path. Takes its inputs from the config file and arguments only." },
+    "script_pending": { "type": "boolean" },
+    "depends_on": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^N[0-9]{1,2}[a-z]?$" } },
+    "input": { "$ref": "#/$defs/record_ref" },
+    "output": { "$ref": "#/$defs/record_ref" },
+    "checklist": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["box", "proof"],
+        "properties": { "box": { "type": "string", "minLength": 1 }, "proof": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "bundle": { "$ref": "bundle.schema.json" },
+    "retry": {
+      "type": "object", "additionalProperties": false, "required": ["max", "waits_seconds", "idempotent"],
+      "properties": {
+        "max": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "waits_seconds": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+        "idempotent": { "type": "boolean", "description": "False means a re-run could repeat an outward effect; such a node has max 0 and recovers by drift check only." }
+      }
+    },
+    "serial": { "type": ["string", "null"] },
+    "parallel": { "enum": ["none", "per file-set", "per ticket"] },
+    "touches": { "type": "array", "items": { "type": "string" }, "description": "Files or globs the node writes; two nodes that can run at once must not overlap." }
+  },
+  "$defs": {
+    "record_ref": {
+      "type": "object", "additionalProperties": false, "required": ["path", "schema_version"],
+      "properties": { "path": { "type": "string", "minLength": 1 }, "schema_version": { "type": "integer", "minimum": 1 } }
+    }
+  }
+}

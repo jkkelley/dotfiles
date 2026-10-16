@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dag.invalid/state.schema.json",
+  "title": "DAG run state",
+  "description": "One file per run, <state_dir>/runs/<run-id>/state.json. The source of truth for the run, like a Terraform state file. Written only by dag-lib.sh, atomically (temp file then rename) and under the run lock.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "serial", "lineage", "design", "ticket", "worktree", "nodes", "updated_at"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "run_id": { "type": "string", "pattern": "^dagrun-[0-9]{8}T[0-9]{6}Z-[a-z0-9-]+$" },
+    "serial": { "type": "integer", "minimum": 0, "description": "Incremented on every write. A writer that read serial N and finds N+1 on disk aborts with DG-STATE-STALE." },
+    "lineage": { "type": "string", "description": "Random id fixed at init, so a state file copied from another run is detected." },
+    "design": {
+      "type": "object", "additionalProperties": false, "required": ["id", "version", "sha256"],
+      "properties": {
+        "id": { "type": "string" },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Hash of the node declarations pinned for this run (nodes.lock/)." }
+      }
+    },
+    "ticket": {
+      "type": "object", "additionalProperties": false, "required": ["id", "title"],
+      "properties": { "id": { "type": "string" }, "title": { "type": "string", "minLength": 1 } }
+    },
+    "worktree": {
+      "type": "object", "additionalProperties": false, "required": ["path", "branch"],
+      "properties": { "path": { "type": "string" }, "branch": { "type": "string" }, "slot": { "type": ["string", "null"] } }
+    },
+    "pr": {
+      "type": ["object", "null"], "additionalProperties": false, "required": ["number", "url"],
+      "properties": { "number": { "type": "integer" }, "url": { "type": "string" } }
+    },
+    "nodes": {
+      "type": "object",
+      "propertyNames": { "pattern": "^N[0-9]{1,2}[a-z]?$" },
+      "additionalProperties": { "$ref": "#/$defs/node_state" }
+    },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "node_state": {
+      "type": "object", "additionalProperties": false, "required": ["status", "version", "attempts", "proofs"],
+      "properties": {
+        "status": { "enum": ["DG-PENDING", "DG-READY", "DG-RUNNING", "DG-DONE", "DG-FAILED", "DG-BLOCKED", "DG-SKIPPED", "DG-STALE"] },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "attempts": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "input": { "type": ["string", "null"], "description": "Path of the input record, with its sha256 in input_sha256." },
+        "input_sha256": { "type": ["string", "null"] },
+        "output": { "type": ["string", "null"] },
+        "output_sha256": { "type": ["string", "null"] },
+        "error_code": { "type": ["string", "null"], "pattern": "^(DG|DR)-[A-Z-]+$" },
+        "started_at": { "type": ["string", "null"] },
+        "ended_at": { "type": ["string", "null"] },
+        "proofs": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["box", "proof", "at"],
+            "properties": { "box": { "type": "string" }, "proof": { "type": "string" }, "at": { "type": "string" } }
+          }
+        }
+      }
+    }
+  }
+}
