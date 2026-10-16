@@ -10,6 +10,7 @@
 #   next    fetch one message without acking: prints "<ack-subject>\t<payload>", nothing when the queue is empty
 #   ack     ack a message fetched by next, after the caller acted on it
 #   pull    fetch and ack every waiting message, payload per line (a model consumer reading its queue)
+#   tail    print every event as it lands, one line each (the events pane of the monitor tab; reads, never acks)
 # env: LW_BUS (config/line-watch.json), BUS_NATS (command that runs the nats CLI; default the pinned nats-box image)
 #
 # BREADCRUMB - why a bus, why NATS, and why acks are published by hand.
@@ -109,5 +110,7 @@ case "$cmd" in
       printf '%s\n' "${line#*$'\t'}"; bash "$HERE/bus.sh" ack "${line%%$'\t'*}"
     done
     ;;
-  *) sed -n '4,13p' "$HERE/bus.sh" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
+  tail) # a core subscription sees every published event without touching any durable consumer
+    nats_ sub 'line.>' --raw 2>/dev/null | jq -rc --unbuffered '"\(.at // "-") \(.status_code // .code // "-") \(.seat // .from // "-") \(.subject // .do // "" | tostring | .[0:120])"' ;;
+  *) sed -n '4,14p' "$HERE/bus.sh" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
 esac

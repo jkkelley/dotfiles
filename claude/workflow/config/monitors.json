@@ -33,6 +33,13 @@
       "interval": 0,
       "command": "make -C ${repo} seat-resources-loop LINE=${line}",
       "publishes": "res.${line}.<seat>"
+    },
+    {
+      "name": "events",
+      "owner": "line-watch",
+      "slot": "2.2",
+      "interval": 0,
+      "command": "make -C ${repo} bus-tail"
     }
   ]
 }
