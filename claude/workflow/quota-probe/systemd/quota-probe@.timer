@@ -1,0 +1,11 @@
+# quota-probe@.timer - once a day.
+[Unit]
+Description=quota-probe %i daily
+
+[Timer]
+OnCalendar=*-*-* 13:00:00 UTC
+Persistent=true
+AccuracySec=5min
+
+[Install]
+WantedBy=timers.target

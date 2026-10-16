@@ -4,15 +4,15 @@
   "slug": "quota-probe-generic-daily-probe-of-a-rate-limite",
   "title": "quota-probe: generic daily probe of a rate-limited tool, QUOTA-OK or QUOTA-OUT on the bus, first entry figma (FB-006 resume check)",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:19:35+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/quota-probe-generic-daily-probe-of-a-rate-limite",
+  "pr": 277,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "tooling ticket cut by design seat yp-design6 per ORD-0910 RR-orch-19 (daily Figma quota check); architect ruling ORD-0550 O4; Lavish prohibited for Claude seats (global rule)",
@@ -143,15 +143,20 @@ A probe of a quota-limited tool may spend one call of that quota; the timer runs
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the 8 cases pass in podman
+- [x] `AC-H1` *(human)* the 8 cases pass in podman
+  - observed `2026-10-16` pass=8 fail=0
   - check: `make -C claude/workflow/quota-probe test` exit 0 expect /pass=8 fail=0/
-- [ ] `AC-H2` *(human)* shellcheck clean
+- [x] `AC-H2` *(human)* shellcheck clean
+  - observed `2026-10-16` shellcheck clean, exit 0
   - check: `make -C claude/workflow/quota-probe lint` exit 0
-- [ ] `AC-H3` *(human)* figma is a config entry, not code
+- [x] `AC-H3` *(human)* figma is a config entry, not code
+  - observed `2026-10-16` grep -c figma = 0, exit 1
   - check: `grep -c figma claude/workflow/quota-probe/quota-probe.sh` exit 1 expect /^0$/
-- [ ] `AC-H4` *(human)* an unknown probe name exits 2
+- [x] `AC-H4` *(human)* an unknown probe name exits 2
+  - observed `2026-10-16` QUOTA-CFG no-such-probe, exit 2
   - check: `bash claude/workflow/quota-probe/quota-probe.sh --name no-such-probe` exit 2 expect /QUOTA-CFG/
-- [ ] `AC-H5` *(human)* the diff is exactly the touches plus generated work-orders files
+- [x] `AC-H5` *(human)* the diff is exactly the touches plus generated work-orders files
+  - observed `2026-10-16` diff limited to quota-probe and work-orders, exit 0
   - check: `bash -c '! git diff --name-only origin/main...HEAD | grep -vE "^(work-orders/|claude/workflow/quota-probe/)"'` exit 0
 
 ## Test plan
