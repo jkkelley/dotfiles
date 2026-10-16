@@ -4,7 +4,7 @@
   "slug": "inbox-sweep-v1-integer-schema-version-for-run-js",
   "title": "Inbox sweep V1 - integer schema_version for run.json with its migration",
   "type": "feature",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-1703",
   "branch": "feat/inbox-sweep-v1-integer-schema-version-for-run-js",
   "pr": 239,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Architect rulings R3 and R4, 2026-10-16T04:25Z, recorded in design 18 (PR 153); Claude seats never use lavish",
@@ -69,7 +69,8 @@ Design 15.2: every record carries an integer schema_version; run.json still carr
   - observed `2026-10-16` podman, sweep-init.sh --seats all with fixture config: run.json schema_version 2 (jq type number); run.v2.schema.json validation errors: 0
 - [x] `AC-H2` *(human)* migrations/run/v1-to-v2.sh upgrades the v1 fixture copy-forward, the v1 file survives, and the result validates against v2 (make migrate test)
   - observed `2026-10-16` podman, make migrate path (bin/migrate.sh migrate) over tests/fixtures/migrations/run/v1.json copied as run.json: MIG-OK -> run.v2.json, run.json survives (schema_version 1), run.v2.json schema_version 2, validates against run.v2 with 0 errors; make test migrate suite ran, its AC-H1..H3/H5 cases ok
-- [ ] `AC-H3` *(human)* make nodes-check is green with the bump and its migration
+- [x] `AC-H3` *(human)* make nodes-check is green with the bump and its migration
+  - observed `2026-10-16` make nodes-check rc 0 on branch rebased onto main f049a84 (after WO-20261016-529a PR 241 and V2 PR 240); log ~/.local/state/zenith/log/2026/10/20261016-082954-v1-uat-suites.txt
 
 ## Test plan
 
