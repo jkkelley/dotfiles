@@ -62,7 +62,7 @@ The exception is auditable, never silent.
 ### 3. `in-progress`
 
 - **Set by** `start`
-- **Gate** creates and stamps the branch `feat/<slug>`
+- **Gate** creates and stamps the branch `feat/<id hex>-<slug>`
 - **Legal next** `in-review`
 - **Writes** `branch`, `updated`
 - **Refuses if** status is not `ready`; a `test` ticket's `## Test plan` block is missing, has no case, has a case missing its intent, command or expected, or is not Podman on an image pinned by digest; the working tree is dirty; the branch already exists

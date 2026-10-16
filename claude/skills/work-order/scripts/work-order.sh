@@ -1107,7 +1107,13 @@ cmd_start() {
     || ps_die "$PS_VALIDATION" "dirty_tree" "working tree is dirty - commit or stash first"
 
   local slug branch; slug=$(wo_field "$file" '.slug')
-  branch="feat/${slug}"
+  # Branch is feat/<id hex>-<slug>, not feat/<slug> (WO-20261016-9fc7). The slug is
+  # cut to 48 chars, so WO-20261016-94e2 and merged WO-20261016-6e55 both mapped to
+  # feat/test-timed-run-every-target-of-claude-workflow-a and start refused
+  # branch_exists. The id's hex is unique per ticket, so the names cannot collide.
+  # Rejected: retiring the stale branch - it deletes a seat's work and recurs on
+  # the next shared prefix. Cost: branch names are 5 chars longer.
+  branch="feat/${id##*-}-${slug}"
   git -C "$project" rev-parse --verify "$branch" >/dev/null 2>&1 \
     && ps_die "$PS_VALIDATION" "branch_exists" "branch $branch already exists"
 

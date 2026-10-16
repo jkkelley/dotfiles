@@ -32,6 +32,7 @@
 - [270-ac-check](#270-ac-check)
 - [280-approve-resolves-tools](#280-approve-resolves-tools)
 - [290-generated-views-untracked](#290-generated-views-untracked)
+- [410-start-branch-id](#410-start-branch-id)
 - [The wo defaults](#the-wo-defaults)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -220,6 +221,11 @@ Why: a ready ticket that names a tool which is not on main sends a build seat of
 
 `next` and `tree` rebuild `INDEX.md` when it is absent, and `reindex --check` passes without it but still fails on a loose top-level ticket.
 Why: the generated views are untracked, so a fresh clone has none and two parallel ticket PRs must never conflict on a shared file.
+
+## 410-start-branch-id
+
+Two tickets with the same 60-char title both `start` (exit 0) on different branches, each ending with its own id hex prefix.
+Why: the slug is cut to 48 chars, so a shared title prefix gave one branch name and the second `start` refused `branch_exists` (WO-20261016-94e2 against merged WO-20261016-6e55).
 
 ## The wo defaults
 

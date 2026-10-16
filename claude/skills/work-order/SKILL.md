@@ -244,7 +244,7 @@ bash $WO amend   --id WO-20260805-3f2a --ac "a 500 is retried three times" \
 bash $WO amend   --id WO-20260805-3f2a --freedom "any client already in go.mod"
                                            # same rule: the whole section, drafts only
 bash $WO approve --id WO-20260805-3f2a     # after Lavish review
-bash $WO start   --id WO-20260805-3f2a     # creates feat/<slug>
+bash $WO start   --id WO-20260805-3f2a     # creates feat/<id hex>-<slug>
 bash $WO submit  --id WO-20260805-3f2a --pr 42
 bash $WO done    --id WO-20260805-3f2a     # last feature commit
 bash $WO cleanup --id WO-20260805-3f2a --dry-run
