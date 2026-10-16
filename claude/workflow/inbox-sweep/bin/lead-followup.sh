@@ -144,7 +144,7 @@ while IFS= read -r row; do
     printf '%s' "${body//\{name\}/${name:-there}}" >"$SCRATCH/draft.txt"
     mv "$SCRATCH/draft.txt" "$REPLY/drafts/$did.txt"
     jq -cn --arg at "$(sweep_now)" --arg id "$did" --arg to "$sender" --arg url "$url" --arg lead "$id" --argjson n "$((sent_n + 1))" --arg run "$run" \
-      '{schema_version:1, at:$at, code:"RP-DRAFTED", id:$id, to:$to, thread_url:$url, lead_id:$lead, followup:$n, run_id:$run}' >>"$LEDGER"
+      '{schema_version:1, at:$at, code:"RP-DRAFTED", id:$id, to:$to, thread_url:$url, lead_id:$lead, followup:$n, run_id:$run}' | bash "$HERE/reply-ledger.sh" append --file "$LEDGER"
   fi
   drafted=1
   new="$(jq -c --arg d "$did" '.pending_followup = $d' <<<"$new")"
