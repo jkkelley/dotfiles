@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 # timed-run.sh - run any step with its start and end on the bus, its timeout enforced, up to 3 tries. No model calls.
+# name: timed-run.sh
+# purpose: run any step with start/end on the bus, its timeout enforced, 3 tries, TIMEOUT coded
+# inputs: --node, --kind, --line, --budget, --timeout, --retries, config/time-budgets.json
+# outputs: the command output; SLOW/TIMEOUT lines on stderr
+# writes-to: NATS line.<line>.event.node.* and .timing.TIMEOUT, the bottlenecks work-order project
+# cleanup: none (one-shot)
 #
 # usage: timed-run.sh --node N [--kind K] [--line L] [--budget S] [--timeout S] [--retries R] -- cmd [args...]
 #   per attempt: line.<L>.event.node.start, the command under `timeout`, then .end {rc, duration_s, budget_s} or
@@ -20,7 +26,7 @@ NODE=""; KIND="make"; L="${LINE:-all}"; BUDGET=""; TIMEOUT=""; RETRIES=""
 while [ $# -gt 0 ]; do case "$1" in
   --node) NODE="$2"; shift 2 ;; --kind) KIND="$2"; shift 2 ;; --line) L="$2"; shift 2 ;; --budget) BUDGET="$2"; shift 2 ;;
   --timeout) TIMEOUT="$2"; shift 2 ;; --retries) RETRIES="$2"; shift 2 ;; --) shift; break ;;
-  -h|--help) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; *) echo "timed-run: unknown argument $1" >&2; exit 2 ;; esac; done
+  -h|--help) sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; *) echo "timed-run: unknown argument $1" >&2; exit 2 ;; esac; done
 if [ -z "$NODE" ] || [ $# -eq 0 ]; then echo "timed-run: --node and a command after -- are required" >&2; exit 2; fi
 BUDGET="${BUDGET:-$(tm_limit budget_s "$KIND" "$NODE")}"; TIMEOUT="${TIMEOUT:-$(tm_limit timeout_s "$KIND" "$NODE")}"
 RETRIES="${RETRIES:-$(tm_cfg .retries)}"

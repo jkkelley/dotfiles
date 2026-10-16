@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # jq programs are single-quoted on purpose
 # uat.sh <line> - the UAT gate (item 34) for stuck-watch: the real bus, real herdr, real gh, a scripted test seat left
+# name: uat.sh
+# purpose: UAT gate: real bus, a haiku test seat, the test ntfy topic read back, owner topic proven empty
+# inputs: line (default stuck-uat), YPC_NTFY_TEST_TOPIC in ENV_FILE
+# outputs: log lines and one JSON summary
+# writes-to: herdr tab <line> 1, NATS, the test topic, systemd deadman timer, artifact store log/
+# cleanup: automatic (trap): deadman removed, seat and tab closed
 # idle, the TEST ntfy topic read back by script (item 35). Nothing reaches the owner: every call passes
 # NTFY_TOPIC_VAR=YPC_NTFY_TEST_TOPIC, and the last step polls the owner topic to prove it stayed empty (AC6).
 # Prints one JSON summary; the full log is written to the artifact store (item 23) and its path printed.

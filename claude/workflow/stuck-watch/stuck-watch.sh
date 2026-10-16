@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # jq programs and the NATS $JS subject are single-quoted on purpose
 # stuck-watch.sh - is a seat really stuck? Code it with evidence on the bus, and ring the owner's phone. No model calls.
+# name: stuck-watch.sh
+# purpose: code stuck seats of a line on the bus with evidence and page the owner once per seat+code per 30 min
+# inputs: stuck-watch/config.json, --line, SW_* env, herdr, gh, transcripts, seat-resources
+# outputs: status lines on stdout
+# writes-to: NATS line.<line>.stuck.<code> and .heartbeat, ntfy, artifact store trace/, ~/.local/state/zenith/stuck-watch
+# cleanup: make stuck-watch-down LINE=; make stuck-watch-clean
 #
 # usage: stuck-watch.sh --line L [--once] [--config FILE]
 #   every interval_seconds (foreground loop; the monitor pane runs it, Rule 18), for each claude seat in tabs "L N":
@@ -30,7 +36,7 @@ HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 LINE=""; ONCE=0
 while [ $# -gt 0 ]; do case "$1" in
   --line) LINE="$2"; shift 2 ;; --once) ONCE=1; shift ;; --config) SW_CONFIG="$2"; shift 2 ;;
-  -h|--help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; *) echo "stuck-watch: unknown argument $1" >&2; exit 2 ;; esac; done
+  -h|--help) sed -n '11,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; *) echo "stuck-watch: unknown argument $1" >&2; exit 2 ;; esac; done
 # shellcheck source=stuck-watch/lib.sh disable=SC1091
 . "$HERE/lib.sh"
 # shellcheck source=bin/workflow-lib.sh disable=SC1091

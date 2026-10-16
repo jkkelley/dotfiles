@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # jq programs are single-quoted on purpose
 # lib.sh - budgets, events and bottleneck work orders shared by bin/timed-run.sh, node-timing.sh and line-timing.sh.
+# name: lib.sh
+# purpose: budgets, start/end events, SLOW/TIMEOUT codes and bottleneck work orders for the timing tools
+# inputs: config/time-budgets.json, TM_* env
+# outputs: none (sourced)
+# writes-to: NATS line.<line>.event.node.* and .timing.*, the bottlenecks work-order project
+# cleanup: make timing-down; the work-order project is kept for the architect
 # Sets no shell options (see bin/workflow-lib.sh BREADCRUMB). Reuses stuck-watch/lib.sh for the bus (sw_pub, sw_js_get).
 #
 # BREADCRUMB - bottleneck work orders go to their own work-order project in the state store, not to a repo checkout.

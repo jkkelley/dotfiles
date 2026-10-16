@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # jq programs are single-quoted on purpose
 # deadman.sh - who watches stuck-watch? A separate process, started by a systemd --user timer, never by herdr or a seat.
+# name: deadman.sh
+# purpose: page the owner when stuck-watch stops heartbeating or the bus is down
+# inputs: stuck-watch/config.json, --lines, SW_* env, the LINE stream
+# outputs: one log line per line per pass
+# writes-to: ntfy, ~/.local/state/zenith/stuck-watch/deadman.log and notified.json
+# cleanup: make deadman-uninstall
 #
 # usage: deadman.sh [--lines "a b"] [--config FILE]     (one pass; the timer runs it every minute)
 #   per line: the last line.<line>.heartbeat on the LINE stream older than heartbeat_max_seconds (or none) -> STK-090
@@ -19,7 +25,7 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 while [ $# -gt 0 ]; do case "$1" in
   --lines) SW_LINES="$2"; shift 2 ;; --config) SW_CONFIG="$2"; shift 2 ;;
-  -h|--help) sed -n '3,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; *) echo "deadman: unknown argument $1" >&2; exit 2 ;; esac; done
+  -h|--help) sed -n '11,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; *) echo "deadman: unknown argument $1" >&2; exit 2 ;; esac; done
 # shellcheck source=stuck-watch/lib.sh disable=SC1091
 . "$HERE/lib.sh"
 command -v jq >/dev/null || sw_die "jq is required"

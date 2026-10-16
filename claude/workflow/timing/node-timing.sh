@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # jq programs are single-quoted on purpose
 # node-timing.sh - start and end events off the bus, durations into the TIMING KV bucket, SLOW and a work order over budget.
+# name: node-timing.sh
+# purpose: consume start/end events, write durations to KV TIMING, code SLOW and file a work order over budget
+# inputs: config/time-budgets.json, the LINE stream, TM_* env
+# outputs: status lines on stdout
+# writes-to: NATS KV TIMING and line.<line>.timing.SLOW, the bottlenecks work-order project, ~/.local/state/zenith/stuck-watch/node-timing.json
+# cleanup: make timing-down
 #
 # usage: node-timing.sh [--once]      (durable pull consumer "node-timing" on the LINE stream; the monitor pane runs it)
 #   timing/event/1 (bin/timed-run.sh): start is remembered, end carries duration_s and budget_s.

@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # jq programs are single-quoted on purpose
 # line-timing.sh - where did the line's time go: durations against budgets and the top 5 bottlenecks. Read only.
+# name: line-timing.sh
+# purpose: report durations against budgets and the top 5 bottlenecks of a line
+# inputs: --line, --since, KV TIMING
+# outputs: the report on stdout and its path
+# writes-to: artifact store report/
+# cleanup: artifact.sh clean --key report
 #
 # usage: line-timing.sh --line L [--since YYYY-MM-DDTHH:MM:SSZ]
 #   walks the TIMING KV bucket (stream KV_TIMING, keys <line>.>) with JetStream next_by_subj, writes a Markdown report to
@@ -12,7 +18,7 @@ HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 . "$HERE/lib.sh"
 LINE=""; SINCE=""
 while [ $# -gt 0 ]; do case "$1" in --line) LINE="$2"; shift 2 ;; --since) SINCE="$2"; shift 2 ;;
-  -h|--help) sed -n '3,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; *) echo "line-timing: unknown argument $1" >&2; exit 2 ;; esac; done
+  -h|--help) sed -n '11,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; *) echo "line-timing: unknown argument $1" >&2; exit 2 ;; esac; done
 [ -n "$LINE" ] || sw_die "--line is required"
 SW_STREAM="KV_$(tm_cfg .kv_bucket)"; export SW_STREAM
 SUBJ="\$KV.$(tm_cfg .kv_bucket).$(sw_tok "$LINE").>"

@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2015,SC2016 # ok/no never fail (A && ok || no is safe); stub bodies are single-quoted on purpose
 # test_stuck_watch.sh - the dev gate (item 34): stuck-watch.sh, deadman.sh and stuck-audit.sh against stub herdr, gh, bus
+# name: test_stuck_watch.sh
+# purpose: dev gate: stuck-watch, deadman and stuck-audit against stubs
+# inputs: CASE
+# outputs: ok/FAIL lines and pass=N fail=N
+# writes-to: a mktemp dir, removed on exit
+# cleanup: automatic (trap)
 # and ntfy. Runs in the podman test image with --network=none; nothing reaches ntfy.sh or the owner (item 35).
 # CASE=<name> runs one case (the work orders' test plans name them); unset runs all.
 # Every case says why it exists: a stuck seat the owner never hears about is the failure this whole tool removes.

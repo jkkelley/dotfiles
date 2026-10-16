@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # jq programs and the NATS $JS subject are single-quoted on purpose
 # lib.sh - config, bus, phone and dedupe helpers shared by stuck-watch.sh, deadman.sh and stuck-audit.sh. No model calls.
+# name: lib.sh
+# purpose: config, bus, ntfy, dedupe and evidence helpers for stuck-watch, deadman and stuck-audit
+# inputs: stuck-watch/config.json, SW_* env, ENV_FILE, NTFY_TOPIC_VAR
+# outputs: none (sourced)
+# writes-to: NATS, ntfy, artifact store trace/, ~/.local/state/zenith/stuck-watch
+# cleanup: make stuck-watch-clean
 # Sets no shell options (see bin/workflow-lib.sh BREADCRUMB): each caller declares its own.
 #
 # BREADCRUMB - the ntfy topic is parsed out of the env file, never sourced and never printed.

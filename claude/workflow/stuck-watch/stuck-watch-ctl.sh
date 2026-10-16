@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # jq programs are single-quoted on purpose
 # stuck-watch-ctl.sh - stuck-watch as one monitor of the line's monitor tab (item 27, Rule 18): up, down, status.
+# name: stuck-watch-ctl.sh
+# purpose: bring stuck-watch up through bin/monitors.sh, stop it by pid, report its heartbeat
+# inputs: up|down|status, line, WS
+# outputs: status lines on stdout
+# writes-to: herdr panes through monitors.sh, the pid file
+# cleanup: make stuck-watch-down LINE=
 #
 # usage: stuck-watch-ctl.sh <up|down|status> <line>
 #   up      bin/monitors.sh up <line>: the tab "<line> monitor" and every declared monitor, stuck-watch at its slot
@@ -20,7 +26,7 @@ HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 # shellcheck source=stuck-watch/lib.sh disable=SC1091
 . "$HERE/lib.sh"
 cmd="${1:-}"; LINE="${2:-}"
-if [ -z "$cmd" ] || [ -z "$LINE" ]; then sed -n '4,9p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; fi
+if [ -z "$cmd" ] || [ -z "$LINE" ]; then sed -n '11,16p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; fi
 LSUB="$(sw_tok "$LINE")"; PID="$(sw_state_dir)/$LSUB.pid"
 running() { [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; }
 case "$cmd" in

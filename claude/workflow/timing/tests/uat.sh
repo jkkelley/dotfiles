@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # jq programs are single-quoted on purpose
 # uat.sh <line> - the UAT gate (item 34) for timing: the real bus and the real TIMING KV bucket, a slow node and a hung
+# name: uat.sh
+# purpose: UAT gate: real bus and KV, a slow and a hung node, the report
+# inputs: line (default timing-uat)
+# outputs: log lines and one JSON summary
+# writes-to: NATS, KV TIMING, a throwaway work-order project, artifact store log/ and report/
+# cleanup: automatic (trap): consumer removed, KV keys purged
 # node run through bin/timed-run.sh, node-timing.sh on its own consumer, then make line-timing. Nothing is sent to anyone
 # (item 35); bottleneck work orders go to a throwaway work-order project. Log in the artifact store; JSON summary printed.
 set -uo pipefail

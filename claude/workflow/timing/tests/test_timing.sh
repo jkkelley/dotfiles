@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2015,SC2016 # ok/no never fail (A && ok || no is safe); stub bodies are single-quoted on purpose
 # test_timing.sh - the dev gate (item 34) for bin/timed-run.sh, timing/node-timing.sh and timing/line-timing.sh, against a
+# name: test_timing.sh
+# purpose: dev gate: timed-run, node-timing and line-timing against stubs
+# inputs: CASE
+# outputs: ok/FAIL lines and pass=N fail=N
+# writes-to: a mktemp dir, removed on exit
+# cleanup: automatic (trap)
 # stub bus, stub nats CLI, stub KV dump and stub work-order. --network=none; nothing reaches the owner (item 35).
 # CASE=<name> runs one case (the work orders' test plans name them); unset runs all.
 set -uo pipefail
