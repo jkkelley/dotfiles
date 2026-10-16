@@ -4,15 +4,15 @@
   "slug": "gitops-check-sh-yamllint-kubeconform-helm-templa",
   "title": "gitops-check.sh: yamllint, kubeconform, helm template and kustomize build on a gitops-changed selection, in digest-pinned images, PASS/FAIL per target",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T11:49:52+00:00",
   "parent": "WO-20261016-770f",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/d1be-gitops-check-sh-yamllint-kubeconform-helm-templa",
+  "pr": 344,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design19 cut ORD-1128 K1 and ORD-1140 S3 (brief BR-20261016-infra-design19); design approvals ruled done, ORD-0550 O4; Claude seats never use lavish (global owner rule)",
@@ -134,17 +134,27 @@ Steps. 1) Pull: for each image a non-empty list needs, "$RT pull -q IMG", retrie
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the usage prints
+- [x] `AC-H1` *(human)* the usage prints
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/gitops-ci/bin/gitops-check.sh --help' exit 0 output: usage: gitops-check.sh --repo OWNER/NAME --repo-dir DIR --select FILE [--config FILE]
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/gitops-ci/bin/gitops-check.sh --help'` exit 0 expect /gitops-check\.sh/
-- [ ] `AC-H2` *(human)* manifests and the overlay output both reach kubeconform with kubernetes-version 1.32.13 (fixture --config, stub runtime)
+- [x] `AC-H2` *(human)* manifests and the overlay output both reach kubeconform with kubernetes-version 1.32.13 (fixture --config, stub runtime)
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "#!/bin/sh
+echo "$*" >> $d/log
+" > $d/rt && chmod +x $d/rt && printf "{"yaml":["a.yaml"],"manifests":["a.yaml"],"charts":[],"overlays":["apps/x"],"deploy":true}" > $d/s.json && printf "{"defaults":{"kubernetes_version":"1.32.13","schema_locations":["default"],"yamllint_config":"{}","images":{"yamllint":"y@sha256:1","kubeconform":"k@sha256:2","helm":"h@sha256:3","kustomize":"z@sha256:4"}},"repos":{}}" > $d/c.json && GITOPS_CI_RUNTIME=$d/rt bash claude/workflow/gitops-ci/bin/gitops-check.sh --repo jkkelley/homelab-gitops --repo-dir $d --select $d/s.json --config $d/c.json >/dev/null && grep -c "kubernetes-version 1.32.13" $d/log' exit 0 output: 2
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "#!/bin/sh\necho \"\$*\" >> $d/log\n" > $d/rt && chmod +x $d/rt && printf "{\"yaml\":[\"a.yaml\"],\"manifests\":[\"a.yaml\"],\"charts\":[],\"overlays\":[\"apps/x\"],\"deploy\":true}" > $d/s.json && printf "{\"defaults\":{\"kubernetes_version\":\"1.32.13\",\"schema_locations\":[\"default\"],\"yamllint_config\":\"{}\",\"images\":{\"yamllint\":\"y@sha256:1\",\"kubeconform\":\"k@sha256:2\",\"helm\":\"h@sha256:3\",\"kustomize\":\"z@sha256:4\"}},\"repos\":{}}" > $d/c.json && GITOPS_CI_RUNTIME=$d/rt bash claude/workflow/gitops-ci/bin/gitops-check.sh --repo jkkelley/homelab-gitops --repo-dir $d --select $d/s.json --config $d/c.json >/dev/null && grep -c "kubernetes-version 1.32.13" $d/log'` exit 0 expect /^2$/
-- [ ] `AC-H3` *(human)* a failing validator fails the run
+- [x] `AC-H3` *(human)* a failing validator fails the run
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "#!/bin/sh
+case "$*" in *-strict*) exit 1;; esac
+" > $d/rt && chmod +x $d/rt && printf "{"yaml":["a.yaml"],"manifests":["a.yaml"],"charts":[],"overlays":["apps/x"],"deploy":true}" > $d/s.json && printf "{"defaults":{"kubernetes_version":"1.32.13","schema_locations":["default"],"yamllint_config":"{}","images":{"yamllint":"y@sha256:1","kubeconform":"k@sha256:2","helm":"h@sha256:3","kustomize":"z@sha256:4"}},"repos":{}}" > $d/c.json && GITOPS_CI_RUNTIME=$d/rt bash claude/workflow/gitops-ci/bin/gitops-check.sh --repo jkkelley/homelab-gitops --repo-dir $d --select $d/s.json --config $d/c.json' exit 1 output: PASS yamllint 1 files FAIL manifests 1 files SKIP chart none FAIL overlay apps/x GITOPS-CHECK fail 2
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "#!/bin/sh\ncase \"\$*\" in *-strict*) exit 1;; esac\n" > $d/rt && chmod +x $d/rt && printf "{\"yaml\":[\"a.yaml\"],\"manifests\":[\"a.yaml\"],\"charts\":[],\"overlays\":[\"apps/x\"],\"deploy\":true}" > $d/s.json && printf "{\"defaults\":{\"kubernetes_version\":\"1.32.13\",\"schema_locations\":[\"default\"],\"yamllint_config\":\"{}\",\"images\":{\"yamllint\":\"y@sha256:1\",\"kubeconform\":\"k@sha256:2\",\"helm\":\"h@sha256:3\",\"kustomize\":\"z@sha256:4\"}},\"repos\":{}}" > $d/c.json && GITOPS_CI_RUNTIME=$d/rt bash claude/workflow/gitops-ci/bin/gitops-check.sh --repo jkkelley/homelab-gitops --repo-dir $d --select $d/s.json --config $d/c.json'` exit 1 expect /GITOPS-CHECK fail/
-- [ ] `AC-H4` *(human)* a missing runtime stops with exit 4
+- [x] `AC-H4` *(human)* a missing runtime stops with exit 4
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "{"yaml":["a.yaml"],"manifests":["a.yaml"],"charts":[],"overlays":["apps/x"],"deploy":true}" > $d/s.json && printf "{"defaults":{"kubernetes_version":"1.32.13","schema_locations":["default"],"yamllint_config":"{}","images":{"yamllint":"y@sha256:1","kubeconform":"k@sha256:2","helm":"h@sha256:3","kustomize":"z@sha256:4"}},"repos":{}}" > $d/c.json && GITOPS_CI_RUNTIME=/nonexistent/rt bash claude/workflow/gitops-ci/bin/gitops-check.sh --repo jkkelley/homelab-gitops --repo-dir $d --select $d/s.json --config $d/c.json' exit 4 output: ENV-MISSING GITOPS_CI_RUNTIME
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'd=$(mktemp -d) && printf "{\"yaml\":[\"a.yaml\"],\"manifests\":[\"a.yaml\"],\"charts\":[],\"overlays\":[\"apps/x\"],\"deploy\":true}" > $d/s.json && printf "{\"defaults\":{\"kubernetes_version\":\"1.32.13\",\"schema_locations\":[\"default\"],\"yamllint_config\":\"{}\",\"images\":{\"yamllint\":\"y@sha256:1\",\"kubeconform\":\"k@sha256:2\",\"helm\":\"h@sha256:3\",\"kustomize\":\"z@sha256:4\"}},\"repos\":{}}" > $d/c.json && GITOPS_CI_RUNTIME=/nonexistent/rt bash claude/workflow/gitops-ci/bin/gitops-check.sh --repo jkkelley/homelab-gitops --repo-dir $d --select $d/s.json --config $d/c.json'` exit 4 expect /ENV-MISSING/
-- [ ] `AC-H5` *(human)* shellcheck passes
+- [x] `AC-H5` *(human)* shellcheck passes
+  - observed `2026-10-16` check: make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'shellcheck -x claude/workflow/gitops-ci/bin/gitops-check.sh' exit 0 output:
   - check: `make -C claude/workflow image >/dev/null && podman run --rm --network=none --userns=keep-id -e HOME=/tmp -v "$PWD:/work:Z" -w /work localhost/dotfiles-workflow-test:1 bash -c 'shellcheck -x claude/workflow/gitops-ci/bin/gitops-check.sh'` exit 0
-- [ ] `AC-H6` *(human)* the diff holds only the In files
+- [x] `AC-H6` *(human)* the diff holds only the In files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/gitops-ci/bin/gitops-check.sh)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/gitops-ci/bin/gitops-check\.sh)$'` exit 1
 
 ## Test plan
