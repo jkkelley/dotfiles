@@ -19,7 +19,8 @@
   "depends_on": [
     "WO-20261016-4682",
     "WO-20261016-cee6",
-    "WO-20261016-73cd"
+    "WO-20261016-73cd",
+    "WO-20261016-c606"
   ],
   "blocks": []
 }
@@ -61,10 +62,11 @@ The send path is unproven until one real approved reply is sent and proven
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the thread read-back shows the text once (screenshot in proof/)
-- [ ] `AC-H2` *(human)* the tab bar is clean (CLEAN-OK)
-- [ ] `AC-H3` *(human)* exactly one ledger row for the file (jq)
-- [ ] `AC-H4` *(human)* whether the owner's own pane line clears the classifier is recorded in the design
+- [ ] `AC-H1` *(human)* gate: the next real reply the owner approves on Bearings plus the owner's one Send them line in the batch pane (architect R2 and R4); no separate card; live proof pending until then
+- [ ] `AC-H2` *(human)* the thread read-back shows the text once (screenshot in proof/)
+- [ ] `AC-H3` *(human)* the tab bar is clean (CLEAN-OK)
+- [ ] `AC-H4` *(human)* exactly one ledger row RP-SENT for the file (jq)
+- [ ] `AC-H5` *(human)* whether the owner's own pane line cleared the classifier is recorded in design 14.3
 
 ## Test plan
 
@@ -83,6 +85,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` Architect R2, 2026-10-16T04:25Z: no separate card; proven on the next real approved reply. Live proof pending. Stays draft so no build seat picks it up; it runs as make reply-send when that approval exists.
 
 ## Outcome
 
