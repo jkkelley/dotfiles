@@ -34,6 +34,8 @@ rc=0; "$RS" post --kind regen --code REGEN --pr 7 --sha abc1234 --repo o/r "${ba
 rc=0; "$RS" post --kind regen --code NOPE "${base[@]}" >/dev/null 2>&1 || rc=$?; [ $rc = 3 ] && ok "kind regen code NOPE fails the schema" || no "NOPE rc=$rc"
 rc=0; "$RS" post --kind ci.rerun --code RERUN --pr 7 --sha abc1234 --repo o/r "${base[@]}" >/dev/null 2>&1 || rc=$?; [ $rc = 0 ] && ok "kind ci.rerun code RERUN is valid" || no "rerun rc=$rc"
 rc=0; "$RS" post --kind ci.rerun --code NOPE "${base[@]}" >/dev/null 2>&1 || rc=$?; [ $rc = 3 ] && ok "kind ci.rerun code NOPE fails the schema" || no "rerun NOPE rc=$rc"
+rc=0; "$RS" post --kind ci.autofix --code AUTOFIX --pr 7 --sha abc1234 --repo o/r "${base[@]}" >/dev/null 2>&1 || rc=$?; [ $rc = 0 ] && ok "kind ci.autofix code AUTOFIX is valid" || no "autofix rc=$rc"
+rc=0; "$RS" post --kind ci.autofix --code NOPE "${base[@]}" >/dev/null 2>&1 || rc=$?; [ $rc = 3 ] && ok "kind ci.autofix code NOPE fails the schema" || no "autofix NOPE rc=$rc"
 rc=0; "$RS" post --kind merged --code 200 --sha 'zz' "${base[@]}" >/dev/null 2>&1 || rc=$?; [ $rc = 3 ] && ok "bad sha fails the schema" || no "sha rc=$rc"
 rc=0; "$RS" post --kind merged --code 200 --note "$(printf 'x%.0s' {1..241})" "${base[@]}" >/dev/null 2>&1 || rc=$?; [ $rc = 3 ] && ok "note over 240 fails" || no "note rc=$rc"
 rc=0; "$RS" post --kind merged --code 200 --line test >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] && ok "missing ticket is usage, exit 2" || no "usage rc=$rc"

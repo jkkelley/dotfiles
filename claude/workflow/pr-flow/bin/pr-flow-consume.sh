@@ -11,6 +11,7 @@
 #   pr-flow-consume.sh loop [--interval 60]   a pass every interval, for the pr-flow pane of the monitoring tab (Rule 18: never &)
 #   pr-flow-consume.sh regen-index      only the regen verb (env REPO, PR, DRY), what the sweep runs first on every tick
 #   pr-flow-consume.sh rerun-stale-red  only the stale-red verb (env REPO, DRY), what the sweep runs on every red PR
+#   pr-flow-consume.sh autofix          only the autofix verb (env REPO, PR), what the sweep runs on every red PR after its 422
 #
 # Records (pr-process.md section 9), each keyed so it is posted once (rule R3):
 #   pr.opened 100  first sight of a head                    key 100/<slug>/<pr>/<head>
@@ -21,6 +22,7 @@
 #                  and seconds from the last check to the merge, the AC2 number
 #   regen REGEN    a PR conflicting only on regen.paths was merged with its base, regenerated and pushed  key REGEN/<slug>/<pr>/<new head>
 #   ci.rerun RERUN a red whose failing checks started before the base head was refreshed  key RERUN/<slug>/<pr>/<base sha>
+#   ci.autofix AUTOFIX  a red PR on headers or markdown contents lists got the mechanical fix pushed  key AUTOFIX/<slug>/<pr>/<head>; note: the fixes
 # Backstop (node N4): a PR whose ci.passed was posted more than backstop_s seconds ago and is still open goes to merge.sh --pr.
 # Every repository pass runs under step-time.sh (node sweep), so a slow pass posts SLOW (rule R7).
 #
@@ -42,6 +44,13 @@
 #   re-tests the old merge commit that still lacks the fix; a fresh merge ref needs a new pull_request event, which update-branch makes.
 #   Rejected: gh run rerun as the default (mode rerun stays for flakes); closing and reopening the PR, which notifies. Cost: a merge
 #   commit on the PR branch, as regen-conflicts.sh already makes, and one gh api call per base per pass. stale_red.mode off disables it.
+#
+# BREADCRUMB 2026-10-16 - WO-20261016-fb99, ORD-0814 P2. What broke: PRs 216, 219, 225, 234 sat red on headers or tracked-ignored-check
+#   for a seat each; the fix was a git rm --cached or a contents-list rewrite, both local and fast. Why a verb run in a temp worktree of the
+#   PR head: check names do not isolate the cause (job headers runs rolodex-check and tracked-ignored-check), so each configured fix has a
+#   detect command and nothing detected means the failure needs content (headers, Bump lines) and stays with the 422 lane. Rejected:
+#   fixing in the shared clone, which a seat may be using. Cost: one fetch and one worktree per red PR per head, and a push that starts CI.
+#   autofix.mode off disables it by config.
 set -uo pipefail
 HERE=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
 GH=${GH:-gh}; RS="$HERE/records.sh"; ST="$HERE/../../bin/step-time.sh"
@@ -56,6 +65,42 @@ post() { # post SLUG LINE KIND CODE KEY PR SHA TICKET NOTE
 ticket_of() { local re=$1 t=$2 b=$3 n=$4; if [[ $t =~ $re ]] || [[ $b =~ $re ]]; then echo "${BASH_REMATCH[1]}"; else echo "PR-$n"; fi; }
 
 declare -A MAIN_OF=()
+autofix_pr() { # autofix_pr SLUG LINE N HEAD HEADREF BASEREF FORK TICKET FAILED CFG CLONE: push the mechanical fixes to a red PR head, once per head
+  local slug=$1 line=$2 n=$3 head=$4 headref=$5 baseref=$6 fork=$7 t=$8 failed=$9 cfg=${10} clone=${11}
+  local on_re w name detect fix names=() f i cnt fl key=${slug//\//_}-$n-$head dot
+  case $(jq -r '.autofix.mode // "off"' <<<"$cfg") in on) ;; *) return 0;; esac
+  on_re=$(jq -r '.autofix.on_checks // ""' <<<"$cfg"); [ -n "$on_re" ] || return 0
+  f=0; IFS=, read -ra fl <<<"$failed"; for name in "${fl[@]}"; do [[ $name =~ $on_re ]] && f=1; done; [ $f = 1 ] || return 0
+  "$RS" seen --key "AUTOFIX/$slug/$n/$head" && return 0
+  [ -e "$STATE/autofix-none/$key" ] && return 0
+  if [ "$fork" = true ]; then echo "$slug PR $n autofix-skip fork"; return 0; fi
+  dot=$(cd "$HERE/../../../.." && pwd); dot=${DOTFILES:-$dot}
+  w=$STATE/autofix/${slug//\//_}-$n; mkdir -p "$STATE/autofix" "$STATE/autofix-none"
+  git -C "$clone" worktree remove --force "$w" >/dev/null 2>&1 || true
+  if git -C "$clone" fetch -q origin "$headref" "$baseref" >/dev/null 2>&1 && git -C "$clone" worktree add -q --detach "$w" "origin/$headref" >/dev/null 2>&1; then
+    cnt=$(jq -r '.autofix.fixes | length' <<<"$cfg")
+    for ((i = 0; i < cnt; i++)); do
+      name=$(jq -r ".autofix.fixes[$i].name" <<<"$cfg"); detect=$(jq -r ".autofix.fixes[$i].detect" <<<"$cfg"); fix=$(jq -r ".autofix.fixes[$i].fix" <<<"$cfg")
+      if ! (cd "$w" && PR_BASE=$baseref DOTFILES=$dot bash -c "$detect") >/dev/null 2>&1; then
+        (cd "$w" && PR_BASE=$baseref DOTFILES=$dot bash -c "$fix") >/dev/null 2>&1 && names+=("$name")
+      fi
+    done
+    git -C "$w" add -u >/dev/null 2>&1
+    if git -C "$w" diff --cached --quiet; then
+      : > "$STATE/autofix-none/$key"; echo "$slug PR $n autofix-none: needs content (fix seat)"
+    else
+      name=$(IFS=+; echo "${names[*]}")
+      git -C "$w" commit -q -m "chore: pr-flow autofix $name (AUTOFIX)" >/dev/null 2>&1
+      if git -C "$w" push -q origin "HEAD:$headref" >/dev/null 2>&1; then
+        echo "$slug PR $n autofix: $name"
+        post "$slug" "$line" ci.autofix AUTOFIX "AUTOFIX/$slug/$n/$head" "$n" "$head" "$t" "fixed: $name"
+      else echo "$slug PR $n autofix-fail push"; fi
+    fi
+  else echo "$slug PR $n autofix-fail fetch"; fi
+  git -C "$clone" worktree remove --force "$w" >/dev/null 2>&1 || rm -rf "$w"
+  return 0
+}
+
 stale_red_pr() { # stale_red_pr SLUG LINE N HEAD BASE TICKET CHECKS MODE: refresh a PR whose red predates its base head, once per base sha
   local slug=$1 line=$2 n=$3 head=$4 base=$5 t=$6 checks=$7 mode=$8 main msha mdate red_at key id ok=0
   case $mode in ""|null|off) return 0;; esac
@@ -112,7 +157,7 @@ repo_pass() { # repo_pass SLUG: one pass over one repository
   export PR_FLOW_RECORDS; PR_FLOW_RECORDS=$(jq -r .records <<<"$cfg")
   # generated-file conflicts first: CI does not run on a PR GitHub cannot merge
   regen_index "$slug"
-  prs=$("$GH" pr list -R "$slug" --state open --limit 100 --json number,headRefOid,title,body,baseRefName) || { echo "$slug io: gh pr list"; return 4; }
+  prs=$("$GH" pr list -R "$slug" --state open --limit 100 --json number,headRefOid,title,body,baseRefName,headRefName,isCrossRepository) || { echo "$slug io: gh pr list"; return 4; }
   while IFS= read -r row; do
     n=$(jq -r .number <<<"$row"); head=$(jq -r .headRefOid <<<"$row"); title=$(jq -r .title <<<"$row"); body=$(jq -r '.body // ""' <<<"$row")
     t=$(ticket_of "$re" "$title" "$body" "$n")
@@ -122,6 +167,7 @@ repo_pass() { # repo_pass SLUG: one pass over one repository
     if [ -n "$failed" ]; then
       "$RS" seen --key "422/$slug/$n/$head" || post "$slug" "$line" ci.failed 422 "422/$slug/$n/$head" "$n" "$head" "$t" "failed: $failed"
       stale_red_pr "$slug" "$line" "$n" "$head" "$(jq -r .baseRefName <<<"$row")" "$t" "$checks" "$(jq -r '.stale_red.mode // "off"' <<<"$cfg")"
+      autofix_pr "$slug" "$line" "$n" "$head" "$(jq -r .headRefName <<<"$row")" "$(jq -r .baseRefName <<<"$row")" "$(jq -r .isCrossRepository <<<"$row")" "$t" "$failed" "$cfg" "$clone"
       continue
     fi
     if GH=$GH "$HERE/gate.sh" ci-green --slug "$slug" --pr "$n" --sha "$head" --required "$req" >/dev/null 2>&1; then
@@ -167,6 +213,24 @@ rerun_stale_red() { # rerun_stale_red SLUG: the verb on its own, same listing as
   return 0
 }
 
+autofix_verb() { # autofix_verb SLUG: the verb on its own, same listing as repo_pass
+  local slug=$1 cfg line re clone prs row n head title body t checks failed
+  cfg=$("$HERE/pr-flow-config.sh" "$slug") || return 0
+  line=$(jq -r .line <<<"$cfg"); re=$(jq -r .ticket_re <<<"$cfg"); clone=$(jq -r .clone <<<"$cfg")
+  export PR_FLOW_RECORDS; PR_FLOW_RECORDS=$(jq -r .records <<<"$cfg")
+  prs=$("$GH" pr list -R "$slug" --state open --limit 100 --json number,headRefOid,title,body,baseRefName,headRefName,isCrossRepository) || { echo "$slug io: gh pr list"; return 0; }
+  while IFS= read -r row; do
+    n=$(jq -r .number <<<"$row"); [ -z "${PR:-}" ] || [ "$PR" = "$n" ] || continue
+    head=$(jq -r .headRefOid <<<"$row"); title=$(jq -r .title <<<"$row"); body=$(jq -r '.body // ""' <<<"$row")
+    t=$(ticket_of "$re" "$title" "$body" "$n")
+    checks=$("$GH" api "repos/$slug/commits/$head/check-runs?per_page=100" --jq '[.check_runs[] | {n: .name, s: .status, c: (.conclusion // ""), at: (.completed_at // ""), st: (.started_at // "")}]') || continue
+    failed=$(jq -r '[.[] | select(.s == "completed" and (.c | IN("success", "skipped", "neutral") | not)) | .n] | join(",")' <<<"$checks")
+    [ -n "$failed" ] || continue
+    autofix_pr "$slug" "$line" "$n" "$head" "$(jq -r .headRefName <<<"$row")" "$(jq -r .baseRefName <<<"$row")" "$(jq -r .isCrossRepository <<<"$row")" "$t" "$failed" "$cfg" "$clone"
+  done < <(jq -c '.[]' <<<"$prs")
+  return 0
+}
+
 sweep() {
   local slug list; if [ -n "${REPO:-}" ]; then list=$REPO; else list=$("$HERE/pr-flow-config.sh" --list); fi
   for slug in $list; do
@@ -181,6 +245,7 @@ sweep() {
 case $VERB in
   regen-index) for slug in ${REPO:-$("$HERE/pr-flow-config.sh" --list)}; do regen_index "$slug"; done ;;
   rerun-stale-red) for slug in ${REPO:-$("$HERE/pr-flow-config.sh" --list)}; do rerun_stale_red "$slug"; done ;;
+  autofix) for slug in ${REPO:-$("$HERE/pr-flow-config.sh" --list)}; do autofix_verb "$slug"; done ;;
   sweep) sweep ;;
   loop) while :; do sweep; sleep "$INTERVAL"; done ;;
   *) sed -n '10,11p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;

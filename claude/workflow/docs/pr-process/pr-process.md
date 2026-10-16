@@ -212,6 +212,7 @@ A merge made with `GITHUB_TOKEN` starts no new workflow run (GitHub documents th
 | 409  | `merge.conflict` | branch no longer merges; once per head                      | worker                                     |
 | REGEN | `regen` | PR conflicting only on generated files merged with its base, regenerated, pushed; once per new head | nobody; CI runs on the new head |
 | RERUN | `ci.rerun` | a red whose failing checks started before the base head; base merged into head (or failed jobs rerun); once per base sha | nobody; CI runs on the new head |
+| AUTOFIX | `ci.autofix` | a red PR on headers or markdown contents lists with a tracked-ignored path or a stale contents list; untracked or regenerated, committed, pushed; once per head | nobody; CI runs on the new head |
 | 423  | `blocked`        | gh failed 3 times, the hold is on, or cleanup not done      | orchestrator                               |
 | SLOW | `step.slow`      | a node over its budget                                      | orchestrator files a bottleneck work order |
 
@@ -221,6 +222,7 @@ A merge made with `GITHUB_TOKEN` starts no new workflow run (GitHub documents th
 Every key is overridable by `VAR=value` on the Make target.
 An empty `regen.paths` turns the regen-index verb off.
 `stale_red.mode` sets the rerun-stale-red verb: `update-branch` (default, merges the base into the head so a new merge ref is tested), `rerun` (`gh run rerun --failed`, same merge ref, for flakes) or `off`.
+`autofix.mode` (`on` or `off`) sets the autofix verb: a red PR whose failed check names match `autofix.on_checks` gets each entry of `autofix.fixes` whose `detect` exits non-zero run in a temp worktree of its head, then one commit and push, once per head.
 
 | Repository       | `merge`    | Why                                                   |
 | ---------------- | ---------- | ----------------------------------------------------- |

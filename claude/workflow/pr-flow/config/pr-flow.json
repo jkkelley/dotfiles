@@ -1,5 +1,5 @@
 {
-  "$comment": "pr-flow per repository (pr-process.md section 10). Every key is overridable by VAR=value on the Make target. clone is the local checkout regen-conflicts and merge.sh's cleanup run in; ci feeds pr-flow-ci-render.sh when the templates are installed. stale_red.mode is update-branch (merge base into head, new pull_request event, fresh merge ref), rerun (gh run rerun --failed, same merge ref, for flakes) or off.",
+  "$comment": "pr-flow per repository (pr-process.md section 10). Every key is overridable by VAR=value on the Make target. clone is the local checkout regen-conflicts and merge.sh's cleanup run in; ci feeds pr-flow-ci-render.sh when the templates are installed. stale_red.mode is update-branch (merge base into head, new pull_request event, fresh merge ref), rerun (gh run rerun --failed, same merge ref, for flakes) or off. autofix.mode on or off; a red PR whose failed check names match on_checks gets each fix whose detect exits non-zero, run in a temp worktree of its head, committed and pushed once per head. No per-repo override",
   "defaults": {
     "line": "pr-flow",
     "merge": "action",
@@ -17,6 +17,22 @@
     "backstop_s": 120,
     "stale_red": {
       "mode": "update-branch"
+    },
+    "autofix": {
+      "mode": "on",
+      "on_checks": "^(headers|markdown contents lists)$",
+      "fixes": [
+        {
+          "name": "tracked-ignored",
+          "detect": "test -z \"$(git ls-files -ci --exclude-standard)\"",
+          "fix": "git ls-files -ci -z --exclude-standard | xargs -0r git rm --cached -q"
+        },
+        {
+          "name": "md-contents",
+          "detect": "BASE=origin/$PR_BASE bash \"$DOTFILES/scripts/md-contents.sh\" check",
+          "fix": "BASE=origin/$PR_BASE bash \"$DOTFILES/scripts/md-contents.sh\" write"
+        }
+      ]
     },
     "budgets": {
       "N4": {
