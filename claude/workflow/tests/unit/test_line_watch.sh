@@ -145,6 +145,38 @@ tick; [ "$(LOG | grep -c 'ALERT beta .*LW-ALERT-IDLE')" = 1 ] && [ "$(pubs)" = 0
 printf 'Bash command\nDo you want to proceed?\nEsc to cancel\n' > "$T/fx/read-wT_p2.txt"; panes working working; fresh; tick
 LOG | grep -q 'ALERT beta .*LW-ALERT-BLOCKED' && ok "a seat on a permission dialog raises ALERT" || bad "blocked" "$(LOG | tail -2)"
 
+# ---- watchers: their own tab, and a watcher whose seat pane is gone is reaped by the sweep
+# (live 2026-10-16T05:32Z: 9 orphan watch-compact panes held monitor slots 2.1/2.2 and refused the resources and events monitors)
+echo '{"result":{"tabs":[{"tab_id":"wT:t1","label":"L 1"},{"tab_id":"wT:t5","label":"L watchers"},{"tab_id":"wT:t6","label":"L monitor"}]}}' > "$T/fx/tabs.json"
+jq -n '{result:{panes:[
+  {pane_id:"wT:pA",tab_id:"wT:t1",label:"architect",agent:"claude",agent_status:"idle"},
+  {pane_id:"wT:p1",tab_id:"wT:t1",label:"alpha",agent:"claude",agent_status:"working"},
+  {pane_id:"wT:w1",tab_id:"wT:t5",label:"watch-compact-wT-p1",agent:null},
+  {pane_id:"wT:w7",tab_id:"wT:t5",label:"watch-compact-wT-p7",agent:null},
+  {pane_id:"wT:w8",tab_id:"wT:t5",label:"watch-seat-wT-p8",agent:null},
+  {pane_id:"wT:f1",tab_id:"wT:t5",label:"free 1.3",agent:null},
+  {pane_id:"wT:m1",tab_id:"wT:t6",label:"free 2.1",agent:null}]}}' > "$T/fx/panes.json"
+tick
+grep -q '^pane close wT:w7' "$T/log" && grep -q '^pane close wT:w8' "$T/log" && ok "the sweep closes watchers whose seat pane is gone" || bad "orphan watchers closed" "$(cat "$T/log")"
+! grep -q '^pane close wT:w1' "$T/log" && ok "and leaves the watcher of a live seat alone" || bad "live watcher closed"
+LOG | grep -q 'watcher: watch-compact-wT-p7 closed' && ok "and logs each reaped watcher" || bad "reap logged" "$(LOG)"
+: > "$T/log"; echo '{"result":{"panes":[]}}' > "$T/fx/panes.json"; $L sweep L --once >/dev/null 2>&1
+! grep -q '^pane close' "$T/log" && ok "an empty herdr list reaps nothing" || bad "empty list reaped"
+# a free slot of the watchers tab takes the next watcher label; the monitor tab's free slot is never used
+jq -n '{result:{panes:[
+  {pane_id:"wT:pA",tab_id:"wT:t1",label:"architect",agent:"claude",agent_status:"idle"},
+  {pane_id:"wT:p1",tab_id:"wT:t1",label:"alpha",agent:"claude",agent_status:"working"},
+  {pane_id:"wT:f1",tab_id:"wT:t5",label:"free 1.3",agent:null},
+  {pane_id:"wT:m1",tab_id:"wT:t6",label:"free 2.1",agent:null}]}}' > "$T/fx/panes.json"
+: > "$T/log"; $L adopt L >/dev/null 2>&1
+grep -q '^pane rename wT:f1 watch-compact-wT-p1' "$T/log" && ok "a watcher takes a free slot of the watchers tab" || bad "watcher slot" "$(grep rename "$T/log")"
+! grep -q 'pane rename wT:m1' "$T/log" && ok "and never one of the monitor tab" || bad "monitor slot taken"
+# no free watcher slot: a new watchers tab is built, labelled "L watchers 2"
+echo '{"result":{"tabs":[{"tab_id":"wT:t1","label":"L 1"},{"tab_id":"wT:t5","label":"L watchers"}]}}' > "$T/fx/tabs.json"
+jq 'del(.result.panes[] | select(.pane_id == "wT:f1" or .pane_id == "wT:m1"))' "$T/fx/panes.json" > "$T/fx/p2" && mv "$T/fx/p2" "$T/fx/panes.json"
+: > "$T/log"; $L adopt L >/dev/null 2>&1
+grep -q '^tab create .*--label L watchers 2' "$T/log" && ok "a full watchers tab overflows to 'L watchers 2'" || bad "watchers overflow" "$(grep -E 'tab create' "$T/log")"
+
 # ---- monitors: one tab, each declared monitor in its slot; down runs every down and closes the tab
 M="bash $R/bin/monitors.sh"
 jq --arg d "$T/downs" '.monitors = [

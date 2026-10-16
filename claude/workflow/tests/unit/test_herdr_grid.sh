@@ -128,6 +128,47 @@ hasnt "a quoted placeholder token is not done"  'pane close wT:p2'
 : > "$T/log"; FORCE=1 $G seat-down architect L >/dev/null 2>&1; rc=$?
 [ "$rc" != 0 ] && hasnt "architect pane is never closed" 'pane close wT:pA' || bad "architect refused"
 
+# ---- seat-down of a seat that holds no slot (live 2026-10-16T05:28Z: seat-down treehouse-seats -> exit 1)
+# s9 is the stub's agent name for wT:y2, a pane in a tab outside the grid; a gone seat is exit 0; the architect is still refused
+mk_tab1 a b c free free free
+echo '{"result":{"tabs":[{"tab_id":"wT:t1","label":"L 1"},{"tab_id":"wT:t5","label":"scratch"}]}}' > "$T/fx/tabs.json"
+jq '.result.panes += [{pane_id:"wT:y2",tab_id:"wT:t5",label:"",agent:"claude",agent_status:"idle"},
+  {pane_id:"wT:wc",tab_id:"wT:t5",label:"watch-compact-wT-y2",agent:null}]' "$T/fx/panes.json" > "$T/fx/p2" && mv "$T/fx/p2" "$T/fx/panes.json"
+printf 'working...\n' > "$T/fx/read-wT_y2.txt"
+: > "$T/log"; $G seat-down s9 L >/dev/null 2>&1; rc=$?
+[ "$rc" = 2 ] && hasnt "an unregistered seat still working is refused, not closed" 'pane close wT:y2' || bad "unregistered unfinished" "rc=$rc"
+printf 'DONE s9 https://example.test/pr/9\n' > "$T/fx/read-wT_y2.txt"
+: > "$T/log"; $G seat-down s9 L >/dev/null 2>&1; rc=$?
+[ "$rc" = 0 ] && ok "seat-down of an unregistered seat exits 0" || bad "unregistered seat-down exit" "rc=$rc"
+has   "and closes it, found by its herdr agent name" 'pane close wT:y2'
+has   "and closes its watcher pane in the same call" 'pane close wT:wc'
+: > "$T/log"; $G seat-down nobody L >/dev/null 2>&1; rc=$?
+[ "$rc" = 0 ] && hasnt "a seat that is already gone is exit 0 and closes nothing" 'pane close' || bad "gone seat exit" "rc=$rc"
+mk_tab1 a b c free free free
+jq '.result.panes += [{pane_id:"wT:wd",tab_id:"wT:t1",label:"watch-seat-wT-p1",agent:null}]' "$T/fx/panes.json" > "$T/fx/p2" && mv "$T/fx/p2" "$T/fx/panes.json"
+printf 'DONE a https://example.test/pr/1\n' > "$T/fx/read-wT_p1.txt"
+: > "$T/log"; $G seat-down a L >/dev/null 2>&1
+has   "a registered seat's watchers close with it" 'pane close wT:wd'
+
+# ---- adopt-named: a named agent pane outside every grid tab takes the next free slot; grid, monitor and watcher tabs are left
+mk_tab1 a free free free free free
+echo '{"result":{"tabs":[{"tab_id":"wT:t1","label":"L 1"},{"tab_id":"wT:t5","label":"scratch"},{"tab_id":"wT:t6","label":"L monitor"},{"tab_id":"wT:t7","label":"L watchers"},{"tab_id":"wT:t9","label":"other 1"}]}}' > "$T/fx/tabs.json"
+jq '.result.panes += [{pane_id:"wT:y2",tab_id:"wT:t5",label:"",agent:"claude",agent_status:"idle"},
+  {pane_id:"wT:y3",tab_id:"wT:t5",label:"",agent:null},
+  {pane_id:"wT:y4",tab_id:"wT:t6",label:"sweep",agent:"claude"},
+  {pane_id:"wT:y5",tab_id:"wT:t7",label:"watch-compact-wT-p1",agent:"claude"},
+  {pane_id:"wT:y6",tab_id:"wT:t9",label:"stranger",agent:"claude"},
+  {pane_id:"wT:y7",tab_id:"wT:t5",label:"free 1.1",agent:"claude"}]' "$T/fx/panes.json" > "$T/fx/p2" && mv "$T/fx/p2" "$T/fx/panes.json"
+: > "$T/log"; $G adopt-named L >/dev/null 2>&1; rc=$?
+[ "$rc" = 0 ] && ok "adopt-named exits 0" || bad "adopt-named exit" "rc=$rc"
+has   "the named pane moves onto the first free slot" 'pane move wT:y2 --tab wT:t1 --split down --target-pane wT:p2'
+has   "the free shell it replaced closes"            'pane close wT:p2'
+has   "the pane is labelled and the agent named for the seat" 'pane rename wT:y2 s9'
+for q in y3 y4 y5 y6 y7; do hasnt "pane $q (no agent, monitor, watcher, other line, free) is not adopted" "pane move wT:$q"; done
+mk_tab1 a s9 free free free free
+: > "$T/log"; $G adopt-named L >/dev/null 2>&1
+hasnt "adopting again is a no-op once the seat holds a slot" 'pane move'
+
 # ---- line-clean: closes an emptied overflow tab, ignores another line
 mk_tab1 free free free free free free
 echo '{"result":{"tabs":[{"tab_id":"wT:t1","label":"L 1"},{"tab_id":"wT:t2","label":"L 2"},{"tab_id":"wT:t9","label":"other 1"}]}}' > "$T/fx/tabs.json"

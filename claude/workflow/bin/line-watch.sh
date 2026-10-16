@@ -48,7 +48,7 @@ WS="${WS:-${HERDR_WORKSPACE_ID:-}}"; [ -n "$WS" ] || wf_die "no workspace: run i
 INTERVAL="${LW_INTERVAL:-60}"; IDLE="${LW_IDLE:-60}"
 SAFE="${LINE//[^A-Za-z0-9_-]/-}"
 STATE="$(wf_expand "${LW_STATE:-$HOME/.local/state/zenith/line-watch}")/$SAFE"; mkdir -p "$STATE/seats"
-TAB="$LINE monitor"
+WTAB="$LINE watchers"
 FREE=free
 CG="${COMPACTION_GUARD_BIN:-compaction-guard}"
 
@@ -84,26 +84,33 @@ seats() {
 # Cost: an event waits until its consumer pulls; the bus must be up (make bus-up), else the publish fails loud in the log.
 BUS="$HERE/bus.sh"
 
-# ---- monitor tabs: 3x3, labelled, a new tab when full (~/AGENTS.md herdr tab layout) -----------------------------
-mon_tabs() { tabs | jq -r --arg t "$TAB" '.result.tabs[] | select((.label // "") == $t or ((.label // "") | startswith($t + " "))) | .tab_id'; }
+# ---- watcher tabs: 3x3, labelled, a new tab when full (~/AGENTS.md herdr tab layout) ------------------------------
+# BREADCRUMB - per-seat watchers get their own tab "<line> watchers", never the monitor tab.
+# What broke: slot() put every watch-compact-<pane> in a free slot of "<line> monitor"; 2026-10-16T05:32Z nine orphans held
+#   slots 2.1/2.2, so `monitors-up` refused the resources and events monitors ("slot 2.1 is not free").
+# Why this fix: the monitor tab is exactly the declared monitors (config/monitors.json) and nothing else lives or dies
+#   there; watchers come and go with seats, so they get "<line> watchers" (3x3, "<line> watchers 2" when full) built by
+#   bin/monitors.sh grid. Rejected: reserving slots in the monitor tab, which caps the line at the free slot count.
+# Cost: one more tab per line once a seat is watched; stop closes it with the watchers.
+watch_tabs() { tabs | jq -r --arg t "$WTAB" '.result.tabs[] | select((.label // "") == $t or ((.label // "") | test("^" + ($t | gsub("[^A-Za-z0-9_-]"; "\\\(.)")) + " [0-9]+$"))) | .tab_id'; }
 
-# new_mon_tab: one more 3x3 tab "<line> monitor N", built by bin/monitors.sh grid; prints its top-left pane.
-new_mon_tab() {
+# new_watch_tab: one more 3x3 tab "<line> watchers N", built by bin/monitors.sh grid; prints its top-left pane.
+new_watch_tab() {
   local n label
-  n=$(( $(mon_tabs | wc -l) + 1 )); label="$TAB"; [ "$n" -gt 1 ] && label="$TAB $n"
+  n=$(( $(watch_tabs | wc -l) + 1 )); label="$WTAB"; [ "$n" -gt 1 ] && label="$WTAB $n"
   WS="$WS" bash "$HERE/monitors.sh" grid "$label"
 }
 
-# slot <label>: the pane holding <label>, else the first free monitor slot renamed to it, else a new monitor tab's.
+# slot <label>: the pane holding <label>, else the first free watcher slot renamed to it, else a new watchers tab's.
 slot() {
   local p ids
   p="$(pane_by_label "$1")"; [ -n "$p" ] && { printf '%s' "$p"; return 0; }
-  ids="$(mon_tabs | jq -R . | jq -sc .)"
+  ids="$(watch_tabs | jq -R . | jq -sc .)"
   p="$(panes | jq -r --argjson ids "$ids" --arg f "$FREE" 'first(.result.panes[] | select(((.label // "") | startswith($f)) and (.tab_id as $t | $ids | index($t)))) | .pane_id // empty')"
   if [ -z "$p" ]; then
-    p="$(new_mon_tab)" || wf_die "could not open a monitor tab for $LINE"
+    p="$(new_watch_tab)" || wf_die "could not open a watchers tab for $LINE"
   fi
-  [ -n "$p" ] || wf_die "no free monitor slot for $1"
+  [ -n "$p" ] || wf_die "no free watcher slot for $1"
   herdr pane rename "$p" "$1" >/dev/null; printf '%s' "$p"
 }
 
@@ -197,8 +204,34 @@ check_seat() {
   printf 'LW-OK\t%s' "$st"
 }
 
+# adopt_named: bin/herdr-grid.sh adopt-named, every tick. A seat started outside seat-up is in the grid within a minute.
+# Idempotent: a seat already in a slot is left. A failure is an ALERT in the log and never stops the sweep.
+adopt_named() {
+  local out l
+  out="$(WS="$WS" bash "$HERE/herdr-grid.sh" adopt-named "$LINE" 2>&1)" || wf_watch_log "ALERT adopt-named failed: $(tail -1 <<<"$out")"
+  while IFS= read -r l; do [ -n "$l" ] && wf_watch_log "$l"; done < <(grep -E '^grid: adopted' <<<"$out")
+}
+
+# reap_watchers: a watcher pane (watch-compact-<id>, watch-seat-<id>) whose seat pane no longer exists is stopped and closed.
+# A failed or empty herdr list reaps nothing (same rule as the discovery-failed breadcrumb below).
+reap_watchers() {
+  local p ids pane label kind sfx
+  p="$(panes)"; jq -e '(.result.panes | length) > 0' >/dev/null 2>&1 <<<"$p" || return 0
+  ids=" $(jq -r '.result.panes[].pane_id | gsub(":"; "-")' <<<"$p" | tr '\n' ' ') "
+  while IFS=$'\t' read -r pane label; do
+    case "$label" in watch-compact-*) kind=compact ;; watch-seat-*) kind=seat ;; *) continue ;; esac
+    sfx="${label#watch-"$kind"-}"
+    case "$ids" in *" $sfx "*) continue ;; esac
+    WATCH_WS="$WS" bash "$HERE/watch-ctl.sh" off "$kind" "${sfx/-/:}" --close >/dev/null 2>&1
+    herdr pane list --workspace "$WS" 2>/dev/null | jq -e --arg p "$pane" '.result.panes | any(.pane_id == $p)' >/dev/null 2>&1 \
+      && herdr pane close "$pane" >/dev/null 2>&1
+    wf_watch_log "watcher: $label closed, its seat pane is gone"
+  done < <(jq -r '.result.panes[] | select((.label // "") | startswith("watch-")) | [.pane_id, .label] | @tsv' <<<"$p")
+}
+
 sweep_once() {
   local name pane agent st out code ev ctx prev key seen
+  adopt_named; reap_watchers
   seen=" "
   while IFS=$'\t' read -r name pane agent st; do
     [ -n "$name" ] || continue
@@ -332,7 +365,7 @@ cmd_run() { cmd_adopt; cmd_sweep; }
 # stop: the sweep monitor's `down`; stops the sweep, the consumer and every watcher this line armed. Tabs are
 # bin/monitors.sh's to close (monitors-down), so this never closes one.
 cmd_stop() {
-  local kind pane
+  local kind pane t
   if [ -f "$STATE/sweep.pid" ] && kill -0 "$(cat "$STATE/sweep.pid")" 2>/dev/null; then kill "$(cat "$STATE/sweep.pid")"; echo "sweep for $LINE off"; fi
   rm -f "$STATE/sweep.pid"
   if [ -f "$STATE/consume.pid" ] && kill -0 "$(cat "$STATE/consume.pid")" 2>/dev/null; then kill "$(cat "$STATE/consume.pid")"; echo "consumer for $LINE off"; fi
@@ -341,6 +374,7 @@ cmd_stop() {
     [ -n "$kind" ] && WATCH_WS="$WS" bash "$HERE/watch-ctl.sh" off "$kind" "$pane" --close
   done < "$STATE/armed" 2>/dev/null
   rm -f "$STATE/armed"
+  for t in $(watch_tabs); do herdr tab close "$t" >/dev/null 2>&1 && echo "closed watchers tab $t"; done
   # the log stays in the artifact store and unpulled events stay on the bus; only the pointer and seat codes go
   rm -rf "$STATE/seats" "$STATE/notified" "$STATE/sweep.log"
 }

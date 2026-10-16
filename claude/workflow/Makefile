@@ -48,7 +48,7 @@ test: schema lint herdr-first compaction chain failover test-plan ci-job ## Ever
 
 # ---- herdr 3x3 grid (docs/design/herdr-grid.md). Inputs are VAR=value; defaults live in config/project.json .workflow.herdr.grid
 need = $(if $($(1)),,$(error $(1)= is required))
-.PHONY: line-reconcile architect-up line-up seat-up seat-down line-clean line-status line-adopt grid
+.PHONY: line-reconcile architect-up line-up seat-up seat-down seat-adopt line-adopt-named line-clean line-status line-adopt grid
 line-up: ## make line-up LINE=<name>: tab "<name> 1", architect left, 2x3 seat slots
 	$(call need,LINE)
 	@bash bin/herdr-grid.sh line-up "$(LINE)"
@@ -64,6 +64,12 @@ seat-up: ## make seat-up LINE= SEAT= [CMD=]: next free slot, labelled; new tab w
 seat-down: ## make seat-down SEAT= [LINE=] [FORCE=1]: close a finished seat, reflow
 	$(call need,SEAT)
 	@bash bin/herdr-grid.sh seat-down "$(SEAT)" "$(LINE)"
+seat-adopt: ## make seat-adopt LINE= SEAT= PANE=<pane>: move a named pane from outside the grid into the next free slot, no restart
+	$(call need,LINE)$(call need,SEAT)$(call need,PANE)
+	@bash bin/herdr-grid.sh seat-adopt "$(LINE)" "$(SEAT)" "$(PANE)"
+line-adopt-named: ## make line-adopt-named LINE=: seat-adopt every named agent pane that no grid, monitor or watchers tab holds (the sweep does this every minute)
+	$(call need,LINE)
+	@bash bin/herdr-grid.sh adopt-named "$(LINE)"
 line-clean: ## make line-clean LINE=: close every finished seat of the line
 	$(call need,LINE)
 	@bash bin/herdr-grid.sh line-clean "$(LINE)"

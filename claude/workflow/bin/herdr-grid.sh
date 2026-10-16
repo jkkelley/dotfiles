@@ -12,7 +12,10 @@
 #   line-up    <line>                       create tab "<line> 1" with the architect pane and the skeleton
 #   seat-up    <line> <seat> [cmd]          claim the next free slot, label it, optionally run cmd and name the agent
 #   claim      <line> <seat>                like seat-up without cmd; prints the pane id (for PANE=$(...) workflow-spawn.sh)
-#   seat-down  <seat> [line]                close a finished seat's pane, reflow, close an emptied overflow tab
+#   seat-down  <seat> [line]                close a finished seat's pane and its watchers, reflow, close an emptied overflow tab;
+#                                           a seat holding no slot is found by herdr agent name or label, and a seat already gone is exit 0
+#   seat-adopt <line> <seat> <pane>         move a named pane from outside the grid into the next free slot, no restart
+#   adopt-named <line>                      seat-adopt every named agent pane of the workspace that no line grid holds
 #   line-clean <line>                       seat-down for every finished seat of the line
 #   line-status <line>                      one table: tab, slot, seat, agent, status. No model calls
 #   architect-up <line> [resume]           (re)start the architect in its pane with both flags; resume adds --continue
@@ -230,10 +233,9 @@ find_seat() {
   done < <(jq -r '.result.tabs[] | [.tab_id, .label] | @tsv' <<<"$tabs")
 }
 
-cmd_claim() { # claim <line> <seat> [cmd]; prints the pane id
-  local line="$1" seat="$2" slot tab pane n
-  [[ "$seat" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || wf_die "seat '$seat' is not a valid herdr agent name"
-  [ -z "$(find_seat "$seat" "$line")" ] || wf_die "seat '$seat' already holds a slot on line $line"
+# free_slot <line>: prints "<tab> <pane>" of the first free slot, opening the next overflow tab when the line is full.
+free_slot() {
+  local line="$1" slot tab n
   slot="$(find_free "$line")" || return 1
   if [ -z "$slot" ]; then
     n=$(( $(line_tabs "$line" | tail -1 | cut -d' ' -f1) + 1 ))
@@ -242,6 +244,14 @@ cmd_claim() { # claim <line> <seat> [cmd]; prints the pane id
     log "line $line is full: opened tab $line $n"
     slot="$tab $(jq -r 'first(.[]|select(.label=="'"$FREE"'")|.pane)' <<<"$(tab_slots "$tab")")"
   fi
+  printf '%s\n' "$slot"
+}
+
+cmd_claim() { # claim <line> <seat> [cmd]; prints the pane id
+  local line="$1" seat="$2" slot pane
+  [[ "$seat" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || wf_die "seat '$seat' is not a valid herdr agent name"
+  [ -z "$(find_seat "$seat" "$line")" ] || wf_die "seat '$seat' already holds a slot on line $line"
+  slot="$(free_slot "$line")" || return 1
   pane="${slot#* }"
   hj pane rename "$pane" "$seat" >/dev/null || return 1
   printf '%s\n' "$pane"
@@ -303,19 +313,104 @@ close_if_empty() {
   fi
 }
 
+# close_watchers <pane>: the seat's compact and seat watchers stop and their panes close in the same call as the seat's.
+# BREADCRUMB - a watcher outlived its seat (2026-10-16T05:32Z): 9 orphan watch-compact panes sat in monitor slots 2.1/2.2
+#   and the resources and events monitors were refused ("slot is not free"). seat-down closed the seat and left the
+#   watchers watch-ctl.sh armed. Fix: seat-down calls watch-ctl off --close for both kinds; the sweep reaps any that
+#   still slip through (line-watch.sh reap_watchers). Rejected: leaving it to the sweep alone, which is up to a minute late.
+close_watchers() {
+  local k
+  [ "$DRY" = 1 ] && return 0
+  for k in compact seat; do WATCH_WS="$WS" bash "$HERE/watch-ctl.sh" off "$k" "$1" --close >/dev/null 2>&1 || true; done
+}
+
+# unreg_pane <seat>: "<tab> <pane> <agent>" of a pane of the workspace that is not the architect and whose label or herdr
+# agent name is <seat>, wherever it sits. Empty when no pane answers to the name.
+unreg_pane() {
+  local pl ag
+  pl="$(hj pane list --workspace "$WS")" || return 1
+  ag="$(hj agent list 2>/dev/null | jq -c '[(.result.agents // [])[] | {(.pane_id): .name}] | add // {}' 2>/dev/null)"; [ -n "$ag" ] || ag='{}'
+  jq -r --arg s "$1" --argjson ag "$ag" 'first(.result.panes[]
+    | select((.label // "") != "architect" and ((.label // "") == $s or ($ag[.pane_id] // "") == $s))
+    | "\(.tab_id) \(.pane_id) \(.agent // "")") // empty' <<<"$pl"
+}
+
+# BREADCRUMB - seat-down of a seat that holds no slot is adoption, never exit 1.
+# What broke: 05:28Z `make seat-down SEAT=treehouse-seats` died "no seat holds a slot" (Makefile:65 Error 1) because the
+#   seat was spawned outside seat-up, so no pane carried its label in a grid tab; the orchestrator had to close it by hand.
+# Why this fix: the seat is found by herdr agent name or pane label anywhere in the workspace, held to the same finished
+#   test, closed, and its tab reflowed when it sat in a grid tab. A name nothing answers to means the seat is already
+#   down, which is exit 0, so a redelivered LW-DONE and a re-run both land in the same end state (item 28).
+#   Rejected: failing so the caller adopts first, which is the hand step this removes. The architect pane is still refused.
+down_unregistered() {
+  local seat="$1" line="${2:-}" hit tab pane agent lbl n l
+  [ "$seat" != architect ] || wf_die "no seat '$seat' holds a slot${line:+ on line $line}; the architect pane and panes outside a line are never closed"
+  hit="$(unreg_pane "$seat")" || return 1
+  if [ -z "$hit" ]; then log "seat $seat holds no pane; already down"; return 0; fi
+  read -r tab pane agent <<<"$hit"
+  if [ "${FORCE:-0}" != 1 ] && ! finished "${line:-_}" "$seat" "$pane" "$agent"; then
+    log "refused-unfinished: seat $seat has neither printed DONE nor exited (FORCE=1 overrides)"; return 2
+  fi
+  log "seat $seat held no slot: found by name in $pane"
+  hj pane close "$pane" >/dev/null || return 1
+  close_watchers "$pane"
+  rm -f "$(state_file "${line:-_}" "$seat")"
+  lbl="$(hj tab list --workspace "$WS" | jq -r --arg t "$tab" 'first(.result.tabs[] | select(.tab_id == $t) | .label) // empty')"
+  if [[ "$lbl" =~ ^(.+)\ ([0-9]+)$ ]] && { [ -z "$line" ] || [ "${BASH_REMATCH[1]}" = "$line" ]; }; then
+    n="${BASH_REMATCH[2]}"; reflow "$tab" "$n" && close_if_empty "$tab" "$n"
+  fi
+  log "seat $seat down"
+}
+
 cmd_seat_down() {
   local seat="$1" line="${2:-}" hit n tab pane l agent
   hit="$(find_seat "$seat" "$line")"
-  [ -n "$hit" ] || wf_die "no seat '$seat' holds a slot${line:+ on line $line}; the architect pane and panes outside a line are never closed"
+  if [ -z "$hit" ]; then down_unregistered "$seat" "$line"; return; fi
   read -r n tab pane l <<<"$hit"
   agent="$(tab_slots "$tab" | jq -r --arg p "$pane" '.[] | select(.pane == $p) | .agent')"
   if [ "${FORCE:-0}" != 1 ] && ! finished "$l" "$seat" "$pane" "$agent"; then
     log "refused-unfinished: seat $seat has neither printed DONE nor exited (FORCE=1 overrides)"; return 2
   fi
   hj pane close "$pane" >/dev/null || return 1
+  close_watchers "$pane"
   rm -f "$(state_file "$l" "$seat")"
   reflow "$tab" "$n" && close_if_empty "$tab" "$n"
   log "seat $seat down"
+}
+
+# seat-adopt <line> <seat> <pane>: a named pane outside the grid takes the next free slot. The pane is moved onto the free
+# slot's place and the free shell closed, so the process in it never restarts. Idempotent: a seat already in a slot is left.
+cmd_seat_adopt() {
+  local line="$1" seat="$2" pane="$3" slot tab free
+  [[ "$seat" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || { log "skip $pane: '$seat' is not a valid seat name"; return 0; }
+  if [ -n "$(find_seat "$seat" "$line")" ]; then log "seat $seat already holds a slot on line $line"; return 0; fi
+  slot="$(free_slot "$line")" || return 1
+  tab="${slot% *}"; free="${slot#* }"
+  hj pane move "$pane" --tab "$tab" --split down --target-pane "$free" --ratio 0.5 --no-focus >/dev/null || return 1
+  hj pane close "$free" >/dev/null || return 1
+  hj pane rename "$pane" "$seat" >/dev/null || return 1
+  hj agent rename "$pane" "$seat" >/dev/null 2>&1 || log "agent in $pane keeps its name (rename refused or no agent)"
+  log "adopted $seat from $pane into line $line"
+}
+
+# adopt-named <line>: every pane of the workspace that runs an agent and has a name (herdr agent name, else label), sits in
+# no grid tab ("<x> N"), monitor tab or watchers tab, and is not the architect or a watcher, becomes a seat of the line.
+# The sweep runs this every minute (line-watch.sh), so a seat started outside seat-up is in the grid within one tick.
+cmd_adopt_named() {
+  local line="$1" pl tl ag pane name rc=0
+  pl="$(hj pane list --workspace "$WS")" || return 1
+  tl="$(hj tab list --workspace "$WS")" || return 1
+  ag="$(hj agent list 2>/dev/null | jq -c '[(.result.agents // [])[] | {(.pane_id): .name}] | add // {}' 2>/dev/null)"; [ -n "$ag" ] || ag='{}'
+  while IFS=$'\t' read -r pane name; do
+    [ -n "$pane" ] || continue
+    cmd_seat_adopt "$line" "$name" "$pane" || rc=1
+  done < <(jq -r --argjson T "$tl" --argjson ag "$ag" --arg f "$FREE" '
+    [$T.result.tabs[] | select((.label // "") | test(" [0-9]+$|^monitors$| (monitor|watchers)( [0-9]+)?$")) | .tab_id] as $skip
+    | .result.panes[] | select(.agent != null and (.tab_id as $t | $skip | index($t) | not))
+    | (if ($ag[.pane_id] // "") != "" then $ag[.pane_id] else (.label // "") end) as $n
+    | select($n != "" and $n != "architect" and ($n | startswith($f) | not) and ($n | startswith("watch-") | not))
+    | [.pane_id, $n] | @tsv' <<<"$pl")
+  return "$rc"
 }
 
 cmd_line_clean() {
@@ -443,12 +538,14 @@ main() {
     seat-up)     [ $# -ge 2 ] || wf_die "usage: seat-up <line> <seat> [cmd]"; cmd_seat_up "$@" ;;
     claim)       [ $# -ge 2 ] || wf_die "usage: claim <line> <seat>"; cmd_claim "$@" ;;
     seat-down)   [ $# -ge 1 ] || wf_die "usage: seat-down <seat> [line]"; cmd_seat_down "$@" ;;
+    seat-adopt)  [ $# -ge 3 ] || wf_die "usage: seat-adopt <line> <seat> <pane>"; cmd_seat_adopt "$@" ;;
+    adopt-named) [ $# -ge 1 ] || wf_die "usage: adopt-named <line>"; cmd_adopt_named "$@" ;;
     line-clean)  [ $# -ge 1 ] || wf_die "usage: line-clean <line>"; cmd_line_clean "$@" ;;
     line-status) [ $# -ge 1 ] || wf_die "usage: line-status <line>"; cmd_line_status "$@" ;;
     architect-up) [ $# -ge 1 ] || wf_die "usage: architect-up <line> [resume]"; cmd_architect_up "$@" ;;
     line-reconcile) [ $# -ge 1 ] || wf_die "usage: line-reconcile <line>"; cmd_line_reconcile "$@" ;;
     line-adopt)  [ $# -ge 2 ] || wf_die "usage: line-adopt <line> <arch-pane> <seat=pane>..."; cmd_line_adopt "$@" ;;
-    *) sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2; return 2 ;;
+    *) sed -n '2,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2; return 2 ;;
   esac
 }
 main "$@"
