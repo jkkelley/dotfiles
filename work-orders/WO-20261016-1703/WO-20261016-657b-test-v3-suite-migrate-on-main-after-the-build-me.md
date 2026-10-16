@@ -4,13 +4,13 @@
   "slug": "test-v3-suite-migrate-on-main-after-the-build-me",
   "title": "Test V3 - suite migrate on main after the build merges",
   "type": "test",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:58+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/test-v3-suite-migrate-on-main-after-the-build-me",
   "pr": null,
   "closed": null,
   "approval": {
@@ -61,7 +61,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+- [x] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+  - observed `2026-10-16` TP-1 on main ffe1b50: podman run ... bash tests/run.sh --suite migrate -> exit 0, output 'ok migrate' / 'ran 1 suite'; suite loops every migrations/ dir incl. R7-verdict. Log: ~/.local/state/zenith/artifacts/inbox-triage-test/2026/10/20261016-TV3-migrate-suite.log
 
 ## Test plan
 
