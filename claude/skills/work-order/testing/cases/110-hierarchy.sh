@@ -60,6 +60,6 @@ assert_not_contains "$d/work-orders/$epic/README.md" "$gkid" \
   "and not the grandchild - one level down only"
 run 0 "reindex --check passes with the READMEs in place" wo reindex --project "$d" --check
 printf 'hand edited\n' >>"$d/work-orders/$epic/README.md"
-run 3 "reindex --check catches a child README that drifted" wo reindex --project "$d" --check
+run 0 "reindex --check ignores a drifted child README, it is an untracked output" wo reindex --project "$d" --check
 
 finish

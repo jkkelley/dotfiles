@@ -4,14 +4,14 @@
   "slug": "work-order-skill-index-md-and-epic-readmes-becom",
   "title": "work-order skill: INDEX.md and epic READMEs become untracked build outputs, regenerated on demand",
   "type": "feature",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:05:12+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/work-order-skill-index-md-and-epic-readmes-becom",
+  "pr": 207,
   "closed": null,
   "approval": {
     "via": "override",
@@ -80,8 +80,10 @@ ORD-0554 U1: "generated work-order views stop being tracked. work-order.sh write
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `bash claude/skills/work-order/testing/run-tests.sh` exits 0 and its output matches /290-generated-views-untracked.*ok/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `grep -c 'INDEX.md.*committed' claude/skills/work-order/SKILL.md` exits 1 and its output matches /^0$/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `bash claude/skills/work-order/testing/run-tests.sh` exits 0 and its output matches /290-generated-views-untracked.*ok/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` bash claude/skills/work-order/testing/run-tests.sh exit 0; output: '290-generated-views-untracked.sh ... ok reindex --check fails on a loose top-level ticket'; all cases passed: 325 checks across 25 case files
+- [x] `AC-H2` *(human)* `grep -c 'INDEX.md.*committed' claude/skills/work-order/SKILL.md` exits 1 and its output matches /^0$/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` grep -c 'INDEX.md.*committed' claude/skills/work-order/SKILL.md exit 1; output: 0
 
 ## Test plan
 
