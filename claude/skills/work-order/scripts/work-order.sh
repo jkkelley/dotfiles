@@ -67,7 +67,8 @@ Usage:
   work-order.sh stale-merged [--project DIR] [--pr-repo OWNER/NAME] [--json]
   work-order.sh next    [--project DIR] [--line NAME] [--offline] [--pr-repo OWNER/NAME] [--json]
   work-order.sh set     [--project DIR] (--id WO-... | --tree WO-...)
-                        [--add-label L]... [--remove-label L]... [--json]
+                        [--add-label L]... [--remove-label L]...
+                        [--repo OWNER/NAME | --clear-repo] [--json]
 
 Lifecycle:
   draft --approve--> ready --start--> in-progress --submit--> in-review
@@ -109,6 +110,10 @@ new:
   --frames     glob over build_order, e.g. 'wf/checkout-cart/*'. Default: all.
   --label      a label, repeatable, ^[a-z0-9][a-z0-9:._-]*$. A line label is
                line:<name>. With --parent the parent's labels are copied first.
+  --repo       OWNER/NAME of the repo this ticket's code PR lands in, ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$.
+               Absent means the project repo. On set it writes only .repo;
+               --clear-repo on set removes it. submit and stale-merged resolve
+               a bare pr number in this repo.
   --parent     an existing WO this one belongs to. The file is written into that
                parent's directory, so the tree mirrors the work.
   --depends-on an existing WO that must reach `done` first. Repeatable. The
@@ -242,7 +247,7 @@ command="$1"; shift
 title=""; type=""; problem=""; test_plan=""; test_plan_file=""; priority="p2"
 id=""; pr=""; reason=""; status_filter=""; from_figma=""; frames_glob="*"; pr_repo=""
 parent=""; text=""; answer=""; observed=""; index=""; match=""; superseded_by=""
-tree_id=""; line_name=""; offline=0
+tree_id=""; line_name=""; offline=0; ticket_repo=""; clear_repo=0
 declare -a label_items=() add_labels=() remove_labels=()
 no_lavish=0; dry_run=0; detach=0; check=0; top_level=0
 declare -a in_items=() out_items=() ac_items=() freedom_items=() surfaces=() assumptions=() questions=()
@@ -307,6 +312,8 @@ while (($#)); do
     --pr) pr="${2-}"; shift 2 ;;
     --reason) reason="${2-}"; shift 2 ;;
     --status) status_filter="${2-}"; shift 2 ;;
+    --repo) ticket_repo="${2-}"; shift 2 ;;
+    --clear-repo) clear_repo=1; shift ;;
     --pr-repo) pr_repo="${2-}"; shift 2 ;;
     --no-lavish) no_lavish=1; shift ;;
     --dry-run) dry_run=1; shift ;;
@@ -566,6 +573,11 @@ label_valid() {
     "label '$1' must match ^[a-z0-9][a-z0-9:._-]*\$"
 }
 
+# repo_valid <repo> - ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$, else exit 2 bad_repo.
+repo_valid() {
+  [[ $1 =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || ps_die "$PS_USAGE" "bad_repo"     "repo '$1' must be OWNER/NAME matching ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\$"
+}
+
 # new_labels_json - the parent's labels plus every --label, sorted and unique.
 new_labels_json() {
   local l pf=""
@@ -618,6 +630,7 @@ cmd_new() {
   # an epic reaches every ticket cut under it without a second pass.
   local labels_json
   labels_json=$(new_labels_json)
+  [[ -z $ticket_repo ]] || repo_valid "$ticket_repo"
   require_test_plan_file
   for e in "${dep_items[@]+"${dep_items[@]}"}"; do require_edge_target depends-on "$e"; done
   for e in "${block_items[@]+"${block_items[@]}"}"; do require_edge_target blocks "$e"; done
@@ -711,6 +724,7 @@ cmd_new() {
     --arg pri "$priority" --arg now "$stamp" --arg today "$today" \
     --argjson ev "$ev_json" \
     --arg parent "$parent" \
+    --arg trepo "$ticket_repo" \
     --argjson labels "$labels_json" \
     --argjson acchecks "$(ac_checks_json "$base_n")" \
     --argjson provides "$(printf '%s\n' "${provides_items[@]+"${provides_items[@]}"}" | grep -v '^$' | jq -R . | jq -s .)" \
@@ -723,7 +737,8 @@ cmd_new() {
       branch:null, pr:null, closed:null,
       approval:null, evidence:$ev, surfaces:$surfaces,
       depends_on:$deps, blocks:$blocks, ac_checks:$acchecks, provides:$provides}
-     + (if ($labels | length) > 0 then {labels:$labels} else {} end)')
+     + (if ($labels | length) > 0 then {labels:$labels} else {} end)
+     + (if $trepo != "" then {repo:$trepo} else {} end)')
 
   tmp=$(ps_tempfile)
   {
@@ -1112,7 +1127,12 @@ cmd_submit() {
   local file; file=$(wo_find "$project" "$id")
   wo_require_status "$file" in-progress
 
-  gh pr view "$pr" --json number >/dev/null 2>&1 \
+  # What broke: gh pr view ran in the ticket project, so a code PR in another
+  # repo was pr_not_found (2d5b TP-3). Why this fix: the ticket's .repo names
+  # the repo; rejected: recording a URL, it needs a repo to verify at submit.
+  local trepo; trepo=$(wo_field "$file" '.repo')
+  local -a rflag=(); [[ -z $trepo ]] || rflag=(-R "$trepo")
+  gh pr view "$pr" "${rflag[@]+"${rflag[@]}"}" --json number >/dev/null 2>&1 \
     || ps_die "$PS_NOTFOUND" "pr_not_found" "gh cannot see PR #$pr"
 
   wo_fm_set "$file" '.status="in-review" | .pr=($p|tonumber) | .updated=$d' \
@@ -2125,8 +2145,10 @@ cmd_set() {
   [[ -d $root ]] || ps_die "$PS_NOTFOUND" "no_work_orders" "no $WO_DIR_NAME/ in $project"
   local l
   for l in "${add_labels[@]+"${add_labels[@]}"}" "${remove_labels[@]+"${remove_labels[@]}"}"; do label_valid "$l"; done
-  ((${#add_labels[@]} + ${#remove_labels[@]})) || ps_die "$PS_USAGE" "usage" \
-    "set needs at least one --add-label or --remove-label"
+  [[ -z $ticket_repo ]] || repo_valid "$ticket_repo"
+  ((!clear_repo)) || [[ -z $ticket_repo ]] || ps_die "$PS_USAGE" "usage" "--repo and --clear-repo are exclusive"
+  ((${#add_labels[@]} + ${#remove_labels[@]})) || [[ -n $ticket_repo ]] || ((clear_repo)) || ps_die "$PS_USAGE" "usage" \
+    "set needs at least one --add-label, --remove-label, --repo or --clear-repo"
   [[ -n $id || -n $tree_id ]] || ps_die "$PS_USAGE" "usage" "set needs --id WO-... or --tree WO-..."
   local -a targets=()
   local gid
@@ -2158,6 +2180,11 @@ cmd_set() {
   rem_json=$(jq -nc '$ARGS.positional' --args -- "${remove_labels[@]+"${remove_labels[@]}"}")
   for tid in "${targets[@]+"${targets[@]}"}"; do
     file=$(wo_find "$project" "$tid")
+    local cur_repo new_repo
+    cur_repo=$(wo_fm "$file" | jq -c '.repo // null')
+    new_repo=$cur_repo
+    [[ -z $ticket_repo ]] || new_repo=$(jq -nc --arg r "$ticket_repo" '$r')
+    ((!clear_repo)) || new_repo=null
     cur=$(wo_fm "$file" | jq -c '.labels // []')
     new=$(jq -nc --argjson c "$cur" --argjson a "$add_json" --argjson r "$rem_json" \
       '(($c + $a) - $r) | unique')
@@ -2167,8 +2194,17 @@ cmd_set() {
       wo_fm_set "$file" '.labels = $l' --argjson l "$new"
       ((PS_JSON)) || printf 'LABELED %s %s\n' "$tid" "$(jq -r 'join(",")' <<<"$new")"
     fi
-    rows=$(jq -c --arg id "$tid" --argjson l "$new" --argjson ch "$changed" \
-      '. + [{id:$id,labels:$l,changed:$ch}]' <<<"$rows")
+    # .repo is written only when it differs; --clear-repo writes null, which
+    # keeps the key but means the project repo (byte-identical on a re-run).
+    if [[ $new_repo != "$cur_repo" ]]; then
+      changed=true
+      wo_fm_set "$file" '.repo = $r' --argjson r "$new_repo"
+      ((PS_JSON)) || printf 'REPO %s %s\n' "$tid" "$new_repo"
+    fi
+    # The row keeps its labels-only shape unless a repo flag was given.
+    rows=$(jq -c --arg id "$tid" --argjson l "$new" --argjson r "$new_repo" --argjson ch "$changed" \
+      --argjson wr "$((${#ticket_repo} > 0 || clear_repo))" \
+      '. + [{id:$id,labels:$l} + (if $wr == 1 then {repo:$r} else {} end) + {changed:$ch}]' <<<"$rows")
   done
   load_graph
   reindex
@@ -2752,6 +2788,13 @@ merged_info() {
     repo=$(stale_gh repo view --json nameWithOwner -q .nameWithOwner) \
       || ps_die "$PS_IO" "gh_failed" "gh repo view failed 3 times"
   fi
+  # What broke: a bare pr number was looked up in one --pr-repo for every ticket,
+  # so c770 (pr 52, ypconsult-01-src) and 68 (business) could not both resolve
+  # (2d5b TP-3). Precedence: a URL pr names its own repo; else the ticket's
+  # .repo; else --pr-repo; else gh repo view in the project. Rejected: a project
+  # config map, since one project holds tickets for several code repos.
+  local trepo; trepo=$(wo_field "$f" '.repo')
+  if [[ -n $trepo && -n $tpr && ! $tpr =~ ^https:// ]]; then repo="$trepo"; fi
   if [[ -n $tpr ]]; then
     # A pr that is a URL names its own repo (ORD-0921 E2): a business ticket
     # whose PR lives in ypconsult-01-src must never be looked up in the
