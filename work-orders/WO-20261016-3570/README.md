@@ -6,5 +6,11 @@ This ticket: [Stuck-watch: no-model stuck detection to the bus and the owner's p
 
 One level down only. A child of a child is listed in its own directory, not here.
 
-_No children yet. This ticket sits at the top level, so it holds the directory
-on its own until work is filed underneath it._
+| ID | status | pri | waiting on | title |
+|---|---|---|---|---|
+| `WO-20261016-02d3` | ready | p2 | - | [line-timing test: report from a KV dump](WO-20261016-02d3-line-timing-test-report-from-a-kv-dump.md) |
+| `WO-20261016-db0f` | ready | p2 | - | [line-timing.sh and timing.mk: make line-timing LINE= SINCE= report of durations vs budgets and top 5 bottlenecks to the artifact store](WO-20261016-db0f-line-timing-sh-and-timing-mk-make-line-timing-li.md) |
+| `WO-20261016-7d69` | ready | p2 | - | [node-timing tests: slow and fast](WO-20261016-7d69-node-timing-tests-slow-and-fast.md) |
+| `WO-20261016-2f31` | ready | p2 | - | [node-timing.sh: start and end events from the bus to a TIMING KV bucket, SLOW and a bottleneck work order over budget](WO-20261016-2f31-node-timing-sh-start-and-end-events-from-the-bus.md) |
+| `WO-20261016-460b` | ready | p2 | - | [timed-run tests: timeout with 3 retries, start and end](WO-20261016-460b-timed-run-tests-timeout-with-3-retries-start-and.md) |
+| `WO-20261016-92a5` | ready | p2 | - | [timed-run.sh: start, end and timeout of any step on the bus, timeout enforced, 3 retries, SLOW and TIMEOUT coded](WO-20261016-92a5-timed-run-sh-start-end-and-timeout-of-any-step-o.md) |
