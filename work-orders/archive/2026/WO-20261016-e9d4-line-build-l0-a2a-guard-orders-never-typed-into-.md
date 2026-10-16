@@ -4,7 +4,7 @@
   "slug": "line-build-l0-a2a-guard-orders-never-typed-into-",
   "title": "Line build L0 - a2a-guard: orders never typed into busy panes",
   "type": "chore",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-0272",
   "branch": "feat/line-build-l0-a2a-guard-orders-never-typed-into-",
   "pr": 175,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner-ordered line build order, ORD-0537 O4",
