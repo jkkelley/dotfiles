@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-suites-preflight-init-and-watch-read",
   "title": "Inbox sweep suites preflight, init and watch read per-node steps and checklist files",
   "type": "bug",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:54:16+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-suites-preflight-init-and-watch-read",
   "pr": null,
   "closed": null,
   "approval": {
@@ -61,8 +61,10 @@ CI run 38862696743 (PR 197, first CI run of inbox-sweep suites) and podman on ma
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* podman tests/run.sh --suite preflight, init and watch each ok
-- [ ] `AC-H2` *(human)* suites.tsv lists bin/sweep-lib.sh for preflight, init and watch
+- [x] `AC-H1` *(human)* podman tests/run.sh --suite preflight, init and watch each ok
+  - observed `2026-10-16` make -C claude/workflow/inbox-sweep suite SUITE=preflight|init|watch (podman): "ok preflight", "ok init", "ok watch", each "ran 1 suite"
+- [x] `AC-H2` *(human)* suites.tsv lists bin/sweep-lib.sh for preflight, init and watch
+  - observed `2026-10-16` suites.tsv rows preflight, init, watch now list bin/sweep-lib.sh (grep -E "^(preflight|init|watch)<TAB>" shows bin/sweep-lib.sh in each covers field)
 
 ## Test plan
 
