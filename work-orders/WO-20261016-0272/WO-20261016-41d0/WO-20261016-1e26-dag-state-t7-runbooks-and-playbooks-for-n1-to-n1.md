@@ -4,13 +4,13 @@
   "slug": "dag-state-t7-runbooks-and-playbooks-for-n1-to-n1",
   "title": "dag-state T7 - Runbooks and playbooks for N1 to N10",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:07:19+00:00",
   "parent": "WO-20261016-41d0",
-  "branch": null,
+  "branch": "feat/dag-state-t7-runbooks-and-playbooks-for-n1-to-n1",
   "pr": null,
   "closed": null,
   "approval": {
@@ -69,9 +69,12 @@ Owner, 2026-10-16 UTC: "DAG SHOULD BE EFFORTLESS WITH EASY MIGRATION PLANS FOR U
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make md-contents-check` exit 0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `make spec-check` exits 0 (the specs were read, not edited) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `make md-contents-check` exit 0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make md-contents-check exit 0: md-contents: nothing in scope
+- [x] `AC-H2` *(human)* `make spec-check` exits 0 (the specs were read, not edited) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make spec-check exit 0: spec-check: nothing in scope (specs unedited, diff touches no *.spec.xml)
+- [x] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` git diff --name-only origin/main (HEAD incl. staged): claude/workflow/dag/playbooks/PB-intake.md claude/workflow/runbooks/RB-dag-intake.md - only the two In files plus generated work-orders files
 
 ## Test plan
 

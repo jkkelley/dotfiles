@@ -35,6 +35,6 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-bf7f` | ready | p1 | WO-20261016-05db | [dag-state T4 - drift verb](WO-20261016-bf7f-dag-state-t4-drift-verb.md) |
 | `WO-20261016-61f0` | ready | p1 | WO-20261016-05db | [dag-state T5 - recover verb](WO-20261016-61f0-dag-state-t5-recover-verb.md) |
 | `WO-20261016-2397` | ready | p1 | WO-20261016-acde | [dag-state T6 - Intake node declarations N1 to N10](WO-20261016-2397-dag-state-t6-intake-node-declarations-n1-to-n10.md) |
-| `WO-20261016-1e26` | ready | p1 | - | [dag-state T7 - Runbooks and playbooks for N1 to N10](WO-20261016-1e26-dag-state-t7-runbooks-and-playbooks-for-n1-to-n1.md) |
+| `WO-20261016-1e26` | in-progress | p1 | - | [dag-state T7 - Runbooks and playbooks for N1 to N10](WO-20261016-1e26-dag-state-t7-runbooks-and-playbooks-for-n1-to-n1.md) |
 | `WO-20261016-9464` | ready | p1 | WO-20261016-05db | [dag-state T8 - Take and ship scripts for N1 to N3 and N6, N7, N10](WO-20261016-9464-dag-state-t8-take-and-ship-scripts-for-n1-to-n3-.md) |
 | `WO-20261016-0797` | ready | p1 | WO-20261016-05db | [dag-state T9 - CI poll and merge scripts with approval check](WO-20261016-0797-dag-state-t9-ci-poll-and-merge-scripts-with-appr.md) |
