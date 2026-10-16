@@ -17,7 +17,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261016-61ae"
+    "WO-20261016-61ae",
+    "WO-20261016-73cd"
   ],
   "blocks": []
 }

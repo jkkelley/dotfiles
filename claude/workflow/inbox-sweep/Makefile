@@ -1,4 +1,8 @@
-# claude/workflow/inbox-sweep - the sweep's own inner loop.
+# claude/workflow/inbox-sweep - the sweep's controller targets and its own inner loop.
+# Platform: WSL only (design D2, Rule 17). The sweep targets need herdr, Windows interop and the Windows home, so there is
+# no justfile; every sweep target is one plain `bash bin/sweep.sh ...` call, which is its own fallback.
+# The test targets below are the Podman implementation, and `sweep.sh test` calls them: they stay here so a `make test`
+# and `sweep.sh test --changed` can never disagree, and so the controller does not recurse into itself.
 # Every target that verifies anything runs in Podman on the pinned workflow test image (dotfiles CLAUDE.md Rule 14),
 # --network=none, with the repository mounted read-only: a test that writes into the tree fails instead of leaving
 # artifacts in a pull request. Test output goes to a mktemp dir inside the container and dies with it.
@@ -13,7 +17,7 @@ ROOT  := $(abspath $(CURDIR)/../../..)
 RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:ro,Z" -w /work/claude/workflow/inbox-sweep -e HOME=/tmp
 
 .DEFAULT_GOAL := help
-.PHONY: help image test test-all herdr-first spec-lint nodes-check bottleneck-check migrate migrate-rollback reply-status reply-send reply-prune
+.PHONY: help image test test-all herdr-first spec-lint nodes-check bottleneck-check migrate migrate-rollback reply-status reply-send reply-prune suite sweep sweep-gmail sweep-proton sweep-linkedin status clean prune
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-12s %s\n", $$1, $$2}'
@@ -62,3 +66,28 @@ reply-send: ## Start the send seat for one approved file: make reply-send APPROV
 
 reply-prune: ## Delete reply files past their age (DAYS=14; ledgers keep 90 days); DRY=1 only lists
 	@bash bin/reply-send.sh prune --days $(or $(DAYS),14) $(if $(DRY),--dry-run)
+
+suite: image ## One suite: make suite SUITE=<name>
+	@test -n "$(SUITE)" || { echo "usage: make suite SUITE=<name>" >&2; exit 2; }
+	@$(RUN) $(IMAGE) bash tests/run.sh --suite $(SUITE)
+
+sweep: ## Start a sweep of every seat in the sweep-ctl pane; prints the run id
+	@bash bin/sweep.sh start --seats all
+
+sweep-gmail: ## Start a Gmail only sweep
+	@bash bin/sweep.sh start --seats gmail
+
+sweep-proton: ## Start a Proton only sweep
+	@bash bin/sweep.sh start --seats proton
+
+sweep-linkedin: ## Start a LinkedIn only sweep
+	@bash bin/sweep.sh start --seats linkedin
+
+status: ## Run status, latest by default; RUN=<run-id> for another
+	@bash bin/sweep.sh status $(if $(RUN),--run $(RUN))
+
+clean: ## Take a finished run down (tabs, briefs, seat dirs); RUN=<run-id>, default latest
+	@bash bin/sweep.sh clean $(if $(RUN),--run $(RUN))
+
+prune: ## Remove runs older than DAYS (default 14)
+	@bash bin/sweep.sh prune --days $(or $(DAYS),14)
