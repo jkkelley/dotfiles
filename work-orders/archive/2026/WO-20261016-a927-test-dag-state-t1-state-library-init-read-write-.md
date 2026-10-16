@@ -4,15 +4,15 @@
   "slug": "test-dag-state-t1-state-library-init-read-write-",
   "title": "Test - dag-state T1 - State library: init, read, write, lock, serial, ledger",
   "type": "test",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:06:39+00:00",
   "parent": "WO-20261016-41d0",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/test-dag-state-t1-state-library-init-read-write-",
+  "pr": 269,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -63,8 +63,10 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+- [x] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
+  - observed `2026-10-16` TP-1 exit 0, pass=49 fail=0; log /home/luna/.local/state/zenith/log/2026/10/20261016-090521-a927-dag-lib-test.log
+- [x] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+  - observed `2026-10-16` log written with frontmatter: /home/luna/.local/state/zenith/log/2026/10/20261016-090521-a927-dag-lib-test.log
 
 ## Test plan
 
