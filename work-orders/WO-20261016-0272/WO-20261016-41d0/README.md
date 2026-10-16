@@ -26,7 +26,7 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-6082` | draft | p1 | WO-20261016-a215 WO-20261016-acde | [dag-author edit, move, rm, step-add and prio: the rest of the authoring verbs](WO-20261016-6082-dag-author-edit-move-rm-step-add-and-prio-the-re.md) |
 | `WO-20261016-a215` | draft | p1 | WO-20261016-1e26 WO-20261016-3f4f WO-20261016-e271 | [dag-author node-new: one verb writes node, bundle stubs, mermaid, spec node list and a migration plan](WO-20261016-a215-dag-author-node-new-one-verb-writes-node-bundle-.md) |
 | `WO-20261016-42cb` | draft | p1 | WO-20261016-6082 | [dag-check --generated: CI fails a hand edit of any generated DAG file](WO-20261016-42cb-dag-check-generated-ci-fails-a-hand-edit-of-any-.md) |
-| `WO-20261016-05db` | ready | p1 | - | [dag-state T1 - State library: init, read, write, lock, serial, ledger](WO-20261016-05db-dag-state-t1-state-library-init-read-write-lock-.md) |
+| `WO-20261016-05db` | in-progress | p1 | - | [dag-state T1 - State library: init, read, write, lock, serial, ledger](WO-20261016-05db-dag-state-t1-state-library-init-read-write-lock-.md) |
 | `WO-20261016-3f4f` | ready | p1 | WO-20261016-05db | [dag-state T10 - Migrate verb, state migrations, fixtures](WO-20261016-3f4f-dag-state-t10-migrate-verb-state-migrations-fixt.md) |
 | `WO-20261016-e271` | ready | p1 | WO-20261016-05db WO-20261016-599f | [dag-state T11 - Config, config schema, dag.mk, Makefile include, dag-check](WO-20261016-e271-dag-state-t11-config-config-schema-dag-mk-makefi.md) |
 | `WO-20261016-709f` | ready | p1 | WO-20261016-2397 | [dag-state T12 - Intake workflow declaration](WO-20261016-709f-dag-state-t12-intake-workflow-declaration.md) |
