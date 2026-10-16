@@ -61,6 +61,7 @@ _none_
 
 ## Test plan
 
+
 _Test plan from claude/workflow/templates/test-plan.md, shaped by claude/workflow/schemas/test-plan.schema.json. The tester runs exactly these cases and nothing else._
 
 **Scope under test**
@@ -71,18 +72,20 @@ reply-send.sh and lead-followup.sh hand every approved send to the shared ypli j
 
 - `TP-1`
   - intent: a batch of approved replies sent at once is a burst, which the owner's post timing rule forbids
-  - command: `bash claude/workflow/inbox-sweep/tests/run.sh --suite reply-jitter`
+  - command: `podman run --rm --pull=never --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash claude/workflow/inbox-sweep/tests/run.sh --suite reply-jitter`
   - expected: exit 0; the stub ypli records one jitter plan call per batch and the send times it returned, none earlier than planned
 
 - `TP-2`
   - intent: a missing or failing scheduler must stop the send, never fall back to sending now
-  - command: `bash claude/workflow/inbox-sweep/tests/run.sh --suite reply-jitter`
+  - command: `podman run --rm --pull=never --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash claude/workflow/inbox-sweep/tests/run.sh --suite reply-jitter`
   - expected: exit 0; with the stub ypli exiting non-zero the ledger gets RP-SCHEDULE-FAILED and no send seat starts
 
 **Isolation**
 
 - runtime: podman
-- image: `localhost/dotfiles-workflow-test@sha256:0a6832bb348572415fc3b304ed48ece90bcce4bd92b7f3f95a6ebc9d694f18f0` (localhost/dotfiles-workflow-test:1)
+- image: `localhost/dotfiles-workflow-test:1`
+- build: `make -C claude/workflow image`
+- containerfile: `claude/workflow/tests/container/Containerfile`
 
 **Out of scope - CI covers**
 
@@ -99,6 +102,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` infra-design8 RR-orch-18: test plan amended from localhost digest 0a6832bb to the local-image form (tag, build make -C claude/workflow image, containerfile, --pull=never); start accepts it once WO-20261016-86b9 merges
 
 ## Outcome
 

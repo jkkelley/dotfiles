@@ -4,7 +4,7 @@
   "slug": "dag-state-t6-intake-node-declarations-n1-to-n10",
   "title": "dag-state T6 - Intake node declarations N1 to N10",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-41d0",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -26,7 +26,8 @@
   "blocks": [
     "WO-20261016-0fb9",
     "WO-20261016-709f"
-  ]
+  ],
+  "superseded_by": "WO-20261016-efb2"
 }
 ---
 
@@ -122,4 +123,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: DESIGN-GAP (seats/dag-t6.result.json): AC-H1, TP-1 and the image step named claude/workflow/bin/tools/validate-schema.sh, absent on main; recut with claude/workflow/tools/validate-schema.sh by infra-design8
+- superseded by: `WO-20261016-efb2`
+
+No branch, no PR and no merge commit exist for this work order.
+
