@@ -19,6 +19,7 @@
 - [13. Build tickets](#13-build-tickets)
 - [14. Testing: dev, UAT, stable](#14-testing-dev-uat-stable)
 - [15. Where everything lives, and how it is cleaned](#15-where-everything-lives-and-how-it-is-cleaned)
+- [16. As built](#16-as-built)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -39,8 +40,9 @@
 13. [Build tickets](#13-build-tickets)
 14. [Testing: dev, UAT, stable](#14-testing-dev-uat-stable)
 15. [Where everything lives, and how it is cleaned](#15-where-everything-lives-and-how-it-is-cleaned)
+16. [As built](#16-as-built)
 
-Status: DESIGN, for the owner to read on Bearings. Nothing in this document is built yet.
+Status: STABLE, built 2026-10-16 UTC from this design (PR #169) and running on dotfiles, business and ypconsult-01-src. Section 16 records what was built differently and why.
 Owner orders, 2026-10-16 UTC: "the coq herdr plugin on local had the pr process smoking fast, did you follow that or did you create your own and its working smooth?", "the PR process should be docuemented globablly since it works, get it smoking first and get that DAG out globally", "automate that process, we dont need gates we need speed" and "testing and linting smartly".
 Companion file: [`pr-process.spec.xml`](pr-process.spec.xml) (nodes, records, codes, config, make, tickets).
 Brief: `BR-20261016-merge-port` v2.
@@ -270,3 +272,32 @@ Baseline open PR counts, 2026-10-16T05:14Z: dotfiles 5, business 4, ypconsult-01
 - Code, config, schemas, templates, tests and this document: `claude/workflow/pr-flow/` and `claude/workflow/docs/pr-process/`, tracked.
 - Records and timings: on the bus, stream `LINE`.
 - Hold file, consumer state, temp clones: under `~/.local/state/zenith/pr-flow/`, removed by `make pr-flow-clean`.
+
+## 16. As built
+
+Built 2026-10-16 UTC under epic WO-20261016-ebe4, one PR per ticket, each merged by the merge-on-green Action once it was on main.
+
+| Ticket | PR | Files |
+| ------ | -- | ----- |
+| T4 templates | #184 | `pr-flow/templates/ci.yml`, `merge-on-green.yml`, `bin/pr-flow-ci-render.sh` |
+| T7 dotfiles install | #185, fix #188 | `.github/workflows/merge-on-green.yml`, `skill-publish.yml` (`workflow_dispatch`) |
+| T3 step-time | #186 | `claude/workflow/bin/step-time.sh` |
+| T1 gate | #187 | `pr-flow/bin/gate.sh` |
+| T2 records | #189 | `pr-flow/bin/records.sh`, `schemas/pr-flow-record.schema.json` |
+| T5 merge | #190 | `pr-flow/bin/merge.sh` |
+| T6 sweep | #191 | `pr-flow/bin/pr-flow-consume.sh`, `regen-conflicts.sh`, `pr-flow-install.sh`, `config/pr-flow.json`, `pr-flow.mk` |
+| T8 merge-train | #193 | `tools/merge-train/merge-train.sh` |
+| stable installs | ypconsult-01-src #55, business #73 | rendered `ci.yml` and `merge-on-green.yml` |
+
+Evidence, last check on the head to merged, by `github-actions[bot]`: #188 14 s, #187 10 s, #189 11 s.
+CI wall time on a small PR: ypconsult-01-src 44 s (4 parallel jobs), business 15 s, dotfiles skill PR gate 100 to 150 s plus runner queue.
+
+Built differently from the design, each with its reason:
+
+1. dotfiles has no `ci.yml`: its skill PR gate already selects suites by path in parallel jobs, so the required check is the gate's always-run job `what has to run` (`required_check` in config), and merge-on-green waits on all four of dotfiles' PR workflows.
+2. merge-on-green also reads the head's workflow runs and holds while any is unfinished: a queued workflow has no check run yet, so checks alone could read green early (fix #188).
+3. A GITHUB_TOKEN merge starts no push workflow, so merge-on-green dispatches the workflows in `DISPATCH` (dotfiles: `skill-publish.yml`, with input `before`).
+4. Generated-file conflicts (order ORD-0545) are fixed by `regen-conflicts.sh` from the sweep, not by an Action: a GITHUB_TOKEN push would start no CI on the regenerated head.
+5. The sweep posts `merged 200` with `ci_to_merge_s` read from GitHub's own timestamps, so the AC2 number does not depend on the sweep interval.
+6. business has no Make targets yet, so its `ci.yml` matrix is the target `none`, which runs nothing and still gives `ci-ok`.
+7. Not built: the N6 verify of main (`verify-main.sh` port) and the merge hold writer; `merge.sh` reads the hold file, nothing writes it yet.
