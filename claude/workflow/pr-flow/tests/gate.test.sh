@@ -61,5 +61,23 @@ out=$(F_CHECKS='[{"n":"x","s":"completed","c":"success"}]' "$GATE" ci-green --sl
 "$GATE" ci-green --slug o/r --pr 7 >/dev/null 2>&1; eq "no --sha: usage, exit 2" "$?" 2
 "$GATE" when x >/dev/null 2>&1; eq "coq's when verb is not ported: exit 2" "$?" 2
 
+# --- ticket-open (WO-20261016-0233): a head whose work-order is still open is held ----------------------------------------
+T="$W/trepo"; mkdir -p "$T"; tg() { "$GATE" ticket-open --repo "$T" --base main --sha "$1"; }
+git -C "$T" init -q -b main; git -C "$T" config user.email t@example.invalid; git -C "$T" config user.name t
+echo a > "$T/a"; git -C "$T" add -A; git -C "$T" commit -q -m base
+wo() { printf -- '---\n{"id": "%s", "status": "%s"}\n---\n\n# body\n' "$1" "$2"; }   # wo ID STATUS: a ticket file
+git -C "$T" switch -q -c f1; mkdir -p "$T/work-orders/E"; wo WO-20261016-aaaa in-progress > "$T/work-orders/E/WO-20261016-aaaa-x.md"
+git -C "$T" add -A; git -C "$T" commit -q -m open; S1=$(git -C "$T" rev-parse HEAD)
+out=$(tg "$S1"); eq "in-progress ticket: held, exit 1" "$?" 1; eq "the hold line names ticket and status" "$out" "TICKET-OPEN WO-20261016-aaaa in-progress"
+git -C "$T" switch -q main; git -C "$T" switch -q -c f2; mkdir -p "$T/work-orders/archive/2026"; wo WO-20261016-bbbb "done" > "$T/work-orders/archive/2026/WO-20261016-bbbb-x.md"
+git -C "$T" add -A; git -C "$T" commit -q -m closed; S2=$(git -C "$T" rev-parse HEAD)
+tg "$S2" >/dev/null; eq "archived done ticket: exit 0" "$?" 0
+git -C "$T" switch -q main; git -C "$T" switch -q -c f3; mkdir -p "$T/work-orders/E"; wo WO-20261016-cccc ready > "$T/work-orders/E/WO-20261016-cccc-x.md"
+git -C "$T" add -A; git -C "$T" commit -q -m cut; S3=$(git -C "$T" rev-parse HEAD)
+tg "$S3" >/dev/null; eq "new ready ticket: exit 0" "$?" 0
+git -C "$T" switch -q main; git -C "$T" switch -q -c f4; echo b > "$T/b"; git -C "$T" add -A; git -C "$T" commit -q -m plain; S4=$(git -C "$T" rev-parse HEAD)
+tg "$S4" >/dev/null; eq "no work-orders file: exit 0" "$?" 0
+"$GATE" ticket-open --repo "$T" --sha "$S4" >/dev/null 2>&1; eq "no --base: usage, exit 2" "$?" 2
+
 echo "pass=$pass fail=$fail"
 [ "$fail" = 0 ]

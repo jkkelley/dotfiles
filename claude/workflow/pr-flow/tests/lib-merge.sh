@@ -44,8 +44,20 @@ esac
 FAKE
 chmod +x "$W/bin/gh"
 GREEN='[{"n":"ci-ok","s":"completed","c":"success"}]'
-hd() { printf 'a%.0s' {1..38}; printf '%02d' "$1"; }   # a distinct 40-hex head per PR, so check runs are per PR
-H1=$(hd 7)
+# BREADCRUMB 2026-10-16 - WO-20261016-0233. hd used to mint aaaa...NN heads that are not commits in the clone, so gate.sh ticket-open could
+#   not resolve them: its fetch failed, exit 4, merge.sh routed that to fail_io and merge.test.sh ran pass=13 fail=14 (evidence:
+#   inbox-triage/20261015/seats/ticket-open.result.json). A head is now the real commit of feat/tN on origin, minted once and reused, so it
+#   stays one distinct, stable 40-hex per PR. merge.sh still does not pass an unresolvable head: a gate that passes what it cannot read
+#   merges an open ticket. Cost: the first hd N for an N with no branch pushes an empty commit to the fixture origin.
+hd() {
+  if git -C "$W/clone" ls-remote --exit-code --heads origin "feat/t$1" >/dev/null 2>&1; then
+    git -C "$W/clone" ls-remote origin "refs/heads/feat/t$1" | cut -f1
+  else
+    git -C "$W/clone" switch -qc "feat/t$1" origin/main && git -C "$W/clone" commit -q --allow-empty -m "t$1" \
+      && git -C "$W/clone" push -q origin "feat/t$1"; git -C "$W/clone" switch -q main
+    git -C "$W/clone" rev-parse "feat/t$1"
+  fi
+}
 # pr_set N JSON-overrides: a green, mergeable, open PR with a ticket title, overridden by the jq object given
 pr_set() { jq -n --argjson n "$1" --arg h "$(hd "$1")" --argjson c "$GREEN" --argjson o "${2:-{\}}" \
   '{number: $n, state: "OPEN", title: "feat: thing", body: "WO-20261016-aaaa - thing", headRefOid: $h, headRefName: "feat/t\($n)",
@@ -57,6 +69,7 @@ fixture_up() {
   echo a > "$W/clone/a"; git -C "$W/clone" add a; git -C "$W/clone" commit -qm a; git -C "$W/clone" push -q origin main
   git -C "$W/clone" switch -qc feat/t7; echo b > "$W/clone/b"; git -C "$W/clone" add b; git -C "$W/clone" commit -qm b
   git -C "$W/clone" push -q origin feat/t7; git -C "$W/clone" switch -q main; git -C "$W/clone" remote set-head origin main
+  H1=$(hd 7)   # feat/t7 now exists on origin; hd reads it, so H1 is set here and not at source time, when there is no clone
 }
 run_merge() { OUT=$("$PR_FLOW_DIR/bin/merge.sh" --repo "$W/clone" --slug o/r "$@" 2>"$W/err"); RC=$?; }
 pubs() { grep -c "^line.test.event.$1 " "$W/pub.log" || true; }
