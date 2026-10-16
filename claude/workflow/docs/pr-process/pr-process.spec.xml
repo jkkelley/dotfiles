@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="pr-process" version="0.1.0" status="design" date="2026-10-16">
+  <contents>
+    <item ref="meta">owner order, source, brief</item>
+    <item ref="rules">rules every node obeys, each with GOOD and NEVER</item>
+    <item ref="nodes">N1 to N6: input, output, file, coq source, budget, proof</item>
+    <item ref="records">record kinds and codes on the bus</item>
+    <item ref="codes">status code map with who acts</item>
+    <item ref="config">pr-flow.json fields</item>
+    <item ref="make">targets and their script calls</item>
+    <item ref="tickets">build tickets, layers, files</item>
+    <item ref="gates">dev, UAT, stable</item>
+  </contents>
+
+  <meta>
+    <owner-order at="2026-10-16" tz="UTC">the coq herdr plugin on local had the pr process smoking fast, did you follow that or did you create your own and its working smooth?</owner-order>
+    <owner-order at="2026-10-16" tz="UTC">the PR process should be docuemented globablly since it works, get it smoking first and get that DAG out globally</owner-order>
+    <source repo="coq-jev-herdr-plugin" commit="4f7f44c"/>
+    <owner-order at="2026-10-16" tz="UTC">automate that process, we dont need gates we need speed</owner-order>
+    <owner-order at="2026-10-16" tz="UTC">testing and linting smartly</owner-order>
+    <brief id="BR-20261016-merge-port" version="v2"/>
+    <design>claude/workflow/docs/pr-process/pr-process.md</design>
+    <tool-choice>bash and jq, copied from coq; NATS JetStream through the nats CLI already pinned in claude/workflow/herdr-bus/config.json; no new runtime</tool-choice>
+  </meta>
+
+  <rules>
+    <rule id="R1" name="reuse-not-rewrite">
+      <text>merge.sh and gate.sh are copied from coq; a diff against the coq file changes only config reads, the record reader and writer, and the ticket pattern.</text>
+      <good>git diff --no-index coq/line/bin/merge.sh pr-flow/bin/merge.sh shows only those hunks.</good>
+      <never>A merge decision written new beside coq's.</never>
+    </rule>
+    <rule id="R2" name="ci-is-the-gate">
+      <text>There is no review gate. A PR merges when the required check ci-ok passed on the head GitHub reports now; gh merges with --match-head-commit; a PR with no ci-ok check is held.</text>
+      <good>A ticket-only PR gets ci-ok from the always-run job and merges.</good>
+      <never>A PR with zero checks treated as green, or a CONFLICTING PR listed as would-merge.</never>
+    </rule>
+    <rule id="R3" name="post-once">
+      <text>merged 200 is posted once per PR and ticket; merge.conflict 409 once per head; blocked 423 once per hold sha.</text>
+      <good>A rerun on a merged PR prints already-merged and posts nothing.</good>
+      <never>One 409 a minute while a worker rebases.</never>
+    </rule>
+    <rule id="R4" name="hold-fails-closed">
+      <text>The hold file existing is the hold, whatever it holds; it is checked before any gh call and again right before the merge.</text>
+      <good>An unreadable hold file still holds, with reason unreadable.</good>
+      <never>A merge onto a red main.</never>
+    </rule>
+    <rule id="R5" name="retry-bound">
+      <text>Every gh call and every post retries up to 3 times with backoff, then one blocked 423 and stop.</text>
+      <good>A gh outage posts one 423, not one per open PR.</good>
+      <never>An unbounded retry loop.</never>
+    </rule>
+    <rule id="R6" name="merge-on-green">
+      <text>The merge is a GitHub Action on workflow_run of ci, completed with conclusion success: it finds the open PR whose head is the run's head_sha, refuses CONFLICTING or a moved head, and runs gh pr merge --squash --delete-branch --match-head-commit. gh pr merge --auto is never used. A local 60 s sweep is the backstop and the record producer; nothing is typed into a pane.</text>
+      <good>business PR turns green and merges in the same minute with no branch protection.</good>
+      <never>gh pr merge --auto on a repository with no protected branch or allow_auto_merge false.</never>
+    </rule>
+    <rule id="R7" name="timed">
+      <text>Every node runs under claude/workflow/bin/step-time.sh, which posts start and end to line.LINE.time.NODE, stops the node at its timeout, and posts step.slow over budget.</text>
+      <good>The UAT proof reads two timestamps off the bus.</good>
+      <never>A node whose duration is only in a seat's memory.</never>
+    </rule>
+    <rule id="R8" name="cleanup-order">
+      <text>After a merge: remote branch, then slot, then local branch from a detached HEAD; never main or the default branch; no checkout of main.</text>
+      <good>A slot holding a foreign process stays leased and the 423 names it.</good>
+      <never>work-order.sh cleanup run from the merge path.</never>
+    </rule>
+  </rules>
+
+  <nodes>
+    <node id="N1" name="create" budget-s="60" timeout-s="180">
+      <input>ticket done on its branch</input>
+      <output>PR open; pr.opened 100 with sha and pr</output>
+      <coq>playbooks/worker.md step 6</coq>
+      <ported>claude/workflow/pr-flow/playbooks/worker.md</ported>
+      <proof>pr.opened record id</proof>
+    </node>
+    <node id="N2" name="smart-ci" budget-s="180" timeout-s="900">
+      <input>PR head sha</input>
+      <output>ci-ok green or red on that head</output>
+      <coq>tester seat, median 1534 s from pr.opened to test.passed</coq>
+      <ported>claude/workflow/pr-flow/templates/ci.yml</ported>
+      <proof>gh run view wall time</proof>
+    </node>
+    <node id="N3" name="fix" budget-s="10" timeout-s="60">
+      <input>ci-ok red on head</input>
+      <output>ci.failed 422 with failing job and log tail; fix work order to the worker lane, once per head</output>
+      <coq>routes.json test.failed row</coq>
+      <ported>claude/workflow/pr-flow/bin/pr-flow-consume.sh</ported>
+      <proof>422 record id and work order id</proof>
+    </node>
+    <node id="N4" name="merge" budget-s="120" timeout-s="300">
+      <input>workflow_run of ci completed success on the PR head; the sweep as backstop</input>
+      <output>merged 200, or held, or merge.conflict 409, or blocked 423</output>
+      <coq>line/bin/merge.sh do_pr; factory/bin/gate.sh same-head; median 475 s from last gate</coq>
+      <ported>claude/workflow/pr-flow/templates/merge-on-green.yml; claude/workflow/pr-flow/bin/merge.sh, gate.sh ci-green, pr-flow-consume.sh</ported>
+      <proof>bus time from ci.passed 201 to merged 200</proof>
+    </node>
+    <node id="N5" name="conflict" budget-s="5" timeout-s="30">
+      <input>gh mergeable CONFLICTING</input>
+      <output>merge.conflict 409 to worker, once per head</output>
+      <coq>line/bin/merge.sh post_conflict</coq>
+      <ported>claude/workflow/pr-flow/bin/merge.sh post_conflict</ported>
+      <proof>409 record id</proof>
+    </node>
+    <node id="N6" name="cleanup-and-verify" budget-s="600" timeout-s="1200">
+      <input>merged 200 with merge sha</input>
+      <output>branches and slot gone; verified 200, or rejected 422 and the hold file</output>
+      <coq>line/bin/merge.sh post_merge_clean; line/bin/verify-main.sh; playbooks/merger.md</coq>
+      <ported>claude/workflow/pr-flow/bin/merge.sh, verify-main.sh, playbooks/merger.md</ported>
+      <proof>git ls-remote exit 2 for the branch; verified record id</proof>
+    </node>
+    <edges>N1-N2 N2-N3 N3-N2 N2-N4 N4-N5 N5-N2 N4-N6</edges>
+  </nodes>
+
+  <records>
+    <subject>line.LINE.event.KIND on stream LINE</subject>
+    <subject>line.LINE.time.NODE on stream LINE</subject>
+    <field name="kind" required="true"/>
+    <field name="code" required="true"/>
+    <field name="ticket" required="true"/>
+    <field name="pr"/>
+    <field name="sha"/>
+    <field name="at" required="true">UTC ISO 8601</field>
+    <field name="seat" required="true"/>
+    <field name="note">at most 240 characters</field>
+    <schema>claude/workflow/pr-flow/schemas/pr-flow-record.schema.json</schema>
+  </records>
+
+  <codes>
+    <code value="100" kind="pr.opened" acts="none"/>
+    <code value="201" kind="ci.passed" acts="consumer"/>
+    <code value="422" kind="ci.failed" acts="worker, fix work order"/>
+    <code value="200" kind="merged" acts="verify-main"/>
+    <code value="0" kind="already-merged" acts="none"/>
+    <code value="3" kind="held" acts="none; the next record re-fires N4"/>
+    <code value="409" kind="merge.conflict" acts="worker"/>
+    <code value="423" kind="blocked" acts="orchestrator"/>
+    <code value="SLOW" kind="step.slow" acts="orchestrator files a bottleneck work order"/>
+  </codes>
+
+  <config file="claude/workflow/pr-flow/config/pr-flow.json">
+    <field name="repo">owner/name</field>
+    <field name="line">bus line name</field>
+    <field name="records">dir or bus</field>
+    <field name="records_dir">records tree for dir</field>
+    <field name="ticket_re">default ^(WO-[0-9]{8}-[0-9a-f]{4})</field>
+    <field name="merge">action (default) or sweep</field>
+    <field name="required_check">default ci-ok</field>
+    <field name="ignore_paths">paths same-head ignores; coq: events/</field>
+    <field name="cleanup.slots">true returns the treehouse slot</field>
+    <field name="hold_file">path of the merge hold</field>
+    <field name="budgets">per node budget and timeout in seconds</field>
+  </config>
+
+  <make file="claude/workflow/pr-flow/pr-flow.mk">
+    <target name="pr-merge" args="REPO= PR=">step-time.sh N4 -- merge.sh --pr PR</target>
+    <target name="pr-merge-all" args="REPO=">step-time.sh N4 -- merge.sh --all</target>
+    <target name="pr-flow-ci-install" args="REPO=">one PR installing templates/ci.yml and templates/merge-on-green.yml in REPO</target>
+    <target name="pr-flow-rollback" args="REPO=">one PR removing merge-on-green.yml from REPO</target>
+    <target name="pr-flow-consume" args="LINE=">pr-flow-consume.sh, in the monitoring tab</target>
+    <target name="pr-flow-consume-stop" args="LINE=">stop the sweep and consumer; coq's own path stays</target>
+    <target name="pr-flow-test" args="CASES=">the named case files in the pinned workflow test image</target>
+    <target name="pr-flow-clean">temp clones, stale consumer state</target>
+    <target name="merge-train" args="REPO= DRY=">tools/merge-train wrapper over merge.sh, leaves first</target>
+  </make>
+
+  <tickets>
+    <ticket id="T1" layer="1" files="pr-flow/bin/gate.sh pr-flow/tests/gate.test.sh"/>
+    <ticket id="T2" layer="1" files="pr-flow/bin/records.sh pr-flow/schemas/pr-flow-record.schema.json pr-flow/tests/records.test.sh"/>
+    <ticket id="T3" layer="1" files="claude/workflow/bin/step-time.sh claude/workflow/tests/unit/test_step_time.sh"/>
+    <ticket id="T4" layer="1" files="pr-flow/templates/ci.yml pr-flow/templates/merge-on-green.yml pr-flow/tests/ci-template.test.sh"/>
+    <ticket id="T5" layer="2" files="pr-flow/bin/merge.sh pr-flow/tests/merge.test.sh pr-flow/tests/merge-hold.test.sh pr-flow/tests/merge-cleanup.test.sh"/>
+    <ticket id="T6" layer="2" files="pr-flow/bin/pr-flow-consume.sh pr-flow/config/pr-flow.json pr-flow/pr-flow.mk pr-flow/playbooks/worker.md"/>
+    <ticket id="T7" layer="2" files=".github/workflows/ci.yml .github/workflows/merge-on-green.yml"/>
+    <ticket id="T8" layer="3" files="tools/merge-train/merge-train.sh tools/merge-train/tests/test_merge_train.sh"/>
+    <ticket id="T9" layer="4" files="tools/merge-train/ claude/golden-rules.md"/>
+    <ticket id="T10" layer="3-4" type="test" files="none"/>
+    <note>pr-flow/ is claude/workflow/pr-flow/.</note>
+  </tickets>
+
+  <gates>
+    <gate name="dev">make pr-flow-test CASES=...; podman, --network=none, stub gh, stub bus</gate>
+    <gate name="uat">one low-risk dotfiles PR on LINE=test; ci.passed 201 to merged 200 under 120 s on the bus; gh run wall time under 180 s</gate>
+    <gate name="stable">every configured repository; gh pr list open counts before and after (baseline 2026-10-16T05:14Z: dotfiles 5, business 4, ypconsult-01-src 6); rollback make pr-flow-rollback REPO=</gate>
+  </gates>
+</spec>
