@@ -23,7 +23,10 @@
   "depends_on": [
     "WO-20261016-0797"
   ],
-  "blocks": []
+  "blocks": [],
+  "labels": [
+    "line:inbox-triage"
+  ]
 }
 ---
 

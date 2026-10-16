@@ -36,7 +36,10 @@
       "expect": "E2E-OK"
     }
   ],
-  "provides": []
+  "provides": [],
+  "labels": [
+    "line:inbox-triage"
+  ]
 }
 ---
 

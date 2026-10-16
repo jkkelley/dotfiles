@@ -48,6 +48,9 @@
   ],
   "provides": [
     "path:claude/skills/work-order/testing/cases/380-approve-env-prefix.sh"
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

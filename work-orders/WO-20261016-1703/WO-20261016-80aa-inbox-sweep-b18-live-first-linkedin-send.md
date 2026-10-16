@@ -22,7 +22,10 @@
     "WO-20261016-73cd",
     "WO-20261016-c606"
   ],
-  "blocks": []
+  "blocks": [],
+  "labels": [
+    "line:inbox-triage"
+  ]
 }
 ---
 

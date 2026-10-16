@@ -39,7 +39,10 @@
       "expect": "^[1-9]"
     }
   ],
-  "provides": []
+  "provides": [],
+  "labels": [
+    "line:inbox-triage"
+  ]
 }
 ---
 

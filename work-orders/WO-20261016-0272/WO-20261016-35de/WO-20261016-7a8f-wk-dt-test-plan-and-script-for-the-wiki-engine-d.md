@@ -43,6 +43,9 @@
       "exit": 0,
       "expect": "^([5-9]|[1-9][0-9]+)$"
     }
+  ],
+  "labels": [
+    "line:inbox-triage"
   ]
 }
 ---

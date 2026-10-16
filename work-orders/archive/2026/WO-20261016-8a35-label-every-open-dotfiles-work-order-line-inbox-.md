@@ -4,15 +4,15 @@
   "slug": "label-every-open-dotfiles-work-order-line-inbox-",
   "title": "Label every open dotfiles work-order line:inbox-triage by one scripted set --tree run over the five roots (ORD-0932 Q2)",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:44:20+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/8a35-label-every-open-dotfiles-work-order-line-inbox-",
+  "pr": 356,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design11 cut for ORD-0932-next Q2 and the ORD-0830 RR-orch-14 DESIGN-GAPs; design approvals ruled done, ORD-0550 O4",
@@ -44,7 +44,10 @@
       "expect": null
     }
   ],
-  "provides": []
+  "provides": [],
+  "labels": [
+    "line:inbox-triage"
+  ]
 }
 ---
 
@@ -104,11 +107,14 @@ Fact 2026-10-16: the open dotfiles tickets hang under five roots, all line work:
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* no open ticket lacks the line label
+- [x] `AC-H1` *(human)* no open ticket lacks the line label
+  - observed `2026-10-16` grep -rL count 0, exit 0
   - check: `bash -c 'grep -rL "\"line:inbox-triage\"" work-orders --include="WO-*.md" --exclude-dir=archive | wc -l'` exit 0 expect /^0$/
-- [ ] `AC-H2` *(human)* the line queue equals the whole queue and is not empty
+- [x] `AC-H2` *(human)* the line queue equals the whole queue and is not empty
+  - observed `2026-10-16` next total 11, next --line inbox-triage 11: same 11
   - check: `bash -c 'a=$(bash claude/skills/work-order/scripts/work-order.sh next --project . --offline --json | jq length); b=$(bash claude/skills/work-order/scripts/work-order.sh next --project . --line inbox-triage --offline --json | jq length); test "$a" = "$b" && test "$b" -gt 0 && echo same $b'` exit 0 expect /^same [1-9]/
-- [ ] `AC-H3` *(human)* the diff holds only work-orders files
+- [x] `AC-H3` *(human)* the diff holds only work-orders files
+  - observed `2026-10-16` git diff --name-only origin/main...HEAD: only work-orders files
   - check: `bash -c '! git diff --name-only origin/main...HEAD | grep -vE "^work-orders/.*$"'` exit 0
 
 ## Test plan
