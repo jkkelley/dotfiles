@@ -4,16 +4,20 @@
   "slug": "test-spec-check-fails-long-malformed-and-content",
   "title": "Test spec-check - fails long, malformed and contents-less specs",
   "type": "test",
-  "status": "draft",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:43:27+00:00",
   "parent": "WO-20261016-949a",
-  "branch": null,
-  "pr": null,
-  "closed": null,
-  "approval": null,
+  "branch": "feat/test-spec-check-fails-long-malformed-and-content",
+  "pr": 158,
+  "closed": "2026-10-16",
+  "approval": {
+    "via": "override",
+    "reason": "owner: i approved of everything (brief BR-20261016-spec-check)",
+    "at": "2026-10-16"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [
@@ -45,11 +49,13 @@ spec-check needs a scripted test plan run in podman.
 
 **In**
 
-- scripts/spec-check.sh from WO-20261016-04d3
+- files: scripts/tests/test_spec_check.sh (new)
+- commands: make spec-check-test
+- docs: claude/workflow/templates/test-plan.md; CLAUDE.md Rule 14
 
 **Out - non-goals**
 
-- scripts/tests/test_spec_check.sh result
+- full suite (CI owns it)
 
 ## Degrees of freedom
 
@@ -57,7 +63,10 @@ spec-check needs a scripted test plan run in podman.
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every TP case ok inside podman
+- [x] `AC-H1` *(human)* make spec-check-test prints 12 ok lines and no not ok line
+  - observed `2026-10-16` 12 ok, 0 not ok, rc=0: /home/luna/.local/state/zenith/log/2026/10/20261016-045256-spec-check-test-plan.txt
+- [x] `AC-H2` *(human)* evidence: repro command and output written by claude/tools/artifact/artifact.sh new --key log to the artifact store, path in the PR body
+  - observed `2026-10-16` evidence: /home/luna/.local/state/zenith/log/2026/10/20261016-045256-spec-check-test-plan.txt
 
 ## Test plan
 

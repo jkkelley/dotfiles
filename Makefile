@@ -66,3 +66,17 @@ rolodex-check:          ## fail a new script with no header (ALL=1 checks every 
 
 rolodex-test:           ## relevant tests only, in Podman (Rule 14)
 	bash tools/rolodex/tests/run-tests.sh
+
+# XML specs: 1000 lines or less, parse, open with <contents> (Design principles 101 item 28). Read-only.
+# Inputs passed as VAR=value: FILES= (default: changed *.spec.xml vs BASE), LIMIT=, PATTERN=.
+LIMIT ?= 1000
+PATTERN ?= *.spec.xml
+SPEC_IMAGE := localhost/dotfiles-workflow-test:1
+.PHONY: spec-check spec-check-test
+
+spec-check:             ## fail a changed XML spec over LIMIT lines, malformed, or without a <contents> first child
+	BASE=$(BASE) LIMIT=$(LIMIT) PATTERN='$(PATTERN)' bash scripts/spec-check.sh $(FILES)
+
+spec-check-test:        ## run scripts/tests/test_spec_check.sh in the pinned workflow test image (Rule 14)
+	podman build -q -t $(SPEC_IMAGE) -f claude/workflow/tests/container/Containerfile claude/workflow >/dev/null
+	podman run --rm --network=none --userns=keep-id -v "$(CURDIR):/work:Z" -w /work -e HOME=/tmp $(SPEC_IMAGE) bash scripts/tests/test_spec_check.sh

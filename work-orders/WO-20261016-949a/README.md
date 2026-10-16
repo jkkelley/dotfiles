@@ -6,8 +6,5 @@ This ticket: [Spec check - golden rules 25 to 30 and make spec-check](WO-2026101
 
 One level down only. A child of a child is listed in its own directory, not here.
 
-| ID | status | pri | waiting on | title |
-|---|---|---|---|---|
-| `WO-20261016-87a3` | draft | p1 | - | [Golden rules block carries items 25 to 30](WO-20261016-87a3-golden-rules-block-carries-items-25-to-30.md) |
-| `WO-20261016-bdcb` | draft | p1 | WO-20261016-04d3 | [Test spec-check - fails long, malformed and contents-less specs](WO-20261016-bdcb-test-spec-check-fails-long-malformed-and-content.md) |
-| `WO-20261016-04d3` | draft | p1 | WO-20261016-87a3 | [make spec-check gates XML specs in the fast PR check](WO-20261016-04d3-make-spec-check-gates-xml-specs-in-the-fast-pr-c.md) |
+_No children yet. This ticket sits at the top level, so it holds the directory
+on its own until work is filed underneath it._
