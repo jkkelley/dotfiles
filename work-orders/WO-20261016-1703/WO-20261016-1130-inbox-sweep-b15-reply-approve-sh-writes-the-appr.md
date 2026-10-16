@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-b15-reply-approve-sh-writes-the-appr",
   "title": "Inbox sweep B15 - reply-approve.sh writes the approval file verbatim",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T03:03:19+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-b15-reply-approve-sh-writes-the-appr",
   "pr": null,
   "closed": null,
   "approval": {
@@ -68,10 +68,14 @@ An owner decision must become exactly one hashed file, byte for byte, before any
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* edited text in gives the same bytes out, sha256 equal (test)
-- [ ] `AC-H2` *(human)* a second text for one thread gets a new revision file and supersedes the first (test)
-- [ ] `AC-H3` *(human)* Drop writes no file (test)
-- [ ] `AC-H4` *(human)* every record this ticket writes carries an integer schema_version (design 15.2) (test)
+- [x] `AC-H1` *(human)* edited text in gives the same bytes out, sha256 equal (test)
+  - observed `2026-10-16` test_reply_approve: 'AC-H1: edited text in gives the same bytes out (untrimmed, trailing newline kept)' and 'sha256 of the file equals sha256 of the owner bytes' ok
+- [x] `AC-H2` *(human)* a second text for one thread gets a new revision file and supersedes the first (test)
+  - observed `2026-10-16` test_reply_approve: 'AC-H2: second text for the thread is send-<id>-r2.txt', first file untouched, one RP-SUPERSEDED row naming it, ok
+- [x] `AC-H3` *(human)* Drop writes no file (test)
+  - observed `2026-10-16` test_reply_approve: 'AC-H3: Drop creates no file', no approvals row, one RP-DROPPED ledger row, ok
+- [x] `AC-H4` *(human)* every record this ticket writes carries an integer schema_version (design 15.2) (test)
+  - observed `2026-10-16` test_reply_approve: 'AC-H4: approvals.jsonl rows and ledger rows have an integer schema_version' ok; test-all: ran 18 suites, all ok
 
 ## Test plan
 
