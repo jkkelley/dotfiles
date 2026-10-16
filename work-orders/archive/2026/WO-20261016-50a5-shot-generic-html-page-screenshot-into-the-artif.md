@@ -4,15 +4,15 @@
   "slug": "shot-generic-html-page-screenshot-into-the-artif",
   "title": "shot: generic HTML page screenshot into the artifact store, headless Chromium, size checked, for the HTML wireframes rev 2 evidence",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:33:32+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/shot-generic-html-page-screenshot-into-the-artif",
+  "pr": 287,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "seat-ready cut ORD-0830 RR-orch-14 yp-design7: touches, exact steps, exit-coded ACs, test plan, fallback FB-008; architect ruling ORD-0550 O4; Lavish prohibited for Claude seats (global rule)",
@@ -129,15 +129,20 @@ ORD-0830 RR-orch-14 yp-design7; RR-orch-19: Figma parked FB-006, HTML wireframes
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the 8 cases pass in podman
+- [x] `AC-H1` *(human)* the 8 cases pass in podman
+  - observed `2026-10-16` check: make -f claude/tools/shot/shot.mk shot-test exit 0 output: ok t1 ok ok t2 wrong size ok t3 failing browser ok t4 timeout ok t5 missing html ok t6 no browser ok t7 bad size ok t8 make pass=8 fail=0
   - check: `make -f claude/tools/shot/shot.mk shot-test` exit 0 expect /pass=8 fail=0/
-- [ ] `AC-H2` *(human)* shellcheck clean
+- [x] `AC-H2` *(human)* shellcheck clean
+  - observed `2026-10-16` check: make -f claude/tools/shot/shot.mk shot-lint exit 0 output:
   - check: `make -f claude/tools/shot/shot.mk shot-lint` exit 0
-- [ ] `AC-H3` *(human)* a missing html exits 3 with SHOT-SRC
+- [x] `AC-H3` *(human)* a missing html exits 3 with SHOT-SRC
+  - observed `2026-10-16` check: bash claude/tools/shot/shot.sh --html /nonexistent.html --name x 2>&1 exit 3 output: SHOT-SRC html file missing: /nonexistent.html
   - check: `bash claude/tools/shot/shot.sh --html /nonexistent.html --name x 2>&1` exit 3 expect /SHOT-SRC/
-- [ ] `AC-H4` *(human)* fallback switch runs the script with FB-008
+- [x] `AC-H4` *(human)* fallback switch runs the script with FB-008
+  - observed `2026-10-16` check: env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node shot-fb --fallback "bash claude/tools/shot/shot.sh --help" --fallback-code FB-008 -- false 2>&1 exit 0 output: usage: shot.sh --html FILE --name SLUG [--size WxH] [--what TEXT] default size 1440x900; env CHROME_BIN, SHOT_TIMEOUT_S (default 30), ARTIFACT_ROOT exit: 0 SHOT-OK <path> | 2 SHOT-USAGE | 3 SHOT-SRC | 4 SHOT-NOBROWSER or SHOT-RENDER FALLBACK FB-008 shot-fb
   - check: `env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node shot-fb --fallback "bash claude/tools/shot/shot.sh --help" --fallback-code FB-008 -- false 2>&1` exit 0 expect /FALLBACK FB-008 shot-fb/
-- [ ] `AC-H5` *(human)* the diff is exactly the touches plus work-orders files
+- [x] `AC-H5` *(human)* the diff is exactly the touches plus work-orders files
+  - observed `2026-10-16` check: bash -c '! git diff --name-only origin/main...HEAD | grep -vE "^(work-orders/|claude/tools/shot/(shot.sh|shot.mk|README.md|tests/test_shot.sh)$)"' exit 0 output:
   - check: `bash -c '! git diff --name-only origin/main...HEAD | grep -vE "^(work-orders/|claude/tools/shot/(shot\.sh|shot\.mk|README\.md|tests/test_shot\.sh)$)"'` exit 0
 
 ## Test plan
