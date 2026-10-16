@@ -4,7 +4,7 @@
   "slug": "wk0t-test-plan-and-script-for-the-wiki-engine-sk",
   "title": "WK0t: test plan and script for the wiki engine skeleton",
   "type": "test",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-35de",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "design seat infra-design12 cut from wiki.spec.xml (PR 285), ORD-0830 RR-orch-14; design approvals ruled done, ORD-0550 O4; owner surface is Bearings, lavish prohibited for Claude seats",
@@ -43,7 +43,8 @@
       "exit": 1,
       "expect": null
     }
-  ]
+  ],
+  "superseded_by": "WO-20261016-5fd3"
 }
 ---
 
@@ -121,4 +122,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: Test plan was a one-line JSON blob that start refuses (test_plan_missing); recut with the template-shaped plan
+- superseded by: `WO-20261016-5fd3`
+
+No branch, no PR and no merge commit exist for this work order.
+
