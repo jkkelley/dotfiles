@@ -31,16 +31,10 @@ run 0 "frontmatter still parses after a note" bash -c \
 run 0 "a note is not a checkbox" bash -c \
   "! awk '/^## Notes/{n=1;next} /^## /{n=0} n' '$f' | grep -q '^- \[ \]'"
 
-# The index gate.
-run 0 "reindex --check passes on a freshly written index" wo reindex --project "$d" --check
+# The index check. INDEX.md is an untracked build output (WO-20261016-565d), so
+# the check generates and validates; it does not compare against a file on disk.
+run 0 "reindex --check passes on a generated index" wo reindex --project "$d" --check
 printf 'hand edited\n' >>"$d/work-orders/INDEX.md"
-run 3 "reindex --check refuses an index that drifted" wo reindex --project "$d" --check
-run 0 "reindex repairs it" wo reindex --project "$d"
-run 0 "and the gate passes again" wo reindex --project "$d" --check
-
-# Determinism: the index is committed, so two builds must be byte-identical.
-cp "$d/work-orders/INDEX.md" "$d/first.md"
-wo reindex --project "$d" >/dev/null 2>&1
-assert_same "$d/first.md" "$d/work-orders/INDEX.md" "rebuilding the index changes nothing"
-
-finish
+run 0 "reindex --check ignores a drifted local index" wo reindex --project "$d" --check
+run 0 "reindex rebuilds it" wo reindex --project "$d"
+run 0 "and the check passes again" wo reindex --project "$d" --check

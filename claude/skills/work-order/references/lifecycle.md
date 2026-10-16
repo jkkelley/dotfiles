@@ -31,7 +31,7 @@ The status set is closed.
 - **Set by** `new`
 - **Gate** rendered in Lavish for review
 - **Legal next** `ready`
-- **Writes** the whole ticket, the evidence snapshot, `INDEX.md`
+- **Writes** the whole ticket, the evidence snapshot (and regenerates the untracked `INDEX.md`)
 - **Refuses if** no `--out` was given; the slug collides with an existing ticket; `--from-figma` points somewhere without both JSON files; `--frames` matches nothing
 
 An empty non-goals list is a validation error, not a default.
@@ -149,7 +149,7 @@ That separation is deliberate: nothing an agent does while working on a ticket s
 | `resolve` | one answer under one Open question, and ticks its box    | `--answer` is empty; no selector was given; the index is out of range; a `--match` is ambiguous or hits nothing; that question is already resolved                                                 |
 | `next`    | nothing                                                  | never - an empty result is an answer, and it means nothing may be started                                                                                                                          |
 | `tree`    | nothing                                                  | never                                                                                                                                                                                              |
-| `reindex` | `INDEX.md`                                               | `--check` exits 3 when the index and the tickets on disk disagree                                                                                                                                  |
+| `reindex` | `INDEX.md` and epic READMEs (untracked build outputs)    | `--check` writes nothing and exits non-zero on a loose top-level ticket, a cycle or a dangling link; it passes with `INDEX.md` absent                                                              |
 | `repair`  | the H1 of any ticket still holding a `%%…%%` placeholder | the frontmatter has no `id` or `title` to rebuild the heading from                                                                                                                                 |
 
 `resolve` is outside the status set for the same reason `note` is, and for one more: it is what makes the `approve` gate survivable.
