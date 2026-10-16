@@ -125,30 +125,6 @@ cards="$(jq --arg run "IS-$run-" '[.items[] | select((.id | startswith($run)) an
 log "BLOCKED codes $codes, BLOCKED cards $cards"
 sweep_check R6 "one card per BLOCKED code" "logs/cards.log" || true
 
-# Server: only when nothing is serving. Labeled pane, never a background job.
-if [ -f "$(dirname "$CARDS")/server.json" ]; then
-  log "bearings server already up"
-else
-  ws="$(herdr workspace list 2>/dev/null | jq -r --arg l "${SWEEP_HERDR_WORKSPACE:-dotfiles}" 'first(.result.workspaces[] | select(.label == $l) | .workspace_id) // empty' || true)"
-  anchor="" known=""
-  if [ -n "$ws" ]; then
-    known="$(herdr pane list --workspace "$ws" 2>/dev/null | jq -c '[.result.panes[].pane_id]' || true)"
-    anchor="$(jq -r '.[0] // empty' <<<"${known:-[]}")"
-  fi
-  if [ -z "$anchor" ]; then
-    log "no herdr pane to split; server not started"
-  elif ! herdr pane split "$anchor" --direction down >/dev/null 2>&1; then
-    log "herdr pane split failed; server not started"
-  else
-    # The new pane is the id that was not in the list before the split: panes can be unlabeled already, so "last
-    # unlabeled pane" could rename someone else's.
-    pane="$(herdr pane list --workspace "$ws" 2>/dev/null | jq -r --argjson k "${known:-[]}" '[.result.panes[].pane_id | select(. as $i | $k | index($i) | not)] | last // empty' || true)"
-    if [ -n "$pane" ] && herdr pane rename "$pane" bearings-inbox-sweep >/dev/null 2>&1 &&
-      herdr pane run "$pane" "node $SERVER_JS inbox-sweep" >/dev/null 2>&1; then
-      log "bearings server started in pane $pane (bearings-inbox-sweep)"
-    else
-      log "could not label or run the server pane; server not started"
-    fi
-  fi
-fi
+# Server: only when nothing is serving. Labeled pane, never a background job (sweep_bearings_server, sweep-lib.sh).
+sweep_bearings_server "$CARDS" "$SERVER_JS"
 echo "cards: $((after - before)) added, $after total"

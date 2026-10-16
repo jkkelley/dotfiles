@@ -4,15 +4,15 @@
   "slug": "inbox-sweep-b14-reply-cards-sh-owner-cards-per-l",
   "title": "Inbox sweep B14 - reply-cards.sh owner cards per LinkedIn draft",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T03:03:13+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/inbox-sweep-b14-reply-cards-sh-owner-cards-per-l",
+  "pr": 123,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner approved the reply DAG design on Bearings card D-18, 2026-10-16 UTC; Claude seats never use lavish (global owner rule)",
@@ -66,10 +66,14 @@ Each LinkedIn draft needs exactly one owner card, and the owner's answer must be
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a card carries the full draft text and exactly 3 options: Send as written, Send with my edits, Drop (test)
-- [ ] `AC-H2` *(human)* a rerun adds no duplicate card (test)
-- [ ] `AC-H3` *(human)* an unanswered card stays RP-AWAITING-OWNER (test)
-- [ ] `AC-H4` *(human)* every record this ticket writes carries an integer schema_version (design 15.2) (test)
+- [x] `AC-H1` *(human)* a card carries the full draft text and exactly 3 options: Send as written, Send with my edits, Drop (test)
+  - observed `2026-10-16` test_reply_cards: AC-H1 ok - card holds full multi-line and 3000 char draft, exactly 3 options Send as written,Send with my edits,Drop
+- [x] `AC-H2` *(human)* a rerun adds no duplicate card (test)
+  - observed `2026-10-16` test_reply_cards: AC-H2 ok - rerun leaves 4 cards, 4 RP-AWAITING-OWNER rows, 3 decisions, existing card not rewritten
+- [x] `AC-H3` *(human)* an unanswered card stays RP-AWAITING-OWNER (test)
+  - observed `2026-10-16` test_reply_cards: AC-H3 ok - 4 unanswered cards report RP-AWAITING-OWNER, decisions.jsonl empty; empty-words edit stays open
+- [x] `AC-H4` *(human)* every record this ticket writes carries an integer schema_version (design 15.2) (test)
+  - observed `2026-10-16` test_reply_cards: AC-H4 ok - cards, ledger rows, decisions rows and answers.json carry integer schema_version
 
 ## Test plan
 
