@@ -53,7 +53,13 @@ status_one() {
   tail -n 3 "$lf" 2>/dev/null | sed 's/^/  /'
 }
 
-ws_id() { herdr workspace list | jq -r --arg l "$(wf_cfg .workflow.herdr.workspace_label)" 'first(.result.workspaces[] | select(.label == $l) | .workspace_id) // empty'; }
+# BREADCRUMB - WATCH_WS names the workspace by id and outranks the configured label.
+# What broke: bin/line-watch.sh arms watchers on the inbox-triage line in workspace wD9, labelled local-network-orbi, which
+#   wD8 also carries; the config label is "dotfiles", which no workspace carries, so `on` died "no herdr workspace labelled
+#   dotfiles" (the SessionStart compaction watcher failed the same way, 2026-10-16T04:2xZ).
+# Why this fix: the caller already knows the id ($HERDR_WORKSPACE_ID). Rejected: editing the label in config, which is
+#   per machine, and first-match by label, which picked wD8. Cost: none; unset keeps the label lookup.
+ws_id() { [ -n "${WATCH_WS:-}" ] && { printf '%s' "$WATCH_WS"; return; }; herdr workspace list | jq -r --arg l "$(wf_cfg .workflow.herdr.workspace_label)" 'first(.result.workspaces[] | select(.label == $l) | .workspace_id) // empty'; }
 pane_by_label() { herdr pane list --workspace "$(ws_id)" 2>/dev/null | jq -er --arg l "$1" 'first(.result.panes[] | select(.label == $l) | .pane_id)'; }
 
 case "$action" in
