@@ -1,0 +1,24 @@
+{
+  "$comment": "Inputs for a2a-send.sh, a2a-deliver.sh and a2a-lint.sh (Design principles 101 item 17). Environment A2A_* and arguments override. See README.md.",
+  "schema": "a2a-guard/config/1",
+  "line": "inbox-triage",
+  "state_dir": "~/.local/state/zenith/a2a",
+  "artifact_key": "a2a",
+  "ack_patterns": [
+    "\\back(nowledge)?(ment)?s?\\b",
+    "\\bconfirm (receipt|you (got|read|received|saw))\\b",
+    "\\breply (with )?\"?(ok|ack|received|roger|done)\"?\\b",
+    "\\bread receipt\\b",
+    "\\broger\\b"
+  ],
+  "future_skew_s": 60,
+  "idle_statuses": ["idle", "done"],
+  "input_prompt_glyph": "❯",
+  "bus": {"enabled": true, "subject_root": "a2a", "nats_url": "nats://127.0.0.1:4222",
+          "nats_box_image": "docker.io/natsio/nats-box@sha256:71ea2fc4bc84e1bebac817e0b0a6d5d7a0ad93b6dc50c7041e0d80e489933072"},
+  "lint": {
+    "pattern": "herdr[[:space:]]+pane[[:space:]]+send-text",
+    "paths": ["claude", "scripts"],
+    "allow": ["claude/workflow/a2a-guard/"]
+  }
+}

@@ -1,0 +1,23 @@
+# Fast check: no script types into a herdr pane directly; agent to agent messages go through make a2a-send.
+# Brief BR-20261016-a2a-guard P1: raw `herdr pane send-text` typed orders into working panes, where they sat 18-25 min.
+# It greps the tree and writes nothing; the rule and its allow list live in claude/workflow/a2a-guard/config.json.
+name: a2a lint
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: a2a-lint-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  raw-send:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make a2a-lint

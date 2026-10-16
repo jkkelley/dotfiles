@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# name: fake-herdr
+# purpose: stands in for herdr in the a2a-guard dev gate.
+# inputs: herdr-style arguments; env FAKE_DIR
+# outputs: stdout herdr-shaped JSON, exit code
+# writes-to: $FAKE_DIR/calls.log
+# cleanup: the test removes FAKE_DIR
+# fake-herdr - stands in for herdr in the a2a-guard dev gate. State lives in $FAKE_DIR:
+#   status/<seat>  agent_status (absent: no such agent)   input/<seat>  text on the seat's input line
+# Every call is appended to $FAKE_DIR/calls.log, one line per call.
+printf '%s\n' "$*" >> "$FAKE_DIR/calls.log"
+case "$1 $2" in
+  "agent get")
+    [ -f "$FAKE_DIR/status/$3" ] || exit 1
+    jq -cn --arg s "$(cat "$FAKE_DIR/status/$3")" --arg n "$3" \
+      '{result:{agent:{name:$n,agent_status:$s,pane_id:("wT:"+$n)}}}' ;;
+  "pane read")
+    seat=${3#wT:}; printf 'some output\n─────\n❯\xc2\xa0%s\n─────\n' "$(cat "$FAKE_DIR/input/$seat" 2>/dev/null)" ;;
+  "agent prompt") exit 0 ;;
+  *) exit 0 ;;
+esac

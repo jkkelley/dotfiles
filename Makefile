@@ -1,6 +1,7 @@
 # Root entry points. Each target is a thin include; the work lives in scripts.
 include claude/tools/ctx-guard/ctx-guard.mk
 include claude/tools/artifact/artifact.mk
+include claude/workflow/a2a-guard/a2a-guard.mk
 
 # Contents lists on every Markdown file. Scripts drive it; nothing by hand.
 BASE ?= origin/main
@@ -80,6 +81,21 @@ spec-check:             ## fail a changed XML spec over LIMIT lines, malformed, 
 spec-check-test:        ## run scripts/tests/test_spec_check.sh in the pinned workflow test image (Rule 14)
 	podman build -q -t $(SPEC_IMAGE) -f claude/workflow/tests/container/Containerfile claude/workflow >/dev/null
 	podman run --rm --network=none --userns=keep-id -v "$(CURDIR):/work:Z" -w /work -e HOME=/tmp $(SPEC_IMAGE) bash scripts/tests/test_spec_check.sh
+
+# Wireframes never lag their design: each */wireframes/README.md records the design.md it reflects (Design-Reflects:),
+# and design-drift fails when design.md changed since. Brief BR-20261016-design-drift; why a blob id: scripts/design-drift.sh.
+# Inputs passed as VAR=value: FILES= READMEs (check default: every tracked */wireframes/README.md; stamp needs FILES).
+.PHONY: design-drift design-drift-stamp design-drift-test
+
+design-drift:           ## fail when a design.md changed after the version its wireframes/README.md records
+	bash scripts/design-drift.sh check $(FILES)
+
+design-drift-stamp:     ## make design-drift-stamp FILES=<dir>/wireframes/README.md: record the current design.md (idempotent)
+	bash scripts/design-drift.sh stamp $(FILES)
+
+design-drift-test:      ## run scripts/tests/test_design_drift.sh in the pinned workflow test image (Rule 14)
+	podman build -q -t $(SPEC_IMAGE) -f claude/workflow/tests/container/Containerfile claude/workflow >/dev/null
+	podman run --rm --network=none --userns=keep-id -v "$(CURDIR):/work:Z" -w /work -e HOME=/tmp $(SPEC_IMAGE) bash scripts/tests/test_design_drift.sh
 
 # Home migration: move a project's clones and worktrees into one home, symlink the old paths (docs/design/home-migrate.md).
 # Inputs passed as VAR=value: CONF=<home project.json> (required), ONLY=<one old path> (UAT gate), PASSES= retries for busy paths, WAIT= seconds between.
