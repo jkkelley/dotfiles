@@ -13,4 +13,4 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-7d69` | ready | p2 | - | [node-timing tests: slow and fast](WO-20261016-7d69-node-timing-tests-slow-and-fast.md) |
 | `WO-20261016-2f31` | ready | p2 | - | [node-timing.sh: start and end events from the bus to a TIMING KV bucket, SLOW and a bottleneck work order over budget](WO-20261016-2f31-node-timing-sh-start-and-end-events-from-the-bus.md) |
 | `WO-20261016-460b` | ready | p2 | - | [timed-run tests: timeout with 3 retries, start and end](WO-20261016-460b-timed-run-tests-timeout-with-3-retries-start-and.md) |
-| `WO-20261016-92a5` | ready | p2 | - | [timed-run.sh: start, end and timeout of any step on the bus, timeout enforced, 3 retries, SLOW and TIMEOUT coded](WO-20261016-92a5-timed-run-sh-start-end-and-timeout-of-any-step-o.md) |
+| `WO-20261016-92a5` | in-progress | p2 | - | [timed-run.sh: start, end and timeout of any step on the bus, timeout enforced, 3 retries, SLOW and TIMEOUT coded](WO-20261016-92a5-timed-run-sh-start-end-and-timeout-of-any-step-o.md) |
