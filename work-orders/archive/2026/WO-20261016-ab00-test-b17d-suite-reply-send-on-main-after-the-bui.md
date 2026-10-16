@@ -4,15 +4,15 @@
   "slug": "test-b17d-suite-reply-send-on-main-after-the-bui",
   "title": "Test B17d - suite reply-send on main after the build merges",
   "type": "test",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:22+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/test-b17d-suite-reply-send-on-main-after-the-bui",
+  "pr": 177,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Architect rulings R3 and R4, 2026-10-16T04:25Z, recorded in design 18 (PR 153); Claude seats never use lavish",
@@ -61,7 +61,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+- [x] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+  - observed `2026-10-16` Main e6afb03 (includes #168). TP-1 command (podman, localhost/dotfiles-workflow-test:1, --suite reply-send) exit 0, output 'ok reply-send' / 'ran 1 suite'; log ~/.local/state/zenith/artifacts/test-evidence/2026/10/20261016-T17d-reply-send-suite.log. Suite prints no per-case lines, so test_reply_send.sh was also run in the same image: 173 ok, 0 not ok, 60 B17d lines; log ...20261016-T17d-reply-send-cases.log
 
 ## Test plan
 
