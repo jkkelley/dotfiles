@@ -4,15 +4,15 @@
   "slug": "claude-workflow-templates-close-successor-md-the",
   "title": "claude/workflow/templates/close-successor.md: the close-successor pattern (WO-20261016-bcb4, WO-20261016-aa46) as a template a design seat fills, with its work-orders-only scope check",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T11:35:27+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/ece2-claude-workflow-templates-close-successor-md-the",
+  "pr": 334,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design18 cut for the stranded close-out class; design approvals ruled done, ORD-0550 O4",
@@ -115,13 +115,17 @@ Section '## Acceptance criteria' rules: copy every check of the old ticket verba
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the contents list is present and fresh
+- [x] `AC-H1` *(human)* the contents list is present and fresh
+  - observed `2026-10-16` make md-contents-check exit 0: md-contents: 1 file(s) ok
   - check: `make md-contents-check` exit 0
-- [ ] `AC-H2` *(human)* the template carries the cancel step, the edge move and the work-orders-only scope check
+- [x] `AC-H2` *(human)* the template carries the cancel step, the edge move and the work-orders-only scope check
+  - observed `2026-10-16` grep -c count 3, exit 0
   - check: `grep -c -e 'superseded-by THIS-TICKET-ID' -e 'no-depends-on' -e 'work-orders/\.\*' claude/workflow/templates/close-successor.md` exit 0 expect /^([3-9]|[1-9][0-9])/
-- [ ] `AC-H3` *(human)* the template carries its GOOD and NEVER examples
+- [x] `AC-H3` *(human)* the template carries its GOOD and NEVER examples
+  - observed `2026-10-16` grep -c count 3, exit 0
   - check: `grep -c -E '^(GOOD|NEVER):' claude/workflow/templates/close-successor.md` exit 0 expect /^([3-9]|[1-9][0-9])/
-- [ ] `AC-H4` *(human)* the diff holds only the In files
+- [x] `AC-H4` *(human)* the diff holds only the In files
+  - observed `2026-10-16` scope grep printed nothing, exit 1
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/templates/close-successor\.md)$'` exit 1
 
 ## Test plan
