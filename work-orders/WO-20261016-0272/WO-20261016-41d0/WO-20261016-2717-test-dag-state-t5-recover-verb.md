@@ -4,13 +4,13 @@
   "slug": "test-dag-state-t5-recover-verb",
   "title": "Test - dag-state T5 - recover verb",
   "type": "test",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:07:08+00:00",
   "parent": "WO-20261016-41d0",
-  "branch": null,
+  "branch": "feat/test-dag-state-t5-recover-verb",
   "pr": null,
   "closed": null,
   "approval": {
@@ -63,8 +63,10 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+- [x] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
+  - observed `2026-10-16` TP-1 exit 0, 25 cases ok, last line pass=25 fail=0
+- [x] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+  - observed `2026-10-16` /home/luna/.local/state/zenith/log/2026/10/20261016-090500-test-dag-state-t5-recover.log
 
 ## Test plan
 
