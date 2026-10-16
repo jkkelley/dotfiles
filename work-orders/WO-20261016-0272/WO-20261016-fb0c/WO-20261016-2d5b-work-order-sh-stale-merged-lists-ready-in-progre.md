@@ -4,14 +4,14 @@
   "slug": "work-order-sh-stale-merged-lists-ready-in-progre",
   "title": "work-order.sh stale-merged lists ready, in-progress and in-review tickets whose PR or branch is merged, read-only (ORD-0848 Y3)",
   "type": "feature",
-  "status": "in-progress",
+  "status": "in-review",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:08:08+00:00",
   "parent": "WO-20261016-fb0c",
   "branch": "feat/work-order-sh-stale-merged-lists-ready-in-progre",
-  "pr": null,
+  "pr": 273,
   "closed": null,
   "approval": {
     "via": "override",
@@ -117,11 +117,14 @@ Rejected: a separate script under claude/workflow, because item 30 says a need i
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* case 320 and the whole skill suite pass
+- [x] `AC-H1` *(human)* case 320 and the whole skill suite pass
+  - observed `2026-10-16` bash claude/skills/work-order/testing/run-tests.sh exit 0: all cases passed: 389 checks across 29 case files; 320-stale-merged 17 checks, 0 failed
   - check: `bash claude/skills/work-order/testing/run-tests.sh` exit 0 expect /all cases passed/
-- [ ] `AC-H2` *(human)* the verb is dispatched
+- [x] `AC-H2` *(human)* the verb is dispatched
+  - observed `2026-10-16` grep -c 'stale-merged) cmd_stale_merged' work-order.sh printed 1, exit 0
   - check: `grep -c 'stale-merged) cmd_stale_merged' claude/skills/work-order/scripts/work-order.sh` exit 0 expect /^1$/
-- [ ] `AC-H3` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H3` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` diff vs origin/main holds only work-order.sh, case 320 and work-orders/ files; check exit 0
   - check: `bash -c '! git diff --name-only origin/main...HEAD | grep -vE "^(work-orders/|claude/skills/work-order/scripts/work-order[.]sh|claude/skills/work-order/testing/cases/320-stale-merged[.]sh)$"'` exit 0
 
 ## Test plan
