@@ -30,6 +30,7 @@
 15. Migration is the test: install, upgrade (guard release promote) and removal are each one target; no workflow needs a hand rebuild.
 17. Config and arguments: inputs come from `CTX_GUARD_*` variables, a conf file or arguments, passed as `make VAR=value`; nothing hard-coded.
 18. Schemas with defined AC: the result is JSON with `acceptance_criteria [{id, statement, proof_kind, proof}]`; switches to `result.schema.json` when it merges.
+19. Small tickets, disjoint files: files touched are declared (`claude/tools/ctx-guard/*`, `Makefile`, `docs/ctx-guard.md`, `claude/workflow/bin/workflow-spawn.sh`, `claude/workflow/Makefile`, `claude/workflow/tests/unit/test_spawn_ctx_bind.sh`, `container-sandbox/references/hook-dedupe.md`); the two parallel subagents touched disjoint sets, no collision; order follows the DAG.
 
 ## DAG
 
