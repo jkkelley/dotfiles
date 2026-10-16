@@ -11,7 +11,7 @@ RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:Z" -w
 include mk/line-watch.mk
 include mk/resources.mk
 include a2a-guard/a2a-guard.mk
-.PHONY: help image test schema lint herdr-first compaction chain failover test-plan ci-job grid step-time lease treehouse-gate
+.PHONY: help image test schema lint herdr-first compaction chain failover test-plan ci-job grid step-time lease treehouse-gate inbox-sweep
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-10s %s\n", $$1, $$2}'
@@ -46,8 +46,15 @@ step-time: image ## step-time.sh: timing records, SLOW, timeout, retries, bus do
 ci-job: image ## CI runs this suite: the gate's selector and the job that calls make test (PR 99 gap)
 	@$(RUN) bash tests/unit/test_ci_job.sh
 
-test: schema lint herdr-first compaction chain failover test-plan ci-job step-time ## Everything
-	@echo "ok  workflow: schema, lint, herdr-first, compaction, chain, failover, test-plan, ci-job"
+# WO-20261016-4c73: CI's claude/workflow job runs `make -C claude/workflow test`, and nothing here reached inbox-sweep, so
+# its suites never ran in CI and PR 168 merged with its lint suite red (fixed by PR 192). Calling its own test-all keeps
+# inbox-sweep's suite list in its own Makefile. Rejected: a second step in skill-pr-gate.yml, a file every CI change
+# conflicts on. Cost: the job also runs every inbox-sweep suite, which is CI's job under Design principles 101 item 6.
+inbox-sweep: ## Every inbox-sweep suite, for CI
+	@$(MAKE) -s -C inbox-sweep test-all
+
+test: schema lint herdr-first compaction chain failover test-plan ci-job step-time inbox-sweep ## Everything
+	@echo "ok  workflow: schema, lint, herdr-first, compaction, chain, failover, test-plan, ci-job, inbox-sweep"
 
 # ---- herdr 3x3 grid (docs/design/herdr-grid.md). Inputs are VAR=value; defaults live in config/project.json .workflow.herdr.grid
 need = $(if $($(1)),,$(error $(1)= is required))
