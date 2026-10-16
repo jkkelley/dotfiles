@@ -12,7 +12,6 @@
     "\\broger\\b"
   ],
   "future_skew_s": 60,
-  "settle_s": 1,
   "idle_statuses": ["idle", "done"],
   "input_prompt_glyph": "❯",
   "bus": {"enabled": true, "subject_root": "a2a", "nats_url": "nats://127.0.0.1:4222",

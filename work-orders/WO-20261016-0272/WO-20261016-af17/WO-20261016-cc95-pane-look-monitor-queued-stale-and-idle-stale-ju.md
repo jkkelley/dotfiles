@@ -22,7 +22,8 @@
   "surfaces": [],
   "depends_on": [],
   "blocks": [
-    "WO-20261016-cc22"
+    "WO-20261016-cc22",
+    "WO-20261016-ca8c"
   ]
 }
 ---

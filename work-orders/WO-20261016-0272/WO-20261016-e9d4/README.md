@@ -8,5 +8,9 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
+| `WO-20261016-24b5` | ready | p0 | WO-20261016-590b | [a2a-send publishes each order to line.<line>.seat.<name>; the pane queue becomes the bus-down fallback](WO-20261016-24b5-a2a-send-publishes-each-order-to-line-line-seat-.md) |
 | `WO-20261016-590b` | ready | p1 | - | [Land PR 182: a2a-deliver confirms the submit, lowercase enter retried once](WO-20261016-590b-land-pr-182-a2a-deliver-confirms-the-submit-lowe.md) |
 | `WO-20261016-dd1f` | ready | p1 | WO-20261016-590b | [Test - Land PR 182: a2a-deliver confirms the submit, lowercase enter retried once](WO-20261016-dd1f-test-land-pr-182-a2a-deliver-confirms-the-submit.md) |
+| `WO-20261016-d572` | ready | p1 | WO-20261016-1cd0 | [Test - a2a-deliver as fallback only: dedup by order id, never type into a pane whose spinner is active](WO-20261016-d572-test-a2a-deliver-as-fallback-only-dedup-by-order.md) |
+| `WO-20261016-346e` | ready | p1 | WO-20261016-24b5 | [Test - a2a-send publishes each order to line.<line>.seat.<name>; the pane queue becomes the bus-down fallback](WO-20261016-346e-test-a2a-send-publishes-each-order-to-line-line-.md) |
+| `WO-20261016-1cd0` | ready | p1 | WO-20261016-24b5 WO-20261016-590b | [a2a-deliver as fallback only: dedup by order id, never type into a pane whose spinner is active](WO-20261016-1cd0-a2a-deliver-as-fallback-only-dedup-by-order-id-n.md) |

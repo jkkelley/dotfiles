@@ -73,8 +73,6 @@ flowchart LR
 | --- | --- | --- |
 | A2A-QUEUED | message stored and queued | nobody |
 | A2A-DELIVERED | one line typed into an idle seat | the receiving seat reads the files |
-| A2A-DELIVERED-RETRIED | the first Enter was not taken; lowercase `enter` once more emptied the box | the receiving seat reads the files |
-| A2A-UNCONFIRMED | the box was still not empty after the one retry; pointers moved to delivered/ | the orchestrator looks at the pane |
 | A2A-HELD | seat working, typing, or locked; stays queued | nobody, the monitor retries |
 | A2A-ACK-REFUSED | order is only an acknowledgement, or an AC asks for one | the sender drops it |
 | A2A-AT-FUTURE | `at` is ahead of the real UTC clock | the sender stops hand-writing times |

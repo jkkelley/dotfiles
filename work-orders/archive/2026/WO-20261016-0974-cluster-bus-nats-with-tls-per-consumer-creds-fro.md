@@ -4,7 +4,7 @@
   "slug": "cluster-bus-nats-with-tls-per-consumer-creds-fro",
   "title": "Cluster bus: NATS with TLS, per-consumer creds from Vault via external-secrets, namespace NetworkPolicy",
   "type": "feature",
-  "status": "draft",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,12 +12,13 @@
   "parent": "WO-20261016-ab87",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": null,
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": []
+  "blocks": [],
+  "superseded_by": null
 }
 ---
 
@@ -81,4 +82,9 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: moved to homelab-gitops per ORD-0616 G4: W13 WO-20261016-672d in jkkelley/homelab-gitops PR 103
+
+No branch, no PR and no merge commit exist for this work order.
+

@@ -16,8 +16,6 @@ case "$1 $2" in
       '{result:{agent:{name:$n,agent_status:$s,pane_id:("wT:"+$n)}}}' ;;
   "pane read")
     seat=${3#wT:}; printf 'some output\n─────\n❯\xc2\xa0%s\n─────\n' "$(cat "$FAKE_DIR/input/$seat" 2>/dev/null)" ;;
-  "agent prompt") # swallow/<seat> = the first Enter is not taken: the text stays in the box (sticky: also the retry)
-    seat=${3#wT:}; [ -f "$FAKE_DIR/swallow/$seat" ] && printf '%s' "$4" > "$FAKE_DIR/input/$seat"; exit 0 ;;
-  "pane send-keys") seat=${3#wT:}; [ "$4" = enter ] && [ "$(cat "$FAKE_DIR/swallow/$seat" 2>/dev/null)" != sticky ] && : > "$FAKE_DIR/input/$seat"; exit 0 ;;
+  "agent prompt") exit 0 ;;
   *) exit 0 ;;
 esac

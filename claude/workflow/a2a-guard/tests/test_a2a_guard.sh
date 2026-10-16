@@ -12,8 +12,8 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"; WF="$(cd "$HERE/.." && pwd)"
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 export FAKE_DIR="$T/fake" HERDR_BIN="$HERE/tests/fake-herdr" A2A_STATE_DIR="$T/state" ARTIFACT_ROOT="$T/store"
-export NATS_BIN="$T/nats" A2A_LINE=dev A2A_SETTLE_S=0
-mkdir -p "$FAKE_DIR/status" "$FAKE_DIR/input" "$FAKE_DIR/swallow"; : > "$FAKE_DIR/calls.log"
+export NATS_BIN="$T/nats" A2A_LINE=dev
+mkdir -p "$FAKE_DIR/status" "$FAKE_DIR/input"; : > "$FAKE_DIR/calls.log"
 printf '#!/bin/sh\necho "$@" >> %s/nats.log\n' "$T" > "$NATS_BIN"; chmod +x "$NATS_BIN"
 fail=0
 check() { if [ "$1" = "$2" ]; then echo "ok  $3"; else echo "FAIL $3 (want '$1', got '$2')"; fail=1; fi; }
@@ -71,18 +71,6 @@ bash "$DELIVER" --line dev >/dev/null; check 1 "$(prompts)" "a second pass deliv
 mkdir -p "$T/state/queue/dev/sweep-build"; echo "$T/orchestrator-msg-20261016T0512Z.json" > "$T/state/queue/dev/sweep-build/1.ptr"
 touch "$T/orchestrator-msg-20261016T0512Z.json"
 out=$(bash "$DELIVER" --line dev); check "1 A2A-NAME-REFUSED" "$(prompts) ${out%% *}" "a hand-named order file is refused, not delivered"
-
-# ORD-0615 O2 - the first Enter is not taken: read back, lowercase enter once, then a status code either way.
-enq() { bash "$SEND" --to sweep-build --file "$T/order.json" --no-deliver >/dev/null 2>&1; : > "$FAKE_DIR/input/sweep-build"; : > "$FAKE_DIR/calls.log"; }
-echo swallow > "$FAKE_DIR/swallow/sweep-build"; enq
-out=$(bash "$DELIVER" --line dev)
-check "A2A-DELIVERED-RETRIED 1" "${out%% *} $(grep -c '^pane send-keys wT:sweep-build enter$' "$FAKE_DIR/calls.log")" "box not emptied: one lowercase enter, A2A-DELIVERED-RETRIED"
-echo sticky > "$FAKE_DIR/swallow/sweep-build"; enq
-out=$(bash "$DELIVER" --line dev)
-check "A2A-UNCONFIRMED 1" "${out%% *} $(grep -c '^pane send-keys' "$FAKE_DIR/calls.log")" "enter never taken: exactly one retry, A2A-UNCONFIRMED"
-rm -f "$FAKE_DIR/swallow/sweep-build"; enq
-out=$(bash "$DELIVER" --line dev)
-check "A2A-DELIVERED 0" "${out%% *} $(grep -c '^pane send-keys' "$FAKE_DIR/calls.log")" "box emptied: no retry, A2A-DELIVERED"
 
 # AC4 - lint fails a raw send-text outside a2a-guard, passes the tree.
 mkdir -p "$T/repo/claude/x"; printf '#!/bin/sh\nherdr pane send-text "$p" "do the thing"\n' > "$T/repo/claude/x/bad.sh"
