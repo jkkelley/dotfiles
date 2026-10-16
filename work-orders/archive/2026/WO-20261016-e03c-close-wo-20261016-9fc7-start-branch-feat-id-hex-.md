@@ -4,15 +4,15 @@
   "slug": "close-wo-20261016-9fc7-start-branch-feat-id-hex-",
   "title": "Close WO-20261016-9fc7 (start branch feat/<id hex>-<slug>, PR 318 merged): re-run its checks 1,2,3 on main under this ticket, move its 94e2, 3d4d edges here and cancel 9fc7 as superseded",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T11:31:05+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/e03c-close-wo-20261016-9fc7-start-branch-feat-id-hex-",
+  "pr": 338,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design18 cut for ORD-1114 close-outs; design approvals ruled done, ORD-0550 O4",
@@ -130,17 +130,23 @@ Steps on the branch, after start, each exactly as written: bash claude/skills/wo
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* WO-20261016-9fc7 check 1 passes on main (copied from WO-20261016-9fc7 check 1)
+- [x] `AC-H1` *(human)* WO-20261016-9fc7 check 1 passes on main (copied from WO-20261016-9fc7 check 1)
+  - observed `2026-10-16` check: bash claude/skills/work-order/testing/run-tests.sh exit 0 output: work-order test suite image: localhost/work-order-test:1 skill: /home/luna/wt-e03c/claude/skills/work-order (read-only) scratch: /tmp/work-order-test.Dy1u7E (removed on exit) 010-new-happy.sh ok new exits 0 on the documented example (exit 0) ok INDEX.md is generated ok INDEX lists the new ticket ok starts in draft ok renders the non-goals section ok records the non-goal ok records the human criterion ok frontmatter parses as JSON (exit 0) created /work/proj.53iGuN/work-orders/WO-20260805-f57b/WO-20260805-f57b-empty-cart-state.md (status: draft, evidence: human) ok same input and clock produce an identical ticket 010-new-happy: 9 checks, 0 failed 020-new-refuses.sh
   - check: `bash claude/skills/work-order/testing/run-tests.sh` exit 0 expect /410-start-branch-id/
-- [ ] `AC-H2` *(human)* WO-20261016-9fc7 check 2 passes on main (copied from WO-20261016-9fc7 check 2)
+- [x] `AC-H2` *(human)* WO-20261016-9fc7 check 2 passes on main (copied from WO-20261016-9fc7 check 2)
+  - observed `2026-10-16` check: grep -c 'branch="feat/${id##*-}-${slug}"' claude/skills/work-order/scripts/work-order.sh exit 0 output: 1
   - check: `grep -c 'branch="feat/${id##\*-}-${slug}"' claude/skills/work-order/scripts/work-order.sh` exit 0 expect /^1$/
-- [ ] `AC-H3` *(human)* WO-20261016-9fc7 check 3 passes on main (copied from WO-20261016-9fc7 check 3)
+- [x] `AC-H3` *(human)* WO-20261016-9fc7 check 3 passes on main (copied from WO-20261016-9fc7 check 3)
+  - observed `2026-10-16` check: make rolodex-check BASE=origin/main exit 0 output: python3 scripts/rolodex.py check --root . --base origin/main rolodex-check: 0 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H4` *(human)* WO-20261016-9fc7 is cancelled and superseded
+- [x] `AC-H4` *(human)* WO-20261016-9fc7 is cancelled and superseded
+  - observed `2026-10-16` check: bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-9fc7 --json | jq -r '.status + " " + (.superseded_by // "-")' exit 0 output: cancelled WO-20261016-e03c
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-9fc7 --json | jq -r '.status + " " + (.superseded_by // "-")'` exit 0 expect /^cancelled WO-/
-- [ ] `AC-H5` *(human)* no open ticket still depends on WO-20261016-9fc7
+- [x] `AC-H5` *(human)* no open ticket still depends on WO-20261016-9fc7
+  - observed `2026-10-16` check: grep -rlE '"WO-20261016-9fc7"' work-orders --include='WO-*.md' | xargs -r grep -L -E '"status": "(done|cancelled)"' | grep -v -- '-9fc7-' exit 1 output:
   - check: `grep -rlE '"WO-20261016-9fc7"' work-orders --include='WO-*.md' | xargs -r grep -L -E '"status": "(done|cancelled)"' | grep -v -- '-9fc7-'` exit 1
-- [ ] `AC-H6` *(human)* the diff holds only generated work-orders files
+- [x] `AC-H6` *(human)* the diff holds only generated work-orders files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan

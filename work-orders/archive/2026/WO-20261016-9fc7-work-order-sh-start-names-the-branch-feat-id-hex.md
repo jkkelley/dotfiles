@@ -4,7 +4,7 @@
   "slug": "work-order-sh-start-names-the-branch-feat-id-hex",
   "title": "work-order.sh start names the branch feat/<id hex>-<slug>, so a ticket whose slug matches a merged ticket's branch can still start",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-fb0c",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design15 cut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -23,10 +23,7 @@
   "depends_on": [
     "WO-20261016-e03c"
   ],
-  "blocks": [
-    "WO-20261016-94e2",
-    "WO-20261016-3d4d"
-  ],
+  "blocks": [],
   "ac_checks": [
     {
       "index": 1,
@@ -56,7 +53,8 @@
   "provides": [],
   "labels": [
     "line:inbox-triage"
-  ]
+  ],
+  "superseded_by": "WO-20261016-e03c"
 }
 ---
 
@@ -151,4 +149,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: start branch feat/<id hex>-<slug>, PR 318 merged; re-checked under WO-20261016-e03c
+- superseded by: `WO-20261016-e03c`
+
+No branch, no PR and no merge commit exist for this work order.
+
