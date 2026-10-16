@@ -4,15 +4,15 @@
   "slug": "golden-rules-block-carries-items-25-to-30",
   "title": "Golden rules block carries items 25 to 30",
   "type": "chore",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:42:28+00:00",
   "parent": "WO-20261016-949a",
   "branch": "feat/golden-rules-block-carries-items-25-to-30",
-  "pr": null,
-  "closed": null,
+  "pr": 152,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "owner: i approved of everything (brief BR-20261016-spec-check)",
@@ -63,8 +63,10 @@ claude/golden-rules.md and the dotfiles instruction files stop at item 24.
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* make golden-rules-check exits 0 on main with item 28 present
-- [ ] `AC-H2` *(human)* evidence: repro command and output written by claude/tools/artifact/artifact.sh new --key log to the artifact store, path in the PR body
+- [x] `AC-H1` *(human)* make golden-rules-check exits 0 on main with item 28 present
+  - observed `2026-10-16` make golden-rules-check rc=0 on main 8941c82, item 28 present: /home/luna/.local/state/zenith/log/2026/10/20261016-045258-golden-rules-check-main.txt
+- [x] `AC-H2` *(human)* evidence: repro command and output written by claude/tools/artifact/artifact.sh new --key log to the artifact store, path in the PR body
+  - observed `2026-10-16` evidence: /home/luna/.local/state/zenith/log/2026/10/20261016-045258-golden-rules-check-main.txt
 
 ## Test plan
 
