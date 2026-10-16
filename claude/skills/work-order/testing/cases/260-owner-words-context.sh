@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: 260-owner-words-context.sh
+# purpose: Assert work-order.sh new refuses a ticket minted without owner words or context.
+# inputs: env SKILL (skill root, default /skill); sourced assert.sh helpers
+# outputs: exit code 0 when every assertion passes, assertion lines on stdout
+# writes-to: scratch project dirs under $WORK (mktemp), removed with the test sandbox
+# cleanup: the sandbox container is discarded; nothing outside $WORK is touched
 # The reason this case exists.
 #
 # Owner, item 30: a job carries the owner's words verbatim and the full context

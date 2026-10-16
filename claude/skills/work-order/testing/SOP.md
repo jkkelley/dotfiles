@@ -32,7 +32,7 @@
 - [270-ac-check](#270-ac-check)
 - [280-approve-resolves-tools](#280-approve-resolves-tools)
 - [290-generated-views-untracked](#290-generated-views-untracked)
-- [The wo() defaults](#the-wo-defaults)
+- [The wo defaults](#the-wo-defaults)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: 270-ac-check.sh
+# purpose: Assert the check verb runs each acceptance criterion's scripted check and done refuses while one fails.
+# inputs: env SKILL (skill root, default /skill); sourced assert.sh helpers
+# outputs: exit code 0 when every assertion passes, assertion lines on stdout
+# writes-to: scratch project dirs under $WORK (mktemp), removed with the test sandbox
+# cleanup: the sandbox container is discarded; nothing outside $WORK is touched
 # The reason this case exists.
 #
 # Owner, item 30: every acceptance criterion is a scripted check with its exit
