@@ -1,0 +1,13 @@
+{
+  "$comment": "One entry per monitor (Design principles 101 item 27). Add a monitor by adding an entry here, never a new mechanism. Fields: id, make (the target, run from claude/workflow), args (VAR=value), interval_seconds, pane (label template), publishes (NATS subject).",
+  "monitors": [
+    {
+      "id": "seat-resources",
+      "make": "seat-resources-loop",
+      "args": {"LINE": "{line}"},
+      "interval_seconds": 60,
+      "pane": "{line}-resources",
+      "publishes": "res.{line}.{seat}"
+    }
+  ]
+}

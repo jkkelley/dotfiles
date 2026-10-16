@@ -9,6 +9,7 @@ RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:Z" -w
 
 .DEFAULT_GOAL := help
 include mk/line-watch.mk
+include mk/resources.mk
 .PHONY: help image test schema lint herdr-first compaction chain failover test-plan ci-job grid
 
 help: ## Show targets

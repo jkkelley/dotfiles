@@ -1,0 +1,13 @@
+{
+  "$comment": "Inputs for seat-resources.sh and mcp-orphans-clean.sh. Every key is overridable by an argument or SR_* env var (Design principles 101 item 17). Thresholds are the owner's 'be conscious of each seat cost' order, 2026-10-16 UTC.",
+  "seat_rss_mb": 2048,
+  "seat_cpu_pct": 150,
+  "floor_mb": 4096,
+  "interval_seconds": 60,
+  "agent_kind": "claude",
+  "nats_url": "127.0.0.1:4222",
+  "subject_prefix": "res",
+  "mcp_images": ["ghcr.io/jkkelley/jenkins-mcp"],
+  "mcp_process_patterns": ["kubernetes-mcp-server", "server-github", "context7-mcp", "notion-mcp-server"],
+  "subreapers": [1]
+}

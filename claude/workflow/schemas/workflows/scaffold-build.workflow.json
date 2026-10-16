@@ -41,7 +41,8 @@
     ],
     "allowed_paths": [
       "claude/skills/project-scaffold/"
-    ]
+    ],
+    "mcp": "none"
   },
   "gates": [
     {
