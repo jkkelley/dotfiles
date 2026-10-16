@@ -4,13 +4,13 @@
   "slug": "test-dag-state-t8-take-and-ship-scripts-for-n1-t",
   "title": "Test - dag-state T8 - Take and ship scripts for N1 to N3 and N6, N7, N10",
   "type": "test",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:07:31+00:00",
   "parent": "WO-20261016-41d0",
-  "branch": null,
+  "branch": "feat/test-dag-state-t8-take-and-ship-scripts-for-n1-t",
   "pr": null,
   "closed": null,
   "approval": {
@@ -63,8 +63,10 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+- [x] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
+  - observed `2026-10-16` TP-1 ran in podman: test_dag_take.sh printed ok for all cases, last line pass=29 fail=0, exit=0. Full output at /home/luna/.local/state/zenith/log/2026/10/20261016-090500-dag-state-t8-test.log
+- [x] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+  - observed `2026-10-16` Run output written by script with frontmatter to /home/luna/.local/state/zenith/log/2026/10/20261016-090500-dag-state-t8-test.log
 
 ## Test plan
 
