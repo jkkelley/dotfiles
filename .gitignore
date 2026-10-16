@@ -13,3 +13,6 @@ __pycache__/
 # Lavish Editor review sessions. Design surfaces for a single conversation -
 # the decisions they capture belong in the skill's own docs, not in git.
 .lavish/
+
+# artifact store link (claude/tools/artifact): the repo points, the store holds
+/.artifacts

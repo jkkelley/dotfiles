@@ -2421,6 +2421,11 @@ hd "the image carries git, and skill-sync still must not"
 check "no runnable line of skill-sync.sh names git" \
   "$([[ "$(grep -vE '^[[:space:]]*#' /repo/claude/tools/skill-sync.sh | grep -cE '\bgit\b')" -eq 0 ]]; echo $?)"
 
+# ── artifact store ─────────────────────────────────────────────────────────────
+# claude/tools/artifact carries its own suite; it runs here so the tools job in CI runs it too.
+hd "artifact store (claude/tools/artifact/tests/test_artifact.sh)"
+check "artifact.sh suite passes" "$(bash /repo/claude/tools/artifact/tests/test_artifact.sh >&2; echo $?)"
+
 # ── summary ────────────────────────────────────────────────────────────────────
 printf '\n=========================================\n'
 printf '  PASS %d   FAIL %d\n' "$PASS" "$FAIL"
