@@ -16,6 +16,7 @@
 #   line-clean <line>                       seat-down for every finished seat of the line
 #   line-status <line>                      one table: tab, slot, seat, agent, status. No model calls
 #   architect-up <line> [resume]           (re)start the architect in its pane with both flags; resume adds --continue
+#   line-reconcile <line>                  repair a line: unique numbered tabs, stash emptied, seats packed, no restarts
 #   line-adopt <line> <arch-pane> <seat=pane>...   migrate a live line into the grid without restarting any seat
 # env: WS (default $HERDR_WORKSPACE_ID), CWD (cwd for new panes), FORCE=1 (close an unfinished seat), DRY=1,
 #      GRID_STATE (default ~/.local/state/zenith/herdr-grid), GRID_RETRY_SLEEP (default 1)
@@ -319,7 +320,7 @@ cmd_line_clean() {
     while IFS=$'\t' read -r seat pane agent; do
       if [ -z "$seat" ] || [ "$seat" = "$FREE" ]; then continue; fi
       finished "$line" "$seat" "$pane" "$agent" && { FORCE=1 cmd_seat_down "$seat" "$line" || rc=1; }
-    done < <(jq -r '.[] | [.label, .pane, .agent] | @tsv' <<<"$slots")
+    done < <(jq -r '.[] | [(.label | if . == "" then "-" else . end), .pane, .agent] | @tsv' <<<"$slots")
   done < <(line_tabs "$line")
   # An overflow tab that was already empty (a seat closed by hand) is swept too.
   while read -r n tab; do [ -n "$n" ] && close_if_empty "$tab" "$n"; done < <(line_tabs "$line")
@@ -375,6 +376,60 @@ cmd_line_adopt() {
   log "line $line adopted: $arch architect, ${#panes[@]} seats"
 }
 
+# line-reconcile: repair a line whose tabs were opened by hand (two tabs both labelled "<line> 2", a stash tab, panes with
+# no label). Seats are only ever moved, never closed or restarted, so no process is interrupted (herdr agent list is the
+# same before and after). Order kept: tab 1 first, then the other tabs in the order herdr lists them, slot by slot.
+# What broke: 2026-10-16 the architect opened a second overflow tab by hand before seat-up existed, so line_tabs saw two
+#   tabs numbered 2 and find_free/seat-down could pick either. Why this fix: old tabs are renamed out of the numbering
+#   first, so the rebuilt tabs take clean numbers; a tab is closed only once it holds no agent.
+cmd_line_reconcile() {
+  local line="$1" t1 re tabs t seats=() names=() slots n i free1 p nm agents
+  re="$(jq -rn --arg l "$line" '$l | gsub("[^A-Za-z0-9_-]"; "\\\(.)")')"
+  t1="$(line_tabs "$line" | awk '$1 == 1 {print $2}')"
+  [ -n "$t1" ] || wf_die "line $line has no tab 1; run line-up first"
+  reflow "$t1" 1 || return 1
+  agents="$(hj agent list | jq -c '[(.result.agents // [])[] | {(.pane_id): .name}] | add // {}')" || return 1
+  tabs="$(hj tab list --workspace "$WS" | jq -r --arg r "^$re ([2-9]|[1-9][0-9]+|stash|old-.*)$" '.result.tabs[] | select(.label | test($r)) | .tab_id')"
+  for t in $tabs; do
+    # BREADCRUMB: an empty field between tabs is eaten by read (tab is whitespace in IFS), which shifted an unlabeled
+    #   agent pane's agent into the label column and skipped it (live run 2026-10-16: dag-state, bottlenecks, artifacts,
+    #   line-watch stayed behind). "-" stands for empty so every row has three fields.
+    while IFS=$'\t' read -r p lbl ag; do
+      [ "$ag" != "-" ] || continue
+      [ "$lbl" != "-" ] || lbl=""
+      nm="$lbl"; if [ -z "$nm" ] || [ "$nm" = "$FREE" ]; then nm="$(jq -r --arg p "$p" '.[$p] // empty' <<<"$agents")"; fi
+      [ -n "$nm" ] || { log "pane $p has an agent but no name; leaving it where it is"; continue; }
+      seats+=("$p"); names+=("$nm")
+    done < <(tab_slots "$t" | jq -r '.[] | [.pane, (.label | if . == "" then "-" else . end), (.agent | if . == "" then "-" else . end)] | @tsv')
+  done
+  i=0; for t in $tabs; do hj tab rename "$t" "$line old-$i" >/dev/null || return 1; i=$((i + 1)); done
+  # fill the free slots of tab 1 first, so a hole left by a finished seat is not wasted
+  i=0
+  while [ "$i" -lt "${#seats[@]}" ]; do
+    free1="$(seat_slots 1 "$(tab_slots "$t1")" | jq -r --arg f "$FREE" 'first(.[] | select(.label == $f) | .pane) // empty')"
+    [ -n "$free1" ] || break
+    hj pane move "${seats[i]}" --tab "$t1" --split down --target-pane "$free1" --ratio 0.5 --no-focus >/dev/null || return 1
+    hj pane close "$free1" >/dev/null || return 1
+    i=$((i + 1))
+  done
+  n=2
+  local rest=("${seats[@]:i}")
+  while [ "${#rest[@]}" -gt 0 ]; do
+    open_overflow "$line" "$n" "${rest[@]:0:9}" >/dev/null || return 1
+    rest=("${rest[@]:9}"); n=$((n + 1))
+  done
+  for ((i = 0; i < ${#seats[@]}; i++)); do hj pane rename "${seats[i]}" "${names[i]}" >/dev/null || return 1; done
+  # the old tabs now hold only free shells and unnamed non-agent panes; any that still holds an agent stays open
+  for t in $tabs; do
+    # herdr closes a tab itself when its last pane is moved out; closing it again would burn 3 retries on tab_not_found
+    hj tab list --workspace "$WS" | jq -e --arg t "$t" '.result.tabs | any(.tab_id == $t)' >/dev/null || continue
+    if tab_slots "$t" | jq -e 'all(.[]; .agent == "")' >/dev/null 2>&1; then hj tab close "$t" >/dev/null && log "closed old tab $t"
+    else log "old tab $t still holds an agent; left open"; fi
+  done
+  reflow "$t1" 1
+  log "line $line reconciled: ${#seats[@]} seats moved, none restarted"
+}
+
 main() {
   local c="${1:-}"; shift || true
   case "$c" in
@@ -385,6 +440,7 @@ main() {
     line-clean)  [ $# -ge 1 ] || wf_die "usage: line-clean <line>"; cmd_line_clean "$@" ;;
     line-status) [ $# -ge 1 ] || wf_die "usage: line-status <line>"; cmd_line_status "$@" ;;
     architect-up) [ $# -ge 1 ] || wf_die "usage: architect-up <line> [resume]"; cmd_architect_up "$@" ;;
+    line-reconcile) [ $# -ge 1 ] || wf_die "usage: line-reconcile <line>"; cmd_line_reconcile "$@" ;;
     line-adopt)  [ $# -ge 2 ] || wf_die "usage: line-adopt <line> <arch-pane> <seat=pane>..."; cmd_line_adopt "$@" ;;
     *) sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2; return 2 ;;
   esac

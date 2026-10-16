@@ -34,6 +34,7 @@ case "$1 $2" in
     t=$(jq -r --arg p "$4" '.result.panes[]|select(.pane_id==$p)|.tab_id' "$fx/panes.json"); cat "$fx/layout-${t//:/_}.json" ;;
   "pane split") echo $((n+1)) > "$fx/next"; echo "{\"result\":{\"pane\":{\"pane_id\":\"wT:p$n\"}}}" ;;
   "tab create") echo $((n+2)) > "$fx/next"; echo "{\"result\":{\"tab\":{\"tab_id\":\"wT:t$n\"},\"root_pane\":{\"pane_id\":\"wT:p$((n+1))\"}}}" ;;
+  "agent list") echo '{"result":{"agents":[{"pane_id":"wT:y2","name":"s9"}]}}' ;;
   "pane read") cat "$fx/read-${3//:/_}.txt" 2>/dev/null ;;
   *) echo '{"result":{"type":"ok"}}' ;;
 esac
@@ -123,6 +124,28 @@ jq '.result.panes += [range(0;3)|{pane_id:"wT:q\(.+1)",tab_id:"wT:t2",label:"fre
 has   "empty overflow tab is closed"            'tab close wT:t2'
 hasnt "tab 1 is never closed"                   'tab close wT:t1'
 hasnt "another line's tab is untouched"         'wT:t9'
+
+# ---- line-reconcile: two tabs both labelled "L 2" and a hole in tab 1 become unique numbered tabs, no seat closed
+mk_tab1 a b c d e free
+echo '{"result":{"tabs":[{"tab_id":"wT:t1","label":"L 1"},{"tab_id":"wT:t2","label":"L 2"},{"tab_id":"wT:t3","label":"L 2"},{"tab_id":"wT:t4","label":"L stash"}]}}' > "$T/fx/tabs.json"
+for tt in t2:x:s7 t3:y:s8 t4:z:; do IFS=: read -r id pfx nm <<<"$tt"
+  jq -n --arg p "wT:${pfx}1" '{result:{layout:{panes:[{pane_id:$p,rect:{x:0,y:0}}]}}}' > "$T/fx/layout-wT_$id.json"
+  jq --arg id "wT:$id" --arg p "wT:${pfx}1" --arg nm "$nm" '.result.panes += [{pane_id:$p,tab_id:$id,label:$nm,agent:(if $nm=="" then null else "claude" end)}]' "$T/fx/panes.json" > "$T/fx/p2" && mv "$T/fx/p2" "$T/fx/panes.json"
+done
+: > "$T/log"; $G line-reconcile L >/dev/null 2>&1
+has   "reconcile renames the duplicate tabs out of the numbering" 'tab rename wT:t2 L old-0'
+has   "reconcile fills tab 1's hole with the first overflow seat"   'pane move wT:x1 --tab wT:t1'
+hasnt "reconcile never closes a seat's pane"                       'pane close wT:x1'
+hasnt "reconcile never closes the second seat's pane"              'pane close wT:y1'
+# an unlabeled agent pane is found by its agent name and moved too (read ate the empty label field once)
+jq --arg id wT:t3 '.result.panes += [{pane_id:"wT:y2",tab_id:$id,label:"",agent:"claude"}]' "$T/fx/panes.json" > "$T/fx/p2" && mv "$T/fx/p2" "$T/fx/panes.json"
+jq '.result.layout.panes += [{pane_id:"wT:y2",rect:{x:0,y:20}}]' "$T/fx/layout-wT_t3.json" > "$T/fx/p2" && mv "$T/fx/p2" "$T/fx/layout-wT_t3.json"
+: > "$T/log"; $G line-reconcile L >/dev/null 2>&1
+has   "reconcile finds an unlabeled agent pane by agent name" 'pane rename wT:y2 s9'
+# with tab 1 full, the overflow seats get fresh numbered tabs (the stub is stateless, so tab 1 is rewritten full)
+jq '(.result.panes[]|select(.label=="free" and .tab_id=="wT:t1")|.label)="f"' "$T/fx/panes.json" > "$T/fx/p2" && mv "$T/fx/p2" "$T/fx/panes.json"
+: > "$T/log"; $G line-reconcile L >/dev/null 2>&1
+has   "reconcile gives overflow seats a fresh numbered tab"         'pane move wT:x1 --new-tab --workspace wT --label L 2'
 
 # ---- line-status: no model calls, one table
 mk_tab1 a free free free free free

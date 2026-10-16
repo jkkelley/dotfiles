@@ -45,10 +45,13 @@ test: schema lint herdr-first compaction chain failover test-plan ci-job ## Ever
 
 # ---- herdr 3x3 grid (docs/design/herdr-grid.md). Inputs are VAR=value; defaults live in config/project.json .workflow.herdr.grid
 need = $(if $($(1)),,$(error $(1)= is required))
-.PHONY: architect-up line-up seat-up seat-down line-clean line-status line-adopt grid
+.PHONY: line-reconcile architect-up line-up seat-up seat-down line-clean line-status line-adopt grid
 line-up: ## make line-up LINE=<name>: tab "<name> 1", architect left, 2x3 seat slots
 	$(call need,LINE)
 	@bash bin/herdr-grid.sh line-up "$(LINE)"
+line-reconcile: ## make line-reconcile LINE=: unique numbered tabs, seats packed, stash emptied, no restarts
+	$(call need,LINE)
+	@bash bin/herdr-grid.sh line-reconcile "$(LINE)"
 architect-up: ## make architect-up LINE= [RESUME=1]: (re)start the architect with bypass + Remote Control
 	$(call need,LINE)
 	@bash bin/herdr-grid.sh architect-up "$(LINE)" $(if $(RESUME),resume)
