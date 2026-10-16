@@ -11,7 +11,7 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-5597` | ready | p2 | WO-20261016-2d3e | [Deadman tests: stale heartbeat, bus down, fresh](WO-20261016-5597-deadman-tests-stale-heartbeat-bus-down-fresh.md) |
 | `WO-20261016-218b` | ready | p2 | WO-20261016-7ce0 | [Stuck-audit test: rows from a stream dump](WO-20261016-218b-stuck-audit-test-rows-from-a-stream-dump.md) |
 | `WO-20261016-c840` | ready | p2 | WO-20261016-230f | [Stuck-watch tick tests: idle, done-unmerged, dedupe, no-leak](WO-20261016-c840-stuck-watch-tick-tests-idle-done-unmerged-dedupe.md) |
-| `WO-20261016-2d3e` | ready | p2 | WO-20261016-230f | [deadman.sh and its systemd --user timer: stale heartbeat or down bus pages 'stuck-watch dead'](WO-20261016-2d3e-deadman-sh-and-its-systemd-user-timer-stale-hear.md) |
+| `WO-20261016-2d3e` | in-progress | p2 | WO-20261016-230f | [deadman.sh and its systemd --user timer: stale heartbeat or down bus pages 'stuck-watch dead'](WO-20261016-2d3e-deadman-sh-and-its-systemd-user-timer-stale-hear.md) |
 | `WO-20261016-7ce0` | ready | p2 | WO-20261016-230f | [stuck-audit.sh: every stuck node, duration and evidence path, from the LINE stream](WO-20261016-7ce0-stuck-audit-sh-every-stuck-node-duration-and-evi.md) |
 | `WO-20261016-2c98` | ready | p2 | WO-20261016-2d3e WO-20261016-7ce0 | [stuck-watch.mk and monitors.json entry: up, down, status, deadman-install, uninstall, clean](WO-20261016-2c98-stuck-watch-mk-and-monitors-json-entry-up-down-s.md) |
 | `WO-20261016-230f` | in-progress | p2 | - | [stuck-watch.sh: per-seat stuck codes with evidence onto line.<line>.stuck.<code>, ntfy with 30 min dedupe, heartbeat](WO-20261016-230f-stuck-watch-sh-per-seat-stuck-codes-with-evidenc.md) |
