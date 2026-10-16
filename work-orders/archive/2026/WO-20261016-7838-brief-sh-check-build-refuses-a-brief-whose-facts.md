@@ -4,15 +4,15 @@
   "slug": "brief-sh-check-build-refuses-a-brief-whose-facts",
   "title": "brief.sh check --build refuses a brief whose facts.worktree is a primary clone; the brief template carries facts.worktree_rule",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:07:34+00:00",
   "parent": "WO-20261016-4b6c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/brief-sh-check-build-refuses-a-brief-whose-facts",
+  "pr": 315,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design13 cut for ORD-0830 RR-orch-14; design approvals ruled done, ORD-0550 O4",
@@ -119,13 +119,17 @@ Test cases added to claude/workflow/tests/unit/test_a2a_brief.sh, reusing its re
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the a2a suite passes with the worktree cases
+- [x] `AC-H1` *(human)* the a2a suite passes with the worktree cases
+  - observed `2026-10-16` check: make -C claude/workflow -f a2a.mk a2a-test exit 0 output: make: Entering directory '/home/luna/worktrees/dotfiles-worktree-rule/claude/workflow' ok template brief is valid ok template result is valid ok result matches its brief ok AC2 brief with no acceptance_criteria is rejected ok brief with an empty acceptance_criteria is rejected ok an AC with no proof_kind is rejected ok an AC with an unknown proof_kind is rejected ok a prose brief is rejected ok AC3 done result with an unticked AC is rejected ok a ticked AC with empty proof is rejected ok a blocked result is not a finished result ok a result that skips a brief AC is rejected against its brief ok the status code map lists A2A-001 to A2A-004, PERM-MISSING and DESIGN-GAP ok a brief carrying A2A-004 is valid ok a draft-0 brief is not valid before migration ok AC1 draft-0 brief migrates and validates ok migration keeps the done token ok an unknown schema has no migration and fails loudly ok brief new from arguments
   - check: `make -C claude/workflow -f a2a.mk a2a-test` exit 0
-- [ ] `AC-H2` *(human)* every changed script has a rolodex header
+- [x] `AC-H2` *(human)* every changed script has a rolodex header
+  - observed `2026-10-16` check: make rolodex-check BASE=origin/main exit 0 output: python3 scripts/rolodex.py check --root . --base origin/main rolodex-check: 0 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H3` *(human)* the template carries the worktree rule
+- [x] `AC-H3` *(human)* the template carries the worktree rule
+  - observed `2026-10-16` check: jq -e '.facts.worktree_rule | test("primary clone")' claude/workflow/templates/a2a/brief.json exit 0 output: true
   - check: `jq -e '.facts.worktree_rule | test("primary clone")' claude/workflow/templates/a2a/brief.json` exit 0
-- [ ] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/(bin/brief.sh|templates/a2a/brief.json|tests/unit/test_a2a_brief.sh))$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/(bin/brief\.sh|templates/a2a/brief\.json|tests/unit/test_a2a_brief\.sh))$'` exit 1
 
 ## Test plan
