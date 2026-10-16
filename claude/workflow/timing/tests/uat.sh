@@ -24,7 +24,7 @@ log "UAT start line=$LINE consumer=$TM_CONSUMER"
 make -s -C "$WF" timing-up >> "$LOG" 2>&1 || { log "FAIL timing-up"; exit 1; }
 bash "$WF/bin/timed-run.sh" --node uat-slow --kind make --line "$LINE" --budget 1 -- sleep 3 >> "$LOG" 2>&1
 bash "$WF/bin/timed-run.sh" --node uat-hang --kind make --line "$LINE" --timeout 2 --retries 3 -- sleep 30 >> "$LOG" 2>&1; HRC=$?
-TO="$(last "line.$LSUB.timing.TIMEOUT")"; NTO="$(sw_js_get "$(jq -nc --arg s "line.$LSUB.event.node.timeout" '{last_by_subj:$s}')" | jq -r '.message.seq // 0')"
+TO="$(last "line.$LSUB.timing.TIMEOUT")"
 WOS="$(grep -rl --include='WO-*.md' 'Bottleneck: uat-hang TIMEOUT' "$TM_WO_PROJECT/work-orders" 2>/dev/null | wc -l)"
 [ "$HRC" = 124 ] && [ -n "$TO" ] && [ "$WOS" = 1 ] && AC[AC9]=pass || AC[AC9]=fail
 log "AC9 ${AC[AC9]}: hung step exit $HRC after 3 attempts, TIMEOUT on bus: $(jq -c '{node,attempts,timeout_s}' <<<"$TO" 2>/dev/null), work orders: $WOS"

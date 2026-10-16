@@ -102,6 +102,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-16` Correction: the evidence line above recorded a shellcheck failure in timing/tests/uat.sh (SC2034 unused NTO), not a test failure. Fixed; rerun make timing-test CASE='slow fast' in podman --network=none: pass=6 fail=0
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._
