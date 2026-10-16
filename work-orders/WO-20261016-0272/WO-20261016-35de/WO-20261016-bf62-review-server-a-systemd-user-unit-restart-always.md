@@ -4,7 +4,7 @@
   "slug": "review-server-a-systemd-user-unit-restart-always",
   "title": "review-server: a systemd --user unit (Restart=always) serves the review root from config/review.json; make -f review.mk review-server-up, -down, -status replace the architect's background http.server",
   "type": "feature",
-  "status": "draft",
+  "status": "ready",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "tool WO-20261016-8c45 (review-publish) is done on main; architect ruled design approvals done, ORD-0550 O4",
+    "at": "2026-10-16"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [
@@ -154,6 +158,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` infra-design23: approved, prerequisite tool WO-20261016-8c45 done on main (item 30)
 
 ## Outcome
 
