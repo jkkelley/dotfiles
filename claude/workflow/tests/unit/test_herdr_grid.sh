@@ -31,6 +31,7 @@ case "$1 $2" in
   "tab list") cat "$fx/tabs.json" ;;
   "pane list") cat "$fx/panes.json" ;;
   "pane layout")
+    [ -f "$fx/slow" ] && sleep 0.3
     t=$(jq -r --arg p "$4" '.result.panes[]|select(.pane_id==$p)|.tab_id' "$fx/panes.json"); cat "$fx/layout-${t//:/_}.json" ;;
   "pane split") echo $((n+1)) > "$fx/next"; echo "{\"result\":{\"pane\":{\"pane_id\":\"wT:p$n\"}}}" ;;
   "tab create") echo $((n+2)) > "$fx/next"; echo "{\"result\":{\"tab\":{\"tab_id\":\"wT:t$n\"},\"root_pane\":{\"pane_id\":\"wT:p$((n+1))\"}}}" ;;
@@ -82,6 +83,18 @@ has   "a plain claude seat gets bypass added"   'pane run wT:p1 claude --dangero
 has   "the Windows browser seat gets bypass after the cd" 'claude.exe --dangerously-skip-permissions --chrome'
 : > "$T/log"; $G seat-up L s3 "claude --dangerously-skip-permissions --remote-control x" >/dev/null 2>&1; rc=$?
 [ "$rc" != 0 ] && hasnt "a seat asking for Remote Control is refused before a slot is taken" 'pane rename' || bad "seat RC refused"
+
+# ---- seat-up with free slots in more than one tab: find_free must not die of SIGPIPE after printing the first hit
+# (live bug 2026-10-16T04:33Z: seat-up exit 1 with a free slot present). The stub is slow so head has quit before the next tab.
+mk_tab1 a free free free free free
+echo '{"result":{"tabs":[{"tab_id":"wT:t1","label":"L 1"},{"tab_id":"wT:t2","label":"L 2"},{"tab_id":"wT:t3","label":"L 3"}]}}' > "$T/fx/tabs.json"
+for tt in t2:q t3:r; do IFS=: read -r id pfx <<<"$tt"
+  jq -n --arg p "wT:${pfx}1" '{result:{layout:{panes:[{pane_id:$p,rect:{x:0,y:0}}]}}}' > "$T/fx/layout-wT_$id.json"
+  jq --arg id "wT:$id" --arg p "wT:${pfx}1" '.result.panes += [{pane_id:$p,tab_id:$id,label:"free"}]' "$T/fx/panes.json" > "$T/fx/p2" && mv "$T/fx/p2" "$T/fx/panes.json"
+done
+touch "$T/fx/slow"; : > "$T/log"; $G seat-up L zed >/dev/null 2>&1; rc=$?; rm -f "$T/fx/slow"
+[ "$rc" = 0 ] && ok "seat-up succeeds with free slots in several tabs" || bad "seat-up with several free tabs" "rc=$rc"
+has "and takes the first free slot of the first tab" 'pane rename wT:p2 zed'
 
 # ---- seat-up: slot order, no double claim, overflow
 mk_tab1 free free free free free free

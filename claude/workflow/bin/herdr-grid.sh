@@ -201,27 +201,33 @@ open_overflow() {
 }
 
 # find_free <line>: prints "<tab> <pane>" of the first free slot in tab order then slot order, else nothing.
+# BREADCRUMB: this ran as `while ...; done < <(line_tabs) | head -1`. With pipefail the loop got SIGPIPE when head quit
+#   after the first hit but the loop went on to query the next tab, so find_free exited 1 AFTER printing the right slot and
+#   cmd_claim returned 1 with no pane (seat-up exit 1 at Makefile:57, reported 2026-10-16T04:33Z; the hit was
+#   "wD9:t1 wD9:p2R"). Fix: return at the first hit, no pipe to head. Rejected: dropping pipefail, which hides real failures.
 find_free() {
-  local n tab slots
+  local n tab slots hit
   while read -r n tab; do
     [ -n "$n" ] || continue
     slots="$(seat_slots "$n" "$(tab_slots "$tab")")" || return 1
-    jq -r --arg t "$tab" --arg f "$FREE" 'first(.[] | select(.label == $f) | "\($t) \(.pane)") // empty' <<<"$slots"
-  done < <(line_tabs "$1") | head -1
+    hit="$(jq -r --arg t "$tab" --arg f "$FREE" 'first(.[] | select(.label == $f) | "\($t) \(.pane)") // empty' <<<"$slots")"
+    if [ -n "$hit" ]; then printf '%s\n' "$hit"; return 0; fi
+  done < <(line_tabs "$1")
 }
 
-# find_seat <seat> [line]: prints "<n> <tab> <pane> <line>" of the pane labelled <seat>, if any.
+# find_seat <seat> [line]: prints "<n> <tab> <pane> <line>" of the pane labelled <seat>, if any. Returns at the first hit.
 find_seat() {
-  local seat="$1" line="${2:-}" tabs n tab lbl s
+  local seat="$1" line="${2:-}" tabs n tab lbl s hit
   tabs="$(hj tab list --workspace "$WS")" || return 1
   while IFS=$'\t' read -r tab lbl; do
     [[ "$lbl" =~ ^(.+)\ ([0-9]+)$ ]] || continue
     [ -z "$line" ] || [ "${BASH_REMATCH[1]}" = "$line" ] || continue
     n="${BASH_REMATCH[2]}"
     s="$(seat_slots "$n" "$(tab_slots "$tab")")"
-    jq -r --arg s "$seat" --arg n "$n" --arg t "$tab" --arg l "${BASH_REMATCH[1]}" \
-      'first(.[] | select(.label == $s) | "\($n) \($t) \(.pane) \($l)") // empty' <<<"$s"
-  done < <(jq -r '.result.tabs[] | [.tab_id, .label] | @tsv' <<<"$tabs") | head -1
+    hit="$(jq -r --arg s "$seat" --arg n "$n" --arg t "$tab" --arg l "${BASH_REMATCH[1]}" \
+      'first(.[] | select(.label == $s) | "\($n) \($t) \(.pane) \($l)") // empty' <<<"$s")"
+    if [ -n "$hit" ]; then printf '%s\n' "$hit"; return 0; fi
+  done < <(jq -r '.result.tabs[] | [.tab_id, .label] | @tsv' <<<"$tabs")
 }
 
 cmd_claim() { # claim <line> <seat> [cmd]; prints the pane id
