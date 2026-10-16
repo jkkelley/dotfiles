@@ -16,5 +16,5 @@
     {"id": "AC1", "statement": "what must be true", "proof_kind": "command", "proof": "the command whose output ticks it"}
   ],
   "done_token": "DONE seat-name <pr-url>",
-  "output": {"result_file": "<path>/result.json"}
+  "output": {"result_file": "<path>/result.json", "state_file": "<path>/state.jsonl"}
 }
