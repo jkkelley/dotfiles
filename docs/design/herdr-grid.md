@@ -38,6 +38,7 @@ The implementation is one script, `claude/workflow/bin/herdr-grid.sh`, called by
 17. Inputs from config or arguments: every knob is a VAR=value on the Make target or a key under `.workflow.herdr.grid` in `config/project.json`, none is hard-coded.
 18. Schemas with acceptance criteria: the seat result for this work is a JSON document with `acceptance_criteria [{id, statement, proof_kind, proof}]`.
 19. Small tickets, no shared files: this change touches only `bin/herdr-grid.sh`, its test, the workflow Makefile, the config and this note.
+20. Worktree, branch, DAG, state as truth: this work ran in its own worktree on `feat/herdr-grid-layout`, and the seat-up DAG below plus the herdr layout read back on every call (nothing cached) are the source of truth, so a stopped run resumes from what herdr reports.
 
 ## Inventory
 
