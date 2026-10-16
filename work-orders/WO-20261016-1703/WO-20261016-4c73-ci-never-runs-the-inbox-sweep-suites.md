@@ -4,13 +4,13 @@
   "slug": "ci-never-runs-the-inbox-sweep-suites",
   "title": "CI never runs the inbox-sweep suites",
   "type": "bug",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:37:36+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/ci-never-runs-the-inbox-sweep-suites",
   "pr": null,
   "closed": null,
   "approval": {
@@ -60,8 +60,10 @@ make -C claude/workflow test (the CI claude/workflow job, skill-pr-gate.yml line
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* make -n -C claude/workflow test lists the inbox-sweep test-all call
-- [ ] `AC-H2` *(human)* suite ci-job ok in podman
+- [x] `AC-H1` *(human)* make -n -C claude/workflow test lists the inbox-sweep test-all call
+  - observed `2026-10-16` make -n -C claude/workflow inbox-sweep prints: make -s -C inbox-sweep test-all, then podman ... tests/run.sh --all
+- [x] `AC-H2` *(human)* suite ci-job ok in podman
+  - observed `2026-10-16` make -C claude/workflow ci-job: ok ci-job (podman)
 
 ## Test plan
 
