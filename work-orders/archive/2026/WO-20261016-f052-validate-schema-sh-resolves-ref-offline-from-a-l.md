@@ -4,15 +4,15 @@
   "slug": "validate-schema-sh-resolves-ref-offline-from-a-l",
   "title": "validate-schema.sh resolves $ref offline from a local registry of the repo schema files, keyed by $id",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:29:46+00:00",
   "parent": "WO-20261016-41d0",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/validate-schema-sh-resolves-ref-offline-from-a-l",
+  "pr": 284,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design10 cut for ORD-0830 RR-orch-14 and ORD-0921; design approvals ruled done, ORD-0550 O4",
@@ -129,15 +129,20 @@ Design, fixed: new claude/workflow/tools/schema_registry.py, stdlib + jsonschema
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the new cases pass in the pinned image with no network
+- [x] `AC-H1` *(human)* the new cases pass in the pinned image with no network
+  - observed `2026-10-16` check: podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work/claude/workflow -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash tests/unit/test_validate_schema_ref.sh exit 0 output: ok repo-ref: node bundle resolved offline ok roots: valid 0, invalid 1 ok unresolved: exit 2 REF-UNRESOLVED ok dup-id: exit 2 REF-DUP-ID ok fallback: resolver store used, registry missing exit 2
   - check: `podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work/claude/workflow -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash tests/unit/test_validate_schema_ref.sh` exit 0 expect /ok repo-ref: node bundle resolved offline/
-- [ ] `AC-H2` *(human)* the existing schema suite still passes
+- [x] `AC-H2` *(human)* the existing schema suite still passes
+  - observed `2026-10-16` check: make -C claude/workflow schema exit 0 output: make: Entering directory '/home/luna/.cache/wt-schema-reg/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 ok rejected: spec with no threshold -> 'context_threshold_percent' is a required property ok rejected: unknown agent field -> Additional properties are not allowed ('budget_usd' was unexpected) ok rejected: permissive record schema -> False was expected ok rejected: threshold out of range -> 0 is less than the minimum of 10 ok accepted: architect chain kimi-k3 -> opus -> codex-sol ok rejected: chain plus runtime/model -> {'role': 'architect', 'models': [{'id': 'kimi-k3', 'launcher': 'kimi-claude', 'h ok rejected: empty chain -> [] is too short ok rejected: no chain and no runtime/model ok rejected: link with no surface ok rejected: illegal herdr agent name -> 'Build Seat' does not match '^[a-z][a-z0-9_-]{0,31}$' ok rejected: unknown watcher-state field ok repo-ref: node bundle resolved offline ok roots: valid 0, invalid 1 ok unresolved: exit 2 REF-UNRESOLVED ok dup-id: exit 2 REF-DUP-ID ok fallback: resolver store used, registry missing exit 2 ok workflow-schemas: declarations valid, thresholds required, records strict make: Leaving directory '/home/luna/.cache/wt-schema-reg/claude/workflow'
   - check: `make -C claude/workflow schema` exit 0
-- [ ] `AC-H3` *(human)* shellcheck clean
+- [x] `AC-H3` *(human)* shellcheck clean
+  - observed `2026-10-16` check: make -C claude/workflow lint exit 0 output: make: Entering directory '/home/luna/.cache/wt-schema-reg/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 make: Leaving directory '/home/luna/.cache/wt-schema-reg/claude/workflow'
   - check: `make -C claude/workflow lint` exit 0
-- [ ] `AC-H4` *(human)* validate-schema.sh calls the shared helper
+- [x] `AC-H4` *(human)* validate-schema.sh calls the shared helper
+  - observed `2026-10-16` check: grep -c schema_registry.py claude/workflow/tools/validate-schema.sh exit 0 output: 2
   - check: `grep -c schema_registry.py claude/workflow/tools/validate-schema.sh` exit 0 expect /^[1-9]/
-- [ ] `AC-H5` *(human)* the diff holds only the four named files and work-orders files
+- [x] `AC-H5` *(human)* the diff holds only the four named files and work-orders files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/tools/schema_registry[.]py|claude/workflow/tools/validate-schema[.]sh|claude/workflow/tests/unit/test_validate_schema_ref[.]sh|claude/workflow/tests/unit/test_workflow_schemas[.]sh)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/tools/schema_registry[.]py|claude/workflow/tools/validate-schema[.]sh|claude/workflow/tests/unit/test_validate_schema_ref[.]sh|claude/workflow/tests/unit/test_workflow_schemas[.]sh)$'` exit 1
 
 ## Test plan
