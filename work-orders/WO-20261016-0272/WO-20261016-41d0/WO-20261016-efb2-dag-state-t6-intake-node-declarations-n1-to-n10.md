@@ -21,7 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261016-acde"
+    "WO-20261016-acde",
+    "WO-20261016-f052"
   ],
   "blocks": [
     "WO-20261016-e118",
@@ -157,6 +158,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` infra-design10 (ORD-0921 E3): depends on WO-20261016-f052 - validate-schema.sh resolves $ref offline; seat dag-t6b DESIGN-GAP RefResolutionError under --network=none (seats/dag-t6b.result.json)
 
 ## Outcome
 

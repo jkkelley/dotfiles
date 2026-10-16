@@ -31,8 +31,13 @@
       "required": ["runtime", "image"],
       "properties": {
         "runtime": { "const": "podman" },
-        "image": { "description": "Pinned by digest (dotfiles Rule 15); a floating tag is not the image that was reviewed.", "type": "string", "pattern": "^[a-z0-9][a-z0-9._/:-]*@sha256:[0-9a-f]{64}$" }
-      }
+        "image": { "description": "A registry image pinned by digest (dotfiles Rule 15), or a locally built localhost/<name>:<tag> with build and containerfile (RR-orch-18: a localhost digest is never used).", "type": "string" },
+        "build": { "description": "The command that builds the local image tag.", "type": "string", "minLength": 1 },
+        "containerfile": { "description": "Project-relative path of the Containerfile; every FROM in it is digest-pinned.", "type": "string", "minLength": 1 }
+      },
+      "if": { "properties": { "image": { "type": "string", "pattern": "^localhost/" } }, "required": ["image"] },
+      "then": { "properties": { "image": { "pattern": "^localhost/[a-z0-9._/-]+:[A-Za-z0-9._-]+$" } }, "required": ["build", "containerfile"] },
+      "else": { "properties": { "image": { "pattern": "^[a-z0-9][a-z0-9._/:-]*@sha256:[0-9a-f]{64}$" } } }
     },
     "out_of_scope": {
       "description": "What full integration CI covers instead, so the plan stays small.",

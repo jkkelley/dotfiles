@@ -20,7 +20,9 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [],
+  "depends_on": [
+    "WO-20261016-f4a0"
+  ],
   "blocks": [],
   "ac_checks": [
     {
@@ -153,6 +155,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` infra-design10: edge to WO-20261016-f4a0 added, both touch claude/workflow/Makefile (seats/run-pullnever.result.json)
 
 ## Outcome
 
