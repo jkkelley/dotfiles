@@ -4,14 +4,14 @@
   "slug": "restore-pr-242-rerun-stale-red-on-main-commit-48",
   "title": "Restore PR 242 rerun-stale-red on main: commit 4817abc of PR 240 reverted all nine of its files",
   "type": "bug",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T08:49:30+00:00",
   "parent": "WO-20261016-fb0c",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/restore-pr-242-rerun-stale-red-on-main-commit-48",
+  "pr": 262,
   "closed": null,
   "approval": {
     "via": "override",
@@ -130,15 +130,20 @@ Who it unblocks: WO-20261016-fb99 (infra-design6, autofix) depends on WO-2026101
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the nine files equal PR 242's merge commit
+- [x] `AC-H1` *(human)* the nine files equal PR 242's merge commit
+  - observed `2026-10-16` check: git diff --quiet d478078 HEAD -- claude/workflow/docs/pr-process/pr-process.md claude/workflow/docs/pr-process/pr-process.spec.xml claude/workflow/pr-flow/bin/pr-flow-consume.sh claude/workflow/pr-flow/config/pr-flow.json claude/workflow/pr-flow/pr-flow.mk claude/workflow/pr-flow/schemas/pr-flow-record.schema.json claude/workflow/pr-flow/tests/records.test.sh claude/workflow/pr-flow/tests/rerun-stale-red.test.sh work-orders/archive/2026/WO-20261016-5082-pr-flow-sweep-verb-rerun-stale-red-once-per-main.md exit 0 output:
   - check: `git diff --quiet d478078 HEAD -- claude/workflow/docs/pr-process/pr-process.md claude/workflow/docs/pr-process/pr-process.spec.xml claude/workflow/pr-flow/bin/pr-flow-consume.sh claude/workflow/pr-flow/config/pr-flow.json claude/workflow/pr-flow/pr-flow.mk claude/workflow/pr-flow/schemas/pr-flow-record.schema.json claude/workflow/pr-flow/tests/records.test.sh claude/workflow/pr-flow/tests/rerun-stale-red.test.sh work-orders/archive/2026/WO-20261016-5082-pr-flow-sweep-verb-rerun-stale-red-once-per-main.md` exit 0
-- [ ] `AC-H2` *(human)* the stale-red verb is back in the sweep
+- [x] `AC-H2` *(human)* the stale-red verb is back in the sweep
+  - observed `2026-10-16` check: grep -c stale_red_pr claude/workflow/pr-flow/bin/pr-flow-consume.sh exit 0 output: 3
   - check: `grep -c stale_red_pr claude/workflow/pr-flow/bin/pr-flow-consume.sh` exit 0 expect /^[1-9]/
-- [ ] `AC-H3` *(human)* the restored suites pass
+- [x] `AC-H3` *(human)* the restored suites pass
+  - observed `2026-10-16` check: make -C claude/workflow pr-flow-test CASES="rerun-stale-red records consume" exit 0 output: make: Entering directory '/home/luna/.cache/wt-restore242/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 ok rerun-stale-red ok records ok consume make: Leaving directory '/home/luna/.cache/wt-restore242/claude/workflow'
   - check: `make -C claude/workflow pr-flow-test CASES="rerun-stale-red records consume"` exit 0 expect /ok rerun-stale-red/
-- [ ] `AC-H4` *(human)* pr-flow scripts stay shellcheck clean
+- [x] `AC-H4` *(human)* pr-flow scripts stay shellcheck clean
+  - observed `2026-10-16` check: make -C claude/workflow pr-flow-lint exit 0 output: make: Entering directory '/home/luna/.cache/wt-restore242/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 make: Leaving directory '/home/luna/.cache/wt-restore242/claude/workflow'
   - check: `make -C claude/workflow pr-flow-lint` exit 0
-- [ ] `AC-H5` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H5` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` check command exits 1 by its own regex defect: the group is anchored with $ so the work-orders/ alternative matches only the bare directory. Diff (git diff --name-only origin/main...HEAD) holds the eight In files, the restored 5082 archive file and this ticket file only; nothing outside In
   - check: `bash -c \!\ git\ diff\ --name-only\ origin/main...HEAD\ \|\ grep\ -vE\ \'\^\(work-orders/\|claude/workflow/\(pr-flow/\(bin/pr-flow-consume\\.sh\|pr-flow\\.mk\|config/pr-flow\\.json\|schemas/pr-flow-record\\.schema\\.json\|tests/\(records\|rerun-stale-red\)\\.test\\.sh\)\|docs/pr-process/pr-process\\.\(md\|spec\\.xml\)\)\)\$\'` exit 0
 
 ## Test plan
