@@ -43,6 +43,8 @@ Prose is for the owner only.
 | FB-007 | herdr unreachable; read seats from the process table: herdr -> pgrep -af claude and /proc/<pid>/cwd | nobody when rc 0, orchestrator when not |
 | FB-008 | make target failed; ran the script directly: make target -> the wrapped script directly | nobody when rc 0, orchestrator when not |
 | FALLBACK | primary failed, fallback ran, rc is the fallback's (`timed-run.sh --fallback`, catalog `config/fallbacks.json`) | nobody when rc 0, orchestrator when not |
+| MAIN-DRIFT | main-clone-guard.sh: a primary clone is off its branch, behind, dirty or diverged, so every seat calling its tools runs stale code | orchestrator breaks glass back to main (item 33) and finds the seat that ran start there; seat-up refuses until it clears |
+| LW-MAIN-DRIFT | the line sweep saw MAIN-DRIFT on the primary clone (one event per new drift line) | orchestrator, as MAIN-DRIFT |
 
 A2A-004 is Design principles 101 item 31 (owner, 2026-10-16 UTC): a claim without a reproduction or clear screenshot is dropped, and the node checklist that let it through is the defect.
 
