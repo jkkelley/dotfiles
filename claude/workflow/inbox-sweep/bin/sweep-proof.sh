@@ -111,16 +111,15 @@ orphan_card() {
   local verdict="$1" id titles
   id="IS-$run-sweep-B-CLEAN-ORPHAN-TAB"
   titles="$(printf '%s' "$verdict" | jq -r '(.orphan_tabs // []) | map(tostring) | join("; ")')"
-  mkdir -p "$(dirname "$CARDS")"
-  [ -f "$CARDS" ] || echo '{"title":"Inbox sweep","items":[]}' >"$CARDS"
-  if jq -e --arg id "$id" '.items | any(.id == $id)' "$CARDS" >/dev/null; then
+  if [ -f "$CARDS" ] && jq -e --arg id "$id" '.items | any(.id == $id)' "$CARDS" >/dev/null; then
     log "orphan card $id already present"
     return 0
   fi
-  sweep_json_set "$CARDS" '.items += [{id:$id, about:("Inbox sweep " + $run + ": CLEAN-ORPHAN-TAB"),
+  # sweep-cards.sh owns questions.json (B21e); add merges by id, so a rerun adds nothing.
+  jq -cn --arg id "$id" --arg run "$run" --arg t "${titles:-none read}" '{id:$id, about:("Inbox sweep " + $run + ": CLEAN-ORPHAN-TAB"),
       decide:("A seat tab is open in Chrome outside any Claude group, so no tool can close it. Close it yourself. Tab titles: " + $t),
       options:[{label:"Closed it",then:"Orchestrator reruns sweep-proof.sh verify"},{label:"Leave it",then:"The tab stays open and the run stays not clean"}],
-      rec:0, asked:$at}]' --arg id "$id" --arg run "$run" --arg t "${titles:-none read}" --arg at "$(sweep_now)"
+      rec:0}' | SWEEP_CARDS_FILE="$CARDS" bash "$HERE/sweep-cards.sh" add >/dev/null
   log "orphan card $id written"
 }
 
