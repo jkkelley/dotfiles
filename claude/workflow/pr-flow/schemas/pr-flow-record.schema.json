@@ -8,8 +8,8 @@
   "required": ["id", "kind", "code", "ticket", "at", "seat", "line"],
   "properties": {
     "id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[a-z0-9.]+-[0-9a-f]{8}$"},
-    "kind": {"enum": ["pr.opened", "ci.passed", "ci.failed", "merged", "already-merged", "held", "merge.conflict", "blocked", "verified", "rejected", "regen"]},
-    "code": {"enum": ["100", "201", "422", "200", "0", "3", "409", "423", "REGEN"]},
+    "kind": {"enum": ["pr.opened", "ci.passed", "ci.failed", "merged", "already-merged", "held", "merge.conflict", "blocked", "verified", "rejected", "regen", "ci.rerun"]},
+    "code": {"enum": ["100", "201", "422", "200", "0", "3", "409", "423", "REGEN", "RERUN"]},
     "ticket": {"type": "string", "minLength": 1},
     "pr": {"type": "integer", "minimum": 1},
     "sha": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"},
