@@ -4,13 +4,13 @@
   "slug": "test-ci-producer-ci-events-sh-publishes-github-a",
   "title": "Test - CI producer: ci-events.sh publishes GitHub Actions run start and end to the bus",
   "type": "test",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:05:04+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
+  "branch": "feat/test-ci-producer-ci-events-sh-publishes-github-a",
   "pr": null,
   "closed": null,
   "approval": {
@@ -63,8 +63,10 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+- [x] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make -C claude/workflow timing-test CASE=ci-events exit 0, pass=4 fail=0: ok a new run publishes ci start once; ok a completed run publishes ci end with duration_s once; ok ci-events is idempotent (plan text has 2 spaces after ok, output has 3; same words)
+- [x] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+  - observed `2026-10-16` run output written by artifact.sh with frontmatter: /home/luna/.local/state/zenith/log/2026/10/20261016-080140-wo-e709-ci-events-test.log
 
 ## Test plan
 
