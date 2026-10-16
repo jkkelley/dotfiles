@@ -1,0 +1,372 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "inbox-sweep.send-result.schema.json",
+  "title": "LinkedIn send seat result",
+  "description": "One send seat's result for one approved reply. Written by the seat, validated by reply-send.sh (L11). Codes are in docs/design/linkedin-reply.spec.xml codes. BREADCRUMB: the Send click is the one step that is never retried (rule exactly-once), so the schema makes a second send unrepresentable: send_clicked_at is one timestamp or null, never an array, send_clicks is 0 or 1, additionalProperties is false so no send_clicked_at_2 can be added, and RP-SENT requires exactly one click. A schema that only asked for 'at least one click' would let a retry loop pass validation. Cost: a seat that clicked twice cannot report it here and must stop with RP-UNPROVEN, which sends the thread to a read-only re-check.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "thread_url",
+    "approval_file",
+    "sha256",
+    "status",
+    "started_at",
+    "finished_at",
+    "confirmed_at",
+    "send_clicks",
+    "send_clicked_at",
+    "typed_attempts",
+    "box_empty_at_end",
+    "readback_equals_file",
+    "proof",
+    "errors",
+    "tab_closed"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,63}$"
+    },
+    "thread_url": {
+      "type": "string",
+      "pattern": "^https://www\\.linkedin\\.com/messaging/thread/[^\\s]+$"
+    },
+    "approval_file": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The one approval file the seat was given."
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "status": {
+      "enum": [
+        "RP-SENT",
+        "RP-ALREADY-SENT",
+        "RP-TEXT-MISMATCH",
+        "RP-NO-BROWSER",
+        "RP-NO-RECIPIENT",
+        "RP-SIGNED-OUT",
+        "RP-DENIED-CLASSIFIER",
+        "RP-UNPROVEN",
+        "RP-FAILED-SEAT"
+      ]
+    },
+    "started_at": {
+      "$ref": "#/$defs/utc"
+    },
+    "finished_at": {
+      "$ref": "#/$defs/utc"
+    },
+    "confirmed_at": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/utc"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "UTC time of the owner's own line; null when the seat ended before it."
+    },
+    "send_clicks": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "send_clicked_at": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/utc"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "One timestamp or null. Never a list."
+    },
+    "typed_attempts": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "box_empty_at_end": {
+      "type": "boolean",
+      "description": "The box held no text when the seat ended; true after a send."
+    },
+    "readback_equals_file": {
+      "type": "boolean"
+    },
+    "proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "readback_path",
+        "token_path",
+        "screenshot_path"
+      ],
+      "properties": {
+        "readback_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "token_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "screenshot_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "at",
+          "step",
+          "message"
+        ],
+        "properties": {
+          "at": {
+            "$ref": "#/$defs/utc"
+          },
+          "step": {
+            "type": "string",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "tab_closed": {
+      "type": "boolean"
+    },
+    "tab_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "anchor_reused",
+        "tabs_opened",
+        "closed_anchor_last"
+      ],
+      "properties": {
+        "anchor_reused": {
+          "type": "boolean"
+        },
+        "tabs_opened": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "closed_anchor_last": {
+          "type": "boolean"
+        }
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "RP-SENT"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "send_clicks": {
+            "const": 1
+          },
+          "send_clicked_at": {
+            "$ref": "#/$defs/utc"
+          },
+          "confirmed_at": {
+            "$ref": "#/$defs/utc"
+          },
+          "readback_equals_file": {
+            "const": true
+          },
+          "box_empty_at_end": {
+            "const": true
+          },
+          "proof": {
+            "properties": {
+              "readback_path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "token_path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "screenshot_path": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "RP-UNPROVEN"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "send_clicks": {
+            "const": 1
+          },
+          "send_clicked_at": {
+            "$ref": "#/$defs/utc"
+          },
+          "errors": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "RP-ALREADY-SENT",
+              "RP-TEXT-MISMATCH",
+              "RP-NO-BROWSER",
+              "RP-NO-RECIPIENT",
+              "RP-SIGNED-OUT",
+              "RP-FAILED-SEAT"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "send_clicks": {
+            "const": 0
+          },
+          "send_clicked_at": {
+            "type": "null"
+          },
+          "box_empty_at_end": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "RP-DENIED-CLASSIFIER"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "send_clicks": {
+            "const": 0
+          },
+          "send_clicked_at": {
+            "type": "null"
+          },
+          "errors": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "RP-TEXT-MISMATCH",
+              "RP-NO-BROWSER",
+              "RP-NO-RECIPIENT",
+              "RP-SIGNED-OUT",
+              "RP-FAILED-SEAT",
+              "RP-UNPROVEN"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "errors": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "send_clicks": {
+            "const": 0
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "send_clicked_at": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "send_clicks": {
+            "const": 1
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "send_clicked_at": {
+            "$ref": "#/$defs/utc"
+          },
+          "confirmed_at": {
+            "$ref": "#/$defs/utc"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "utc": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    }
+  }
+}

@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-b16-send-seat-brief-declaration-and-",
   "title": "Inbox sweep B16 - send seat brief, declaration and send-result schema",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T03:03:20+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-b16-send-seat-brief-declaration-and-",
   "pr": null,
   "closed": null,
   "approval": {
@@ -67,10 +67,14 @@ A send seat needs a brief naming one file and one thread, and a result contract 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the brief names one file and one thread only (grep in test)
-- [ ] `AC-H2` *(human)* the schema refuses a result with two sends (fixture)
-- [ ] `AC-H3` *(human)* the declaration launcher is claude-win-chrome with bypass (make -C claude/workflow schema green)
-- [ ] `AC-H4` *(human)* the brief makes the seat wait for the owner's own line before typing (grep in test)
+- [x] `AC-H1` *(human)* the brief names one file and one thread only (grep in test)
+  - observed `2026-10-16` send-seat suite: brief names exactly one 'Approval file:' and one 'Thread URL:' line, hardcodes no URL or send- path, states 'It is given no other file and no other thread'
+- [x] `AC-H2` *(human)* the schema refuses a result with two sends (fixture)
+  - observed `2026-10-16` send-seat suite: 3 two-send fixtures (array, send_clicks 2, extra field) plus 11 other invalid fixtures all refused; 9 status-code fixtures validate
+- [x] `AC-H3` *(human)* the declaration launcher is claude-win-chrome with bypass (make -C claude/workflow schema green)
+  - observed `2026-10-16` make -C claude/workflow schema green: declaration models == [claude-win-chrome]; project.json link carries --chrome and --dangerously-skip-permissions (send-seat suite)
+- [x] `AC-H4` *(human)* the brief makes the seat wait for the owner's own line before typing (grep in test)
+  - observed `2026-10-16` send-seat suite: wait-for-owner-line, open thread, type, click ordered by line number; 'Until that line arrives the seat types nothing into LinkedIn' grep ok; mutation caught
 
 ## Test plan
 
