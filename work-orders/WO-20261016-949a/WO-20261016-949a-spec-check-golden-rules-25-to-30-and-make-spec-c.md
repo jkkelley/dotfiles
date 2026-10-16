@@ -4,7 +4,7 @@
   "slug": "spec-check-golden-rules-25-to-30-and-make-spec-c",
   "title": "Spec check - golden rules 25 to 30 and make spec-check",
   "type": "feature",
-  "status": "draft",
+  "status": "ready",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "owner: i approved of everything (brief BR-20261016-spec-check)",
+    "at": "2026-10-16"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
