@@ -37,7 +37,7 @@
       <file path="claude/workflow/tools/ci-select.sh" for="make test change selection"/>
       <file path="claude/workflow/tests/container/Containerfile" for="the pinned test image"/>
     </reuses>
-    <out-of-scope>Sending anything, including an approved LinkedIn draft (design D7). Scheduling (design D5).</out-of-scope>
+    <out-of-scope>Sending anything, including an approved LinkedIn draft (design D7); that path is specified in linkedin-reply.spec.xml, one file per concern so every spec stays at 1000 lines or fewer. Scheduling (design D5).</out-of-scope>
   </meta>
 
   <!-- 2. rules -->
