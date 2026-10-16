@@ -4,14 +4,14 @@
   "slug": "timed-run-every-target-of-claude-workflow-makefi",
   "title": "timed-run: every target of claude/workflow/Makefile runs through the timing wrapper",
   "type": "chore",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:05:42+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/timed-run-every-target-of-claude-workflow-makefi",
+  "pr": 265,
   "closed": null,
   "approval": {
     "via": "override",
@@ -71,9 +71,12 @@ Item 37 amended, owner 2026-10-16 UTC: "time out everything logically, you'll ID
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `grep -c '$(TIMED)' claude/workflow/Makefile` equals the number of wrapped targets listed in the PR body (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `make -n` of every wrapped target of claude/workflow/Makefile prints `timed-run.sh --node <target> --kind make` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* with the bus down (no NATS on the port) a wrapped target exits with its own exit code and prints only a WARN line (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `grep -c '$(TIMED)' claude/workflow/Makefile` equals the number of wrapped targets listed in the PR body (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` cmd: grep -cF "$(TIMED)" claude/workflow/Makefile; exit 0; output 24 (one definition line is not counted: it reads TIMED =); 24 wrapped targets listed in the PR body. Note: the literal "grep -c '$(TIMED)'" form prints 0 because BRE reads $( oddly; the -F and TP-1 [$][(]TIMED[)] forms both print 24.
+- [x] `AC-H2` *(human)* `make -n` of every wrapped target of claude/workflow/Makefile prints `timed-run.sh --node <target> --kind make` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` cmd: make -n <target> [VAR=x] for all 24 wrapped targets, in podman; exit 0 each; every output contains "timed-run.sh --node <target> --kind make" (24 ok, 0 FAIL).
+- [x] `AC-H3` *(human)* with the bus down (no NATS on the port) a wrapped target exits with its own exit code and prints only a WARN line (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` cmd: podman run --network=none ... SW_NATS_URL=127.0.0.1:1 bash claude/workflow/bin/timed-run.sh --node probe --kind make -- true; exit 0; output: "WARN bus unreachable, start of probe not published", "WARN bus unreachable, end of probe not published", rc=0. make -C claude/workflow test: exit 0, ok workflow line.
 
 ## Test plan
 
