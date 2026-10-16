@@ -16,6 +16,8 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-5f8d` | ready | p1 | WO-20261016-002d | [Inbox sweep V1 - integer schema_version for run.json with its migration](WO-20261016-5f8d-inbox-sweep-v1-integer-schema-version-for-run-js.md) |
 | `WO-20261016-67ab` | ready | p1 | WO-20261016-002d | [Inbox sweep V2 - integer schema_version for summary.json with its migration](WO-20261016-67ab-inbox-sweep-v2-integer-schema-version-for-summar.md) |
 | `WO-20261016-870d` | ready | p1 | WO-20261016-002d | [Inbox sweep V3 - integer schema_version for R7-verdict.json with its migration](WO-20261016-870d-inbox-sweep-v3-integer-schema-version-for-r7-ver.md) |
+| `WO-20261016-1b25` | ready | p1 | - | [Inbox sweep send-seat suite asserts the batch brief from B17d](WO-20261016-1b25-inbox-sweep-send-seat-suite-asserts-the-batch-br.md) |
+| `WO-20261016-d9f4` | ready | p1 | - | [Inbox sweep suites preflight, init and watch read per-node steps and checklist files](WO-20261016-d9f4-inbox-sweep-suites-preflight-init-and-watch-read.md) |
 | `WO-20261016-cbb4` | ready | p1 | WO-20261016-5b59 | [Test B21e - suite cards on main after the build merges](WO-20261016-cbb4-test-b21e-suite-cards-on-main-after-the-build-me.md) |
 | `WO-20261016-4794` | ready | p1 | WO-20261016-002d | [Test B21f2 - suite controller on main after the build merges](WO-20261016-4794-test-b21f2-suite-controller-on-main-after-the-bu.md) |
 | `WO-20261016-56c1` | ready | p1 | WO-20261016-5f8d | [Test V1 - suite migrate on main after the build merges](WO-20261016-56c1-test-v1-suite-migrate-on-main-after-the-build-me.md) |
