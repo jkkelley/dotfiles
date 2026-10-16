@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "zenith.a2a.result.v1",
+  "title": "Agent to agent result",
+  "description": "What a receiver hands back for a zenith.a2a.brief.v1. A done result ticks every acceptance criterion with its proof; an unticked criterion makes a done result invalid. A blocked result may leave criteria unticked but must say why.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "id", "at", "kind", "status_code", "from", "to", "subject", "brief_id", "status", "facts", "actions", "reply", "refs", "acceptance_criteria", "done_token"],
+  "properties": {
+    "schema": {"const": "zenith.a2a.result.v1"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "id": {"type": "string", "minLength": 1},
+    "at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "kind": {"const": "notice"},
+    "status_code": {"type": "string", "pattern": "^A2A-[0-9]{3}$", "description": "A2A-002 done, A2A-003 blocked."},
+    "from": {"type": "object", "required": ["name", "role"], "properties": {"name": {"type": "string", "minLength": 1}, "role": {"type": ["string", "null"]}}},
+    "to": {"type": "object", "required": ["name"], "properties": {"name": {"type": "string", "minLength": 1}, "role": {"type": ["string", "null"]}, "pane": {"type": ["string", "null"]}, "session": {"type": ["string", "null"]}}},
+    "subject": {"type": "string", "minLength": 1},
+    "brief_id": {"type": "string", "minLength": 1, "description": "The id of the brief this answers."},
+    "status": {"enum": ["done", "blocked"]},
+    "facts": {"type": "object"},
+    "actions": {"type": "array", "items": {"type": "string"}, "description": "What the receiver did, in order."},
+    "reply": {"type": "null"},
+    "refs": {"type": "array", "items": {"type": "string"}},
+    "blockers": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "acceptance_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "ticked", "proof_kind", "proof"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^AC[0-9]+$"},
+          "ticked": {"type": "boolean"},
+          "proof_kind": {"enum": ["command", "file", "url", "screenshot"]},
+          "proof": {"type": "string", "description": "The evidence itself: command output, file path, url, screenshot path. Empty only while unticked."}
+        },
+        "if": {"properties": {"ticked": {"const": true}}},
+        "then": {"properties": {"proof": {"minLength": 1}}}
+      }
+    },
+    "done_token": {"type": "string", "minLength": 1, "description": "The exact final line the receiver ended with."}
+  },
+  "if": {"properties": {"status": {"const": "done"}}},
+  "then": {"properties": {"acceptance_criteria": {"items": {"properties": {"ticked": {"const": true}}}}}},
+  "else": {"required": ["blockers"], "properties": {"blockers": {"minItems": 1}}}
+}

@@ -1,0 +1,20 @@
+{
+  "schema": "zenith.a2a.brief.v1",
+  "version": "1.0.0",
+  "id": "BR-REPLACE-ME",
+  "at": "2026-01-01T00:00:00Z",
+  "kind": "request",
+  "status_code": "A2A-001",
+  "from": {"name": "architect", "role": null},
+  "to": {"name": "seat-name", "role": null},
+  "subject": "one line: what this seat builds",
+  "facts": {"worktree": "<path>", "branch": "<branch>", "reuse": []},
+  "actions": ["first step the seat takes"],
+  "reply": {"required": true, "format": "result JSON valid against zenith.a2a.result.v1 written to output.result_file"},
+  "refs": [],
+  "acceptance_criteria": [
+    {"id": "AC1", "statement": "what must be true", "proof_kind": "command", "proof": "the command whose output ticks it"}
+  ],
+  "done_token": "DONE seat-name <pr-url>",
+  "output": {"result_file": "<path>/result.json"}
+}
