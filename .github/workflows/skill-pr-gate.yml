@@ -88,6 +88,18 @@ jobs:
       # Golden system design rules block must match claude/golden-rules.md (owner order 2026-10-16 UTC).
       - run: make golden-rules-check
 
+  # Design principles 101 item 23 (owner, 2026-10-16 UTC): logs, results and
+  # screenshots never go in git; they live in the artifact store and the repo
+  # points to them. This job is where a committed one is stopped. It has no
+  # `if:` because a log can arrive in any pull request, not only a tools one.
+  # Patterns and the allow list: claude/tools/artifact/artifact.conf.
+  artifacts:
+    name: no tracked artifacts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: bash claude/tools/artifact/artifact.sh check --dir .
+
   detect:
     name: what has to run
     runs-on: ubuntu-24.04
