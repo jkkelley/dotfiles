@@ -1,5 +1,24 @@
 # Artifact store
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Contents](#contents)
+  - [Hard rule: Design principles 101, right below the contents list](#hard-rule-design-principles-101-right-below-the-contents-list)
+  - [Hard rule: every Markdown file opens with a contents list](#hard-rule-every-markdown-file-opens-with-a-contents-list)
+  - [Hard rule: herdr tab layout for every multi-agent line](#hard-rule-herdr-tab-layout-for-every-multi-agent-line)
+- [Design principles 101](#design-principles-101)
+- [Why it exists](#why-it-exists)
+- [Layout](#layout)
+- [Naming](#naming)
+- [Frontmatter](#frontmatter)
+- [Commands](#commands)
+- [Configuration](#configuration)
+- [Multi-agent rules](#multi-agent-rules)
+- [Cleanup](#cleanup)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Contents
 
 - [Design principles 101](#design-principles-101)
