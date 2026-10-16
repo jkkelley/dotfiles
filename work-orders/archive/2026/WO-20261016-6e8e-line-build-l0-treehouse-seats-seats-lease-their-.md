@@ -4,15 +4,15 @@
   "slug": "line-build-l0-treehouse-seats-seats-lease-their-",
   "title": "Line build L0 - treehouse seats: seats lease their worktree",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:38:38+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/line-build-l0-treehouse-seats-seats-lease-their-",
+  "pr": 174,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner-ordered line build order, ORD-0537 O4",
@@ -61,7 +61,8 @@ Node th of the inbox-triage line build order, layer L0. State: PR 174. Brief: /h
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* Node th merged on main with CI green
+- [x] `AC-H1` *(human)* Node th merged on main with CI green
+  - observed `2026-10-16` MERGED SKIPPED,SUCCESS
 
 ## Test plan
 
