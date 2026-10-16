@@ -4,15 +4,15 @@
   "slug": "seat-up-exports-tmpdir-a-per-seat-scratch-dir-it",
   "title": "seat-up exports TMPDIR, a per-seat scratch dir it creates, into every seat it starts; seat-down removes it",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T12:09:00+00:00",
   "parent": "WO-20261016-4b6c",
   "branch": "feat/a36a-seat-up-exports-tmpdir-a-per-seat-scratch-dir-it",
-  "pr": null,
-  "closed": null,
+  "pr": 352,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design20 ORD-1150 T1 tooling leaf; design approvals ruled done, ORD-0550 O4",
@@ -130,17 +130,23 @@ Edit 1, claude/workflow/bin/herdr-grid.sh, in the config block next to START_TIM
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a fresh seat gets TMPDIR set to its own scratch dir and can write it
+- [x] `AC-H1` *(human)* a fresh seat gets TMPDIR set to its own scratch dir and can write it
+  - observed `2026-10-16` x
   - check: `make -C claude/workflow grid` exit 0 expect /seat-up exports TMPDIR and the seat can write it/
-- [ ] `AC-H2` *(human)* seat-down removes the seat scratch dir
+- [x] `AC-H2` *(human)* seat-down removes the seat scratch dir
+  - observed `2026-10-16` make -C claude/workflow grid exit 0: ok seat-down removes the seat TMPDIR
   - check: `make -C claude/workflow grid` exit 0 expect /seat-down removes the seat TMPDIR/
-- [ ] `AC-H3` *(human)* the whole grid suite stays green
+- [x] `AC-H3` *(human)* the whole grid suite stays green
+  - observed `2026-10-16` make -C claude/workflow grid exit 0: ok herdr-grid
   - check: `make -C claude/workflow grid` exit 0 expect /ok herdr-grid/
-- [ ] `AC-H4` *(human)* the scratch root comes from config
+- [x] `AC-H4` *(human)* the scratch root comes from config
+  - observed `2026-10-16` jq prints ~/.cache/zenith/seat-tmp, exit 0
   - check: `jq -r .workflow.herdr.grid.seat_tmp_dir claude/workflow/config/project.json` exit 0 expect /^~/.cache/zenith/seat-tmp$/
-- [ ] `AC-H5` *(human)* rolodex pointers hold
+- [x] `AC-H5` *(human)* rolodex pointers hold
+  - observed `2026-10-16` make rolodex-check BASE=origin/main exit 0
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H6` *(human)* the diff holds only the In files
+- [x] `AC-H6` *(human)* the diff holds only the In files
+  - observed `2026-10-16` grep -vE filter on name-only diff printed nothing, exit 1
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/(bin/herdr-grid\.sh|config/project\.json|tests/unit/test_herdr_grid\.sh))$'` exit 1
 
 ## Test plan
