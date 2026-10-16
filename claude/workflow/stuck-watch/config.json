@@ -33,6 +33,7 @@
   "lines": [
     "inbox-triage"
   ],
+  "bearings": {"dir": "~/.bearings", "probe_path": "/state", "timeout_s": 5},
   "codes": {
     "STK-001": {
       "means": "seat idle longer than idle_seconds and no result file",
@@ -61,6 +62,10 @@
     "STK-091": {
       "means": "bus down: NATS unreachable",
       "acts": "architect break glass: bring the bus up"
+    },
+    "STK-092": {
+      "means": "Bearings server of a live line down: probe of 127.0.0.1:<port>/state returned 000, or no server.json",
+      "acts": "architect break glass: make -C claude/workflow bearings-up LINE=<line>"
     },
     "A2A-004": {
       "means": "SOP breach recorded in a result file, paged as is",

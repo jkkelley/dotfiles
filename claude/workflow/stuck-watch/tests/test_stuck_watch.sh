@@ -39,6 +39,7 @@ printf '%s %s\n' "$1" "$2" >> "$STUB/bus.log"
 EOF
   cat > "$C/bin/curl" <<'EOF'
 #!/usr/bin/env bash
+case "$*" in *127.0.0.1*/state*) c="$(cat "$STUB/probe.code" 2>/dev/null || echo 403)"; printf '%s' "$c"; [ "$c" = 000 ] && exit 7; exit 0 ;; esac
 printf '%s\n' "$*" >> "$STUB/curl.log"; printf '200'
 EOF
   echo '{"seats":[]}' > "$C/res.json"
@@ -47,6 +48,7 @@ EOF
     SW_STATE_DIR="$C/state" SW_RUN_DIR="$C/run" ENV_FILE="$C/env" NTFY_TOPIC_VAR=YPC_NTFY_TEST_TOPIC \
     WF_PROJECTS_DIR="$C/proj" ARTIFACT_ROOT="$C/art" SW_RESOURCES_CMD="cat $C/res.json"
   : > "$C/bus.log"; : > "$C/curl.log"
+  export SW_BEARINGS_DIR="$C/bearings"; mkdir -p "$C/bearings/t"; echo '{"port":1}' > "$C/bearings/t/server.json"; echo 403 > "$C/probe.code"
 }
 agent() { # agent <name> <pane> <session> [tab]
   jq -nc --arg n "$1" --arg p "$2" --arg s "$3" --arg t "${4:-w:t1}" '{result:{agents:[{agent:"claude",name:$n,pane_id:$p,tab_id:$t,agent_session:{value:$s}}]}}' > "$C/agents.json"
@@ -140,6 +142,20 @@ case_deadman_fresh() {
   setup; js_stub 30; deadman
   [ ! -s "$C/curl.log" ] && ok "deadman-fresh: fresh heartbeat stays silent" || no "deadman-fresh: paged" "$(cat "$C/curl.log")"
 }
+case_bearings_down() {
+  setup; js_stub 30; echo 000 > "$C/probe.code"; deadman
+  grep -q 'Title: bearings down' "$C/curl.log" && grep -q 'Priority: high' "$C/curl.log" && [ "$(wc -l < "$C/curl.log")" = 1 ] && ok "bearings-down: probe 000 pages 'bearings down' high (TP-1)" || no "bearings-down: page" "$(cat "$C/curl.log" "$C/err")"
+  grep -q 'STK-092 line=t ntfy=200' "$C/deadman.log" && ok "bearings-down: logged with ntfy 200" || no "bearings-down: log" "$(cat "$C/deadman.log")"
+  deadman; [ "$(wc -l < "$C/curl.log")" = 1 ] && ok "bearings-down: second pass inside dedupe window posts nothing" || no "bearings-down: dedupe" "$(cat "$C/curl.log")"
+  setup; js_stub down; rm -f "$C/bearings/t/server.json"; deadman
+  grep -q 'STK-092 line=t' "$C/deadman.log" && ok "bearings-down: no server.json pages STK-092 (TP-3)" || no "bearings-down: no server.json" "$(cat "$C/deadman.log")"
+  a="$(grep -n 'STK-092' "$C/deadman.log" | head -1 | cut -d: -f1)"; b="$(grep -n 'STK-091' "$C/deadman.log" | head -1 | cut -d: -f1)"
+  [ -n "$a" ] && [ -n "$b" ] && [ "$a" -lt "$b" ] && ok "bearings-down: with the bus down STK-092 is logged before STK-091 (TP-3)" || no "bearings-down: order" "$(cat "$C/deadman.log")"
+}
+case_bearings_up() {
+  setup; js_stub 30; deadman
+  grep -q 'OK line=t bearings_http=403' "$C/deadman.log" && [ ! -s "$C/curl.log" ] && ok "bearings-up: 403 is alive, no page (TP-2)" || no "bearings-up" "$(cat "$C/deadman.log" "$C/curl.log")"
+}
 case_audit() {
   setup; js_stub audit
   e() { jq -nc --arg s "$1" --arg c "$2" --arg a "$3" --arg p "$4" '{schema:"stuck-watch/event/1",seat:$s,code:$c,at:$a,evidence_path:(if $p=="" then null else $p end)}'; }
@@ -160,7 +176,7 @@ case_signals() {
   grep -q '^line.t.stuck.A2A-004 ' "$C/bus.log" && grep -q 'Priority: high' "$C/curl.log" && ok "signals: SOP breach A2A-004 paged high" || no "signals: A2A-004" "$(cat "$C/bus.log")"
 }
 
-CASES="${CASE:-idle done-unmerged dedupe no-leak signals deadman-stale deadman-bus-down deadman-fresh audit}"
+CASES="${CASE:-idle done-unmerged dedupe no-leak signals deadman-stale deadman-bus-down deadman-fresh audit bearings_down bearings_up}"
 for c in $CASES; do fn="case_${c//-/_}"; declare -F "$fn" >/dev/null && "$fn" || no "unknown case $c"; done
 echo "pass=$PASS fail=$FAIL"
 [ "$FAIL" = 0 ]
