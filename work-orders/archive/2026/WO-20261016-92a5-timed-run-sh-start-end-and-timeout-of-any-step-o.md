@@ -4,15 +4,15 @@
   "slug": "timed-run-sh-start-end-and-timeout-of-any-step-o",
   "title": "timed-run.sh: start, end and timeout of any step on the bus, timeout enforced, 3 retries, SLOW and TIMEOUT coded",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:20:07+00:00",
   "parent": "WO-20261016-3570",
   "branch": "feat/timed-run-sh-start-end-and-timeout-of-any-step-o",
-  "pr": null,
-  "closed": null,
+  "pr": 170,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat: lavish prohibited outside firstmate; brief BR-20261016-stuck-watch v2 is the approval",
@@ -61,9 +61,12 @@ Owner item 37: every node, seat, job, CI run and merge emits start and end; over
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* start and end events on line.<line>.event.node.*
-- [ ] `AC-H2` *(human)* a step past TIMEOUT is stopped, retried 3 times, coded TIMEOUT, work order filed
-- [ ] `AC-H3` *(human)* over budget is coded SLOW
+- [x] `AC-H1` *(human)* start and end events on line.<line>.event.node.*
+  - observed `2026-10-16` dev start-end: line.t.event.node.start (budget_s 120 from time-budgets.json) and .end with rc and duration_s; UAT uat-slow start/end on the real bus (/home/luna/.local/state/zenith/log/2026/10/20261016-052507-timing-uat-timing-uat.log)
+- [x] `AC-H2` *(human)* a step past TIMEOUT is stopped, retried 3 times, coded TIMEOUT, work order filed
+  - observed `2026-10-16` dev timeout: exit 124, 3 timeout events, line.t.timing.TIMEOUT, 1 work order, deduped on rerun; UAT AC9 uat-hang 3 attempts, TIMEOUT on bus, 1 work order (/home/luna/.local/state/zenith/log/2026/10/20261016-052507-timing-uat-timing-uat.log)
+- [x] `AC-H3` *(human)* over budget is coded SLOW
+  - observed `2026-10-16` timed-run prints SLOW on an end over budget and every end carries budget_s; node-timing publishes the SLOW code (UAT uat-slow 3s vs 1s)
 
 ## Test plan
 

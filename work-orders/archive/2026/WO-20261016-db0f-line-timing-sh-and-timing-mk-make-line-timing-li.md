@@ -4,15 +4,15 @@
   "slug": "line-timing-sh-and-timing-mk-make-line-timing-li",
   "title": "line-timing.sh and timing.mk: make line-timing LINE= SINCE= report of durations vs budgets and top 5 bottlenecks to the artifact store",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:20:12+00:00",
   "parent": "WO-20261016-3570",
   "branch": "feat/line-timing-sh-and-timing-mk-make-line-timing-li",
-  "pr": null,
-  "closed": null,
+  "pr": 170,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat: lavish prohibited outside firstmate; brief BR-20261016-stuck-watch v2 is the approval",
@@ -61,7 +61,8 @@ No morning view of where the time went.
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* make line-timing prints durations and top 5 bottlenecks and the report artifact path
+- [x] `AC-H1` *(human)* make line-timing prints durations and top 5 bottlenecks and the report artifact path
+  - observed `2026-10-16` dev report: top 5 sorted by overrun, durations vs budgets, artifact written; UAT AC8 make line-timing LINE=timing-uat -> /home/luna/.local/state/zenith/report/2026/10/20261016-052528-line-timing-timing-uat.md
 
 ## Test plan
 
