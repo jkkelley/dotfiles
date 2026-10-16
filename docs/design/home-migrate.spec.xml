@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="home-migrate" version="1.0.0" design="docs/design/home-migrate.md">
+  <contents>
+    <item ref="config">Config: the home's project.json</item>
+    <item ref="items">Items and their targets</item>
+    <item ref="codes">Status codes</item>
+    <item ref="verbs">Verbs and Make targets</item>
+    <item ref="invariants">Invariants</item>
+    <item ref="gates">Gates: dev, UAT, stable</item>
+  </contents>
+
+  <section id="config">
+    <field name="name" required="true">key for state and log names</field>
+    <field name="home" required="true">the home directory; must exist</field>
+    <field name="source_root" required="true">where the scattered items live today</field>
+    <field name="worktrees_dir" default=".worktrees">home-relative directory for worktrees and glob matches</field>
+    <field name="repos">clone names under source_root, moved to home/name</field>
+    <field name="paths">objects {src, dst}: any directory, moved to home/dst</field>
+    <field name="worktree_globs">globs under source_root; a worktree goes to home/worktrees_dir/basename</field>
+    <field name="byte_for_byte">basenames whose file manifest is recorded before and compared after the move</field>
+    <field name="exceptions">objects {path, reason}: kept outside the home; printed as KEEP by every verb</field>
+  </section>
+
+  <section id="items">
+    <rule>A glob match with a .git file is a worktree; a real directory without one is moved by mv.</rule>
+    <rule>A glob match that is already a symlink to its target is DONE.</rule>
+    <rule>apply walks worktrees before clones, so a clone's records are updated by git before the clone moves.</rule>
+  </section>
+
+  <section id="codes">
+    <code id="MOVE" owner="script">planned; apply will move it</code>
+    <code id="MOVED" owner="script">apply moved it this run</code>
+    <code id="DONE" owner="script">in the home, symlink at the old path</code>
+    <code id="BUSY" owner="script">a process or herdr seat has its cwd inside it, or inside one of a clone's worktrees; next pass</code>
+    <code id="CONFLICT" owner="architect">target exists, old path missing, a foreign symlink, or another filesystem; nothing touched</code>
+    <code id="KEEP" owner="owner">a stated exception with its reason</code>
+    <code id="FAIL" owner="architect">a move that did not land, or a check that did not hold</code>
+    <code id="OK" owner="script">check proved the item</code>
+  </section>
+
+  <section id="verbs">
+    <verb name="plan" writes="nothing" exit="0">one line per item</verb>
+    <verb name="apply" writes="home, symlinks, state, log" exit="0 done, 3 conflict or fail, 4 busy remain">moves MOVE items; PASSES and WAIT retry busy ones</verb>
+    <verb name="check" writes="nothing" exit="0 all OK, 3 otherwise">proof for AC: every item DONE and resolving through its old path</verb>
+    <verb name="rollback" writes="one item back at its old path" exit="0, 2 without ONLY, 3 not DONE, 4 busy">ONLY= required</verb>
+    <verb name="rolodex" writes="nothing (stdout)" exit="0">ROLODEX.md for the home</verb>
+    <make target="home-plan|home-apply|home-check|home-rollback" args="CONF= ONLY= PASSES= WAIT="/>
+    <make target="home-migrate-test">fixture test plan in Podman</make>
+    <make target="home-migrate-dev" args="CONF=">mirror of the real tree in Podman</make>
+  </section>
+
+  <section id="invariants">
+    <rule>Never deletes, never prunes, never overwrites an existing target.</rule>
+    <rule>Never moves a path a live process or seat is using; a fresh holder snapshot is taken right before each move.</rule>
+    <rule>One apply per home at a time: a directory lock under the artifact store state.</rule>
+    <rule>A second apply on a migrated tree reports changed 0 and leaves the tree identical.</rule>
+    <rule>Same filesystem only: a move is a rename, so bytes are untouched; across filesystems it is a CONFLICT.</rule>
+  </section>
+
+  <section id="gates">
+    <gate name="dev">make home-migrate-test; make home-migrate-dev CONF=</gate>
+    <gate name="UAT">make home-apply CONF= ONLY=one idle worktree; make home-check CONF= ONLY= that worktree</gate>
+    <gate name="stable">make home-apply CONF=; make home-apply again shows changed 0; make home-check CONF=</gate>
+    <rollback>home-migrate.sh rollback CONF with ONLY=old path: drops our symlink, git worktree move or mv back, repair</rollback>
+  </section>
+</spec>
