@@ -4,15 +4,15 @@
   "slug": "dag-state-t9-ci-poll-and-merge-scripts-with-appr",
   "title": "dag-state T9 - CI poll and merge scripts with approval check",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:07:35+00:00",
   "parent": "WO-20261016-41d0",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/dag-state-t9-ci-poll-and-merge-scripts-with-appr",
+  "pr": 258,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -72,9 +72,12 @@ Owner, 2026-10-16 UTC: "DAG SHOULD BE EFFORTLESS WITH EASY MIGRATION PLANS FOR U
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_merge.sh'` exit 0; every case prints ok and the last line is the pass count with fail=0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `make spec-check` exits 0 (the specs were read, not edited) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_merge.sh'` exit 0; every case prints ok and the last line is the pass count with fail=0 (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` exit=0; last lines: ok merge: state.json untouched pass=30 fail=0 exit=0
+- [x] `AC-H2` *(human)* `make spec-check` exits 0 (the specs were read, not edited) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` BASE=origin/main LIMIT=1000 PATTERN='*.spec.xml' bash scripts/spec-check.sh spec-check: nothing in scope exit=0
+- [x] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` claude/workflow/dag/bin/dag-ci.sh claude/workflow/dag/bin/dag-merge.sh claude/workflow/dag/tests/unit/test_dag_merge.sh work-orders/WO-20261016-0272/WO-20261016-1844-test-work-order-skill-index-md-and-epic-readmes-.md work-orders/WO-20261016-0272/WO-20261016-41d0/WO-20261016-0797-dag-state-t9-ci-poll-and-merge-scripts-with-appr.md work-orders/WO-20261016-0272/WO-20261016-41d0/WO-20261016-e271-dag-state-t11-config-config-schema-dag-mk-makefi.md work-orders/WO-20261016-0272/WO-20261016-824e-line-build-l1-design-drift-check.md work-orders/WO-20261016-0272/WO-20261016-af17/WO-20261016-193d-test-ord-0832-b1-the-live-line-s-bearings-server.md work-orders/WO-20261016-0272/WO-20261016-af17/WO-20261016-599f-timed-run-every-target-of-claude-workflow-makefi.md work-orders/WO-20261016-0272/WO-20261016-af17/WO-20261016-cc95-pane-look-monitor-queued-stale-and-idle-stale-ju.md work-orders/WO-20261016-0272/WO-20261016-af17/WO-20261016-e8f2-stuck-watch-deadman-probes-each-live-line-s-bear.md work-orders/WO-20261016-0272/WO-20261016-af17/WO-20261016-f4a0-bearings-server-for-a-live-line-runs-as-systemd-.md work-orders/WO-20261016-0272/WO-20261016-fb0c/WO-20261016-39da-merge-on-green-holds-a-green-pr-whose-head-is-be.md work-orders/WO-20261016-0272/WO-20261016-fb0c/WO-20261016-448e-restore-pr-242-rerun-stale-red-on-main-commit-48.md work-orders/WO-20261016-0272/WO-20261016-fb0c/WO-20261016-73f2-pr-flow-sweep-refreshes-a-green-pr-behind-its-ba.md work-orders/WO-20261016-0272/WO-20261016-fb0c/WO-20261016-7f26-test-rr-orch-15-merge-on-green-holds-a-stale-bas.md exit=0
 
 ## Test plan
 
