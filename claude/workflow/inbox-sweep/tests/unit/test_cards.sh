@@ -117,4 +117,21 @@ bash "$S" >/dev/null 2>&1; check 2 "$?" "no arguments exits 2"
 rm "$(dirname "$SWEEP_CARDS_FILE")/server.json"; : >"$TEST_OUT/calls.log"
 STUB_HERDR_FAIL=1 bash "$S" --run $run >/dev/null 2>&1; check 0 "$?" "a herdr that fails does not fail the cards"
 check yes "$(grep -q 'server not started' "$D/logs/cards.log" && echo yes || echo no)" "and the log says the server was not started"
+# B21e: `add` is the one write path to questions.json
+rm -f "$SWEEP_CARDS_FILE"
+check "added 1" "$(echo '{"id":"X-1","about":"a","decide":"d","options":[],"rec":0}' | bash "$S" add)" "B21e AC-H2: add creates the file and adds a card"
+check "added 0" "$(echo '{"id":"X-1","about":"changed","decide":"d","options":[],"rec":0}' | bash "$S" add)" "B21e AC-H2: a rerun with the same id adds no duplicate"
+check a "$(jq -r '.items[] | select(.id=="X-1") | .about' "$SWEEP_CARDS_FILE")" "B21e AC-H2: the existing card is not rewritten"
+check "added 1" "$(echo '[{"id":"X-1"},{"id":"X-2"},{"id":"X-2"}]' | bash "$S" add)" "B21e AC-H2: an array adds only new ids, once each"
+check 2 "$(jq '.items | length' "$SWEEP_CARDS_FILE")" "B21e AC-H2: two items in all"
+echo '{"about":"no id"}' | bash "$S" add >/dev/null 2>&1; check 2 "$?" "B21e: a card without an id exits 2"
+check 2 "$(jq '.items | length' "$SWEEP_CARDS_FILE")" "B21e: and nothing was written"
+cp "$SWEEP_CARDS_FILE" "$D/cards.bak"; echo '[]' >"$SWEEP_CARDS_FILE"
+echo '{"id":"X-3"}' | bash "$S" add >/dev/null 2>&1; check 2 "$?" "B21e: a questions.json that is not {items:[...]} exits 2, never added 0"
+check '[]' "$(cat "$SWEEP_CARDS_FILE")" "B21e: and the file is left as it was"
+cp "$D/cards.bak" "$SWEEP_CARDS_FILE"
+# AC-H1: no other script writes questions.json
+# shellcheck disable=SC2016 # the pattern is a regex with literal $, single quotes are the point
+w="$(grep -lE 'sweep_json_set +"?\$(CARDS|cards)|>"?\$(CARDS|cards)"?' "$R"/bin/*.sh | xargs -n1 basename | sort | tr '\n' ' ')"
+check "sweep-cards.sh " "$w" "B21e AC-H1: only sweep-cards.sh writes the cards file"
 finish
