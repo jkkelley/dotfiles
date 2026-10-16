@@ -119,7 +119,10 @@ All commands call `claude/workflow/bin/herdr-grid.sh`.
 | ------------------ | ----------------------------------------- | -------------------------------------------------------------------------- |
 | `make line-up`     | `LINE=`                                   | Builds tab 1 for the line with the architect column and 6 free seat slots. |
 | `make seat-up`     | `LINE= SEAT= [CMD=] [CWD=]`               | Claims the first free slot for the seat, optionally starting `CMD` in it.  |
-| `make seat-down`   | `SEAT= [LINE=] [FORCE=1]`                 | Closes a finished seat's pane and reflows the grid.                        |
+| `make seat-down`   | `SEAT= [LINE=] [FORCE=1]`                 | Closes a finished seat's pane and its watchers, reflows the grid. A seat holding no slot is found by herdr agent name or label; a seat already gone is exit 0. |
+| `make seat-adopt`  | `LINE= SEAT= PANE=`                       | Moves a named pane from outside the grid into the next free slot, no restart. |
+| `make line-adopt-named` | `LINE=`                              | `seat-adopt` for every named agent pane held by no grid, monitor or watchers tab; the line sweep runs it every minute. |
+| watchers tab       | `<line> watchers`, `<line> watchers N`    | Per-seat `watch-compact-<pane>` and `watch-seat-<pane>` panes (3x3, overflow tabs), never the `<line> monitor` tab. The sweep closes any whose seat pane is gone. |
 | `make line-clean`  | `LINE=`                                   | Closes every finished seat and every all-free overflow tab.                |
 | `make line-status` | `LINE=`                                   | Prints each tab, slot, label and seat state, one line per slot.            |
 | `make line-adopt`  | `LINE= ARCH=<pane> SEATS="name=pane ..."` | Moves a live line into the grid with no restart.                           |
