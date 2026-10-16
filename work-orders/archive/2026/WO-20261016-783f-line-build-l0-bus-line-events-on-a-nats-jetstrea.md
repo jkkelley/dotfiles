@@ -4,15 +4,15 @@
   "slug": "line-build-l0-bus-line-events-on-a-nats-jetstrea",
   "title": "Line build L0 - bus: line events on a NATS JetStream bus",
   "type": "chore",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:38:36+00:00",
   "parent": "WO-20261016-0272",
   "branch": "feat/line-build-l0-bus-line-events-on-a-nats-jetstrea",
-  "pr": null,
-  "closed": null,
+  "pr": 171,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner-ordered line build order, ORD-0537 O4",
@@ -62,7 +62,8 @@ Node bus of the inbox-triage line build order, layer L0. State: PR 171 merged. B
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* Node bus merged on main with CI green
+- [x] `AC-H1` *(human)* Node bus merged on main with CI green
+  - observed `2026-10-16` PR 171 merged: feat(workflow) line events on a NATS JetStream bus, commit 7b40f74 on main
 
 ## Test plan
 

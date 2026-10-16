@@ -8,11 +8,10 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-e9d4` | ready | p1 | WO-20261016-783f | [Line build L0 - a2a-guard: orders never typed into busy panes](WO-20261016-e9d4-line-build-l0-a2a-guard-orders-never-typed-into-.md) |
-| `WO-20261016-783f` | in-progress | p1 | - | [Line build L0 - bus: line events on a NATS JetStream bus](WO-20261016-783f-line-build-l0-bus-line-events-on-a-nats-jetstrea.md) |
+| `WO-20261016-e9d4` | ready | p1 | - | [Line build L0 - a2a-guard: orders never typed into busy panes](WO-20261016-e9d4-line-build-l0-a2a-guard-orders-never-typed-into-.md) |
 | `WO-20261016-4b6c` | ready | p1 | WO-20261016-6e8e | [Line build L0 - grid-fix: seat-up, seat-down, adopt](WO-20261016-4b6c-line-build-l0-grid-fix-seat-up-seat-down-adopt.md) |
 | `WO-20261016-fb0c` | ready | p1 | - | [Line build L0 - merge-port-build: merge-on-green, index regen, smart CI](WO-20261016-fb0c-line-build-l0-merge-port-build-merge-on-green-in.md) |
-| `WO-20261016-af17` | ready | p1 | WO-20261016-4b6c WO-20261016-783f | [Line build L0 - stuck-watch: stuck-watch, timing and deadman](WO-20261016-af17-line-build-l0-stuck-watch-stuck-watch-timing-and.md) |
+| `WO-20261016-af17` | ready | p1 | WO-20261016-4b6c | [Line build L0 - stuck-watch: stuck-watch, timing and deadman](WO-20261016-af17-line-build-l0-stuck-watch-stuck-watch-timing-and.md) |
 | `WO-20261016-6e8e` | ready | p1 | - | [Line build L0 - treehouse seats: seats lease their worktree](WO-20261016-6e8e-line-build-l0-treehouse-seats-seats-lease-their-.md) |
 | `WO-20261016-ab87` | ready | p1 | WO-20261016-af17 WO-20261016-fb0c WO-20261016-f69a | [Line build L1 - cluster-ops: NATS, CronJobs, deadman on cluster](WO-20261016-ab87-line-build-l1-cluster-ops-nats-cronjobs-deadman-.md) |
 | `WO-20261016-41d0` | ready | p1 | WO-20261016-4b6c | [Line build L1 - dag-build: runtime and authoring verbs](WO-20261016-41d0-line-build-l1-dag-build-runtime-and-authoring-ve.md) |
