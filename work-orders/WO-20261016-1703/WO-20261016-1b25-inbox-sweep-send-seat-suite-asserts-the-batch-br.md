@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-send-seat-suite-asserts-the-batch-br",
   "title": "Inbox sweep send-seat suite asserts the batch brief from B17d",
   "type": "bug",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:54:22+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-send-seat-suite-asserts-the-batch-br",
   "pr": null,
   "closed": null,
   "approval": {
@@ -60,8 +60,10 @@ CI run 38862696743 and podman on main: FAIL send-seat, 13 cases, for example 'th
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* podman tests/run.sh --suite send-seat ok
-- [ ] `AC-H2` *(human)* every removed assertion has a batch-form replacement that fails if the template drops that rule
+- [x] `AC-H1` *(human)* podman tests/run.sh --suite send-seat ok
+  - observed `2026-10-16` podman run localhost/dotfiles-workflow-test:1 bash tests/run.sh --suite send-seat (make -C claude/workflow/inbox-sweep suite SUITE=send-seat): "ok send-seat / ran 1 suite", exit 0; before the change: 13 FAIL, "ran 1 suite, 1 failed"
+- [x] `AC-H2` *(human)* every removed assertion has a batch-form replacement that fails if the template drops that rule
+  - observed `2026-10-16` Direct run of tests/unit/test_send_seat.sh in the image: 13 mutants (template copy with one batch rule line removed: owner-line, pre-confirm-ban, other-line-ignored, print-awaiting, print-every-reply, one-line-rule, failure-continues, denial-stops-batch, own-token, reply-token-gate, result-before-next, one-wait, reply-blocks) each re-run the suite via SWEEP_TEMPLATES and each printed "ok template without <rule> is caught"; exit 0
 
 ## Test plan
 
