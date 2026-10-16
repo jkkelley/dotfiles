@@ -1,0 +1,56 @@
+{
+  "$comment": "pre-push gates per repository slug (owner/name from git remote get-url origin); defaults for any other repository. Each gate: name, cmd run by bash -c in the repository root with env BASE TITLE_FILE BODY_FILE DOTFILES, needs = tools that must be on PATH or the gate is skipped (ENV-MISSING). ORD-0814 P1.",
+  "budget_s": 30,
+  "timeout_s": 60,
+  "defaults": {
+    "gates": [
+      {
+        "name": "tracked-ignored-check",
+        "needs": [],
+        "cmd": "bad=$(git ls-files -ci --exclude-standard); [ -z \"$bad\" ] || { echo \"tracked but ignored:\"; echo \"$bad\"; exit 1; }"
+      }
+    ]
+  },
+  "repos": {
+    "jkkelley/dotfiles": {
+      "gates": [
+        {
+          "name": "tracked-ignored-check",
+          "needs": [],
+          "cmd": "make -s tracked-ignored-check"
+        },
+        {
+          "name": "rolodex-check",
+          "needs": [
+            "python3"
+          ],
+          "cmd": "make -s rolodex-check BASE=\"$BASE\""
+        },
+        {
+          "name": "md-contents-check",
+          "needs": [
+            "npx"
+          ],
+          "cmd": "make -s md-contents-check BASE=\"$BASE\""
+        },
+        {
+          "name": "spec-check",
+          "needs": [
+            "python3"
+          ],
+          "cmd": "make -s spec-check BASE=\"$BASE\""
+        },
+        {
+          "name": "a2a-lint",
+          "needs": [],
+          "cmd": "make -s a2a-lint"
+        },
+        {
+          "name": "bump-resolve",
+          "needs": [],
+          "cmd": "bash .github/scripts/bump-gate.sh resolve --base \"$BASE\" --title-file \"$TITLE_FILE\" --body-file \"$BODY_FILE\""
+        }
+      ]
+    }
+  }
+}
