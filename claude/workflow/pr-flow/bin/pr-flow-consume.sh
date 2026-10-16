@@ -10,6 +10,7 @@
 #   pr-flow-consume.sh sweep            one pass
 #   pr-flow-consume.sh loop [--interval 60]   a pass every interval, for the pr-flow pane of the monitoring tab (Rule 18: never &)
 #   pr-flow-consume.sh regen-index      only the regen verb (env REPO, PR, DRY), what the sweep runs first on every tick
+#   pr-flow-consume.sh rerun-stale-red  only the stale-red verb (env REPO, DRY), what the sweep runs on every red PR
 #
 # Records (pr-process.md section 9), each keyed so it is posted once (rule R3):
 #   pr.opened 100  first sight of a head                    key 100/<slug>/<pr>/<head>
@@ -19,6 +20,7 @@
 #   merged 200     a merged PR seen in the last 20          key 200/<slug>/<pr> (the same key merge.sh uses); note: merged_at <UTC>
 #                  and seconds from the last check to the merge, the AC2 number
 #   regen REGEN    a PR conflicting only on regen.paths was merged with its base, regenerated and pushed  key REGEN/<slug>/<pr>/<new head>
+#   ci.rerun RERUN a red whose failing checks started before the base head was refreshed  key RERUN/<slug>/<pr>/<base sha>
 # Backstop (node N4): a PR whose ci.passed was posted more than backstop_s seconds ago and is still open goes to merge.sh --pr.
 # Every repository pass runs under step-time.sh (node sweep), so a slow pass posts SLOW (rule R7).
 #
@@ -32,6 +34,14 @@
 #   item 30, a need is met by a verb on an existing tool; regen-conflicts.sh is the regen-merge.sh port. Rejected: a second script
 #   copied from regen-merge.sh. Cost: one gh pr view per regenerated PR. WO-20261016-565d empties regen.paths, which makes this a no-op
 #   by config, no code change.
+#
+# BREADCRUMB 2026-10-16 - BR-20261016-infra-design4, ORD-0726 S1. What broke: PRs 207 and 210 were MERGEABLE but red on claude/workflow
+#   from a run before #208 (1dd0b32), finding F20; repo_pass posts ci.failed once per head and never looks again until the head moves.
+#   Why update-branch and not rerun: GitHub docs, Re-running workflows and jobs: "Re-running a workflow or jobs in a workflow uses the
+#   same GITHUB_SHA (commit SHA) and GITHUB_REF (Git ref) of the original event that triggered the workflow run", so gh run rerun
+#   re-tests the old merge commit that still lacks the fix; a fresh merge ref needs a new pull_request event, which update-branch makes.
+#   Rejected: gh run rerun as the default (mode rerun stays for flakes); closing and reopening the PR, which notifies. Cost: a merge
+#   commit on the PR branch, as regen-conflicts.sh already makes, and one gh api call per base per pass. stale_red.mode off disables it.
 set -uo pipefail
 HERE=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
 GH=${GH:-gh}; RS="$HERE/records.sh"; ST="$HERE/../../bin/step-time.sh"
@@ -44,6 +54,35 @@ post() { # post SLUG LINE KIND CODE KEY PR SHA TICKET NOTE
     | jq -r --arg k "$3" '"posted \($k) pr=\(.pr) sha=\(.sha[0:12]) \(.note // "")"'
 }
 ticket_of() { local re=$1 t=$2 b=$3 n=$4; if [[ $t =~ $re ]] || [[ $b =~ $re ]]; then echo "${BASH_REMATCH[1]}"; else echo "PR-$n"; fi; }
+
+declare -A MAIN_OF=()
+stale_red_pr() { # stale_red_pr SLUG LINE N HEAD BASE TICKET CHECKS MODE: refresh a PR whose red predates its base head, once per base sha
+  local slug=$1 line=$2 n=$3 head=$4 base=$5 t=$6 checks=$7 mode=$8 main msha mdate red_at key id ok=0
+  case $mode in ""|null|off) return 0;; esac
+  if [ -z "${MAIN_OF[$slug/$base]:-}" ]; then
+    MAIN_OF[$slug/$base]=$("$GH" api "repos/$slug/commits/$base" --jq '.sha + " " + .commit.committer.date' 2>/dev/null || true)
+  fi
+  main=${MAIN_OF[$slug/$base]}; msha=${main%% *}; mdate=${main#* }
+  [ -n "$msha" ] || return 0
+  red_at=$(jq -r '[.[] | select(.s == "completed" and (.c | IN("success", "skipped", "neutral") | not)) | .st] | max // ""' <<<"$checks")
+  [[ -n $red_at && $red_at < $mdate ]] || return 0
+  key="RERUN/$slug/$n/$msha"
+  "$RS" seen --key "$key" && return 0
+  if [ -n "${DRY:-}" ]; then echo "$slug PR $n would-rerun: $mode"; return 0; fi
+  case $mode in
+    update-branch)
+      if "$GH" pr update-branch "$n" -R "$slug" >/dev/null 2>&1 \
+        || "$GH" api -X PUT "repos/$slug/pulls/$n/update-branch" -f expected_head_sha="$head" >/dev/null 2>&1; then ok=1; fi ;;
+    rerun)
+      id=$("$GH" run list -R "$slug" --commit "$head" --status failure --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
+      if [ -n "$id" ] && "$GH" run rerun "$id" -R "$slug" --failed >/dev/null 2>&1; then ok=1; fi ;;
+  esac
+  if [ $ok = 1 ]; then
+    post "$slug" "$line" ci.rerun RERUN "$key" "$n" "$head" "$t" "red at $red_at predates $base ${msha:0:12} at $mdate; mode $mode"
+    echo "$slug PR $n rerun: $mode"
+  else echo "$slug PR $n stale-red-fail: $mode"; fi
+  return 0
+}
 
 regen_index() { # regen_index SLUG: regenerate index-only conflicts through regen-conflicts.sh and post REGEN once per new head
   local slug=$1 cfg line re clone out l n head pr title body t sel=(--all)
@@ -67,20 +106,22 @@ regen_index() { # regen_index SLUG: regenerate index-only conflicts through rege
 
 repo_pass() { # repo_pass SLUG: one pass over one repository
   local slug=$1 cfg line re req clone prs row t n head title body checks failed last merged
+  MAIN_OF=()
   cfg=$("$HERE/pr-flow-config.sh" "$slug") || return 2
   line=$(jq -r .line <<<"$cfg"); re=$(jq -r .ticket_re <<<"$cfg"); req=$(jq -r .required_check <<<"$cfg"); clone=$(jq -r .clone <<<"$cfg")
   export PR_FLOW_RECORDS; PR_FLOW_RECORDS=$(jq -r .records <<<"$cfg")
   # generated-file conflicts first: CI does not run on a PR GitHub cannot merge
   regen_index "$slug"
-  prs=$("$GH" pr list -R "$slug" --state open --limit 100 --json number,headRefOid,title,body) || { echo "$slug io: gh pr list"; return 4; }
+  prs=$("$GH" pr list -R "$slug" --state open --limit 100 --json number,headRefOid,title,body,baseRefName) || { echo "$slug io: gh pr list"; return 4; }
   while IFS= read -r row; do
     n=$(jq -r .number <<<"$row"); head=$(jq -r .headRefOid <<<"$row"); title=$(jq -r .title <<<"$row"); body=$(jq -r '.body // ""' <<<"$row")
     t=$(ticket_of "$re" "$title" "$body" "$n")
     "$RS" seen --key "100/$slug/$n/$head" || post "$slug" "$line" pr.opened 100 "100/$slug/$n/$head" "$n" "$head" "$t" "PR $n head ${head:0:12}"
-    checks=$("$GH" api "repos/$slug/commits/$head/check-runs?per_page=100" --jq '[.check_runs[] | {n: .name, s: .status, c: (.conclusion // ""), at: (.completed_at // "")}]') || continue
+    checks=$("$GH" api "repos/$slug/commits/$head/check-runs?per_page=100" --jq '[.check_runs[] | {n: .name, s: .status, c: (.conclusion // ""), at: (.completed_at // ""), st: (.started_at // "")}]') || continue
     failed=$(jq -r '[.[] | select(.s == "completed" and (.c | IN("success", "skipped", "neutral") | not)) | .n] | join(",")' <<<"$checks")
     if [ -n "$failed" ]; then
       "$RS" seen --key "422/$slug/$n/$head" || post "$slug" "$line" ci.failed 422 "422/$slug/$n/$head" "$n" "$head" "$t" "failed: $failed"
+      stale_red_pr "$slug" "$line" "$n" "$head" "$(jq -r .baseRefName <<<"$row")" "$t" "$checks" "$(jq -r '.stale_red.mode // "off"' <<<"$cfg")"
       continue
     fi
     if GH=$GH "$HERE/gate.sh" ci-green --slug "$slug" --pr "$n" --sha "$head" --required "$req" >/dev/null 2>&1; then
@@ -108,6 +149,24 @@ repo_pass() { # repo_pass SLUG: one pass over one repository
   done < <(jq -c --arg since "$(date -u -d '-1 day' +%FT%TZ)" '.[] | select(.mergedAt >= $since)' <<<"$merged")
 }
 
+rerun_stale_red() { # rerun_stale_red SLUG: the verb on its own, same listing as repo_pass
+  local slug=$1 cfg line re prs row n head title body t checks failed
+  MAIN_OF=()
+  cfg=$("$HERE/pr-flow-config.sh" "$slug") || return 0
+  line=$(jq -r .line <<<"$cfg"); re=$(jq -r .ticket_re <<<"$cfg")
+  export PR_FLOW_RECORDS; PR_FLOW_RECORDS=$(jq -r .records <<<"$cfg")
+  prs=$("$GH" pr list -R "$slug" --state open --limit 100 --json number,headRefOid,title,body,baseRefName) || { echo "$slug io: gh pr list"; return 0; }
+  while IFS= read -r row; do
+    n=$(jq -r .number <<<"$row"); head=$(jq -r .headRefOid <<<"$row"); title=$(jq -r .title <<<"$row"); body=$(jq -r '.body // ""' <<<"$row")
+    t=$(ticket_of "$re" "$title" "$body" "$n")
+    checks=$("$GH" api "repos/$slug/commits/$head/check-runs?per_page=100" --jq '[.check_runs[] | {n: .name, s: .status, c: (.conclusion // ""), at: (.completed_at // ""), st: (.started_at // "")}]') || continue
+    failed=$(jq -r '[.[] | select(.s == "completed" and (.c | IN("success", "skipped", "neutral") | not)) | .n] | join(",")' <<<"$checks")
+    [ -n "$failed" ] || continue
+    stale_red_pr "$slug" "$line" "$n" "$head" "$(jq -r .baseRefName <<<"$row")" "$t" "$checks" "$(jq -r '.stale_red.mode // "off"' <<<"$cfg")"
+  done < <(jq -c '.[]' <<<"$prs")
+  return 0
+}
+
 sweep() {
   local slug list; if [ -n "${REPO:-}" ]; then list=$REPO; else list=$("$HERE/pr-flow-config.sh" --list); fi
   for slug in $list; do
@@ -121,6 +180,7 @@ sweep() {
 
 case $VERB in
   regen-index) for slug in ${REPO:-$("$HERE/pr-flow-config.sh" --list)}; do regen_index "$slug"; done ;;
+  rerun-stale-red) for slug in ${REPO:-$("$HERE/pr-flow-config.sh" --list)}; do rerun_stale_red "$slug"; done ;;
   sweep) sweep ;;
   loop) while :; do sweep; sleep "$INTERVAL"; done ;;
   *) sed -n '10,11p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;

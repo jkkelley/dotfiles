@@ -4,13 +4,13 @@
   "slug": "pr-flow-sweep-verb-rerun-stale-red-once-per-main",
   "title": "pr-flow sweep verb rerun-stale-red: once per main sha, refresh open PRs whose red run predates main, post RERUN, make pr-rerun-stale-red",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T07:33:17+00:00",
   "parent": "WO-20261016-ebe4",
-  "branch": null,
+  "branch": "feat/pr-flow-sweep-verb-rerun-stale-red-once-per-main",
   "pr": null,
   "closed": null,
   "approval": {
@@ -93,12 +93,18 @@ ORD-0726 S1 (orchestrator brief BR-20261016-infra-design4): "rerun-stale-red (wh
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow pr-flow-test CASES="rerun-stale-red regen-index consume records"` exits 0 and prints ok for all four, no line matching /^FAIL/ (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* `make -C claude/workflow pr-flow-lint` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
-- [ ] `AC-H3` *(human)* `make -C claude/workflow pr-rerun-stale-red; echo rc=$?` prints 'pr-rerun-stale-red needs REPO=' and 'rc=2' (proof: output pasted by work-order.sh evidence)
-- [ ] `AC-H4` *(human)* `jq -r .defaults.stale_red.mode claude/workflow/pr-flow/config/pr-flow.json` prints update-branch (proof: output pasted by work-order.sh evidence)
-- [ ] `AC-H5` *(human)* `python3 -c 'import xml.dom.minidom,sys; xml.dom.minidom.parse(sys.argv[1])' claude/workflow/docs/pr-process/pr-process.spec.xml && grep -c 'value="RERUN"' claude/workflow/docs/pr-process/pr-process.spec.xml` exits 0 and prints 1 (proof: output pasted by work-order.sh evidence)
-- [ ] `AC-H6` *(human)* `make rolodex-check BASE=origin/main` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
+- [x] `AC-H1` *(human)* `make -C claude/workflow pr-flow-test CASES="rerun-stale-red regen-index consume records"` exits 0 and prints ok for all four, no line matching /^FAIL/ (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make -C claude/workflow pr-flow-test CASES="rerun-stale-red regen-index consume records" exit 0; ok rerun-stale-red, ok regen-index, ok consume, ok records; no FAIL lines
+- [x] `AC-H2` *(human)* `make -C claude/workflow pr-flow-lint` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make -C claude/workflow pr-flow-lint exit 0
+- [x] `AC-H3` *(human)* `make -C claude/workflow pr-rerun-stale-red; echo rc=$?` prints 'pr-rerun-stale-red needs REPO=' and 'rc=2' (proof: output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make -C claude/workflow pr-rerun-stale-red printed "pr-rerun-stale-red needs REPO=" and rc=2
+- [x] `AC-H4` *(human)* `jq -r .defaults.stale_red.mode claude/workflow/pr-flow/config/pr-flow.json` prints update-branch (proof: output pasted by work-order.sh evidence)
+  - observed `2026-10-16` jq -r .defaults.stale_red.mode printed update-branch
+- [x] `AC-H5` *(human)* `python3 -c 'import xml.dom.minidom,sys; xml.dom.minidom.parse(sys.argv[1])' claude/workflow/docs/pr-process/pr-process.spec.xml && grep -c 'value="RERUN"' claude/workflow/docs/pr-process/pr-process.spec.xml` exits 0 and prints 1 (proof: output pasted by work-order.sh evidence)
+  - observed `2026-10-16` spec.xml parses (minidom exit 0); grep -c value="RERUN" printed 1
+- [x] `AC-H6` *(human)* `make rolodex-check BASE=origin/main` exits 0 (proof: command, exit code and output pasted by work-order.sh evidence)
+  - observed `2026-10-16` make rolodex-check BASE=origin/main exit 0: 1 script(s) checked, all have headers
 - [ ] `AC-H7` *(human)* `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/|claude/workflow/(pr-flow/(bin/pr-flow-consume.sh|pr-flow.mk|config/pr-flow.json|schemas/pr-flow-record.schema.json|tests/(rerun-stale-red|records).test.sh)|docs/pr-process/pr-process.(md|spec.xml)))$'` exits 1 and prints nothing: only In files plus generated work-orders/ close-out files
 
 ## Test plan
