@@ -63,5 +63,6 @@ unset SWEEP_SUITES
 while IFS=$'\t' read -r s _; do
   [ -f "$R/tests/unit/test_${s//-/_}.sh" ] || [ "$s" = lint ] || bad "real suite $s has a test file"
 done <"$R/tests/suites.tsv"
-check 5 "$(wc -l <"$R/tests/suites.tsv")" "the real table lists the five B0 suites"
+# Later nodes add suites (B2 added briefs), so assert the five B0 suites are present, not that they are the only rows.
+check 5 "$(cut -f1 "$R/tests/suites.tsv" | grep -cxE 'stubs|lib|select|herdr-first|lint')" "the real table lists the five B0 suites"
 finish

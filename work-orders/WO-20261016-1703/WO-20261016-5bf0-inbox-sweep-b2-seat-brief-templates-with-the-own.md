@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-b2-seat-brief-templates-with-the-own",
   "title": "Inbox sweep B2 - seat brief templates with the owner-words block",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T01:19:09+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-b2-seat-brief-templates-with-the-own",
   "pr": null,
   "closed": null,
   "approval": {
@@ -66,9 +66,12 @@ Each seat needs a brief carrying the owner's words, the forbidden-action list an
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* each template holds the owner-words block (test grep)
-- [ ] `AC-H2` *(human)* the forbidden-action list is verbatim from the spec rules (test diff)
-- [ ] `AC-H3` *(human)* no em dash and one sentence per line (test grep)
+- [x] `AC-H1` *(human)* each template holds the owner-words block (test grep)
+  - observed `2026-10-16` briefs suite: ok for 3 templates - one owner-words block each, holding ${OWNER_WORDS}, before the forbidden list (53 checks ok)
+- [x] `AC-H2` *(human)* the forbidden-action list is verbatim from the spec rules (test diff)
+  - observed `2026-10-16` briefs suite: forbidden list diff against spec rules no-send, untrusted, own-tab, no-credentials is empty for all 3; a reworded no-send rule makes the diff fail
+- [x] `AC-H3` *(human)* no em dash and one sentence per line (test grep)
+  - observed `2026-10-16` briefs suite: 0 em dashes and 0 lines with two sentences in all 3 templates; planted dash and two-sentence line are caught
 
 ## Test plan
 
