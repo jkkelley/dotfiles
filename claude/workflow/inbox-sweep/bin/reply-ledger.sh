@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # jq filters use $var; they are jq variables, single quotes are the point
 # node: B21c
+# name: reply-ledger.sh
+# purpose: the one writer of ledger.jsonl; validates every row from stdin, then appends them all or none
+# inputs: append --file <ledger.jsonl>, JSON rows on stdin
+# outputs: exit 0 on append, exit 2 with the reason on stderr when any row is invalid
+# writes-to: the ledger.jsonl named by --file
+# cleanup: none (append-only event log)
 # reply-ledger.sh - the one writer of ledger.jsonl (design 18, ruling R3, node B21c).
 #
 #   reply-ledger.sh append --file <ledger.jsonl> < rows.jsonl   append every row read from stdin to the ledger

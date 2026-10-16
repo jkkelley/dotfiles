@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# name: test_reply_ledger.sh
+# purpose: unit test for reply-ledger.sh (AC-H1, AC-H3)
+# inputs: none
+# outputs: pass/fail lines and exit code
+# writes-to: a mktemp directory
+# cleanup: the mktemp directory is removed by an EXIT trap
 # AC-H1, AC-H3 for reply-ledger.sh (B21c). Rules out: a second writer of ledger.jsonl creeping back into a caller, a row
 # without a code, an id or an integer schema_version (a string "1", a float, null) reaching the file, and a half-valid batch
 # writing its good rows before the bad one is found.
