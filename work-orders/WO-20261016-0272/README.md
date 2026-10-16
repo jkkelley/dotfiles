@@ -10,8 +10,8 @@ One level down only. A child of a child is listed in its own directory, not here
 |---|---|---|---|---|
 | `WO-20261016-2ffe` | ready | p0 | WO-20261016-1c04 | [make pr-regen-index REPO= BRANCHES=: regen-merge.sh ported as the index-regen fallback](WO-20261016-2ffe-make-pr-regen-index-repo-branches-regen-merge-sh.md) |
 | `WO-20261016-1c04` | ready | p0 | WO-20261016-565d | [make wo-untrack-generated REPO=: untrack the generated work-order views, plan before apply](WO-20261016-1c04-make-wo-untrack-generated-repo-untrack-the-gener.md) |
-| `WO-20261016-565d` | ready | p0 | WO-20261016-0e3a | [work-order skill: INDEX.md and epic READMEs become untracked build outputs, regenerated on demand](WO-20261016-565d-work-order-skill-index-md-and-epic-readmes-becom.md) |
-| `WO-20261016-0e3a` | ready | p0 | - | [work-order skill: owner words, context, scripted AC checks, check verb, approve resolves tools](WO-20261016-0e3a-work-order-skill-owner-words-context-scripted-ac.md) |
+| `WO-20261016-565d` | ready | p0 | WO-20261016-6ef4 | [work-order skill: INDEX.md and epic READMEs become untracked build outputs, regenerated on demand](WO-20261016-565d-work-order-skill-index-md-and-epic-readmes-becom.md) |
+| `WO-20261016-6ef4` | ready | p0 | - | [work-order skill: owner words, context, scripted AC checks, check verb, approve resolves tools](WO-20261016-6ef4-work-order-skill-owner-words-context-scripted-ac.md) |
 | `WO-20261016-e9d4` | ready | p1 | - | [Line build L0 - a2a-guard: orders never typed into busy panes](WO-20261016-e9d4/WO-20261016-e9d4-line-build-l0-a2a-guard-orders-never-typed-into-.md) |
 | `WO-20261016-4b6c` | ready | p1 | WO-20261016-6e8e | [Line build L0 - grid-fix: seat-up, seat-down, adopt](WO-20261016-4b6c/WO-20261016-4b6c-line-build-l0-grid-fix-seat-up-seat-down-adopt.md) |
 | `WO-20261016-fb0c` | ready | p1 | - | [Line build L0 - merge-port-build: merge-on-green, index regen, smart CI](WO-20261016-fb0c/WO-20261016-fb0c-line-build-l0-merge-port-build-merge-on-green-in.md) |
@@ -34,5 +34,5 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-fa85` | ready | p1 | WO-20261016-2ffe | [Test - make pr-regen-index REPO= BRANCHES=: regen-merge.sh ported as the index-regen fallback](WO-20261016-fa85-test-make-pr-regen-index-repo-branches-regen-mer.md) |
 | `WO-20261016-de15` | ready | p1 | WO-20261016-1c04 | [Test - make wo-untrack-generated REPO=: untrack the generated work-order views, plan before apply](WO-20261016-de15-test-make-wo-untrack-generated-repo-untrack-the-.md) |
 | `WO-20261016-1844` | ready | p1 | WO-20261016-565d | [Test - work-order skill: INDEX.md and epic READMEs become untracked build outputs, regenerated on demand](WO-20261016-1844-test-work-order-skill-index-md-and-epic-readmes-.md) |
-| `WO-20261016-6e76` | ready | p1 | WO-20261016-0e3a | [Test - work-order skill: owner words, context, scripted AC checks, check verb, approve resolves tools](WO-20261016-6e76-test-work-order-skill-owner-words-context-script.md) |
+| `WO-20261016-6e76` | ready | p1 | WO-20261016-6ef4 | [Test - work-order skill: owner words, context, scripted AC checks, check verb, approve resolves tools](WO-20261016-6e76-test-work-order-skill-owner-words-context-script.md) |
 | `WO-20261016-6630` | ready | p1 | WO-20261016-2ffe | [generated-lint: CI fails a PR that adds a file marked auto-generated to the tracked tree](WO-20261016-6630-generated-lint-ci-fails-a-pr-that-adds-a-file-ma.md) |
