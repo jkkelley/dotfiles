@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # brief.sh - agent to agent briefs and results are JSON with defined acceptance criteria, never prose.
 #
-#   brief.sh check        FILE                     brief valid against schemas/brief.schema.json
+#   brief.sh check        FILE [--build] [--wo-project DIR]
+#                                                  brief valid against schemas/brief.schema.json; --build also needs a ready
+#                                                  work order in .work_order, else DESIGN-GAP on stderr and exit 3
 #   brief.sh result-check FILE [--brief BRIEF]     result valid, status done, every AC ticked with proof
 #                                                  (with --brief: same AC ids, same brief id, same done token)
 #   brief.sh new  [--config FILE] [--id X] [--from X] [--to X] [--subject X] [--result-file X] [--done-token X]
@@ -29,11 +31,31 @@ validate() { # <schema-file> <instance>
 }
 
 cmd_check() {
-  [ $# -eq 1 ] || die "usage: brief.sh check FILE"
-  [ -f "$1" ] || die "no such file: $1"
-  jq -e . "$1" >/dev/null 2>&1 || die "$1 is not JSON; agent to agent briefs are JSON, not prose"
-  validate "$SCHEMAS/brief.schema.json" "$1" || die "$1 fails brief.schema.json"
-  printf 'ok  brief %s valid (%s acceptance criteria)\n' "$1" "$(jq '.acceptance_criteria | length' "$1")"
+  local file="" build=0 woproj=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --build) build=1; shift ;;
+      --wo-project) woproj="${2:?--wo-project needs a dir}"; shift 2 ;;
+      *) [ -z "$file" ] || die "usage: brief.sh check FILE [--build] [--wo-project DIR]"; file="$1"; shift ;;
+    esac
+  done
+  [ -n "$file" ] || die "usage: brief.sh check FILE [--build] [--wo-project DIR]"
+  [ -f "$file" ] || die "no such file: $file"
+  jq -e . "$file" >/dev/null 2>&1 || die "$file is not JSON; agent to agent briefs are JSON, not prose"
+  validate "$SCHEMAS/brief.schema.json" "$file" || die "$file fails brief.schema.json"
+  if [ "$build" = 1 ]; then check_build "$file" "$woproj"; fi
+  printf 'ok  brief %s valid (%s acceptance criteria)\n' "$file" "$(jq '.acceptance_criteria | length' "$file")"
+}
+
+# A build seat starts only from a ready work order (ORD-0548, Design principles 101 item 30); otherwise DESIGN-GAP, exit 3.
+check_build() { # <brief> <work-order project dir, may be empty>
+  local wo st dir="${2:-$HERE/../..}"
+  wo="$(jq -r '.work_order // empty' "$1")"
+  [ -n "$wo" ] || { printf 'DESIGN-GAP %s names no work order\n' "$1" >&2; exit 3; }
+  if ! st="$(bash "$HERE/../skills/work-order/scripts/work-order.sh" show --project "$dir" --id "$wo" --json 2>/dev/null | jq -r .status)" || [ -z "$st" ]; then
+    printf 'DESIGN-GAP %s not found\n' "$wo" >&2; exit 3
+  fi
+  [ "$st" = ready ] || { printf 'DESIGN-GAP %s is %s, not ready\n' "$wo" "$st" >&2; exit 3; }
 }
 
 cmd_result_check() {
