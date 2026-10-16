@@ -4,15 +4,15 @@
   "slug": "close-the-merged-tickets-wo-20261016-75b7-wo-202",
   "title": "Close the merged tickets WO-20261016-75b7, WO-20261016-6edb and WO-20261016-3ac1 (PRs 220, 327, 293)",
   "type": "chore",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T12:35:37+00:00",
   "parent": "WO-20261016-af17",
   "branch": "feat/2b83-close-the-merged-tickets-wo-20261016-75b7-wo-202",
-  "pr": null,
-  "closed": null,
+  "pr": 374,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design22 cut for BR-20261016-infra-design22; design approvals ruled done, ORD-0550 O4",
@@ -113,13 +113,17 @@ Found by infra-design22 inventory on main 575b196: stale-merged READY-MERGED tic
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* WO-20261016-75b7 is done
+- [x] `AC-H1` *(human)* WO-20261016-75b7 is done
+  - observed `2026-10-16` check: bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-75b7 --json | jq -r .status exit 0 output: done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-75b7 --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H2` *(human)* WO-20261016-6edb is done
+- [x] `AC-H2` *(human)* WO-20261016-6edb is done
+  - observed `2026-10-16` check: bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-6edb --json | jq -r .status exit 0 output: done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-6edb --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H3` *(human)* WO-20261016-3ac1 is done
+- [x] `AC-H3` *(human)* WO-20261016-3ac1 is done
+  - observed `2026-10-16` check: bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-3ac1 --json | jq -r .status exit 0 output: done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-3ac1 --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H4` *(human)* the diff holds only work-orders files
+- [x] `AC-H4` *(human)* the diff holds only work-orders files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan
