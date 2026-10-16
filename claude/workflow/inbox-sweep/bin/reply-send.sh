@@ -196,7 +196,7 @@ ledger() { # <code> [json object of extra fields]
   local extra="${2:-}"
   [ -n "$extra" ] || extra='{}'
   jq -cn --arg at "$(sweep_now)" --arg code "$1" --arg id "$id" --arg sha "$sha" --arg url "$url" --arg b "$BATCH" --argjson extra "$extra" \
-    '{schema_version:1, at:$at, code:$code, id:$id, sha256:$sha, thread_url:$url, batch:$b} + $extra' >>"$LEDGER"
+    '{schema_version:1, at:$at, code:$code, id:$id, sha256:$sha, thread_url:$url, batch:$b} + $extra' | bash "$HERE/reply-ledger.sh" append --file "$LEDGER"
 }
 
 # load_file <approval>: checks one file against the owner's approval and appends it to the arrays. Returns 3 or 4 with a message
