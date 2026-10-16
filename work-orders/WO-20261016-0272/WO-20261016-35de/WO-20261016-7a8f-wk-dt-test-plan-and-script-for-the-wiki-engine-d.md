@@ -4,7 +4,7 @@
   "slug": "wk-dt-test-plan-and-script-for-the-wiki-engine-d",
   "title": "WK-Dt: test plan and script for the wiki engine design doc and spec",
   "type": "test",
-  "status": "draft",
+  "status": "ready",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -13,13 +13,37 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "infra-design11 cut for ORD-0932-next Q2 and the ORD-0830 RR-orch-14 DESIGN-GAPs; design approvals ruled done, ORD-0550 O4",
+    "at": "2026-10-16"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [
     "WO-20261016-6e7f"
   ],
-  "blocks": []
+  "blocks": [],
+  "ac_checks": [
+    {
+      "index": 1,
+      "command": "bash scripts/spec-check.sh docs/design/wiki.spec.xml",
+      "exit": 0,
+      "expect": null
+    },
+    {
+      "index": 2,
+      "command": "bash scripts/md-contents.sh check docs/design/wiki.md",
+      "exit": 0,
+      "expect": null
+    },
+    {
+      "index": 3,
+      "command": "grep -c fallback docs/design/wiki.spec.xml",
+      "exit": 0,
+      "expect": "^([5-9]|[1-9][0-9]+)$"
+    }
+  ]
 }
 ---
 
@@ -45,12 +69,17 @@ Test sibling of WK-D. The tester runs exactly this plan from ~/dotfiles on the W
 
 **In**
 
-- Run every case below from ~/dotfiles
-- Evidence: the output of every case, written to the path printed by `make -s -C ~/dotfiles artifact-new KEY=log NAME=wk-d-test EXT=log` (fallback FB-004: `bash ~/dotfiles/claude/tools/artifact/artifact.sh new` with the same KEY NAME EXT)
+- touches: nothing; the tester edits no file. Evidence goes to the artifact store only
+- step: check out the WK-D branch of WO-20261016-6e7f - WK-D: wiki engine design doc and XML spec - mermaid pipeline, status codes, GOOD/NEVER per rule in your own worktree from ~/dotfiles (its PR head), after WK-D submitted
+- step: run every AC check below in that worktree, in order; write their combined output to the path printed by `make -s artifact-new KEY=log NAME=wk-d-test EXT=log`; record each result with work-order.sh evidence
+- tool: path:scripts/spec-check.sh, path:scripts/md-contents.sh - on main; fallback: python3 missing on the host: run the same command in the pinned python image of the test plan, status FB-001 when the pull fails and the cached digest is used
+- tool: make:artifact-new - on main; fallback FB-004: bash claude/tools/artifact/artifact.sh new with the same KEY NAME EXT
+- tool: cmd:grep, cmd:git - fallback: missing on the host: stop with ENV-MISSING naming it
 
 **Out - non-goals**
 
-- Editing any file; a failing case is a note on the build ticket with its output
+- Editing any file; a failing case is a note on WO-20261016-6e7f with its output, then A2A-003
+- Waiting on CI or merging WK-D: run, evidence, result, leave (ORD-0542 O2)
 
 ## Degrees of freedom
 
@@ -58,7 +87,12 @@ Test sibling of WK-D. The tester runs exactly this plan from ~/dotfiles on the W
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* Every case passes: each case's command exits as its expected line says. Proof: the evidence log path on this ticket
+- [ ] `AC-H1` *(human)* TP-1 the spec passes spec-check (1000 lines or less, parses, contents first)
+  - check: `bash scripts/spec-check.sh docs/design/wiki.spec.xml` exit 0
+- [ ] `AC-H2` *(human)* TP-2 the design doc opens with its contents list
+  - check: `bash scripts/md-contents.sh check docs/design/wiki.md` exit 0
+- [ ] `AC-H3` *(human)* TP-3 the spec names a fallback at least five times (ORD-0558 O1)
+  - check: `grep -c fallback docs/design/wiki.spec.xml` exit 0 expect /^([5-9]|[1-9][0-9]+)$/
 
 ## Test plan
 
