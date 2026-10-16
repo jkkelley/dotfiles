@@ -116,6 +116,7 @@ jobs:
       tools: ${{ steps.detect.outputs.tools }}
       gate: ${{ steps.detect.outputs.gate }}
       workflow: ${{ steps.workflow.outputs.workflow }}
+      workflow_shards: ${{ steps.workflow.outputs.shards }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -203,19 +204,16 @@ jobs:
   # workflow that does not trigger leaves a required check pending forever,
   # where a job skipped by `if:` reports as passed.
   #
-  # Why the Makefile rather than a run-suite line: the Makefile already builds
-  # its own image from a digest-pinned base and runs every target in Podman
-  # with --network=none. Calling it is the same command a contributor runs, so
-  # CI and the local loop cannot disagree about what "the suite" means.
+  # The suite now runs sharded in workflow-suite.yml, one matrix job per shard
+  # the diff touches (detect's workflow_shards). Why: serial it took 8 min 9 s
+  # (run 2026-10-16T07:02:20Z to 07:10:29Z). Rejected: a path-filtered sibling
+  # workflow, which leaves a check pending forever. Cost: one runner per
+  # selected shard. Each shard calls the Makefile's own target, so CI and the
+  # local loop still agree about what "the suite" means.
   workflow:
     name: claude/workflow
     needs: detect
     if: needs.detect.outputs.workflow == 'true'
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: podman
-        run: bash .github/scripts/require-podman.sh
-
-      - run: make -C claude/workflow test
+    uses: ./.github/workflows/workflow-suite.yml
+    with:
+      shards: ${{ needs.detect.outputs.workflow_shards }}
