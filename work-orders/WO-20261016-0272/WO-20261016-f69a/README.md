@@ -8,7 +8,7 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-6cff` | ready | p1 | WO-20261016-5504 WO-20261016-88d3 | [Rolodex points at the PR index: one pointer line, never the index itself](WO-20261016-6cff-rolodex-points-at-the-pr-index-one-pointer-line-.md) |
+| `WO-20261016-6cff` | ready | p1 | WO-20261016-5504 | [Rolodex points at the PR index: one pointer line, never the index itself](WO-20261016-6cff-rolodex-points-at-the-pr-index-one-pointer-line-.md) |
 | `WO-20261016-dcb4` | ready | p1 | WO-20261016-6cff | [Test - Rolodex points at the PR index: one pointer line, never the index itself](WO-20261016-dcb4-test-rolodex-points-at-the-pr-index-one-pointer-.md) |
 | `WO-20261016-7d47` | ready | p1 | WO-20261016-5504 | [Test - pr-index.sh: every open PR of the account in one generated index outside git](WO-20261016-7d47-test-pr-index-sh-every-open-pr-of-the-account-in.md) |
 | `WO-20261016-1256` | ready | p1 | WO-20261016-df39 | [Test - pr-sweep.sh: merge every clean approved PR, one fix work order per red one](WO-20261016-1256-test-pr-sweep-sh-merge-every-clean-approved-pr-o.md) |
