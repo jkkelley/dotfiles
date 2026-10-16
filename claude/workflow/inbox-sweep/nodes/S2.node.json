@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "S2",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "script": "claude/workflow/inbox-sweep/bin/lead-qualify.sh",
   "input_schema": {
     "path": "<runs>/<run-id>/leads.jsonl",
@@ -26,6 +26,5 @@
     }
   ],
   "serial": null,
-  "parallel": "per conversation",
-  "script_pending": true
+  "parallel": "per conversation"
 }
