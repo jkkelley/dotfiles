@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "run_id": "dagrun-20261016T090000Z-fixture",
+  "serial": 3,
+  "lineage": "00000000-0000-4000-8000-000000000001",
+  "design": {
+    "id": "fixture",
+    "version": "1.0.0",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "ticket": { "id": "WO-FIXTURE", "title": "Fixture run at design 1.0.0" },
+  "worktree": { "path": "/wt/fixture", "branch": "feat/fixture", "slot": null },
+  "pr": null,
+  "nodes": {
+    "N1": { "status": "DG-DONE", "version": "1.0.0", "attempts": 1, "proofs": [{ "box": "b1", "proof": "p1", "at": "2026-10-16T09:00:00Z" }] },
+    "N2": { "status": "DG-DONE", "version": "1.0.0", "attempts": 1, "proofs": [{ "box": "b2", "proof": "p2", "at": "2026-10-16T09:01:00Z" }] },
+    "N3": { "status": "DG-PENDING", "version": "1.0.0", "attempts": 0, "proofs": [] },
+    "N4": { "status": "DG-DONE", "version": "1.0.0", "attempts": 1, "proofs": [{ "box": "b4", "proof": "p4", "at": "2026-10-16T09:02:00Z" }] }
+  },
+  "updated_at": "2026-10-16T09:02:00Z"
+}
