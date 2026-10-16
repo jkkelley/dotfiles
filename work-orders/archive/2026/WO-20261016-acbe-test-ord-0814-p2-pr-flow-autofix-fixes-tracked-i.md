@@ -4,15 +4,15 @@
   "slug": "test-ord-0814-p2-pr-flow-autofix-fixes-tracked-i",
   "title": "Test - ORD-0814 P2: pr-flow autofix fixes tracked-ignored and contents lists once per head, leaves content failures to the fix seat",
   "type": "test",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T08:28:49+00:00",
   "parent": "WO-20261016-ebe4",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/acbe-test-ord-0814-p2-pr-flow-autofix-fixes-tracked-i",
+  "pr": 342,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design6 cut for ORD-0814 P1 P2; design approvals ruled done, ORD-0550 O4",
@@ -94,9 +94,11 @@ Evidence 2026-10-16 08:00-08:15Z: PRs 216, 219, 225, 234 red on headers or track
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* autofix and every sweep case beside it pass on main
+- [x] `AC-H1` *(human)* autofix and every sweep case beside it pass on main
+  - observed `2026-10-16` check: make -C claude/workflow pr-flow-test CASES="autofix consume regen-index rerun-stale-red records" exit 0 output: make: Entering directory '/home/luna/.local/state/zenith/wt-acbe/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 ok autofix ok consume ok regen-index ok rerun-stale-red ok records make: Leaving directory '/home/luna/.local/state/zenith/wt-acbe/claude/workflow'
   - check: `make -C claude/workflow pr-flow-test CASES="autofix consume regen-index rerun-stale-red records"` exit 0 expect /ok autofix/
-- [ ] `AC-H2` *(human)* pr-flow scripts stay shellcheck clean on main
+- [x] `AC-H2` *(human)* pr-flow scripts stay shellcheck clean on main
+  - observed `2026-10-16` check: make -C claude/workflow pr-flow-lint exit 0 output: make: Entering directory '/home/luna/.local/state/zenith/wt-acbe/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 make: Leaving directory '/home/luna/.local/state/zenith/wt-acbe/claude/workflow'
   - check: `make -C claude/workflow pr-flow-lint` exit 0
 
 ## Test plan
