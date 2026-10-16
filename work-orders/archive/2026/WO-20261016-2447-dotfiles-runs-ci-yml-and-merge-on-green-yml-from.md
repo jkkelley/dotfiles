@@ -4,15 +4,15 @@
   "slug": "dotfiles-runs-ci-yml-and-merge-on-green-yml-from",
   "title": "dotfiles runs ci.yml and merge-on-green.yml from the pr-flow templates (T7)",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:39:08+00:00",
   "parent": "WO-20261016-ebe4",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/dotfiles-runs-ci-yml-and-merge-on-green-yml-from",
+  "pr": 185,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat; design PR 169 merged under ORD-0550 is the approval",
@@ -64,8 +64,10 @@ Build ticket from claude/workflow/docs/pr-process/pr-process.md section 13; file
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the named test cases pass in podman
-- [ ] `AC-H2` *(human)* files touched equal the Scope list
+- [x] `AC-H1` *(human)* the named test cases pass in podman
+  - observed `2026-10-16` PR 185 checks pass=7 skipping=3 (deviation, recorded in the commit: no ci.yml in dotfiles, skill PR gate is the path-selected CI, REQUIRED_CHECK='what has to run')
+- [x] `AC-H2` *(human)* files touched equal the Scope list
+  - observed `2026-10-16` files: .github/workflows/merge-on-green.yml (rendered, no hand edit), .github/workflows/skill-publish.yml (workflow_dispatch input before)
 
 ## Test plan
 
