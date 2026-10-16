@@ -36,6 +36,7 @@ case "$1 $2" in
   "pane split") echo $((n+1)) > "$fx/next"; echo "{\"result\":{\"pane\":{\"pane_id\":\"wT:p$n\"}}}" ;;
   "tab create") echo $((n+2)) > "$fx/next"; echo "{\"result\":{\"tab\":{\"tab_id\":\"wT:t$n\"},\"root_pane\":{\"pane_id\":\"wT:p$((n+1))\"}}}" ;;
   "agent list") echo '{"result":{"agents":[{"pane_id":"wT:y2","name":"s9"}]}}' ;;
+  "agent wait") [ -f "$fx/working" ] && [[ "$*" != *"--until working"* ]] && exit 1; echo '{"result":{"type":"ok"}}' ;;
   "pane read") cat "$fx/read-${3//:/_}.txt" 2>/dev/null ;;
   *) echo '{"result":{"type":"ok"}}' ;;
 esac
@@ -95,6 +96,11 @@ done
 touch "$T/fx/slow"; : > "$T/log"; $G seat-up L zed >/dev/null 2>&1; rc=$?; rm -f "$T/fx/slow"
 [ "$rc" = 0 ] && ok "seat-up succeeds with free slots in several tabs" || bad "seat-up with several free tabs" "rc=$rc"
 has "and takes the first free slot of the first tab" 'pane rename wT:p2 zed'
+
+# ---- a prompted seat is working at once (live bug 2026-10-16T05:42Z, stuck-watch-2): seat-up must wait on idle or working
+mk_tab1 free free free free free free
+touch "$T/fx/working"; rm -f "$T/state/L/pw.agent-seen"; : > "$T/log"; $G seat-up L pw "claude -p go" >/dev/null 2>&1; rc=$?; rm -f "$T/fx/working"
+[ "$rc" = 0 ] && [ -f "$T/state/L/pw.agent-seen" ] && ok "seat-up with a prompted seat that is working exits 0 and writes agent-seen" || bad "seat-up with a prompted seat that is working exits 0 and writes agent-seen" "rc=$rc"
 
 # ---- seat-up: slot order, no double claim, overflow
 mk_tab1 free free free free free free
