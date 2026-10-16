@@ -25,7 +25,7 @@ Archived tickets drop out of it and into the table below.
 ```text
 WO-20261016-916d  in-progress p1 A2A guard - orders never typed into busy panes, never ack-o...
 |-- WO-20261016-e15b  in-progress p2 a2a-deliver delivers one collapsed pointer line to an idle ...
-|-- WO-20261016-9682  ready       p2 a2a-guard dev and UAT gates
+|-- WO-20261016-9682  in-progress p2 a2a-guard dev and UAT gates
 |-- WO-20261016-2aef  in-progress p2 a2a-lint fails a raw herdr pane send-text outside a2a-guard...
 |-- WO-20261016-43bb  in-progress p2 a2a-send validates, refuses ack-only and future-dated order...
 `-- WO-20261016-6f1f  in-progress p2 repo-settings-check reports auto-merge, branch protection a...
@@ -79,7 +79,7 @@ WO-20261016-1703  ready       p1 Inbox sweep build
 | `WO-20261016-43bb` | in-progress | p2 | feature | WO-20261016-916d | - | [a2a-send validates, refuses ack-only and future-dated orders, names by artifact store, enqueues](WO-20261016-916d/WO-20261016-43bb-a2a-send-validates-refuses-ack-only-and-future-d.md) |
 | `WO-20261016-6f1f` | in-progress | p2 | feature | WO-20261016-916d | - | [repo-settings-check reports auto-merge, branch protection and merge workflow per repo, read-only](WO-20261016-916d/WO-20261016-6f1f-repo-settings-check-reports-auto-merge-branch-pr.md) |
 | `WO-20261016-916d` | in-progress | p1 | feature | - | - | [A2A guard - orders never typed into busy panes, never ack-only, never hand-named](WO-20261016-916d/WO-20261016-916d-a2a-guard-orders-never-typed-into-busy-panes-nev.md) |
-| `WO-20261016-9682` | ready | p2 | test | WO-20261016-916d | WO-20261016-e15b WO-20261016-2aef | [a2a-guard dev and UAT gates](WO-20261016-916d/WO-20261016-9682-a2a-guard-dev-and-uat-gates.md) |
+| `WO-20261016-9682` | in-progress | p2 | test | WO-20261016-916d | WO-20261016-e15b WO-20261016-2aef | [a2a-guard dev and UAT gates](WO-20261016-916d/WO-20261016-9682-a2a-guard-dev-and-uat-gates.md) |
 | `WO-20261016-e15b` | in-progress | p2 | feature | WO-20261016-916d | WO-20261016-43bb | [a2a-deliver delivers one collapsed pointer line to an idle seat with an empty input line](WO-20261016-916d/WO-20261016-e15b-a2a-deliver-delivers-one-collapsed-pointer-line-.md) |
 
 ## Archived
