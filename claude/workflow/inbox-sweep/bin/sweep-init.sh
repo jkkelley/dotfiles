@@ -15,6 +15,9 @@
 #   SWEEP_WIN_HOME     see sweep-lib.sh
 #
 # Design: docs/design/inbox-sweep.md section 5 node R1 and spec node `scripts` / `sweep-init.sh`.
+# run.json carries the integer schema_version 2 (design 15.2); v1 was the string "1.0.0". schemas/records/run.v2.schema.json
+# describes it and migrations/run/v1-to-v2.sh upgrades an old copy forward. Rejected: keeping the string, which migrate.sh
+# cannot compare as a version.
 set -euo pipefail
 BIN="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SWEEP="$(cd "$BIN/.." && pwd)"
@@ -98,7 +101,7 @@ MARK_READ="$(jq -r 'if has("mark_read") then .mark_read else true end | tostring
 
 jq -n --arg id "$RUN_ID" --arg at "$(sweep_now)" --arg sha "$OWNER_SHA" --arg win "$win_home" --arg dl "$DEADLINE_AT" --argjson nv "$NODE_VERSIONS" \
   --rawfile rows <(printf '%s\n' "$seat_rows") '
-  { schema_version: "1.0.0", run_id: $id, status: "RUN-RUNNING",
+  { schema_version: 2, run_id: $id, status: "RUN-RUNNING",
     seats: ($rows | split("\n") | map(select(length > 0) | split("\t")
       | {seat: .[0], source: .[1], account: .[3], status: "RUN-RUNNING", pane: null, deadline_at: $dl, attempts: 0})),
     win_home: $win, owner_words_sha256: $sha, node_versions: $nv, started_at: $at, finished_at: null, cleaned_at: null, steps: [] }' \
