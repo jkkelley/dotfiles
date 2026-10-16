@@ -4,7 +4,7 @@
   "slug": "line-sweep-raises-lw-alert-discovery-for-an-unla",
   "title": "line-sweep raises LW-ALERT-DISCOVERY for an unlabelled claude pane in a line workspace",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-4b6c",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -23,7 +23,8 @@
   "depends_on": [],
   "blocks": [
     "WO-20261016-e77c"
-  ]
+  ],
+  "superseded_by": "WO-20261016-f228"
 }
 ---
 
@@ -114,4 +115,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: F15 folded in: superseded by the combined line-watch alerts ticket
+- superseded by: `WO-20261016-f228`
+
+No branch, no PR and no merge commit exist for this work order.
+
