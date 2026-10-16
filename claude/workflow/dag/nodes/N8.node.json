@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "N8",
+  "version": "1.0.0",
+  "title": "ci",
+  "script": "claude/workflow/dag/bin/dag-ci.sh",
+  "depends_on": [
+    "N7"
+  ],
+  "input": {
+    "path": "records/N8.input.json",
+    "schema_version": 1
+  },
+  "output": {
+    "path": "records/N8.output.json",
+    "schema_version": 1
+  },
+  "checklist": [
+    {
+      "box": "Every required check green",
+      "proof": "gh pr checks lists each required_checks name as pass"
+    }
+  ],
+  "bundle": {
+    "checklist_doc": "claude/workflow/dag/nodes/N8.node.json",
+    "runbook": "claude/workflow/runbooks/RB-dag-intake.md",
+    "playbook": "claude/workflow/dag/playbooks/PB-intake.md",
+    "docs": [
+      "docs/design/dag-state.md",
+      "docs/design/dag-state.spec.xml",
+      "docs/design/dag-state-nodes.spec.xml",
+      "claude/workflow/dag/schemas/node.schema.json",
+      "claude/workflow/dag/schemas/state.schema.json"
+    ]
+  },
+  "retry": {
+    "max": 3,
+    "waits_seconds": [
+      5,
+      30,
+      120
+    ],
+    "idempotent": true
+  },
+  "serial": "Intended wait: CI time",
+  "parallel": "none"
+}

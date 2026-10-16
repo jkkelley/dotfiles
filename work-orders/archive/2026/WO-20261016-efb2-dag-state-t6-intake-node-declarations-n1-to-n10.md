@@ -4,15 +4,15 @@
   "slug": "dag-state-t6-intake-node-declarations-n1-to-n10",
   "title": "dag-state T6 - Intake node declarations N1 to N10",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:07:38+00:00",
   "parent": "WO-20261016-41d0",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/dag-state-t6-intake-node-declarations-n1-to-n10",
+  "pr": 297,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design8 cut for ORD-0837 RR-orch-18, ORD-0848 Y3 and the ORD-0830 RR-orch-14 DESIGN-GAPs; design approvals ruled done, ORD-0550 O4",
@@ -116,11 +116,14 @@ DESIGN-GAP 2026-10-16T08:58Z from seat dag-t6 (seats/dag-t6.result.json): AC-H1,
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every node declaration N1..N10 is valid against node.schema.json
+- [x] `AC-H1` *(human)* every node declaration N1..N10 is valid against node.schema.json
+  - observed `2026-10-16` ok-nodes, exit 0 in podman --network=none
   - check: `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'for f in claude/workflow/dag/nodes/N*.node.json; do bash claude/workflow/tools/validate-schema.sh claude/workflow/dag/schemas/node.schema.json $f || exit 1; done; echo ok-nodes'` exit 0 expect /ok-nodes/
-- [ ] `AC-H2` *(human)* the specs were read, not edited
+- [x] `AC-H2` *(human)* the specs were read, not edited
+  - observed `2026-10-16` make spec-check exit 0
   - check: `make spec-check` exit 0
-- [ ] `AC-H3` *(human)* the diff holds only the ten node files and generated work-orders files
+- [x] `AC-H3` *(human)* the diff holds only the ten node files and generated work-orders files
+  - observed `2026-10-16` diff holds only N1..N10 node files
   - check: `bash -c '! git diff --name-only origin/main...HEAD | grep -vE "^(work-orders/|claude/workflow/dag/nodes/N([1-9]|10)[.]node[.]json$)"'` exit 0
 
 ## Test plan
