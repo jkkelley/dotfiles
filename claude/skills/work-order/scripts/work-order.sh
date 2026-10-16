@@ -45,17 +45,17 @@ Usage:
   work-order.sh resolve [--project DIR] --id WO-... (--index N | --match TEXT)
                         --answer T [--json]
   work-order.sh evidence [--project DIR] --id WO-... (--index N | --match TEXT)
-                        --observed T [--json]
-  work-order.sh check   [--project DIR] --id WO-... [--index N] [--code-dir DIR] [--json]
+                        --observed T [--code-dir DIR [--code-ref REF]] [--json]
+  work-order.sh check   [--project DIR] --id WO-... [--index N] [--code-dir DIR [--code-ref REF]] [--json]
   work-order.sh next    [--project DIR] [--json]
   work-order.sh tree    [--project DIR] [--json]
   work-order.sh reindex [--project DIR] [--check] [--json]
   work-order.sh reflow  [--project DIR] [--dry-run] [--json]
   work-order.sh repair  [--project DIR] [--dry-run] [--json]
-  work-order.sh approve [--project DIR] --id WO-... [--code-dir DIR] [--no-lavish --reason T] [--json]
+  work-order.sh approve [--project DIR] --id WO-... [--code-dir DIR [--code-ref REF]] [--no-lavish --reason T] [--json]
   work-order.sh start   [--project DIR] --id WO-... [--json]
   work-order.sh submit  [--project DIR] --id WO-... --pr N [--json]
-  work-order.sh done    [--project DIR] --id WO-... [--code-dir DIR] [--json]
+  work-order.sh done    [--project DIR] --id WO-... [--code-dir DIR [--code-ref REF]] [--json]
   work-order.sh cleanup [--project DIR] --id WO-... [--dry-run] [--json]
   work-order.sh cancel  [--project DIR] --id WO-... --reason T
                         [--superseded-by WO-...] [--json]
@@ -247,7 +247,7 @@ command="$1"; shift
 title=""; type=""; problem=""; test_plan=""; test_plan_file=""; priority="p2"
 id=""; pr=""; reason=""; status_filter=""; from_figma=""; frames_glob="*"; pr_repo=""
 parent=""; text=""; answer=""; observed=""; index=""; match=""; superseded_by=""
-tree_id=""; line_name=""; offline=0; ticket_repo=""; clear_repo=0; code_dir=""
+tree_id=""; line_name=""; offline=0; ticket_repo=""; clear_repo=0; code_dir=""; code_ref=""; CODE_TREE=""; CODE_SHA=""
 declare -a label_items=() add_labels=() remove_labels=()
 no_lavish=0; dry_run=0; detach=0; check=0; top_level=0
 declare -a in_items=() out_items=() ac_items=() freedom_items=() surfaces=() assumptions=() questions=()
@@ -314,6 +314,7 @@ while (($#)); do
     --status) status_filter="${2-}"; shift 2 ;;
     --repo) ticket_repo="${2-}"; shift 2 ;;
     --code-dir) code_dir="${2-}"; shift 2 ;;
+    --code-ref) code_ref="${2-}"; shift 2 ;;
     --clear-repo) clear_repo=1; shift ;;
     --pr-repo) pr_repo="${2-}"; shift 2 ;;
     --no-lavish) no_lavish=1; shift ;;
@@ -1090,8 +1091,14 @@ resolve_tool() {
 
 # code_repo_slug <dir> - O/R of the dir's origin remote, from git@github.com:O/R(.git)
 # or https://github.com/O/R(.git); empty when it has no origin.
+# BREADCRUMB (WO-20261016-318d). What broke: remote get-url applies
+# url.<base>.insteadOf rewriting, so a fixture that redirects the github url to a
+# local bare repo (assert.sh fake_origin, cases 370, 420, 450 under --network=none)
+# would also change the slug the guard compares. Fix: read the configured url,
+# which is the repo the checkout declares. Rejected: a WO_FETCH_URL test-only
+# override in code_tree, a test seam in production code.
 code_repo_slug() {
-  local u; u=$(git -C "$1" remote get-url origin 2>/dev/null) || return 0
+  local u; u=$(git -C "$1" config --get remote.origin.url 2>/dev/null) || return 0
   u="${u%/}"; u="${u%.git}"; u="${u#git@github.com:}"; u="${u#https://github.com/}"
   printf '%s' "$u"
 }
@@ -1114,12 +1121,8 @@ require_tools_resolve() {
   trepo=$(wo_field "$file" '.repo')
   declare -g tool_root="$project"
   if [[ -n $trepo ]]; then
-    [[ -n $code_dir ]] || ps_die "$PS_USAGE" "code_dir_required" \
-      "code_dir_required: ticket repo is $trepo; pass --code-dir DIR, a checkout of it"
-    local actual; actual=$(code_repo_slug "$code_dir")
-    [[ $actual == "$trepo" ]] || ps_die "$PS_VALIDATION" "code_dir_mismatch" \
-      "code_dir_mismatch: ticket repo is $trepo, --code-dir origin is ${actual:-none}"
-    tool_root="$code_dir"
+    code_tree "$file" main
+    tool_root="$CODE_TREE"
   elif [[ -n $code_dir ]]; then
     ps_die "$PS_USAGE" "code_dir_without_repo" \
       "code_dir_without_repo: the ticket has no repo field, so --code-dir does not apply"
@@ -1235,7 +1238,7 @@ cmd_submit() {
 cmd_done() {
   wo_require_jq; require_id
   local file; file=$(wo_find "$project" "$id")
-  require_code_dir "$file"
+  code_tree "$file" pr
   wo_require_status "$file" in-review
 
   # Scripted checks run first; a failing one refuses the close-out outright,
@@ -1928,24 +1931,59 @@ tick_criterion() {
 # made here carries the command, its exit code and its output.
 # ---------------------------------------------------------------------------
 
-# BREADCRUMB (WO-20261016-1099). What broke: run_checks ran every ac_check with
-# the ticket project as cwd, so a ticket whose .repo names another repo ran its git
-# diff and make checks in the wrong tree: WO-20261016-2d63 (business ticket, code
-# in ypconsult-01-src PR 63) passed AC-H1..H5 in the src worktree but done failed
-# in business and the ticket sat in-review (seats/ypc-2d63.result.json).
-# Fix: check and done take --code-dir DIR, proven by its origin remote like approve
-# (WO-20261016-e297), and run_checks cds there. Rejected: guessing the checkout
-# from treehouse or ~/projects, which is nondeterministic. Cost: a cross-repo
-# close-out names one more flag.
-# require_code_dir <file> - sets code_dir for a cross-repo ticket, refuses without it.
-require_code_dir() {
-  local trepo; trepo=$(wo_field "$1" '.repo')
-  if [[ -z $trepo ]]; then code_dir=""; return 0; fi
+# BREADCRUMB (WO-20261016-1099, WO-20261016-318d). What broke: run_checks ran every
+# ac_check with the ticket project as cwd, so a cross-repo ticket ran its checks in
+# the wrong tree (WO-20261016-2d63, then WO-20261016-64f2 F44: done in dotfiles
+# while the same checks pass in gitops-builder). Then --code-dir DIR was read as
+# the seat left it: whatever HEAD, branch and uncommitted files, possibly behind
+# origin, so approve passed tools not on main (WO-20261016-1b46 finding) and
+# evidence named no commit.
+# Fix: code_tree adds a detached worktree of DIR at freshly fetched origin/main
+# (mode main) or the ticket's open code PR head (mode pr) and sets CODE_TREE and
+# CODE_SHA; an EXIT trap removes it. A detached worktree never moves the seat's
+# branch, and a dirty seat tree cannot leak into a check.
+# Rejected: git -C DIR checkout (moves the seat's branch, fails on a dirty tree);
+# DIR as it stands (an old copy passes).
+# Cost: one fetch and one worktree per call, about a second.
+# code_tree <file> <main|pr> - no-op when the ticket has no .repo.
+code_tree() {
+  local file="$1" mode="$2" trepo ref="" try d pr_n info st head ok
+  trepo=$(wo_field "$file" '.repo')
+  if [[ -z $trepo ]]; then CODE_TREE=""; code_dir=""; return 0; fi
   [[ -n $code_dir ]] || ps_die "$PS_USAGE" "code_dir_required" \
     "code_dir_required: $id names repo $trepo; pass --code-dir <checkout of that repo>"
   local actual; actual=$(code_repo_slug "$code_dir")
   [[ $actual == "$trepo" ]] || ps_die "$PS_VALIDATION" "code_dir_mismatch" \
     "code_dir_mismatch: ticket repo is $trepo, --code-dir origin is ${actual:-none}"
+  ok=0
+  for try in 1 2 3; do
+    git -C "$code_dir" fetch -q origin 2>/dev/null && { ok=1; break; }
+    ((try < 3)) && sleep 5
+  done
+  ((ok)) || ps_die "$PS_IO" "code_fetch_failed" "$trepo: git fetch origin failed 3 times"
+  if [[ -n $code_ref ]]; then
+    git -C "$code_dir" rev-parse --verify -q "$code_ref" >/dev/null 2>&1 || ps_die "$PS_VALIDATION" \
+      "code_ref_unknown" "code_ref_unknown: $code_ref does not resolve in $code_dir"
+    ref="$code_ref"
+  elif [[ $mode == pr ]] && pr_n=$(wo_field "$file" '.pr') && [[ -n $pr_n ]]; then
+    ok=0
+    for try in 1 2 3; do
+      info=$(${GH:-gh} pr view "$pr_n" -R "$trepo" --json state,headRefName 2>/dev/null) && { ok=1; break; }
+      ((try < 3)) && sleep 5
+    done
+    ((ok)) || ps_die "$PS_IO" "code_pr_lookup_failed" "$trepo: gh pr view $pr_n failed 3 times"
+    st=$(jq -r .state <<<"$info"); head=$(jq -r .headRefName <<<"$info")
+    if [[ $st == OPEN ]]; then ref="origin/$head"; else ref="origin/main"; fi
+  else
+    ref="origin/main"
+  fi
+  d=$(mktemp -d "${TMPDIR:-/tmp}/wo-code.XXXXXX")
+  git -C "$code_dir" worktree add -q --detach "$d" "$ref" 2>/dev/null || ps_die "$PS_IO" \
+    "code_worktree_failed" "$trepo: git worktree add $ref failed"
+  # shellcheck disable=SC2064
+  trap "git -C '$code_dir' worktree remove --force '$d' >/dev/null 2>&1; rm -rf '$d'" EXIT
+  CODE_TREE="$d"
+  CODE_SHA=$(git -C "$d" rev-parse HEAD)
 }
 
 # run_checks <file> [only-index] [notick] - runs the checks, ticking passes
@@ -1965,7 +2003,7 @@ run_checks() {
     want=$(jq -r .exit <<<"$rec"); expect=$(jq -r '.expect // ""' <<<"$rec")
     [[ -z $only || $only == "$i" ]] || continue
     rc=0
-    out=$(cd "${code_dir:-$project}" && timeout 600 bash -c "$cmd" 2>&1) || rc=$?
+    out=$(cd "${CODE_TREE:-$project}" && timeout 600 bash -c "$cmd" 2>&1) || rc=$?
     ok=0
     if [[ $rc == "$want" ]]; then
       ok=1
@@ -1992,7 +2030,7 @@ cmd_check() {
   if [[ -n $index ]]; then
     [[ $index =~ ^[0-9]+$ ]] || ps_die "$PS_USAGE" "bad_index" "--index must be a whole number (got: $index)"
   fi
-  require_code_dir "$file"
+  code_tree "$file" pr
   run_checks "$file" "$index" || exit 1
 }
 
@@ -2055,6 +2093,10 @@ cmd_evidence() {
     "criterion $pick on $id is already evidenced: ${texts[pick - 1]}"
 
   local stamp; stamp=$(ps_today)
+  code_tree "$file" pr
+  if [[ -n $CODE_TREE ]]; then
+    observed="$observed (at $(wo_field "$file" '.repo')@${CODE_SHA:0:12})"
+  fi
   tick_criterion "$file" "$pick" "$observed"
 
   if ((PS_JSON)); then

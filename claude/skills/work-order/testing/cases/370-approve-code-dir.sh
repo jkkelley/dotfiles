@@ -21,8 +21,8 @@ git -C "$code" add -A && git -C "$code" commit -qm "makefile" && git -C "$code" 
 other=$(git_project)
 printf 'lint:\n\t@true\n' >"$other/Makefile"
 git -C "$other" add -A && git -C "$other" commit -qm "makefile" && git -C "$other" push -q origin main
-git -C "$code" remote set-url origin git@github.com:acme/code.git
-git -C "$other" remote set-url origin https://github.com/acme/else.git
+fake_origin "$code" git@github.com:acme/code.git
+fake_origin "$other" https://github.com/acme/else.git
 
 mk() { # mk <title> [extra new args...]
   local t="$1"; shift
@@ -46,11 +46,11 @@ run 0 "an ssh origin matches and the tool resolves in the code checkout" appr "$
 run 0 "the ticket is ready" bash -c \
   "bash '$SKILL/scripts/work-order.sh' show --project '$d' --id '$id' --json | jq -e '.status == \"ready\"' >/dev/null"
 
-git -C "$code" remote set-url origin https://github.com/acme/code.git
+fake_origin "$code" https://github.com/acme/code.git
 id=$(mk "Cross repo https" --repo acme/code --ac "lint" --ac-check "make lint" --ac-exit 0)
 run 0 "an https origin matches" appr "$id" --code-dir "$code"
 
-git -C "$code" remote set-url origin https://github.com/acme/code
+fake_origin "$code" https://github.com/acme/code
 id=$(mk "Cross repo bare" --repo acme/code --ac "lint" --ac-check "make lint" --ac-exit 0)
 run 0 "an https origin without .git matches" appr "$id" --code-dir "$code"
 

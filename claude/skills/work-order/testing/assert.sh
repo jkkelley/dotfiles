@@ -174,6 +174,13 @@ git_project() {
   printf '%s' "$d"
 }
 
+# fake_origin <dir> <url> - name a github url as origin but fetch from the local bare repo (370, 420, 450 under --network=none)
+fake_origin() {
+  local dir="$1" url="$2"
+  git -C "$dir" remote set-url origin "$url"
+  git -C "$dir" config --add url."${dir}.git".insteadOf "$url"
+}
+
 # gh_stub <dir> <state> [sha] [project] [pr-create-fails] - put a fake gh on PATH
 # reporting a fixed state. The close tests are about what work-order does with
 # gh's answer, so gh's answer has to be the thing under our control.
