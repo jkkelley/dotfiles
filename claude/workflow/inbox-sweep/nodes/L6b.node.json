@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "id": "L6b",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "script": "claude/workflow/inbox-sweep/bin/reply-send.sh",
   "input_schema": {
-    "path": "<owner's typed line in the send pane>",
+    "path": "<owner's typed line `Send them` in the batch send pane>",
     "schema_version": 1
   },
   "output_schema": {
@@ -13,18 +13,18 @@
   },
   "checklist": [
     {
-      "box": "Line names the id and is the owner's own message in this session",
-      "proof": "`RP-CONFIRMED` row carries the id and the UTC time of the line."
+      "box": "Line is exactly `Send them`, follows RP-AWAITING-CONFIRM batch <batch-id> and is the owner's own message in this session",
+      "proof": "one `RP-CONFIRMED` row per file in the batch, each quoting the line and the batch id, with the UTC time."
     },
     {
       "box": "Nothing was typed into LinkedIn before the confirm",
       "proof": "L7 start time in the ledger is later than the `RP-CONFIRMED` time."
     },
     {
-      "box": "A pane line that does not name a ready id is ignored",
-      "proof": "stub test: a line with an unknown id writes no row."
+      "box": "`send <id>` and any other line are ignored",
+      "proof": "stub test: those lines write no row and nothing is typed."
     }
   ],
-  "serial": "Intended wait: the single wait in the whole process, the owner decides each reply; the other replies do not queue behind it",
+  "serial": "Intended wait: the single wait per batch, the owner decides each reply on its card and then types one line for the batch; other batches do not queue behind it",
   "parallel": "per approved reply"
 }
