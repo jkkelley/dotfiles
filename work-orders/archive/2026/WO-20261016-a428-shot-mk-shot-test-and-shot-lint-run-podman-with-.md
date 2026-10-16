@@ -4,15 +4,15 @@
   "slug": "shot-mk-shot-test-and-shot-lint-run-podman-with-",
   "title": "shot.mk: shot-test and shot-lint run podman with --userns=keep-id like every other workflow container step",
   "type": "bug",
-  "status": "ready",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:26:20+00:00",
   "parent": "WO-20261016-35de",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/shot-mk-shot-test-and-shot-lint-run-podman-with-",
+  "pr": 311,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design14 cut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -102,11 +102,14 @@ Order ORD-1012 W1 via brief BR-20261016-infra-design14, ORD-0830 RR-orch-14; F35
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* both podman lines carry --userns=keep-id
+- [x] `AC-H1` *(human)* both podman lines carry --userns=keep-id
+  - observed `2026-10-16` grep -c prints 2, exit 0
   - check: `grep -c 'podman run --rm --network=none --userns=keep-id' claude/tools/shot/shot.mk` exit 0 expect /^2$/
-- [ ] `AC-H2` *(human)* the shot test passes under keep-id
+- [x] `AC-H2` *(human)* the shot test passes under keep-id
+  - observed `2026-10-16` make shot-test pass=8 fail=0, exit 0
   - check: `make -f claude/tools/shot/shot.mk shot-test` exit 0
-- [ ] `AC-H3` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H3` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` diff names only shot.mk plus work-orders; grep -v exit 1
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/tools/shot/shot\.mk)$'` exit 1
 
 ## Test plan
