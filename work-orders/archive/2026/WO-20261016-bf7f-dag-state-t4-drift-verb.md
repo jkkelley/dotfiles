@@ -4,7 +4,7 @@
   "slug": "dag-state-t4-drift-verb",
   "title": "dag-state T4 - drift verb",
   "type": "feature",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-41d0",
   "branch": "feat/dag-state-t4-drift-verb",
   "pr": 255,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
