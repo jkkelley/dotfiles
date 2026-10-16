@@ -7,7 +7,7 @@
 #
 # usage: a2a-deliver.sh --line LINE [--seat SEAT] [--loop [--interval S]]
 #   one pass over every seat queued on LINE (or just SEAT); --loop repeats it, for the line's monitors tab.
-# prints one status code line per seat: A2A-DELIVERED, A2A-HELD (with the reason), A2A-NAME-REFUSED, A2A-DELIVER-FAILED.
+# prints one status code line per seat: A2A-DELIVERED, A2A-DELIVERED-RETRIED, A2A-UNCONFIRMED, A2A-HELD (with the reason), A2A-NAME-REFUSED, A2A-DELIVER-FAILED.
 # exit: 0 pass done, 2 usage, 4 io.
 # inputs: config.json beside this file (A2A_CONFIG), A2A_STATE_DIR, HERDR_BIN.
 # writes-to: $A2A_STATE/queue/<line>/<seat>/{delivered,refused}/; herdr agent prompt into idle seats only.
@@ -35,6 +35,7 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$line" ] || a2a_die 2 "A2A-USAGE --line is required"
 IDLE=$(jq -c '.idle_statuses' "$A2A_CFG"); GLYPH=$(a2a_cfg .input_prompt_glyph); KEY=$(a2a_cfg .artifact_key)
+SETTLE=${A2A_SETTLE_S:-$(a2a_cfg .settle_s)}
 
 # Only a path artifact.sh minted is delivered: the store format plus the .meta.json it writes beside every JSON artifact.
 minted() {
@@ -76,7 +77,20 @@ deliver_seat() { # <seat>
   [ $n -gt 0 ] || { a2a_unlock "$q"; return 0; }
   local msg="a2a: $n message(s) for $s, each a schema JSON file; read each and act on it: ${ptrs[*]}"
   if "$HERDR" agent prompt "$pane" "$msg" >/dev/null 2>&1; then
-    mv "${files[@]}" "$q/delivered/"; printf 'A2A-DELIVERED %s pane=%s status=%s count=%s\n' "$s" "$pane" "$st" "$n"
+    # BREADCRUMB - confirm the submit (brief BR-20261016-a2a-enter, ORD-0615 O2).
+    # What broke: 06:12Z the orchestrator's input sat unsubmitted after Enter was sent twice; the line above was typed
+    #   by `agent prompt` and the box never emptied, so the seat never woke and nothing said so.
+    # Why this fix: read the pane back; a non-empty box means the Enter was not taken, so send key `enter` (lowercase,
+    #   the form that submitted it by hand) once more and recheck. Exactly one retry: a second one could submit a line the
+    #   owner started typing. Rejected: retry in a loop, which can double-submit.
+    # Cost: one extra pane read per delivery (about one herdr call) after a short settle wait (config settle_s).
+    local code=A2A-DELIVERED
+    sleep "$SETTLE"
+    if [ -n "$(input_line "$pane")" ]; then
+      "$HERDR" pane send-keys "$pane" enter >/dev/null 2>&1; sleep "$SETTLE"
+      if [ -n "$(input_line "$pane")" ]; then code=A2A-UNCONFIRMED; else code=A2A-DELIVERED-RETRIED; fi
+    fi
+    mv "${files[@]}" "$q/delivered/"; printf '%s %s pane=%s status=%s count=%s\n' "$code" "$s" "$pane" "$st" "$n"
   else printf 'A2A-DELIVER-FAILED %s pane=%s; still queued\n' "$s" "$pane"; fi
   a2a_unlock "$q"
 }
