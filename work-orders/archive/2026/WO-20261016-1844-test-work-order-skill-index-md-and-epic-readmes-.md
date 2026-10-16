@@ -4,15 +4,15 @@
   "slug": "test-work-order-skill-index-md-and-epic-readmes-",
   "title": "Test - work-order skill: INDEX.md and epic READMEs become untracked build outputs, regenerated on demand",
   "type": "test",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:05:16+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/test-work-order-skill-index-md-and-epic-readmes-",
+  "pr": 210,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -63,8 +63,10 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
-- [ ] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+- [x] `AC-H1` *(human)* every case of the plan prints its expected result (proof: the run output pasted by work-order.sh evidence)
+  - observed `2026-10-16` work-order suite case 290 on PR 210 run 38868679507 (head 4771b75) and PR 207 run 38868695355 (head cc4e8bc): ok next and tree answer with INDEX.md absent (TP-1); ok reindex --check fails on a loose top-level ticket, exit 3 (TP-2); all cases passed: 325 checks across 25 case files. The test shipped inside PR 207 (merged ae5a0d7) and the untrack landed in PR 236 (merged 6e56a3c).
+- [x] `AC-H2` *(human)* the run output is written by script to ~/.local/state/zenith/log/YYYY/MM/ with frontmatter (proof: the path)
+  - observed `2026-10-16` run output written by claude/tools/artifact/artifact.sh new --key log with frontmatter: /home/luna/.local/state/zenith/log/2026/10/20261016-084209-wo-1844-ci-evidence.txt
 
 ## Test plan
 
