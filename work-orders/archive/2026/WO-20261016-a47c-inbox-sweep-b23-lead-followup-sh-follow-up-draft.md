@@ -4,15 +4,15 @@
   "slug": "inbox-sweep-b23-lead-followup-sh-follow-up-draft",
   "title": "Inbox sweep B23 - lead-followup.sh follow-up drafts as new cards",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T03:03:25+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/inbox-sweep-b23-lead-followup-sh-follow-up-draft",
+  "pr": 132,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner approved the reply DAG design on Bearings card D-18, 2026-10-16 UTC; Claude seats never use lavish (global owner rule)",
@@ -65,9 +65,12 @@ A lead with no answer is never followed up
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a due lead gets one draft and one card, never a send (test)
-- [ ] `AC-H2` *(human)* a declined or answered lead gets none (test)
-- [ ] `AC-H3` *(human)* after followup_max follow-ups the lead is LD-COLD (test)
+- [x] `AC-H1` *(human)* a due lead gets one draft and one card, never a send (test)
+  - observed `2026-10-16` test_followup.sh: AC-H1 ok - one draft fu-lead-due-1, one card, one RP-DRAFTED row, no send-*.txt, no new RP-SENT; rerun adds none
+- [x] `AC-H2` *(human)* a declined or answered lead gets none (test)
+  - observed `2026-10-16` test_followup.sh: AC-H2 ok - answered, declined, booked, not-a-fit, never-sent and no-URL leads get no draft
+- [x] `AC-H3` *(human)* after followup_max follow-ups the lead is LD-COLD (test)
+  - observed `2026-10-16` test_followup.sh: AC-H3 ok - after 2 sent follow-ups and 3 days silence lead is LD-COLD, no third draft; test-all ran 24 suites, all ok
 
 ## Test plan
 
