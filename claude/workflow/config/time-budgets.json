@@ -14,6 +14,7 @@
   "kv_bucket": "TIMING",
   "consumer": "node-timing",
   "filters": ["line.*.event.node.>", "herdr.>"],
+  "ci_events": {"repos": ["jkkelley/dotfiles"], "limit": 50, "state": "~/.local/state/zenith/timing/ci-events.json"},
   "wo_project": "~/.local/state/zenith/bottlenecks",
   "wo_epic_title": "Bottlenecks: nodes over budget or past timeout (item 37)"
 }
