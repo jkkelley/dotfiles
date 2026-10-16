@@ -4,15 +4,15 @@
   "slug": "close-wo-20261016-3327-main-clone-guard-pr-304-m",
   "title": "Close WO-20261016-3327 (main-clone-guard, PR 304 merged): re-run its checks with check 1 expecting 'ok +main-clone-guard: 8 cases', move its edges here and cancel 3327 as superseded",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:38:41+00:00",
   "parent": "WO-20261016-4b6c",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/close-wo-20261016-3327-main-clone-guard-pr-304-m",
+  "pr": 316,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design15 cut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -21,7 +21,10 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [],
+  "blocks": [
+    "WO-20261016-c2b3",
+    "WO-20261016-5ee5"
+  ],
   "ac_checks": [
     {
       "index": 1,
@@ -123,17 +126,23 @@ Order brief BR-20261016-infra-design15, ORD-0830 RR-orch-14; F35. Pattern: WO-20
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* WO-20261016-3327 check 1 passes on main
+- [x] `AC-H1` *(human)* WO-20261016-3327 check 1 passes on main
+  - observed `2026-10-16` check: make -C claude/workflow -f main-clone.mk main-clone-test exit 0 output: make: Entering directory '/home/luna/.cache/wt-close-3327/claude/workflow' ok (1) up to date check ok (2) behind check ok (3) ff then ff again then check ok (4) on feat check ok (5) on feat ff ok (6) ff left HEAD on feat ok (7) dirty ff ok (8) diverged ff ok (9) remote gone warns and answers ok (10) non-git dir skips ok (11) no arguments ok main-clone-guard: 8 cases make: Leaving directory '/home/luna/.cache/wt-close-3327/claude/workflow'
   - check: `make -C claude/workflow -f main-clone.mk main-clone-test` exit 0 expect /^ok +main-clone-guard: 8 cases/
-- [ ] `AC-H2` *(human)* WO-20261016-3327 check 2 passes on main
+- [x] `AC-H2` *(human)* WO-20261016-3327 check 2 passes on main
+  - observed `2026-10-16` check: make rolodex-check BASE=origin/main exit 0 output: python3 scripts/rolodex.py check --root . --base origin/main rolodex-check: 0 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H3` *(human)* WO-20261016-3327 check 3 passes on main
+- [x] `AC-H3` *(human)* WO-20261016-3327 check 3 passes on main
+  - observed `2026-10-16` check: grep -cE '^| (LW-)?MAIN-DRIFT |' claude/workflow/templates/a2a/README.md exit 0 output: 2
   - check: `grep -cE '^\| (LW-)?MAIN-DRIFT \|' claude/workflow/templates/a2a/README.md` exit 0 expect /^2$/
-- [ ] `AC-H4` *(human)* WO-20261016-3327 check 4 passes on main
+- [x] `AC-H4` *(human)* WO-20261016-3327 check 4 passes on main
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/(bin/main-clone-guard.sh|main-clone.mk|tests/unit/test_main_clone_guard.sh|templates/a2a/README.md))$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/(bin/main-clone-guard\.sh|main-clone\.mk|tests/unit/test_main_clone_guard\.sh|templates/a2a/README\.md))$'` exit 1
-- [ ] `AC-H5` *(human)* WO-20261016-3327 is cancelled and superseded by this ticket
+- [x] `AC-H5` *(human)* WO-20261016-3327 is cancelled and superseded by this ticket
+  - observed `2026-10-16` check: bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-3327 --json | jq -r '.status + " " + (.superseded_by // "-")' exit 0 output: cancelled WO-20261016-ad18
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-3327 --json | jq -r '.status + " " + (.superseded_by // "-")'` exit 0 expect /^cancelled WO-/
-- [ ] `AC-H6` *(human)* the diff holds only generated work-orders files
+- [x] `AC-H6` *(human)* the diff holds only generated work-orders files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan
