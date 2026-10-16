@@ -144,6 +144,8 @@ cmd_repos() {
 # block already inserted there, so the source follows the owner's file and never its own copy. Owner-run only.
 cmd_extract() {
   local from=${1:-$HOME/AGENTS.md}
+  # CI and other machines have no ~/AGENTS.md; the committed source is then used as is.
+  [ -f "$from" ] || { echo "golden-rules: no $from, keeping $SRC"; return 0; }
   python3 - "$from" "$SRC" <<'PY'
 import sys,re
 t=open(sys.argv[1]).read()

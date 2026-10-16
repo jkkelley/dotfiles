@@ -30,16 +30,16 @@ golden-rules-extract:   ## rebuild claude/golden-rules.md from FROM=<AGENTS.md> 
 	bash scripts/golden-rules.sh extract $(FROM)
 
 
-golden-rules:           ## write the golden rules block under the contents list of dotfiles' instruction files
+golden-rules: golden-rules-extract           ## write the golden rules block under the contents list of dotfiles' instruction files
 	bash scripts/golden-rules.sh write
 
 golden-rules-check:     ## fail when any copy drifts from claude/golden-rules.md
 	bash scripts/golden-rules.sh check
 
-golden-rules-global:    ## global instruction files (config/golden-rules.global), backed up first
+golden-rules-global: golden-rules-extract    ## global instruction files (config/golden-rules.global), backed up first
 	bash scripts/golden-rules.sh global
 
-golden-rules-repos:     ## one branch + PR per git repo under ~/projects, in parallel (DRY=1 lists only)
+golden-rules-repos: golden-rules-extract     ## one branch + PR per git repo under ~/projects, in parallel (DRY=1 lists only)
 	BRANCH=$(BRANCH) PARALLEL=$(PARALLEL) PROJECTS=$(PROJECTS) bash scripts/golden-rules.sh repos $(if $(DRY),--dry-run)
 
 golden-rules-global-check:
