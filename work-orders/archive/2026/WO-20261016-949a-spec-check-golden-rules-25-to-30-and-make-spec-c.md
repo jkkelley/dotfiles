@@ -4,15 +4,15 @@
   "slug": "spec-check-golden-rules-25-to-30-and-make-spec-c",
   "title": "Spec check - golden rules 25 to 30 and make spec-check",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:42:27+00:00",
   "parent": null,
   "branch": "feat/spec-check-golden-rules-25-to-30-and-make-spec-c",
-  "pr": null,
-  "closed": null,
+  "pr": 167,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "owner: i approved of everything (brief BR-20261016-spec-check)",
@@ -60,7 +60,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* both child PRs merged by make merge-train
+- [x] `AC-H1` *(human)* both child PRs merged by make merge-train
+  - observed `2026-10-16` merged by make merge-train: #152 #156 #158 #165 #166; golden-rules-repos opened 30 repo PRs plus jkkelley/firstmate#6
 
 ## Test plan
 
