@@ -11,7 +11,7 @@ RUN   := podman run --rm --network=none --userns=keep-id -v "$(ROOT):/work:Z" -w
 include mk/line-watch.mk
 include mk/resources.mk
 include a2a-guard/a2a-guard.mk
-.PHONY: help image test schema lint herdr-first compaction chain failover test-plan ci-job grid
+.PHONY: help image test schema lint herdr-first compaction chain failover test-plan ci-job grid step-time
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-10s %s\n", $$1, $$2}'
@@ -40,10 +40,13 @@ failover: image ## The seat watcher: done records, hot swap along the chain, exh
 test-plan: image ## The test-plan block: template, work-order's parser and the schema agree (O-10)
 	@$(RUN) bash tests/unit/test_test_plan.sh
 
+step-time: image ## step-time.sh: timing records, SLOW, timeout, retries, bus down tolerated (item 37)
+	@$(RUN) bash tests/unit/test_step_time.sh
+
 ci-job: image ## CI runs this suite: the gate's selector and the job that calls make test (PR 99 gap)
 	@$(RUN) bash tests/unit/test_ci_job.sh
 
-test: schema lint herdr-first compaction chain failover test-plan ci-job ## Everything
+test: schema lint herdr-first compaction chain failover test-plan ci-job step-time ## Everything
 	@echo "ok  workflow: schema, lint, herdr-first, compaction, chain, failover, test-plan, ci-job"
 
 # ---- herdr 3x3 grid (docs/design/herdr-grid.md). Inputs are VAR=value; defaults live in config/project.json .workflow.herdr.grid
