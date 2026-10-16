@@ -4,15 +4,15 @@
   "slug": "close-wo-20261016-168d-wk2-wiki-process-code-pr-",
   "title": "Close WO-20261016-168d (WK2 wiki-process, code PR 306 and close-out PR 314 merged): re-run its checks 1,2,3,4,5 on main under this ticket, move its 6803, b6a8, 2013 edges here and cancel 168d as superseded",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T11:31:12+00:00",
   "parent": "WO-20261016-35de",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/f963-close-wo-20261016-168d-wk2-wiki-process-code-pr-",
+  "pr": 335,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design18 cut for ORD-1114 close-outs; design approvals ruled done, ORD-0550 O4",
@@ -145,21 +145,29 @@ Steps on the branch, after start, each exactly as written: bash claude/skills/wo
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* WO-20261016-168d check 1 passes on main (copied from WO-20261016-168d check 1)
+- [x] `AC-H1` *(human)* WO-20261016-168d check 1 passes on main (copied from WO-20261016-168d check 1)
+  - observed `2026-10-16` check: podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py exit 0 output: test_missing_source_exits_3_and_writes_nothing (claude.tools.wiki.tests.test_process.ProcessTest.test_missing_source_exits_3_and_writes_nothing) ... ok test_rerun_is_byte_identical_and_unchanged (claude.tools.wiki.tests.test_process.ProcessTest.test_rerun_is_byte_identical_and_unchanged) ... ok test_skeleton_has_structure_and_citation (claude.tools.wiki.tests.test_process.ProcessTest.test_skeleton_has_structure_and_citation) ... ok test_usage_and_bad_pages_json (claude.tools.wiki.tests.test_process.ProcessTest.test_usage_and_bad_pages_json) ... ok test_written_prose_survives_and_sections_append (claude.tools.wiki.tests.test_process.ProcessTest.test_written_prose_survives_and_sections_append) ... ok ---------------------------------------------------------------------- Ran 5 tests in 0.615s OK
   - check: `podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py` exit 0 expect /^OK/
-- [ ] `AC-H2` *(human)* WO-20261016-168d check 2 passes on main (copied from WO-20261016-168d check 2)
+- [x] `AC-H2` *(human)* WO-20261016-168d check 2 passes on main (copied from WO-20261016-168d check 2)
+  - observed `2026-10-16` check: env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk2 --fallback "podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py exit 0 output: test_missing_source_exits_3_and_writes_nothing (claude.tools.wiki.tests.test_process.ProcessTest.test_missing_source_exits_3_and_writes_nothing) ... ok test_rerun_is_byte_identical_and_unchanged (claude.tools.wiki.tests.test_process.ProcessTest.test_rerun_is_byte_identical_and_unchanged) ... ok test_skeleton_has_structure_and_citation (claude.tools.wiki.tests.test_process.ProcessTest.test_skeleton_has_structure_and_citation) ... ok test_usage_and_bad_pages_json (claude.tools.wiki.tests.test_process.ProcessTest.test_usage_and_bad_pages_json) ... ok test_written_prose_survives_and_sections_append (claude.tools.wiki.tests.test_process.ProcessTest.test_written_prose_survives_and_sections_append) ... ok ---------------------------------------------------------------------- Ran 5 tests in 0.484s OK FALLBACK FB-001 wk2
   - check: `env FORCE_FALLBACK=1 bash claude/workflow/bin/timed-run.sh --node wk2 --fallback "podman run --rm --pull=never --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py" --fallback-code FB-001 -- podman run --rm --network=none -v $PWD:/w:Z -w /w docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 python3 -m unittest -v claude/tools/wiki/tests/test_process.py` exit 0 expect /FALLBACK FB-001/
-- [ ] `AC-H3` *(human)* WO-20261016-168d check 3 passes on main (copied from WO-20261016-168d check 3)
+- [x] `AC-H3` *(human)* WO-20261016-168d check 3 passes on main (copied from WO-20261016-168d check 3)
+  - observed `2026-10-16` check: make -n wiki-process WIKI=/tmp/wk SRC=/tmp/src exit 0 output: if [ -z "/tmp/wk" ]; then echo "usage: WIKI=<root> is required" >&2; exit 2; fi python3 claude/tools/wiki/wiki_process.py "/tmp/wk"
   - check: `make -n wiki-process WIKI=/tmp/wk SRC=/tmp/src` exit 0 expect /wiki_process\.py/
-- [ ] `AC-H4` *(human)* WO-20261016-168d check 4 passes on main (copied from WO-20261016-168d check 4)
+- [x] `AC-H4` *(human)* WO-20261016-168d check 4 passes on main (copied from WO-20261016-168d check 4)
+  - observed `2026-10-16` check: make -s wiki-process WIKI= SRC=/tmp/src exit 2 output: usage: WIKI=<root> is required make: *** [claude/tools/wiki/mk/process.mk:6: wiki-process] Error 2
   - check: `make -s wiki-process WIKI= SRC=/tmp/src` exit 2 expect /WIKI/
-- [ ] `AC-H5` *(human)* WO-20261016-168d check 5 passes on main (copied from WO-20261016-168d check 5)
+- [x] `AC-H5` *(human)* WO-20261016-168d check 5 passes on main (copied from WO-20261016-168d check 5)
+  - observed `2026-10-16` check: make rolodex-check BASE=origin/main exit 0 output: python3 scripts/rolodex.py check --root . --base origin/main rolodex-check: 0 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H6` *(human)* WO-20261016-168d is cancelled and superseded
+- [x] `AC-H6` *(human)* WO-20261016-168d is cancelled and superseded
+  - observed `2026-10-16` check: bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-168d --json | jq -r '.status + " " + (.superseded_by // "-")' exit 0 output: cancelled WO-20261016-f963
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-168d --json | jq -r '.status + " " + (.superseded_by // "-")'` exit 0 expect /^cancelled WO-/
-- [ ] `AC-H7` *(human)* no open ticket still depends on WO-20261016-168d
+- [x] `AC-H7` *(human)* no open ticket still depends on WO-20261016-168d
+  - observed `2026-10-16` check: grep -rlE '"WO-20261016-168d"' work-orders --include='WO-*.md' | xargs -r grep -L -E '"status": "(done|cancelled)"' | grep -v -- '-168d-' exit 1 output:
   - check: `grep -rlE '"WO-20261016-168d"' work-orders --include='WO-*.md' | xargs -r grep -L -E '"status": "(done|cancelled)"' | grep -v -- '-168d-'` exit 1
-- [ ] `AC-H8` *(human)* the diff holds only generated work-orders files
+- [x] `AC-H8` *(human)* the diff holds only generated work-orders files
+  - observed `2026-10-16` check: git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$' exit 1 output:
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan

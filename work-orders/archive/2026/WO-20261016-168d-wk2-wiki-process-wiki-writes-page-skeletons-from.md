@@ -4,7 +4,7 @@
   "slug": "wk2-wiki-process-wiki-writes-page-skeletons-from",
   "title": "WK2: wiki-process WIKI= writes page skeletons from pages.json with citations, never touching written prose",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-35de",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "design seat infra-design12 cut from wiki.spec.xml (PR 285), ORD-0830 RR-orch-14; design approvals ruled done, ORD-0550 O4; owner surface is Bearings, lavish prohibited for Claude seats",
@@ -26,11 +26,7 @@
     "WO-20261016-b9ba",
     "WO-20261016-f963"
   ],
-  "blocks": [
-    "WO-20261016-6803",
-    "WO-20261016-b6a8",
-    "WO-20261016-2013"
-  ],
+  "blocks": [],
   "ac_checks": [
     {
       "index": 1,
@@ -71,7 +67,8 @@
   ],
   "provides": [
     "make:wiki-process"
-  ]
+  ],
+  "superseded_by": "WO-20261016-f963"
 }
 ---
 
@@ -156,4 +153,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: WK2 wiki-process, code PR 306 and close-out PR 314 merged; re-checked under WO-20261016-f963
+- superseded by: `WO-20261016-f963`
+
+No branch, no PR and no merge commit exist for this work order.
+
