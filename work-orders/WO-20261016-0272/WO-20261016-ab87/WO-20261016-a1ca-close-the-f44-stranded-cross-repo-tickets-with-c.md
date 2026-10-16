@@ -21,12 +21,12 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261016-1099",
-    "WO-20261016-ddf1"
+    "WO-20261016-1099"
   ],
   "blocks": [
     "WO-20261016-03ef",
-    "WO-20261016-c315"
+    "WO-20261016-c315",
+    "WO-20261016-64f2"
   ],
   "ac_checks": [
     {
@@ -179,6 +179,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-16` infra-design20 F55: ddf1 edge dropped (a1ca closes ddf1; ddf1 done is F44-blocked, so the edge was a deadlock). 64f2 now depends_on a1ca so next does not hand it to a seat: a1ca owns its start, submit and done; start does not check depends_on.
 
 ## Outcome
 
