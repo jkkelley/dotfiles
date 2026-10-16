@@ -40,6 +40,14 @@
       "slot": "2.2",
       "interval": 0,
       "command": "make -C ${repo} bus-tail"
+    },
+    {
+      "name": "a2a",
+      "owner": "a2a-guard",
+      "slot": "2.3",
+      "interval": 0,
+      "command": "make -C ${repo} a2a-deliver-loop LINE=${line}",
+      "publishes": "a2a.${line}.<seat>"
     }
   ]
 }
