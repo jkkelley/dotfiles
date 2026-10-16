@@ -129,7 +129,7 @@ write_verdict() { # <code> <json fields object> <baseline> <final> <prompts>
   local out="$PROOF/R7-verdict.json" tmp
   tmp="$(mktemp "$PROOF/.r7.XXXXXX")"
   printf '%s' "$2" | jq --arg code "$1" --arg run "$run" --arg base "$3" --arg final "$4" --argjson prompts "$5" --arg at "$(sweep_now)" \
-    '. + {code:$code, run_id:$run, baseline:$base, final:$final, tabs_left_prompts:$prompts, at:$at}' >"$tmp"
+    '. + {schema_version:2, code:$code, run_id:$run, baseline:$base, final:$final, tabs_left_prompts:$prompts, at:$at}' >"$tmp"
   mv "$tmp" "$out"
   log "R7 verdict $1"
   printf '%s\n' "$1"
