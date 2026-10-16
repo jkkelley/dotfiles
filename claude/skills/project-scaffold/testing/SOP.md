@@ -1,5 +1,37 @@
 # Testing SOP
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [How the suite runs](#how-the-suite-runs)
+  - [Two images, and why](#two-images-and-why)
+- [010-scaffold-fresh](#010-scaffold-fresh)
+- [020-scaffold-existing](#020-scaffold-existing)
+- [030-scaffold-idempotent](#030-scaffold-idempotent)
+- [040-log-issue-happy](#040-log-issue-happy)
+- [050-log-issue-reject](#050-log-issue-reject)
+- [060-log-issue-concurrent](#060-log-issue-concurrent)
+- [070-backlog-lifecycle](#070-backlog-lifecycle)
+- [080-encoding-and-injection](#080-encoding-and-injection)
+- [090-cache-freshness](#090-cache-freshness)
+- [100-version-skew](#100-version-skew)
+- [110-settings-files](#110-settings-files)
+- [120-ignore-files](#120-ignore-files)
+- [130-backlog-read-window](#130-backlog-read-window)
+- [180-migrate](#180-migrate)
+- [190-check](#190-check)
+- [140-skills-block](#140-skills-block)
+- [150-documentation-lifetime](#150-documentation-lifetime)
+- [160-skills-manifest](#160-skills-manifest)
+- [170-treehouse-policy](#170-treehouse-policy)
+- [200-agents-md](#200-agents-md)
+- [210-ci-workflow](#210-ci-workflow)
+- [220-cache-gone](#220-cache-gone)
+- [cases-git/010-skills-gitignored](#cases-git010-skills-gitignored)
+- [Adding a case](#adding-a-case)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 What each case runs, what it asserts, and **why that failure would matter**.
 
 A case whose "why" cannot be written is a case not worth keeping.

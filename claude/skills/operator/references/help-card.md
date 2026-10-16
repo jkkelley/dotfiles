@@ -1,5 +1,13 @@
 # Operator — Help
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Intents](#intents)
+- [Intent Categories](#intent-categories)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Intents
 
 | Intent | What it does | Example |

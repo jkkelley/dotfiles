@@ -1,5 +1,41 @@
 # Standards for the managed files
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [The rule underneath all of them](#the-rule-underneath-all-of-them)
+- [Every file states its own read protocol](#every-file-states-its-own-read-protocol)
+- [issues/](#issues)
+  - [Why one file per entry, and why no sequential IDs](#why-one-file-per-entry-and-why-no-sequential-ids)
+  - [Why month sharding](#why-month-sharding)
+  - [Why the window is a directory walk](#why-the-window-is-a-directory-walk)
+  - [Read protocol](#read-protocol)
+  - [Entry shape](#entry-shape)
+  - [Why an HTML comment holds the metadata](#why-an-html-comment-holds-the-metadata)
+  - [Why suffix references](#why-suffix-references)
+  - [Why the five fields are mandatory](#why-the-five-fields-are-mandatory)
+  - [Why values collapse to a single line](#why-values-collapse-to-a-single-line)
+  - [Why `-->` inside a value is neutralised](#why----inside-a-value-is-neutralised)
+  - [Why a fix is a new entry](#why-a-fix-is-a-new-entry)
+- [backlog/](#backlog)
+  - [The four buckets](#the-four-buckets)
+  - [Why buckets are directories](#why-buckets-are-directories)
+  - [Read protocol](#read-protocol-1)
+  - [Item shape](#item-shape)
+  - [Why `done-when` is mandatory](#why-done-when-is-mandatory)
+  - [Why completion goes in the metadata](#why-completion-goes-in-the-metadata)
+  - [Why moves are a script](#why-moves-are-a-script)
+- [COMPASS.md](#compassmd)
+  - [Hard cap: 100 lines](#hard-cap-100-lines)
+  - [Staleness is a defect](#staleness-is-a-defect)
+- [NAMING.md](#namingmd)
+- [AGENTS.md and CLAUDE.md](#agentsmd-and-claudemd)
+- [.claude/ settings](#claude-settings)
+- [.github/workflows/context-check.yml](#githubworkflowscontext-checkyml)
+- [ID format](#id-format)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 This is the format spec.
 The scripts enforce it; this document explains it and says why each rule exists.
 

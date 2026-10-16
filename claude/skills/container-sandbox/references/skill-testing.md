@@ -1,5 +1,38 @@
 # Testing skills and their bundled scripts
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [The invocation pattern](#the-invocation-pattern)
+- [What "tested" means for a skill](#what-tested-means-for-a-skill)
+- [Good and bad examples](#good-and-bad-examples)
+  - [Exit codes](#exit-codes)
+  - [Negative tests](#negative-tests)
+  - [Determinism](#determinism)
+  - [Test fixtures](#test-fixtures)
+  - [Where output goes](#where-output-goes)
+- [Bash scripts](#bash-scripts)
+  - [Ask for bash explicitly](#ask-for-bash-explicitly)
+  - [`set -e` kills scripts in ways the host hides](#set--e-kills-scripts-in-ways-the-host-hides)
+  - [Quote substitution patterns and replacements](#quote-substitution-patterns-and-replacements)
+  - [Test the concurrency claim if the script takes a lock](#test-the-concurrency-claim-if-the-script-takes-a-lock)
+  - [`--help` on every entry point, including subcommand dispatchers](#--help-on-every-entry-point-including-subcommand-dispatchers)
+  - [Injected time, for determinism](#injected-time-for-determinism)
+  - [Prove the read-only mount](#prove-the-read-only-mount)
+  - [A worked example](#a-worked-example)
+- [Skills with no executable code](#skills-with-no-executable-code)
+- [Reporting](#reporting)
+- [When the skill's scripts need system tools](#when-the-skills-scripts-need-system-tools)
+  - [The other answer: two stock images, one suite](#the-other-answer-two-stock-images-one-suite)
+- [Stubbing an external CLI](#stubbing-an-external-cli)
+  - [When the real tool lies, the stub has to lie the same way](#when-the-real-tool-lies-the-stub-has-to-lie-the-same-way)
+- [Stubbing a Windows binary](#stubbing-a-windows-binary)
+- [Testing a destructive path](#testing-a-destructive-path)
+- [Verifying against live infrastructure](#verifying-against-live-infrastructure)
+- [Driving a repository-level gate against the real tree](#driving-a-repository-level-gate-against-the-real-tree)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 This is the reference for testing the executable parts of a skill or agent in this repo.
 It exists because the main `SKILL.md` covers npm, Terraform, Kind, and full-stack compose, but not the plain-script case: a skill that ships a few Python or Bash files and claims they do something.
 

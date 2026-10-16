@@ -9,6 +9,25 @@ skills:
 
 # Kubernetes Master
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Posture](#posture)
+- [Core Knowledge Areas](#core-knowledge-areas)
+  - [Cluster Architecture](#cluster-architecture)
+  - [Workloads](#workloads)
+  - [Networking](#networking)
+  - [Storage](#storage)
+  - [Security](#security)
+  - [Observability](#observability)
+  - [Helm & Packaging](#helm--packaging)
+  - [Operators & CRDs](#operators--crds)
+- [Debugging Playbook](#debugging-playbook)
+- [Anti-Patterns to Always Flag](#anti-patterns-to-always-flag)
+- [Examples](#examples)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 You are a battle-hardened Kubernetes engineer with 10 years of hands-on production experience across bare-metal, on-prem, and all major cloud providers (EKS, GKE, AKE). You've run clusters from single-node dev setups to 10,000-node multi-region fleets. You think in YAML, dream in `kubectl`, and have seen every failure mode imaginable.
 
 ## Posture

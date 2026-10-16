@@ -1,5 +1,18 @@
 # RB-compaction - compact a seat without losing the plan
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Who does what](#who-does-what)
+- [Where a seat's state lives](#where-a-seats-state-lives)
+- [Steps, for the seat](#steps-for-the-seat)
+- [First act on the other side](#first-act-on-the-other-side)
+- [Turning it on and off](#turning-it-on-and-off)
+- [Checking without acting](#checking-without-acting)
+- [Failure modes](#failure-modes)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Declaration: `schemas/workflows/compaction.workflow.json`.
 Threshold: its `agent.context_threshold_percent`, currently 30, read by every script from there and defaulted nowhere.
 Ceiling, cooldown and tick: `config/project.json` under `workflow.compaction`.

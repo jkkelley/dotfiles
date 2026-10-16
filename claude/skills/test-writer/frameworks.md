@@ -1,5 +1,22 @@
 # Framework Setup Reference
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Python — pytest](#python--pytest)
+- [JavaScript — Jest](#javascript--jest)
+- [TypeScript — Jest + ts-jest](#typescript--jest--ts-jest)
+- [JavaScript/TypeScript — Vitest](#javascripttypescript--vitest)
+- [Go — stdlib + testify](#go--stdlib--testify)
+- [Java — JUnit 5 (Maven)](#java--junit-5-maven)
+- [Rust — built-in](#rust--built-in)
+- [Ruby — RSpec](#ruby--rspec)
+- [C# — xUnit](#c--xunit)
+- [PHP — PHPUnit](#php--phpunit)
+- [Bash — bats-core](#bash--bats-core)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Python — pytest
 
 ```bash

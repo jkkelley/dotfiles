@@ -1,5 +1,14 @@
 # Change triggers
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [The table](#the-table)
+- [How this is enforced](#how-this-is-enforced)
+- [The one rule that has no table entry](#the-one-rule-that-has-no-table-entry)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Diataxis mode: **reference**.
 Last reviewed: 2026-08-23.
 

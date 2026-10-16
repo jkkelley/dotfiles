@@ -1,5 +1,14 @@
 # Brainstorming — Session Plan Convention
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Desired behavior](#desired-behavior)
+- [Homelab standing rules to inject into every session plan](#homelab-standing-rules-to-inject-into-every-session-plan)
+- [Action required](#action-required)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 The `superpowers:brainstorming` skill is plugin-managed and cannot be edited directly (plugin updates overwrite it). This note documents the desired behavior for when the plugin is next updated or replaced.
 
 ## Desired behavior

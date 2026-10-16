@@ -1,5 +1,36 @@
 # Testing SOP
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [How the suite runs](#how-the-suite-runs)
+- [010-new-happy](#010-new-happy)
+- [020-new-refuses](#020-new-refuses)
+- [030-figma-binding](#030-figma-binding)
+- [040-evidence-snapshot](#040-evidence-snapshot)
+- [050-lifecycle](#050-lifecycle)
+- [060-approve-blocks](#060-approve-blocks)
+- [070-cleanup-refuses-unmerged](#070-cleanup-refuses-unmerged)
+- [080-cleanup-dry-run](#080-cleanup-dry-run)
+- [090-done-archives-on-branch](#090-done-archives-on-branch)
+- [095-cleanup-deletes-branches](#095-cleanup-deletes-branches)
+- [100-help-and-entrypoints](#100-help-and-entrypoints)
+- [110-hierarchy](#110-hierarchy)
+- [120-graph-and-next](#120-graph-and-next)
+- [130-notes-and-index](#130-notes-and-index)
+- [140-resolve](#140-resolve)
+- [150-heading-and-repair](#150-heading-and-repair)
+- [160-evidence](#160-evidence)
+- [170-evidence-gate](#170-evidence-gate)
+- [180-cancel](#180-cancel)
+- [190-amend](#190-amend)
+- [200-link-removal](#200-link-removal)
+- [230-scratch-dir](#230-scratch-dir)
+- [240-test-plan-gate](#240-test-plan-gate)
+- [250-degrees-of-freedom](#250-degrees-of-freedom)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 What each case runs, what it asserts, and **why that failure would matter**.
 
 A case whose "why" cannot be written is a case not worth keeping.

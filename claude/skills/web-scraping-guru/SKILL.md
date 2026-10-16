@@ -6,6 +6,32 @@ version: 1.0.3
 
 # Web Scraping Guru
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [First decision: do you actually need a browser?](#first-decision-do-you-actually-need-a-browser)
+- [Tool selection by language](#tool-selection-by-language)
+- [HTTP client fundamentals](#http-client-fundamentals)
+  - [Headers that matter](#headers-that-matter)
+  - [TLS fingerprinting (JA3/JA3S)](#tls-fingerprinting-ja3ja3s)
+- [Anti-bot evasion layers](#anti-bot-evasion-layers)
+  - [Layer 1: IP reputation](#layer-1-ip-reputation)
+  - [Layer 2: TLS fingerprint](#layer-2-tls-fingerprint)
+  - [Layer 3: HTTP/2 fingerprinting (AKAMAI H2)](#layer-3-http2-fingerprinting-akamai-h2)
+  - [Layer 4: Browser fingerprint (JS challenges)](#layer-4-browser-fingerprint-js-challenges)
+  - [Layer 5: Behavioral signals](#layer-5-behavioral-signals)
+  - [Layer 6: Cookie / token freshness](#layer-6-cookie--token-freshness)
+- [Pagination patterns](#pagination-patterns)
+- [Data extraction](#data-extraction)
+  - [CSS selectors vs XPath](#css-selectors-vs-xpath)
+  - [Resilient selectors — ranked by stability](#resilient-selectors--ranked-by-stability)
+- [Rate limiting and retries](#rate-limiting-and-retries)
+- [Distributed crawling](#distributed-crawling)
+- [Legal and ethical guardrails](#legal-and-ethical-guardrails)
+- [Additional reference](#additional-reference)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## First decision: do you actually need a browser?
 
 Most scrapers start with Playwright when they should start with `requests`. Always try the cheapest tool first.

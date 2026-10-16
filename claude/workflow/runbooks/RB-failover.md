@@ -1,5 +1,17 @@
 # RB-failover - a seat is done, or cannot go on
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Where it came from](#where-it-came-from)
+- [What the seat watcher reads](#what-the-seat-watcher-reads)
+- [Each tick](#each-tick)
+- [The swap](#the-swap)
+- [Turning it on and off](#turning-it-on-and-off)
+- [After a failure](#after-a-failure)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Owner decision O-06: hot swap through the model chain until it is exhausted.
 A human is notified, never required.
 

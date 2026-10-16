@@ -6,6 +6,19 @@ version: 1.0.3
 
 # Git Review Checklist
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Pre-Review Scan (run first)](#pre-review-scan-run-first)
+- [Commit Quality Checklist](#commit-quality-checklist)
+- [Conventional Commits Reference](#conventional-commits-reference)
+- [Diff Review Checklist](#diff-review-checklist)
+- [Review Output Template](#review-output-template)
+- [Branching Strategy Quick Reference](#branching-strategy-quick-reference)
+- [Common Blockers to Always Flag](#common-blockers-to-always-flag)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Pre-Review Scan (run first)
 
 ```bash

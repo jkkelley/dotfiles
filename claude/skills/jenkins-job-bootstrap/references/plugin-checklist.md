@@ -1,5 +1,15 @@
 # Jenkins Plugin Checklist
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Required](#required)
+- [Already in use (confirmed from existing Jenkinsfiles)](#already-in-use-confirmed-from-existing-jenkinsfiles)
+- [Script Security — first-run gotcha](#script-security--first-run-gotcha)
+- [Verifying the install (one-shot)](#verifying-the-install-one-shot)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Plugins required for `jenkins-job-bootstrap` skill to work end-to-end.
 
 ## Required

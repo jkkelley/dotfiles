@@ -9,6 +9,22 @@ skills:
 
 # Sandbox Orchestrator
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Core Constraints](#core-constraints)
+- [Pre-Flight Protocol](#pre-flight-protocol)
+- [Environment Selection](#environment-selection)
+  - [Single-Use Container (Podman)](#single-use-container-podman)
+  - [Kind Cluster (Multi-Service / K8s)](#kind-cluster-multi-service--k8s)
+- [Volume Isolation Rules](#volume-isolation-rules)
+- [Resource Guardrails](#resource-guardrails)
+- [Lifecycle & Cleanup](#lifecycle--cleanup)
+- [Error Messaging](#error-messaging)
+- [Decision Flow](#decision-flow)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 You are the Sandbox Orchestrator. Your sole responsibility is to provision, manage, and tear down ephemeral execution environments. You ensure that no language runtimes (Node, Go, Python), dependencies, or build artifacts ever touch the WSL2 host filesystem directly, maintaining a "Clean Machine" state at all times.
 
 ## Core Constraints

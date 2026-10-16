@@ -6,6 +6,30 @@ version: 1.0.3
 
 # Homelab Jenkins Shared Library
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [pipelineConfig — Load environment config](#pipelineconfig--load-environment-config)
+- [sastSonarQube — Static analysis (SAST)](#sastsonarqube--static-analysis-sast)
+- [scaSnyk — Dependency scan (SCA)](#scasnyk--dependency-scan-sca)
+- [iacCheckov — IaC misconfiguration scan](#iaccheckov--iac-misconfiguration-scan)
+- [buildKaniko — Build & push container image](#buildkaniko--build--push-container-image)
+- [imageScanTrivy — CVE scan](#imagescantrivy--cve-scan)
+- [deployStaging — Rolling deploy to staging](#deploystaging--rolling-deploy-to-staging)
+- [dastZap — OWASP ZAP dynamic scan](#dastzap--owasp-zap-dynamic-scan)
+- [deployProduction — Manual approval gate](#deployproduction--manual-approval-gate)
+- [updateGitOpsManifest — GitOps image tag update](#updategitopsmanifest--gitops-image-tag-update)
+- [versionRelease — Semantic versioning + GitHub release](#versionrelease--semantic-versioning--github-release)
+- [Required Jenkins Credentials](#required-jenkins-credentials)
+- [Infrastructure Defaults](#infrastructure-defaults)
+- [Full Pipeline Pattern (Helm + GitOps — current homelab standard)](#full-pipeline-pattern-helm--gitops--current-homelab-standard)
+- [Homelab AVP + ESO Contract — What the CI Pipeline Owns](#homelab-avp--eso-contract--what-the-ci-pipeline-owns)
+  - [What AVP resolves (at ArgoCD sync time, not in the pipeline)](#what-avp-resolves-at-argocd-sync-time-not-in-the-pipeline)
+  - [ArgoCD Application source (all new apps use plugin, not helm)](#argocd-application-source-all-new-apps-use-plugin-not-helm)
+  - [ghcr-pull-secret comes from ESO (Vault-backed)](#ghcr-pull-secret-comes-from-eso-vault-backed)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 **Library declaration:**
 
 ```groovy

@@ -6,6 +6,31 @@ version: 1.0.3
 
 # plan-scaffold
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [When This Applies](#when-this-applies)
+- [Recommended Flow](#recommended-flow)
+- [Hard Rules](#hard-rules)
+- [Directory Hierarchy — How It Works](#directory-hierarchy--how-it-works)
+- [Step 0 — Discover Runtime Context](#step-0--discover-runtime-context)
+- [Step 1 — Interview (one question per turn)](#step-1--interview-one-question-per-turn)
+- [Step 2 — Scaffold the Directory](#step-2--scaffold-the-directory)
+  - [Directory tree](#directory-tree)
+  - [File contents](#file-contents)
+- [Step 3 — Update Root README.md](#step-3--update-root-readmemd)
+  - [Add to In-Progress table](#add-to-in-progress-table)
+  - [Ensure Completed table exists](#ensure-completed-table-exists)
+  - [Moving rows to Completed](#moving-rows-to-completed)
+  - [Updating subproject status day-to-day](#updating-subproject-status-day-to-day)
+- [Step 4 — Persist](#step-4--persist)
+- [Step 5 — Session Close-Out Gates](#step-5--session-close-out-gates)
+- [Step 6 — project-kickoff Gate](#step-6--project-kickoff-gate)
+- [Anti-patterns](#anti-patterns)
+- [FLAG — Workflow Profile (future work)](#flag--workflow-profile-future-work)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Scaffold a new project workspace in the claude-plans repo. One question at a time.
 Output is a complete directory tree ready for the first session.
 

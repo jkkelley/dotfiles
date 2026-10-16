@@ -1,5 +1,41 @@
 # Dotfiles — Agent Orientation
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Rule 1 — Think Before Coding](#rule-1--think-before-coding)
+- [Rule 2 — Simplicity First](#rule-2--simplicity-first)
+- [Rule 3 — Surgical Changes](#rule-3--surgical-changes)
+- [Rule 4 — Goal-Driven Execution](#rule-4--goal-driven-execution)
+- [Rule 5 — Use the model only for judgment calls](#rule-5--use-the-model-only-for-judgment-calls)
+- [Rule 6 — Token budgets are not advisory](#rule-6--token-budgets-are-not-advisory)
+- [Rule 7 — Surface conflicts, don't average them](#rule-7--surface-conflicts-dont-average-them)
+- [Rule 8 — Read before you write](#rule-8--read-before-you-write)
+- [Rule 9 — Tests verify intent, not just behavior](#rule-9--tests-verify-intent-not-just-behavior)
+- [Rule 10 — Checkpoint after every significant step](#rule-10--checkpoint-after-every-significant-step)
+- [Rule 11 — Match the codebase's conventions, even if you disagree](#rule-11--match-the-codebases-conventions-even-if-you-disagree)
+- [Rule 12 — Fail loud](#rule-12--fail-loud)
+- [Rule 13 — Never add the Claude footer to PR bodies](#rule-13--never-add-the-claude-footer-to-pr-bodies)
+- [Rule 14 — All testing runs in Podman](#rule-14--all-testing-runs-in-podman)
+- [Rule 15 — Pin every version. No floating tags.](#rule-15--pin-every-version-no-floating-tags)
+- [Rule 16 - A skill edit carries the intent to bump. CI allocates the number](#rule-16---a-skill-edit-carries-the-intent-to-bump-ci-allocates-the-number)
+  - [The path, end to end](#the-path-end-to-end)
+  - [`skill-update.sh` is the hand-authored path, and nothing else](#skill-updatesh-is-the-hand-authored-path-and-nothing-else)
+- [Starting a session - read `HYDRATION.md` first](#starting-a-session---read-hydrationmd-first)
+- [Feature branches only - never commit to `main`](#feature-branches-only---never-commit-to-main)
+- [Close-out and post-merge cleanup](#close-out-and-post-merge-cleanup)
+- [PII & PHI Policy — Strictly Enforced](#pii--phi-policy--strictly-enforced)
+- [How to Handle Environment-Specific Values](#how-to-handle-environment-specific-values)
+  - [The documented exception: this repo's own public URLs](#the-documented-exception-this-repos-own-public-urls)
+- [Consuming These Files](#consuming-these-files)
+- [Before You Commit](#before-you-commit)
+- [Rule 17 - Skills are OS aware, and `justfile` is the entry point](#rule-17---skills-are-os-aware-and-justfile-is-the-entry-point)
+- [Rule 18 - Herdr-first execution: never background processes](#rule-18---herdr-first-execution-never-background-processes)
+- [Rule 19 - Google Drive first, and the surface follows the model](#rule-19---google-drive-first-and-the-surface-follows-the-model)
+- [Adding a New Agent or Skill — Ship the MVP Immediately](#adding-a-new-agent-or-skill--ship-the-mvp-immediately)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 These rules apply to every task in this project unless explicitly overridden.
 Bias: caution over speed on non-trivial work.
 

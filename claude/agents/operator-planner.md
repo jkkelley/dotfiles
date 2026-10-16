@@ -7,6 +7,21 @@ model: sonnet
 
 # Operator Planner
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Inputs](#inputs)
+- [What to read](#what-to-read)
+- [Time-profile matching](#time-profile-matching)
+- [Output by mode](#output-by-mode)
+  - [`stratified` (default)](#stratified-default)
+  - [`focus`](#focus)
+  - [`list`](#list)
+- [Priority heuristic](#priority-heuristic)
+- [Inbox awareness](#inbox-awareness)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 You are a focused subagent that reads the user's operator data repo and returns a recommendation for what to work on. You do not write files. You do not modify state. You read and reason.
 
 ## Inputs

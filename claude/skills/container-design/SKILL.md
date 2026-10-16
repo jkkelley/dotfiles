@@ -6,6 +6,22 @@ version: 1.0.3
 
 # Container Design
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Core mental model](#core-mental-model)
+- [Sequencing patterns — choose one per dependency type](#sequencing-patterns--choose-one-per-dependency-type)
+  - [1. Volume + network simultaneously (shell script / Podman)](#1-volume--network-simultaneously-shell-script--podman)
+  - [2. Readiness gating (wait-for pattern)](#2-readiness-gating-wait-for-pattern)
+  - [3. Init container pattern (Kubernetes)](#3-init-container-pattern-kubernetes)
+  - [4. Docker Compose dependency + health check](#4-docker-compose-dependency--health-check)
+- [Decision guide](#decision-guide)
+- [Script skeleton for shell-based sequencing](#script-skeleton-for-shell-based-sequencing)
+- [Common mistakes](#common-mistakes)
+- [Additional reference](#additional-reference)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Core mental model
 
 Every multi-container problem is a **dependency graph**. Before writing any script or config, draw it:

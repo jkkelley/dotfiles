@@ -1,5 +1,15 @@
 # `tools/` - this repository's own tooling
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Do not put anything here that a project needs](#do-not-put-anything-here-that-a-project-needs)
+- [Conventions that still apply](#conventions-that-still-apply)
+- [Versions](#versions)
+- [What is here](#what-is-here)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Everything in this directory exists to maintain **this repository**. None of it is
 distributed, vendored, synced, or installed anywhere else.
 

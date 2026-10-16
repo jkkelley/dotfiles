@@ -6,6 +6,17 @@ version: 1.0.3
 
 # Issue Log Skill
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Directory Structure](#directory-structure)
+- [Steps](#steps)
+- [Entry Format](#entry-format)
+- [Rules](#rules)
+- [New Project Bootstrap](#new-project-bootstrap)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Appends new issue entries to the monthly issue log file in `~/projects/knowledge-base`.
 
 ## Directory Structure

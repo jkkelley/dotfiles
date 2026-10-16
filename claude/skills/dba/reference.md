@@ -1,5 +1,23 @@
 # DBA Reference — Deep Dive
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Table Inheritance Patterns](#table-inheritance-patterns)
+  - [Single Table Inheritance (STI)](#single-table-inheritance-sti)
+  - [Class Table Inheritance (CTI / Concrete Table)](#class-table-inheritance-cti--concrete-table)
+  - [JSONB for Flexible Attributes](#jsonb-for-flexible-attributes)
+- [Partitioning](#partitioning)
+  - [Range Partitioning (time-series data)](#range-partitioning-time-series-data)
+  - [Hash Partitioning (distribute writes)](#hash-partitioning-distribute-writes)
+- [Connection Pooling (PgBouncer)](#connection-pooling-pgbouncer)
+- [JSONB vs Relational Column](#jsonb-vs-relational-column)
+- [Full-Text Search (PostgreSQL)](#full-text-search-postgresql)
+- [Sharding Strategies](#sharding-strategies)
+- [N+1 and Query Pattern Checklist](#n1-and-query-pattern-checklist)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Table Inheritance Patterns
 
 ### Single Table Inheritance (STI)

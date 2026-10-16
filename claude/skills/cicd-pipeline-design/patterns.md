@@ -1,5 +1,16 @@
 # CI/CD Design — Worked Patterns
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Pattern: Full image promotion pipeline (GitHub Actions)](#pattern-full-image-promotion-pipeline-github-actions)
+- [Pattern: PR ephemeral environment (GitLab)](#pattern-pr-ephemeral-environment-gitlab)
+- [Pattern: Matrix test fan-out + merge gate (GitHub Actions)](#pattern-matrix-test-fan-out--merge-gate-github-actions)
+- [Pattern: Isolated integration test with ephemeral DB (Jenkins)](#pattern-isolated-integration-test-with-ephemeral-db-jenkins)
+- [Anti-patterns checklist](#anti-patterns-checklist)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Pattern: Full image promotion pipeline (GitHub Actions)
 
 Build once, promote the same immutable image through environments.

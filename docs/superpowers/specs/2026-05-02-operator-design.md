@@ -1,5 +1,43 @@
 # Operator — Personal Work-Steering System
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [1. Problem](#1-problem)
+- [2. North star (for this design)](#2-north-star-for-this-design)
+- [3. Out of scope (explicitly)](#3-out-of-scope-explicitly)
+- [4. Architecture](#4-architecture)
+  - [4.1 Two-repo split](#41-two-repo-split)
+  - [4.2 Distribution](#42-distribution)
+  - [4.3 Configuration](#43-configuration)
+  - [4.4 Sync model](#44-sync-model)
+- [5. Data model](#5-data-model)
+  - [5.1 Repo layout](#51-repo-layout)
+  - [5.2 North-star template](#52-north-star-template)
+  - [5.3 Project card template](#53-project-card-template)
+  - [5.4 Inbox format](#54-inbox-format)
+  - [5.5 Agenda format](#55-agenda-format)
+- [6. Intents](#6-intents)
+  - [6.1 Bootstrap (implicit, fires when `$OPERATOR_REPO` doesn't exist)](#61-bootstrap-implicit-fires-when-operator_repo-doesnt-exist)
+  - [6.2 Capture an idea (a)](#62-capture-an-idea-a)
+  - [6.3 Plan / "what should I work on?" (b)](#63-plan--what-should-i-work-on-b)
+  - [6.4 Show domain status (c)](#64-show-domain-status-c)
+  - [6.5 Start a new project (d)](#65-start-a-new-project-d)
+  - [6.6 Close a project (e)](#66-close-a-project-e)
+  - [6.7 Create a new domain (f)](#67-create-a-new-domain-f)
+  - [6.8 Edit / refine a north-star (g)](#68-edit--refine-a-north-star-g)
+  - [6.9 Show today's agenda (h)](#69-show-todays-agenda-h)
+  - [6.10 Triage inbox (i)](#610-triage-inbox-i)
+- [7. Subagents](#7-subagents)
+  - [7.1 `operator-planner`](#71-operator-planner)
+  - [7.2 `operator-triage`](#72-operator-triage)
+- [8. Skill metadata](#8-skill-metadata)
+- [9. Error handling](#9-error-handling)
+- [10. Testing strategy](#10-testing-strategy)
+- [11. Open questions / future work](#11-open-questions--future-work)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 **Status:** Draft
 **Date:** 2026-05-02
 **Scope:** Single design, single implementation plan.

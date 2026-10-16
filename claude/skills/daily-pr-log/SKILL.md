@@ -6,6 +6,18 @@ version: 1.0.3
 
 # Daily PR Log
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Overview](#overview)
+- [Log Location](#log-location)
+- [File Format](#file-format)
+- [Steps](#steps)
+- [Rules](#rules)
+- [Do NOT log these PRs](#do-not-log-these-prs)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Overview
 
 Appends one or more PR URLs to the daily log file in `~/projects/knowledge-base`. Files are plain `.txt`, organized by year and month. Directory structure is scaffolded automatically.

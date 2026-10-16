@@ -1,5 +1,15 @@
 # dotfiles
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [How it works](#how-it-works)
+- [What's in here](#whats-in-here)
+- [Getting started](#getting-started)
+- [Contributing](#contributing)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 A library of Claude Code agents and skills — clone it, run `setup.sh`, and drop domain experts into any project in minutes.
 
 ## How it works

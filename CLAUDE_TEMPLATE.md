@@ -1,5 +1,26 @@
 # CLAUDE.md — Project Template
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [TO CLAUDE — read this block FIRST](#to-claude--read-this-block-first)
+- [Session State](#session-state)
+- [Session start — skill version check](#session-start--skill-version-check)
+- [Cluster & Architecture (homelab — non-negotiable defaults)](#cluster--architecture-homelab--non-negotiable-defaults)
+- [Project Overview](#project-overview)
+- [Commands](#commands)
+- [Architecture](#architecture)
+- [Development Workflow (homelab — always in this order)](#development-workflow-homelab--always-in-this-order)
+- [Build & Dependency Hygiene (sandbox-only — applies to every project)](#build--dependency-hygiene-sandbox-only--applies-to-every-project)
+- [CI/CD Pipeline (homelab standard)](#cicd-pipeline-homelab-standard)
+- [Shared Infrastructure (cluster-wide constants)](#shared-infrastructure-cluster-wide-constants)
+- [Database](#database)
+- [Recommended File Skeleton (when expanding this template)](#recommended-file-skeleton-when-expanding-this-template)
+- [Markdown contents lists (every project)](#markdown-contents-lists-every-project)
+- [Template provenance (delete after first fill-in)](#template-provenance-delete-after-first-fill-in)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 > **This file is a template copied from `~/dotfiles/CLAUDE_TEMPLATE.md`.**
 > Public dotfiles repo policy applies: no real values may live in the template itself.
 > Real values belong here in the project-level `CLAUDE.md` after it's been copied in.

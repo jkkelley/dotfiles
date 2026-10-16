@@ -6,6 +6,28 @@ version: 1.0.3
 
 # Terraform Patterns
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Module Structure](#module-structure)
+- [Variable Patterns](#variable-patterns)
+- [Resource Patterns](#resource-patterns)
+- [Locals Pattern](#locals-pattern)
+- [State Operations Reference](#state-operations-reference)
+- [Backend Configuration](#backend-configuration)
+- [Multi-Region / Multi-Account Provider Aliases](#multi-region--multi-account-provider-aliases)
+- [Terragrunt Patterns](#terragrunt-patterns)
+- [Local Testing with Ministack — REQUIRED Before Any Terraform Change](#local-testing-with-ministack--required-before-any-terraform-change)
+  - [Step 0 — Gitignore Pre-Flight](#step-0--gitignore-pre-flight)
+  - [Step 1 — Start Ministack](#step-1--start-ministack)
+  - [Step 2 — Configure Terraform to Target Ministack](#step-2--configure-terraform-to-target-ministack)
+  - [Step 3 — Run and Verify](#step-3--run-and-verify)
+  - [Step 4 — Teardown](#step-4--teardown)
+- [CI/CD Pipeline Pattern](#cicd-pipeline-pattern)
+- [Common Anti-Patterns](#common-anti-patterns)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Module Structure
 
 ```

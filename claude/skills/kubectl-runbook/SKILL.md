@@ -6,6 +6,26 @@ version: 1.0.3
 
 # kubectl Runbook
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Debugging Hierarchy (always in this order)](#debugging-hierarchy-always-in-this-order)
+- [Pod Lifecycle Quick Checks](#pod-lifecycle-quick-checks)
+- [Resource Management](#resource-management)
+- [RBAC Debugging](#rbac-debugging)
+- [Networking Debugging](#networking-debugging)
+- [Node Operations](#node-operations)
+- [Rollout Management](#rollout-management)
+- [etcd & Control Plane](#etcd--control-plane)
+- [Helm Quick Reference](#helm-quick-reference)
+- [One-Liners Worth Memorizing](#one-liners-worth-memorizing)
+- [Homelab K8s — AVP + ESO Troubleshooting](#homelab-k8s--avp--eso-troubleshooting)
+  - [ImagePullBackOff on homelab cluster](#imagepullbackoff-on-homelab-cluster)
+  - [AVP placeholder not resolved (value shows literally in cluster)](#avp-placeholder-not-resolved-value-shows-literally-in-cluster)
+  - [Vault k8s auth roles — quick reference](#vault-k8s-auth-roles--quick-reference)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Debugging Hierarchy (always in this order)
 
 ```bash

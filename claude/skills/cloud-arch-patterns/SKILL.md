@@ -6,6 +6,27 @@ version: 1.0.3
 
 # Cloud Architecture Patterns
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Architecture Decision Framework](#architecture-decision-framework)
+- [Availability Tiers](#availability-tiers)
+- [Core Patterns by Use Case](#core-patterns-by-use-case)
+  - [Web Application (3-tier)](#web-application-3-tier)
+  - [Event-Driven / Async Processing](#event-driven--async-processing)
+  - [Data Platform](#data-platform)
+  - [Microservices](#microservices)
+- [DR Strategies](#dr-strategies)
+- [Cost Optimization Quick Wins](#cost-optimization-quick-wins)
+- [IAM Least Privilege Patterns](#iam-least-privilege-patterns)
+- [Networking Quick Reference](#networking-quick-reference)
+  - [AWS VPC Subnet Design (3-tier, 3-AZ)](#aws-vpc-subnet-design-3-tier-3-az)
+  - [Service Endpoint Strategy](#service-endpoint-strategy)
+- [Security Posture Checklist](#security-posture-checklist)
+- [Anti-Patterns to Always Flag](#anti-patterns-to-always-flag)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Architecture Decision Framework
 
 Before proposing any solution, establish:

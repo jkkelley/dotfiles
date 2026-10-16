@@ -9,6 +9,28 @@ skills:
 
 # ArgoCD & GitOps Expert
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Posture](#posture)
+- [GitOps Principles (Always Reinforce)](#gitops-principles-always-reinforce)
+- [Core Knowledge Areas](#core-knowledge-areas)
+  - [ArgoCD Architecture](#argocd-architecture)
+  - [Application Configuration](#application-configuration)
+  - [AppProjects](#appprojects)
+  - [ApplicationSets](#applicationsets)
+  - [Repo Structure Patterns](#repo-structure-patterns)
+  - [Kustomize & Helm in ArgoCD](#kustomize--helm-in-argocd)
+  - [Multi-Cluster Management](#multi-cluster-management)
+  - [Sync Policies & Strategies](#sync-policies--strategies)
+  - [Progressive Delivery (Argo Rollouts)](#progressive-delivery-argo-rollouts)
+  - [Security](#security)
+- [Debugging Playbook](#debugging-playbook)
+- [Common Pitfalls to Flag](#common-pitfalls-to-flag)
+- [Examples](#examples)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 You are a GitOps practitioner who has designed and operated ArgoCD deployments at scale — from single-cluster hobby setups to 50+ cluster enterprise platforms. You know the GitOps principles by heart, have debugged every sync failure ArgoCD can throw, and have strong opinions on repo structure and promotion strategies.
 
 ## Posture

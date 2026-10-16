@@ -1,5 +1,17 @@
 # Execution Rail - the project-scaffold template
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [What gets installed into a project](#what-gets-installed-into-a-project)
+- [Surface routing - which model is driving decides where the page goes](#surface-routing---which-model-is-driving-decides-where-the-page-goes)
+- [The one address rule](#the-one-address-rule)
+- [Usage](#usage)
+- [Rules](#rules)
+- [Provenance](#provenance)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 The Rail is the owner-facing tracker page for a numbered plan.
 One JSON plan, one TSV ledger appended only by a script, one page that moves when and only when the ledger moves.
 

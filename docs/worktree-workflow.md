@@ -1,5 +1,28 @@
 # Worktrees: treehouse as the workspace broker
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [The problem it removes](#the-problem-it-removes)
+- [What treehouse actually is](#what-treehouse-actually-is)
+- [The invariant that makes it safe](#the-invariant-that-makes-it-safe)
+- [Who owns what](#who-owns-what)
+- [The pool on disk](#the-pool-on-disk)
+- [The lifecycle](#the-lifecycle)
+- [The commands that matter](#the-commands-that-matter)
+  - [prune will only delete when all four hold](#prune-will-only-delete-when-all-four-hold)
+- [v1.8.0 -> v2.3.0, what changed](#v180---v230-what-changed)
+- [How this gets implemented](#how-this-gets-implemented)
+  - [1. `hydration-prompt` - the mechanism](#1-hydration-prompt---the-mechanism)
+  - [2. `project-scaffold` CLAUDE.md template - the policy](#2-project-scaffold-claudemd-template---the-policy)
+  - [Explicitly NOT a skill](#explicitly-not-a-skill)
+- [Decided, 2026-08-24: the pool stays user-level](#decided-2026-08-24-the-pool-stays-user-level)
+- [Verified, 2026-08-24](#verified-2026-08-24)
+- [After the compaction](#after-the-compaction)
+  - [Unrelated loose ends from the same session](#unrelated-loose-ends-from-the-same-session)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Worked out 2026-08-23. Companion to [skill-distribution-workflow.md](skill-distribution-workflow.md), which covers the same discipline applied to skills.
 
 Status: **the model is settled. The `hydration-prompt` half of the integration is built; the `project-scaffold` half is not.** See "How this gets implemented" and then "After the compaction" at the bottom for what is actually left to do.

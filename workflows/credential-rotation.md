@@ -1,5 +1,21 @@
 # Credential rotation
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [The procedure](#the-procedure)
+- [Why it is shaped like this](#why-it-is-shaped-like-this)
+- [The two shapes of rotation](#the-two-shapes-of-rotation)
+- [Where each new value comes from](#where-each-new-value-comes-from)
+  - [The two that are one credential](#the-two-that-are-one-credential)
+  - [The NATS chain is not a rotation](#the-nats-chain-is-not-a-rotation)
+- [After the sync](#after-the-sync)
+- [Adding a credential to the manifest](#adding-a-credential-to-the-manifest)
+- [What it costs](#what-it-costs)
+- [Verifying the procedure holds](#verifying-the-procedure-holds)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 <!-- workflow-version: 1.0.0 -->
 
 How a credential in AWS Parameter Store is replaced, and how the cluster is made

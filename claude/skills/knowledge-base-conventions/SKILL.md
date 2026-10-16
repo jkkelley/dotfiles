@@ -6,6 +6,25 @@ version: 1.0.3
 
 # Knowledge Base Conventions
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Repository](#repository)
+- [Directory Structure](#directory-structure)
+- [File Placement Rules](#file-placement-rules)
+- [Current Projects](#current-projects)
+- [Cluster Quick Reference](#cluster-quick-reference)
+- [Commit Conventions](#commit-conventions)
+- [Git Workflow](#git-workflow)
+- [Conventions Checklist](#conventions-checklist)
+- [Document Templates](#document-templates)
+  - [Manifest Doc (`docs/manifests/<project-name>.md`)](#manifest-doc-docsmanifestsproject-namemd)
+  - [Runbook (`docs/runbooks/<name>.md`)](#runbook-docsrunbooksnamemd)
+  - [ADR (`docs/adr/NNNN-<title>.md`)](#adr-docsadrnnnn-titlemd)
+  - [Incident Report (`docs/incidents/YYYY-MM-DD-<title>.md`)](#incident-report-docsincidentsyyyy-mm-dd-titlemd)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Repository
 
 ```

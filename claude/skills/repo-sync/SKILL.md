@@ -6,6 +6,22 @@ version: 1.0.3
 
 # repo-sync — Sync a Repo to Main
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Input](#input)
+- [Step 1: Resolve the repo path](#step-1-resolve-the-repo-path)
+  - [If the user gave a full path](#if-the-user-gave-a-full-path)
+  - [If the user gave a repo name (or chose "search for it")](#if-the-user-gave-a-repo-name-or-chose-search-for-it)
+- [Step 2: Checkout main](#step-2-checkout-main)
+- [Step 3: Pull from origin](#step-3-pull-from-origin)
+  - [Pull error handling](#pull-error-handling)
+- [Step 4: Confirm and verify](#step-4-confirm-and-verify)
+  - [Plain English summary (always shown)](#plain-english-summary-always-shown)
+  - [Verification commands (always show both)](#verification-commands-always-show-both)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Syncs a local git repository to its `main` branch.
 Accepts either a full path or a repo name.
 Always uses `git -C <path>` so verification commands work from any directory without disrupting the user's current session.

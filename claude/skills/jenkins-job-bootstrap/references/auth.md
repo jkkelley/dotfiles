@@ -1,5 +1,15 @@
 # Jenkins Auth & Credential Reference
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Endpoint](#endpoint)
+- [Known credential IDs](#known-credential-ids)
+- [Creating a Jenkins API token (for CLI/script use)](#creating-a-jenkins-api-token-for-cliscript-use)
+- [Creating a *new* Branch Source credential (only if rotating)](#creating-a-new-branch-source-credential-only-if-rotating)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Endpoint
 
 `https://<jenkins-host>`

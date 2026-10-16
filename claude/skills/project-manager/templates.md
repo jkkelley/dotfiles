@@ -1,5 +1,18 @@
 # PM Templates
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Project Charter](#project-charter)
+- [Weekly Status Report](#weekly-status-report)
+- [RAID Log](#raid-log)
+- [RACI Matrix](#raci-matrix)
+- [Change Request](#change-request)
+- [Retrospective Board](#retrospective-board)
+- [Kickoff Meeting Agenda](#kickoff-meeting-agenda)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Project Charter
 
 ```markdown

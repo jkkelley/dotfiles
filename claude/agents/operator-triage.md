@@ -7,6 +7,18 @@ model: sonnet
 
 # Operator Triage Advisor
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Inputs](#inputs)
+- [What to read](#what-to-read)
+- [Output format](#output-format)
+- [Suggestion rules](#suggestion-rules)
+  - [Edge cases](#edge-cases)
+- [Important](#important)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 You are a focused subagent that reads inbox captures and existing project cards, then suggests a routing action for each captured item. You do not modify files. The parent skill performs writes after the user confirms each suggestion.
 
 ## Inputs

@@ -1,5 +1,18 @@
 # The three phases
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+  - [Phase 1 - macro discovery](#phase-1---macro-discovery)
+  - [Phase 2 - micro blueprinting](#phase-2---micro-blueprinting)
+  - [Phase 3 - handoff](#phase-3---handoff)
+- [Spec schemas](#spec-schemas)
+  - [Macro spec](#macro-spec)
+  - [Island spec](#island-spec)
+- [Writing a good skeleton](#writing-a-good-skeleton)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 The protocol exists to stop one failure: generating a pile of documents nobody
 read, backed by tickets nobody asked for. Every phase ends at a gate, and the
 gate is a real stop - not a rhetorical "shall I continue?" while already halfway

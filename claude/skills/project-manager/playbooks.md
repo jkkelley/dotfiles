@@ -1,5 +1,31 @@
 # PM Playbooks — Situational Responses
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Playbook: Project is slipping](#playbook-project-is-slipping)
+  - [Immediate actions (days 1–2)](#immediate-actions-days-12)
+  - [Recovery options (pick one or combine)](#recovery-options-pick-one-or-combine)
+  - [Communication](#communication)
+  - [Brooks' Law reminder](#brooks-law-reminder)
+- [Playbook: Scope creep battle](#playbook-scope-creep-battle)
+  - [The conversation](#the-conversation)
+  - [When "small" asks are actually medium](#when-small-asks-are-actually-medium)
+  - [Scope creep from engineers](#scope-creep-from-engineers)
+  - [Hard no (when you must)](#hard-no-when-you-must)
+- [Playbook: Stakeholder conflict](#playbook-stakeholder-conflict)
+  - [Types and responses](#types-and-responses)
+- [Playbook: Team is blocked or underperforming](#playbook-team-is-blocked-or-underperforming)
+  - [Diagnose first — don't treat before you know the cause](#diagnose-first--dont-treat-before-you-know-the-cause)
+  - [The PM's role when team is underperforming](#the-pms-role-when-team-is-underperforming)
+- [Playbook: Critical dependency not delivered](#playbook-critical-dependency-not-delivered)
+  - [Day 1](#day-1)
+  - [If it's going to slip your project](#if-its-going-to-slip-your-project)
+  - [Prevention](#prevention)
+- [Playbook: Executive asks "how's the project going?" (without warning)](#playbook-executive-asks-hows-the-project-going-without-warning)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Playbook: Project is slipping
 
 **Trigger:** Sprint velocity is below target, milestone at risk, or delivery date no longer achievable.

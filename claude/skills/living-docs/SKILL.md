@@ -7,6 +7,25 @@ requires: work-order
 
 # living-docs
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [When this applies](#when-this-applies)
+- [What gets installed](#what-gets-installed)
+- [The four modes](#the-four-modes)
+- [Workflow](#workflow)
+  - [1. Install the layer](#1-install-the-layer)
+  - [2. Record a decision](#2-record-a-decision)
+  - [3. Record a procedure](#3-record-a-procedure)
+  - [4. Verify](#4-verify)
+- [The mechanism that stops documentation being forgotten](#the-mechanism-that-stops-documentation-being-forgotten)
+- [Contracts every tool honours](#contracts-every-tool-honours)
+- [OS awareness](#os-awareness)
+- [Testing](#testing)
+- [Additional reference](#additional-reference)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Documentation does not rot because people are lazy.
 It rots because nothing fails when it is wrong.
 

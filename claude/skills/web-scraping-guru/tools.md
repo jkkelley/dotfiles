@@ -1,5 +1,25 @@
 # Tools & Setup Reference
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Python stack](#python-stack)
+  - [httpx + parsel (static sites)](#httpx--parsel-static-sites)
+  - [curl_cffi (TLS-hardened sites)](#curl_cffi-tls-hardened-sites)
+  - [Playwright async (JS-rendered)](#playwright-async-js-rendered)
+  - [Network interception — grab the API call instead of parsing HTML](#network-interception--grab-the-api-call-instead-of-parsing-html)
+  - [Scrapy spider template](#scrapy-spider-template)
+- [JavaScript stack](#javascript-stack)
+  - [Crawlee (Playwright-backed, production-grade)](#crawlee-playwright-backed-production-grade)
+  - [Cheerio (static HTML, fast)](#cheerio-static-html-fast)
+- [Go stack](#go-stack)
+  - [Colly (crawl framework)](#colly-crawl-framework)
+- [Output formats](#output-formats)
+  - [JSONL streaming output](#jsonl-streaming-output)
+  - [Deduplication with SQLite](#deduplication-with-sqlite)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Python stack
 
 ### httpx + parsel (static sites)

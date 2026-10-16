@@ -1,5 +1,23 @@
 # Lifecycle
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Statuses](#statuses)
+  - [1. `draft`](#1-draft)
+  - [2. `ready`](#2-ready)
+  - [3. `in-progress`](#3-in-progress)
+  - [4. `in-review`](#4-in-review)
+  - [5. `done`](#5-done)
+  - [6. `cancelled`](#6-cancelled)
+  - [7. `stale`](#7-stale)
+- [Outside the status set](#outside-the-status-set)
+- [Status-gated record verbs](#status-gated-record-verbs)
+- [The frozen block](#the-frozen-block)
+- [close](#close)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 The complete status table.
 Nothing here is left to interpretation: every status names its setter, its gate, its legal successors, what the transition writes, and what makes it refuse.
 

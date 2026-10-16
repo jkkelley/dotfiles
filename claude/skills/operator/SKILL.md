@@ -6,6 +6,52 @@ version: 1.0.3
 
 # Operator — Personal Work-Steering System
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Configuration](#configuration)
+- [Data layout](#data-layout)
+- [Intent dispatch](#intent-dispatch)
+- [Bootstrap (implicit, runs when `$OPERATOR_REPO` does not exist)](#bootstrap-implicit-runs-when-operator_repo-does-not-exist)
+  - [Step 1: Detect remote state](#step-1-detect-remote-state)
+  - [Flavor 1: Brand-new setup (remote does not exist)](#flavor-1-brand-new-setup-remote-does-not-exist)
+  - [Flavor 2: New machine (remote exists)](#flavor-2-new-machine-remote-exists)
+  - [Edge cases](#edge-cases)
+- [Intent (a): capture an idea](#intent-a-capture-an-idea)
+  - [Behavior](#behavior)
+  - [Strict rule](#strict-rule)
+- [Intent (f): create a new domain](#intent-f-create-a-new-domain)
+  - [Behavior](#behavior-1)
+- [Intent (d): start a new project](#intent-d-start-a-new-project)
+  - [Behavior](#behavior-2)
+  - [On reject](#on-reject)
+- [Intent (c): show domain status](#intent-c-show-domain-status)
+  - [Behavior](#behavior-3)
+  - [Output cap](#output-cap)
+- [Intent (e): close a project](#intent-e-close-a-project)
+  - [Behavior](#behavior-4)
+- [Intent (g): edit / refine a north-star](#intent-g-edit--refine-a-north-star)
+  - [Two modes — picked from the prompt](#two-modes--picked-from-the-prompt)
+- [Intent (b): plan / "what should I work on?"](#intent-b-plan--what-should-i-work-on)
+  - [Behavior](#behavior-5)
+- [Intent (h): show today's agenda](#intent-h-show-todays-agenda)
+  - [Behavior](#behavior-6)
+  - [Edge cases](#edge-cases-1)
+- [Intent (i): triage inbox](#intent-i-triage-inbox)
+  - [Two modes — picked from the prompt](#two-modes--picked-from-the-prompt-1)
+  - [Behavior](#behavior-7)
+  - [Edge cases](#edge-cases-2)
+- [Intent (j): log a backlog item](#intent-j-log-a-backlog-item)
+  - [Behavior](#behavior-8)
+- [Intent (k): log Claude sessions](#intent-k-log-claude-sessions)
+  - [Behavior](#behavior-9)
+- [Intent: help](#intent-help)
+  - [Behavior](#behavior-10)
+- [Skill Update Convention](#skill-update-convention)
+- [Homelab K8s Project Context](#homelab-k8s-project-context)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 This skill is a single named entry point. The user invokes it in natural language and it parses two things from the prompt:
 
 - **Domain hint** — `work`, `weekend-business`, `personal`, or any custom domain the user has created. Hint may be absent (some intents work without one).

@@ -1,5 +1,17 @@
 # Intake questionnaire
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Block A — scope (ask first, alone)](#block-a--scope-ask-first-alone)
+- [Block B — target](#block-b--target)
+- [Block C — form factor](#block-c--form-factor)
+- [Block D — content](#block-d--content)
+- [Block E — guardrails](#block-e--guardrails)
+- [Brief schema](#brief-schema)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Ask in order. Batch three to five at a time. Q1 branches the rest — get it first.
 
 If a repo path is available, read it and pre-fill answers, then ask the user to

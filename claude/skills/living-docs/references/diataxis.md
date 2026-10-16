@@ -1,5 +1,15 @@
 # The four modes, and how to choose
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [The grid](#the-grid)
+- [What each one owes the reader](#what-each-one-owes-the-reader)
+- [Choosing when a document wants to be two](#choosing-when-a-document-wants-to-be-two)
+- [What this skill enforces](#what-this-skill-enforces)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Diataxis mode: **explanation**.
 Last reviewed: 2026-08-23.
 

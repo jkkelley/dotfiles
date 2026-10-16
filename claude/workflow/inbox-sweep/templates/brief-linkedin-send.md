@@ -1,5 +1,21 @@
 # Seat brief: LinkedIn send
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Seat](#seat)
+- [Forbidden](#forbidden)
+- [Browser check](#browser-check)
+- [Show and wait](#show-and-wait)
+- [Steps](#steps)
+- [One Send](#one-send)
+- [Proof](#proof)
+- [Classifier denial](#classifier-denial)
+- [Tabs](#tabs)
+- [Result](#result)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 <owner-words>
 ${OWNER_WORDS}
 </owner-words>

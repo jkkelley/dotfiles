@@ -6,6 +6,27 @@ version: 1.0.3
 
 # ArgoCD Runbook
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Sync Status Quick Reference](#sync-status-quick-reference)
+- [Debugging Commands](#debugging-commands)
+- [Repo & Connectivity](#repo--connectivity)
+- [RBAC Debugging](#rbac-debugging)
+- [ApplicationSet Troubleshooting](#applicationset-troubleshooting)
+- [Common Fixes](#common-fixes)
+- [Sync Policy Cheatsheet](#sync-policy-cheatsheet)
+- [Promotion Patterns](#promotion-patterns)
+- [ArgoCD Vault Plugin (AVP) — Homelab Pattern](#argocd-vault-plugin-avp--homelab-pattern)
+  - [The correct CMP generate command](#the-correct-cmp-generate-command)
+  - [Application source for AVP-enabled apps](#application-source-for-avp-enabled-apps)
+  - [Placeholder format in values.yaml](#placeholder-format-in-valuesyaml)
+  - [sync-wave ordering for Vault-backed ESO](#sync-wave-ordering-for-vault-backed-eso)
+  - [AVP debugging](#avp-debugging)
+  - [Common AVP failures](#common-avp-failures)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Sync Status Quick Reference
 
 | Status | Meaning | Action |

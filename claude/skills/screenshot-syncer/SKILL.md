@@ -6,6 +6,17 @@ version: 1.0.3
 
 # Windows → WSL Screenshot Sync
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Configuration](#configuration)
+- [Filters](#filters)
+- [Behavior](#behavior)
+- [Contract](#contract)
+- [Files](#files)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Triggered by an entry-point PowerShell script that selects matching files on the
 Windows side, then shells into WSL to copy them from `/mnt/c/...` into the
 target directory. Source, destination, and distro are all configurable per

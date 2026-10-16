@@ -6,6 +6,20 @@ version: 1.0.3
 
 # Backend Patterns
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [API Response Conventions](#api-response-conventions)
+- [Database Patterns](#database-patterns)
+- [Caching Patterns](#caching-patterns)
+- [Resilience Patterns](#resilience-patterns)
+- [Authentication Patterns](#authentication-patterns)
+- [Background Jobs](#background-jobs)
+- [Structured Logging](#structured-logging)
+- [Anti-Patterns Quick Reference](#anti-patterns-quick-reference)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## API Response Conventions
 
 ```json
