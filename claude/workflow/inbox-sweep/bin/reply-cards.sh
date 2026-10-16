@@ -72,7 +72,7 @@ drafted_field() { jq -rs --arg id "$1" --arg f "$2" '[.[] | select(.code == "RP-
 
 ledger_add() { # <code> <draft id> <card id>
   jq -cn --arg at "$(sweep_now)" --arg code "$1" --arg id "$2" --arg card "$3" --arg run "$run" \
-    '{schema_version:1, at:$at, code:$code, id:$id, card:$card, run_id:$run}' >>"$LEDGER"
+    '{schema_version:1, at:$at, code:$code, id:$id, card:$card, run_id:$run}' | bash "$HERE/reply-ledger.sh" append --file "$LEDGER"
 }
 
 # 1. Cards. A draft whose name is not a plain token is skipped and logged: it becomes part of a card id and a path.
