@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: publish.sh
+# purpose: the writing half of the pipeline, driven by
+# inputs: --before --cached --format --help --name-only --no-commit-id; env SKILL_PUBLISH_EMAIL SKILL_PUBLISH_NAME
+# outputs: stdout, exit code
+# writes-to: nothing (read-only)
+# cleanup: none needed
 #
 # publish.sh - the writing half of the pipeline, driven by
 # .github/workflows/skill-publish.yml.

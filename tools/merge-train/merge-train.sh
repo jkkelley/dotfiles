@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: merge-train.sh
+# purpose: collapse every open PR of a repo into its default branch, leaves first.
+# inputs: merge-train.sh --repo <owner/repo> [--dry] [--method merge|squash|rebase] [--retries 3]
+# outputs: stdout, exit code
+# writes-to: a mktemp scratch path, git branches and PRs
+# cleanup: removes its own temp files on exit
 # merge-train.sh - collapse every open PR of a repo into its default branch, leaves first.
 #
 # Owner, 2026-10-16 UTC: "get this code merged the fuck in, dead code is shit, it sitting under agents is stupid"

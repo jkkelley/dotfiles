@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: golden-rules.sh
+# purpose: the golden system design rules sit right under every contents list.
+# inputs: golden-rules.sh write|check [FILE...]   (default: tracked instruction files of the current repo)
+# outputs: stdout, exit code
+# writes-to: $HOME/.cache/golden-rules/$name, $HOME/.local/state/zenith/backup, $HOME/.local/state/zenith/golden-rules, $log/repos.tsv, a mktemp scratch path, git branches and PRs
+# cleanup: removes its own temp files on exit
 # golden-rules.sh - the golden system design rules sit right under every contents list.
 # Owner order 2026-10-16 UTC: "they sit right under those content list, blast that shit, I don't care if its
 # not dry, i want it wildly known". Repeating the block everywhere is intended, not a DRY violation.

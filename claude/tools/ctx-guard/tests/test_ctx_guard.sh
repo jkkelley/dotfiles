@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: test_ctx_guard.sh
+# purpose: Tests ctx-guard.sh against a stub compaction-guard that behaves like install/doctor (real tool is exercised by
+# inputs: env STUB_FAIL STUB_HOOKS
+# outputs: stdout, exit code
+# writes-to: $HOME/.claude/settings.json, a mktemp scratch path
+# cleanup: removes its own temp files on exit
 # Tests ctx-guard.sh against a stub compaction-guard that behaves like install/doctor (real tool is exercised by
 # `make ctx-guard-install` on the host). Intent: install is idempotent, backs up, retries 3 times, and fails loudly
 # when doctor does not show the wiring.

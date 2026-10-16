@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: workflow-version.sh
+# purpose: skill-tool-version: 1.0.0
+# inputs: --help --major --minor --patch; env WORKFLOW_VERSION_DIR
+# outputs: stdout, exit code
+# writes-to: a mktemp scratch path
+# cleanup: removes its own temp files on exit
 # skill-tool-version: 1.0.0
 #
 # workflow-version.sh — owns the versions of the documents in workflows/.

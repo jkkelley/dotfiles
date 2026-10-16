@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: run-tests.sh
+# purpose: the suite for workflows/credential-rotation/.
+# inputs: --days --dry-run --entrypoint --help --id --network; env IN_CREDROT_CONTAINER TMPDIR TOOLS_TEST_IMAGE WORK
+# outputs: stdout, exit code
+# writes-to: $WORK/empty.txt, $WORK/fixtures/bad.tsv, $WORK/new.txt, a mktemp scratch path
+# cleanup: removes its own temp files on exit
 #
 # run-tests.sh - the suite for workflows/credential-rotation/.
 #

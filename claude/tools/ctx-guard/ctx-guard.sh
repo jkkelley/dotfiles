@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# rolodex: header drafted by scripts/rolodex.py headers - correct any line that is wrong
+# name: ctx-guard.sh
+# purpose: one entry point that wires the existing compaction-guard into a seat or the whole host.
+# inputs: ctx-guard.sh install [--global|--project DIR] | status | check | uninstall [--global|--project DIR] | watch
+# outputs: stdout, exit code
+# writes-to: $HOME/.local/state/compaction-guard}, $HOME/.local/state/zenith/backup}, ~/.local/state/zenith/backup
+# cleanup: none in the file - drafted, confirm what removes its output
 # ctx-guard.sh - one entry point that wires the existing compaction-guard into a seat or the whole host.
 # usage: ctx-guard.sh install [--global|--project DIR] | status | check | uninstall [--global|--project DIR] | watch
 #

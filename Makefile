@@ -47,3 +47,21 @@ golden-rules-repos: golden-rules-extract     ## one branch + PR per git repo und
 
 golden-rules-global-check:
 	bash scripts/golden-rules.sh global --check
+
+# System rolodex: what exists on this host and what does what. Scripts drive it; nothing by hand.
+# Inputs are Make variables, e.g. make rolodex-headers ROOT=~/projects/foo WRITE=1 ; make rolodex-check BASE=origin/main ALL=1
+ROOT ?= .
+WRITE ?=
+.PHONY: rolodex rolodex-headers rolodex-check rolodex-test
+
+rolodex:                ## scan the host (config/rolodex.conf) and write SYSTEM_ROLODEX.md + system-rolodex.json
+	python3 scripts/rolodex.py build $(if $(CONFIG),--config $(CONFIG)) $(if $(OUT_MD),--out-md $(OUT_MD)) $(if $(OUT_JSON),--out-json $(OUT_JSON))
+
+rolodex-headers:        ## draft script headers (ROOT=<repo>; dry run unless WRITE=1)
+	python3 scripts/rolodex.py headers --root $(ROOT) $(if $(WRITE),--write)
+
+rolodex-check:          ## fail a new script with no header (ALL=1 checks every script)
+	python3 scripts/rolodex.py check --root $(ROOT) --base $(BASE) $(if $(ALL),--all)
+
+rolodex-test:           ## relevant tests only, in Podman (Rule 14)
+	bash tools/rolodex/tests/run-tests.sh
