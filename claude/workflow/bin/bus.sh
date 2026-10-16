@@ -40,6 +40,7 @@ CFG="${LW_BUS:-$WF_REPO/config/line-watch.json}"
 [ -f "$CFG" ] || wf_die "no bus config at $CFG (set LW_BUS)"
 c() { jq -r "$1" "$CFG"; }
 NAME="$(c .bus.name)"; STREAM="$(c .bus.stream)"; PORT="$(c .bus.port)"; MPORT="$(c .bus.monitor_port)"
+BIND="$(c '.bus.bind // "127.0.0.1"')"
 STORE="$(wf_expand "$(c .bus.store)")"
 URL="${NATS_URL:-nats://127.0.0.1:$PORT}"
 
@@ -73,15 +74,20 @@ ensure() { # the stream and every configured consumer, created only when missing
 cmd="${1:-status}"; shift || true
 case "$cmd" in
   up)
+    # BREADCRUMB - bind guard (ORD-0553 R1, owner ruling: "local NATS binds 127.0.0.1 only, never the LAN").
+    # What broke: nothing yet; the -p flags below were literal 127.0.0.1, so a config edit could not widen them, but the
+    #   bind is now a config value and so could be set to 0.0.0.0. Why this fix: refuse any value but 127.0.0.1 before
+    #   podman runs, so a widened config never reaches the network. Rejected: trusting the config. Cost: none.
+    [ "$BIND" = 127.0.0.1 ] || { echo "BUS-BIND-REFUSED $BIND" >&2; exit 3; }
     if ! podman container exists "$NAME"; then
       mkdir -p "$STORE"
-      podman run -d --name "$NAME" --restart=always -p "127.0.0.1:$PORT:4222" -p "127.0.0.1:$MPORT:8222" -v "$STORE:/data:Z" \
+      podman run -d --name "$NAME" --restart=always -p "$BIND:$PORT:4222" -p "$BIND:$MPORT:8222" -v "$STORE:/data:Z" \
         --health-cmd "wget -qO- http://127.0.0.1:$MPORT/healthz || exit 1" --health-interval 30s \
         "$(c .bus.image)" -js -sd /data -m "$MPORT" >/dev/null || wf_die "podman could not start $NAME"
     elif [ "$(podman inspect -f '{{.State.Running}}' "$NAME")" != true ]; then podman start "$NAME" >/dev/null; fi
     retry3 healthy || wf_die "$NAME did not report healthy; read: podman logs $NAME"
     retry3 ensure || wf_die "could not create stream $STREAM or its consumers"
-    echo "bus up: $NAME on 127.0.0.1:$PORT, stream $STREAM, store $STORE"
+    echo "bus up: $NAME on $BIND:$PORT, stream $STREAM, store $STORE"
     ;;
   logs) exec podman logs -f --tail 20 "$NAME" ;;   # the bus monitor's foreground: the pane lives as long as the server
   down) podman rm -f "$NAME" >/dev/null 2>&1; echo "bus down: $NAME removed, store kept at $STORE" ;;
