@@ -8,4 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261016-8031` | ready | p1 | - | [Port merge-on-green.yml to ypli-01-src and ypconsult-01-src](WO-20261016-8031-port-merge-on-green-yml-to-ypli-01-src-and-ypcon.md) |
+| `WO-20261016-054b` | ready | p1 | - | [Render ci.yml and merge-on-green.yml into ypli-01-src; ypconsult-01-src already ported](WO-20261016-054b-render-ci-yml-and-merge-on-green-yml-into-ypli-0.md) |
