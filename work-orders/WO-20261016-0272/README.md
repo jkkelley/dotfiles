@@ -8,6 +8,7 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
+| `WO-20261016-75b7` | ready | p0 | - | [claude/workflow CI sharded by suite: diff-selected matrix, full on main and nightly, cached image, timed by step-time.sh](WO-20261016-75b7-claude-workflow-ci-sharded-by-suite-diff-selecte.md) |
 | `WO-20261016-2ffe` | ready | p0 | WO-20261016-1c04 | [make pr-regen-index REPO= BRANCHES=: regen-merge.sh ported as the index-regen fallback](WO-20261016-2ffe-make-pr-regen-index-repo-branches-regen-merge-sh.md) |
 | `WO-20261016-1c04` | in-review | p0 | WO-20261016-565d | [make wo-untrack-generated REPO=: untrack the generated work-order views, plan before apply](WO-20261016-1c04-make-wo-untrack-generated-repo-untrack-the-gener.md) |
 | `WO-20261016-565d` | ready | p0 | WO-20261016-6ef4 | [work-order skill: INDEX.md and epic READMEs become untracked build outputs, regenerated on demand](WO-20261016-565d-work-order-skill-index-md-and-epic-readmes-becom.md) |
@@ -39,4 +40,6 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-de15` | ready | p1 | WO-20261016-1c04 | [Test - make wo-untrack-generated REPO=: untrack the generated work-order views, plan before apply](WO-20261016-de15-test-make-wo-untrack-generated-repo-untrack-the-.md) |
 | `WO-20261016-1844` | ready | p1 | WO-20261016-565d | [Test - work-order skill: INDEX.md and epic READMEs become untracked build outputs, regenerated on demand](WO-20261016-1844-test-work-order-skill-index-md-and-epic-readmes-.md) |
 | `WO-20261016-6e76` | ready | p1 | WO-20261016-6ef4 | [Test - work-order skill: owner words, context, scripted AC checks, check verb, approve resolves tools](WO-20261016-6e76-test-work-order-skill-owner-words-context-script.md) |
+| `WO-20261016-ff68` | ready | p1 | WO-20261016-75b7 WO-20261016-e832 | [ci-events.sh imports each CI run's step-time-* artifacts to the bus, once per run](WO-20261016-ff68-ci-events-sh-imports-each-ci-run-s-step-time-art.md) |
 | `WO-20261016-6630` | ready | p1 | WO-20261016-2ffe | [generated-lint: CI fails a PR that adds a file marked auto-generated to the tracked tree](WO-20261016-6630-generated-lint-ci-fails-a-pr-that-adds-a-file-ma.md) |
+| `WO-20261016-88d3` | ready | p1 | - | [rolodex headers with no FILE drafts exactly the files check flags: same base, same file set](WO-20261016-88d3-rolodex-headers-with-no-file-drafts-exactly-the-.md) |
