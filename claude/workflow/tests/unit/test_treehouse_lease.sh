@@ -54,11 +54,13 @@ has   "no slot and no directory: the seat leases one, as holder" "DRY: treehouse
 has   "the lease asks for JSON so the path is read, not guessed" "--json" "$out"
 hasnt "git worktree add is gone"                                "worktree add" "$out"
 has   "the seat's gate watcher runs in the leased slot"          "on workflow architect \\<treehouse-slot\\>" "$out"
+has   "the fresh slot gets the pre-push hook"                   "pre-push.sh install --repo \\<treehouse-slot\\>" "$out"
 
 out="$(TH_STATUS="$T/held.json" spawn architect --link 1)"
 has   "a rerun reuses the slot the seat already leases"          "seat architect: already leases /pool/3/dotfiles" "$out"
 hasnt "and takes no second slot"                                 "treehouse get" "$out"
 hasnt "another holder's slot is never taken over"                "/pool/4" "$out"
+has   "a reused slot gets the pre-push hook too"               "pre-push.sh install --repo /pool/3/dotfiles" "$out"
 
 out="$(TH_STATUS="$T/none.json" WORKFLOW_CONFIG="$T/config-dir.json" spawn architect --link 1)"
 has   "an existing configured directory is still used as is"     "seat architect: worktree present at $T/wt" "$out"

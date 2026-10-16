@@ -129,6 +129,17 @@ else
   fi
 fi
 
+# BREADCRUMB 2026-10-16 (ORD-0814 P1): every seat worktree gets the dotfiles pre-push hook so a red gate fails in the
+#   seat, not in CI. Evidence: PRs 216, 219, 225, 234, 213, 210 went red on gates that run locally in seconds.
+#   Rejected: a global core.hooksPath, which would hook every repository on the host. Cost: one script call per spawn.
+#   Fallback: a missing script prints PREPUSH-SKIP and the seat starts.
+pp="$(dirname "$(readlink -f "$0")")/../pre-push/pre-push.sh"
+if [ -f "$pp" ]; then
+  run bash "$pp" install --repo "$worktree" || printf 'seat %s: PREPUSH-HOOK-FAIL %s\n' "$name" "$worktree" >&2
+else
+  printf 'seat %s: PREPUSH-SKIP NO-TOOL %s\n' "$name" "$pp" >&2
+fi
+
 # ---- herdr: rediscover every id -------------------------------------------
 need_herdr() { command -v herdr >/dev/null 2>&1 || wf_die "herdr is not on PATH; seats are started through herdr only"; }
 need_herdr
