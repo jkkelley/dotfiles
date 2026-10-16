@@ -1,0 +1,10 @@
+# stuck-deadman.service - one deadman pass. Rendered by `make deadman-install` (@DIR@, @LINES@, @TOPIC_VAR@ replaced).
+# Started only by stuck-deadman.timer: nothing in herdr or the line may start it, so it cannot die with the line.
+[Unit]
+Description=stuck-watch deadman: page the owner when stuck-watch or the bus is dead
+
+[Service]
+Type=oneshot
+Environment=SW_LINES=@LINES@
+Environment=NTFY_TOPIC_VAR=@TOPIC_VAR@
+ExecStart=/bin/bash @DIR@/deadman.sh

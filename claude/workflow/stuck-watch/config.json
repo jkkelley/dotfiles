@@ -1,0 +1,70 @@
+{
+  "$comment": "Inputs for stuck-watch.sh, deadman.sh and stuck-audit.sh. Every key is overridable by an SW_* env var or a flag (Design principles 101 item 17). Owner, 2026-10-16 UTC: 'what really ensure things are stuck? i dont trust you or agents or humans' and 'ensure it goes to my phone'. codes is the status code map: what each code means and who acts.",
+  "schema": "stuck-watch/config/1",
+  "nats_url": "127.0.0.1:4222",
+  "nats_monitor_url": "http://127.0.0.1:8222",
+  "stream": "LINE",
+  "subject_root": "line",
+  "interval_seconds": 60,
+  "idle_seconds": 60,
+  "stale_minutes": 20,
+  "cpu_zero_samples": 5,
+  "ctx_pct": 30,
+  "dedupe_minutes": 30,
+  "heartbeat_max_seconds": 180,
+  "agent_kind": "claude",
+  "exempt_seats": [
+    "architect",
+    "orchestrator"
+  ],
+  "run_dir": "~/.local/state/zenith/inbox-triage/20261015",
+  "result_file": "{run_dir}/{seat}-result.json",
+  "brief_files": [
+    "{run_dir}/{seat}-brief.v1.json",
+    "{run_dir}/{seat}-brief.json"
+  ],
+  "page_result_codes": [
+    "A2A-004"
+  ],
+  "env_file": "~/.config/zenith/yieldpoint.env",
+  "topic_key": "YPC_NTFY_TOPIC",
+  "ntfy_base": "https://ntfy.sh",
+  "state_dir": "~/.local/state/zenith/stuck-watch",
+  "lines": [
+    "inbox-triage"
+  ],
+  "codes": {
+    "STK-001": {
+      "means": "seat idle longer than idle_seconds and no result file",
+      "acts": "orchestrator"
+    },
+    "STK-002": {
+      "means": "no commit on the seat's branch and no PR change for stale_minutes, no result file",
+      "acts": "orchestrator"
+    },
+    "STK-003": {
+      "means": "seat CPU 0 for cpu_zero_samples consecutive ticks, no result file",
+      "acts": "orchestrator"
+    },
+    "STK-004": {
+      "means": "seat context over ctx_pct",
+      "acts": "orchestrator (compaction)"
+    },
+    "STK-005": {
+      "means": "result claims done but gh shows a PR not merged or CI not green",
+      "acts": "orchestrator, never trusts the claim"
+    },
+    "STK-090": {
+      "means": "stuck-watch dead: heartbeat older than heartbeat_max_seconds",
+      "acts": "architect break glass: make stuck-watch-up"
+    },
+    "STK-091": {
+      "means": "bus down: NATS unreachable",
+      "acts": "architect break glass: bring the bus up"
+    },
+    "A2A-004": {
+      "means": "SOP breach recorded in a result file, paged as is",
+      "acts": "architect"
+    }
+  }
+}
