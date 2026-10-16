@@ -4,15 +4,15 @@
   "slug": "review-publish-sh-make-f-review-mk-review-publis",
   "title": "review-publish.sh: make -f review.mk review-publish REPO= SRC= NAME= copies a merged directory from origin/main into the review root and prints each URL",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:25:16+00:00",
   "parent": "WO-20261016-35de",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/review-publish-sh-make-f-review-mk-review-publis",
+  "pr": 310,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design14 cut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -132,13 +132,17 @@ review.mk is standalone like claude/workflow/a2a.mk (make -C claude/workflow -f 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the 8 review-publish cases pass in podman
+- [x] `AC-H1` *(human)* the 8 review-publish cases pass in podman
+  - observed `2026-10-16` make -C claude/workflow -f review.mk review-test exit 0: ok review-publish: 8 cases
   - check: `make -C claude/workflow -f review.mk review-test` exit 0 expect /ok review-publish: 8 cases/
-- [ ] `AC-H2` *(human)* every changed script has a rolodex header
+- [x] `AC-H2` *(human)* every changed script has a rolodex header
+  - observed `2026-10-16` make rolodex-check BASE=origin/main exit 0: 2 script(s) checked, all have headers
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H3` *(human)* the config fixes the port and the root
+- [x] `AC-H3` *(human)* the config fixes the port and the root
+  - observed `2026-10-16` jq output: 127.0.0.1:45610 ~/.local/state/zenith/review origin/main
   - check: `jq -r '"\(.bind):\(.port) \(.root) \(.ref)"' claude/workflow/config/review.json` exit 0 expect /^127\.0\.0\.1:45610 ~/\.local/state/zenith/review origin/main$/
-- [ ] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` grep -v filter exit 1, no stray files
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/(bin/review-publish\.sh|review\.mk|config/review\.json|tests/unit/test_review_publish\.sh))$'` exit 1
 
 ## Test plan

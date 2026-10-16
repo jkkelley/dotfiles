@@ -1,0 +1,1 @@
+{"$comment": "Review server: review-publish.sh writes ROOT/NAME, the review-server unit serves ROOT on BIND:PORT. Breadcrumb in bin/review-publish.sh.", "root": "~/.local/state/zenith/review", "bind": "127.0.0.1", "port": 45610, "ref": "origin/main"}
