@@ -1,18 +1,18 @@
 ---
 {
-  "id": "WO-20261016-7ca5",
-  "slug": "timed-run-every-target-of-claude-workflow-mk-res",
-  "title": "timed-run: every target of claude/workflow/mk/resources.mk runs through the timing wrapper",
+  "id": "WO-20261016-7e9f",
+  "slug": "timed-run-every-target-of-claude-workflow-mk-lin",
+  "title": "timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper",
   "type": "chore",
-  "status": "in-review",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
-  "created_at": "2026-10-16T06:05:55+00:00",
+  "created_at": "2026-10-16T06:05:49+00:00",
   "parent": "WO-20261016-af17",
-  "branch": "feat/timed-run-every-target-of-claude-workflow-mk-res",
-  "pr": 213,
-  "closed": null,
+  "branch": "feat/timed-run-every-target-of-claude-workflow-mk-lin",
+  "pr": 218,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -22,7 +22,7 @@
   "surfaces": [],
   "depends_on": [],
   "blocks": [
-    "WO-20261016-8590"
+    "WO-20261016-20e8"
   ],
   "labels": [
     "line:inbox-triage"
@@ -30,7 +30,7 @@
 }
 ---
 
-# WO-20261016-7ca5 - timed-run: every target of claude/workflow/mk/resources.mk runs through the timing wrapper
+# WO-20261016-7e9f - timed-run: every target of claude/workflow/mk/line-watch.mk runs through the timing wrapper
 
 ## Contents
 
@@ -46,16 +46,16 @@
 
 ## Problem
 
-Item 37 amended, owner 2026-10-16 UTC: "time out everything logically, you'll ID the bottlenecks, and it'll get things thru faster" - "One shared wrapper script does the timing, the timeout and the bus events for every Make target, so no step can run untimed." stuck-watch brief v2: one work order per Makefile owner (resources) to route its targets through claude/workflow/bin/timed-run.sh.
+Item 37 amended, owner 2026-10-16 UTC: "time out everything logically, you'll ID the bottlenecks, and it'll get things thru faster" - "One shared wrapper script does the timing, the timeout and the bus events for every Make target, so no step can run untimed." stuck-watch brief v2: one work order per Makefile owner (line-watch) to route its targets through claude/workflow/bin/timed-run.sh.
 
 ## Scope
 
 **In**
 
-- touches: claude/workflow/mk/resources.mk
-- step: near the top of claude/workflow/mk/resources.mk: `TIMED = bash $(abspath bin/timed-run.sh) --node $@ --kind make --` with a breadcrumb comment (item 37; a down bus only warns; rejected: a SHELL override, which also times recipe-internal shell calls)
+- touches: claude/workflow/mk/line-watch.mk
+- step: near the top of claude/workflow/mk/line-watch.mk: `TIMED = bash $(abspath bin/timed-run.sh) --node $@ --kind make --` with a breadcrumb comment (item 37; a down bus only warns; rejected: a SHELL override, which also times recipe-internal shell calls)
 - step: prefix the command line of every target's recipe that runs a script, podman or make with `$(TIMED) ` (after any leading `@`); leave `help` and recipes that only echo or check $(call need,...) unwrapped
-- step: run `make -n -C $(dirname claude/workflow/mk/resources.mk) <each wrapped target> <its required VAR=x>` and check each prints timed-run.sh
+- step: run `make -n -C $(dirname claude/workflow/mk/line-watch.mk) <each wrapped target> <its required VAR=x>` and check each prints timed-run.sh
 - step: run the owner's relevant test target once (`make -C claude/workflow test` for workflow files, `make rolodex-test` for the root)
 - tool: path:claude/workflow/bin/timed-run.sh - on main; fallback: bus down: timed-run warns `WARN bus unreachable` and the step runs with its own exit code (tm_event); covered by the bus-down case
 - tool: path:claude/workflow/tests/container/Containerfile - on main; fallback: no fallback permitted (dotfiles Rule 14, never the host): podman or the image missing stops the node with ENV-MISSING podman
@@ -72,12 +72,12 @@ Item 37 amended, owner 2026-10-16 UTC: "time out everything logically, you'll ID
 
 ## Acceptance criteria
 
-- [x] `AC-H1` *(human)* `grep -c '$(TIMED)' claude/workflow/mk/resources.mk` equals the number of wrapped targets listed in the PR body (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-  - observed `2026-10-16` grep -c '$(TIMED)' claude/workflow/mk/resources.mk -> exit 0, 5 (4 wrapped recipes: seat-resources, seat-resources-loop, mcp-orphans-clean, resources-test, plus the TIMED definition); TP-1 grep -cE recipe-only -> 4
-- [x] `AC-H2` *(human)* `make -n` of every wrapped target of claude/workflow/mk/resources.mk prints `timed-run.sh --node <target> --kind make` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-  - observed `2026-10-16` make -n -C claude/workflow <target> -> exit 0, prints 'timed-run.sh --node <target> --kind make' for seat-resources, seat-resources-loop, mcp-orphans-clean, resources-test
+- [x] `AC-H1` *(human)* `grep -c '$(TIMED)' claude/workflow/mk/line-watch.mk` equals the number of wrapped targets listed in the PR body (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` grep -cF '$(TIMED)' claude/workflow/mk/line-watch.mk -> exit 0, prints 16 (16 wrapped targets, listed in PR body). The AC's non-F grep prints 0 (BRE); TP-1 regex prints 16.
+- [x] `AC-H2` *(human)* `make -n` of every wrapped target of claude/workflow/mk/line-watch.mk prints `timed-run.sh --node <target> --kind make` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -n -C claude/workflow <target> for all 16 wrapped targets -> exit 0, each prints 'timed-run.sh --node <target> --kind make'
 - [x] `AC-H3` *(human)* with the bus down (no NATS on the port) a wrapped target exits with its own exit code and prints only a WARN line (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-  - observed `2026-10-16` podman TP-2 with SW_NATS_URL=127.0.0.1:1 -> 'WARN bus unreachable, start/end of probe not published', rc=0; make resources-test passes
+  - observed `2026-10-16` podman, SW_NATS_URL=127.0.0.1:1, timed-run.sh --node probe --kind make -- true -> WARN bus unreachable lines only, rc=0. make -C claude/workflow line-watch-test -> rc=0, all ok
 
 ## Test plan
 
@@ -85,13 +85,13 @@ _Test plan from claude/workflow/templates/test-plan.md, shaped by claude/workflo
 
 **Scope under test**
 
-claude/workflow/mk/resources.mk recipes routed through timed-run.sh
+claude/workflow/mk/line-watch.mk recipes routed through timed-run.sh
 
 **Cases**
 
 - `TP-1`
   - intent: an untimed target is an invisible bottleneck (item 37)
-  - command: `grep -cE '^[[:space:]]+@?[$][(]TIMED[)] ' claude/workflow/mk/resources.mk`
+  - command: `grep -cE '^[[:space:]]+@?[$][(]TIMED[)] ' claude/workflow/mk/line-watch.mk`
   - expected: exit 0; prints the wrapped-target count listed in the PR body
 - `TP-2`
   - intent: the bus must never be a build dependency
@@ -118,8 +118,6 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
-
-- `2026-10-16` AC-H1 evidence line says 5; the true count is 4 (grep -cF '$(TIMED)' -> 4, matches the PR body). evidence cannot be re-recorded (already evidenced).
 
 ## Outcome
 

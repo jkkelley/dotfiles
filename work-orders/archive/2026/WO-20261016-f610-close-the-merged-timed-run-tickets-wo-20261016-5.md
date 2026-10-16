@@ -4,15 +4,15 @@
   "slug": "close-the-merged-timed-run-tickets-wo-20261016-5",
   "title": "Close the merged timed-run tickets WO-20261016-599f, WO-20261016-7ca5 and WO-20261016-7e9f (PRs 265, 213, 218)",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T12:19:11+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/f610-close-the-merged-timed-run-tickets-wo-20261016-5",
+  "pr": 358,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design21 cut DESIGN-GAP d38a and ORD-1140 S3 (brief BR-20261016-infra-design21); design approvals ruled done, ORD-0550 O4; Claude seats never use lavish (global owner rule)",
@@ -115,15 +115,20 @@ Found by infra-design21 inventory: work-order.sh stale-merged lists WO-20261016-
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* WO-20261016-599f is done
+- [x] `AC-H1` *(human)* WO-20261016-599f is done
+  - observed `2026-10-16` show status = done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-599f --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H2` *(human)* WO-20261016-7ca5 is done
+- [x] `AC-H2` *(human)* WO-20261016-7ca5 is done
+  - observed `2026-10-16` show status = done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-7ca5 --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H3` *(human)* WO-20261016-7e9f is done
+- [x] `AC-H3` *(human)* WO-20261016-7e9f is done
+  - observed `2026-10-16` show status = done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-7e9f --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H4` *(human)* the merged code is green on main (TP-1)
+- [x] `AC-H4` *(human)* the merged code is green on main (TP-1)
+  - observed `2026-10-16` TIMED count 24/4/16 in podman, TP-1..3 exit 0
   - check: `grep -cE '^[[:space:]]+@?[$][(]TIMED[)] ' claude/workflow/Makefile` exit 0 expect /^[1-9]/
-- [ ] `AC-H5` *(human)* the diff holds only work-orders files
+- [x] `AC-H5` *(human)* the diff holds only work-orders files
+  - observed `2026-10-16` all changed paths under work-orders/
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan
