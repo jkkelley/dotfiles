@@ -13,6 +13,5 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261016-4682` | ready | p1 | - | [Inbox sweep B17b - reply-send.sh controller and make reply targets](WO-20261016-4682-inbox-sweep-b17b-reply-send-sh-controller-and-ma.md) |
 | `WO-20261016-80aa` | draft | p1 | WO-20261016-4682 | [Inbox sweep B18 - live first LinkedIn send](WO-20261016-80aa-inbox-sweep-b18-live-first-linkedin-send.md) |
 | `WO-20261016-41f2` | ready | p1 | WO-20261016-61ae | [Inbox sweep B21b - integer schema_version on every built record with migrations](WO-20261016-41f2-inbox-sweep-b21b-integer-schema-version-on-every.md) |
-| `WO-20261016-b1b6` | in-progress | p1 | - | [Inbox sweep B22 - lead-ledger.sh and lead-qualify.sh](WO-20261016-b1b6-inbox-sweep-b22-lead-ledger-sh-and-lead-qualify-.md) |
-| `WO-20261016-a47c` | ready | p1 | WO-20261016-4682 WO-20261016-b1b6 | [Inbox sweep B23 - lead-followup.sh follow-up drafts as new cards](WO-20261016-a47c-inbox-sweep-b23-lead-followup-sh-follow-up-draft.md) |
+| `WO-20261016-a47c` | ready | p1 | WO-20261016-4682 | [Inbox sweep B23 - lead-followup.sh follow-up drafts as new cards](WO-20261016-a47c-inbox-sweep-b23-lead-followup-sh-follow-up-draft.md) |
 | `WO-20261016-61ae` | ready | p1 | - | [Inbox sweep B9 - sweep.sh controller, Makefile and README](WO-20261016-61ae-inbox-sweep-b9-sweep-sh-controller-makefile-and-.md) |
