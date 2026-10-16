@@ -4,15 +4,15 @@
   "slug": "bus-sh-health-runs-podman-healthcheck-run-on-eac",
   "title": "bus.sh health runs podman healthcheck run on each configured container and publishes HEALTHY, UNHEALTHY or HEALTHCHECK-NOT-RUN; bus.sh status and the bus monitor report it each tick",
   "type": "bug",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:39:48+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/0c07-bus-sh-health-runs-podman-healthcheck-run-on-eac",
+  "pr": 368,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design15 cut for ORD-0830 RR-orch-14 F35; design approvals ruled done, ORD-0550 O4",
@@ -137,17 +137,23 @@ Order brief BR-20261016-infra-design15, ORD-1020 H1. Edit 1, config/line-watch.j
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a container whose check fails reads UNHEALTHY within one tick, and every code is mapped
+- [x] `AC-H1` *(human)* a container whose check fails reads UNHEALTHY within one tick, and every code is mapped
+  - observed `2026-10-16` exit 0; 5 ok lines (UNHEALTHY, HEALTHY, HEALTHCHECK-NOT-RUN, ABSENT, status)
   - check: `podman run --rm --network=none --userns=keep-id -v $PWD:/work:Z -w /work/claude/workflow -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash tests/unit/test_bus_health.sh` exit 0 expect /^ok/
-- [ ] `AC-H2` *(human)* the bus monitor runs the health loop
+- [x] `AC-H2` *(human)* the bus monitor runs the health loop
+  - observed `2026-10-16` make -C ${repo} bus-up && make -C ${repo} bus-health-loop
   - check: `jq -r '.monitors[] | select(.name=="bus") | .command' claude/workflow/config/monitors.json` exit 0 expect /bus-health-loop/
-- [ ] `AC-H3` *(human)* the Make targets exist
+- [x] `AC-H3` *(human)* the Make targets exist
+  - observed `2026-10-16` exit 0; recipes run bus.sh health and bus.sh health-loop
   - check: `make -C claude/workflow -n bus-health bus-health-loop` exit 0 expect /bus.sh health/
-- [ ] `AC-H4` *(human)* the breadcrumb names the systemd timer cause
+- [x] `AC-H4` *(human)* the breadcrumb names the systemd timer cause
+  - observed `2026-10-16` grep -c systemd = 2
   - check: `grep -c 'systemd' claude/workflow/bin/bus.sh` exit 0 expect /^[1-9]/
-- [ ] `AC-H5` *(human)* rolodex pointers hold
+- [x] `AC-H5` *(human)* rolodex pointers hold
+  - observed `2026-10-16` rolodex-check: 1 script(s) checked, all have headers; exit 0
   - check: `make rolodex-check BASE=origin/main` exit 0
-- [ ] `AC-H6` *(human)* the diff holds only the In files
+- [x] `AC-H6` *(human)* the diff holds only the In files
+  - observed `2026-10-16` grep exit 1, no out-of-scope files
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*|claude/workflow/(bin/bus\.sh|config/(line-watch|monitors)\.json|mk/line-watch\.mk|tests/unit/test_bus_health\.sh))$'` exit 1
 
 ## Test plan

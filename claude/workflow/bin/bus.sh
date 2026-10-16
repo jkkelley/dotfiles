@@ -7,10 +7,12 @@
 # writes-to: podman container zenith-nats, JetStream store ~/.local/state/zenith/state/nats
 # cleanup: make bus-down (keep store) or make bus-clean (delete store)
 #
-# usage: bus.sh up | logs | down | status | clean | pub <subject> <json> | next <consumer> | ack <ack-subject> | pull <consumer>
+# usage: bus.sh up | logs | down | status | health | health-loop | clean | pub <subject> <json> | next <consumer> | ack <ack-subject> | pull <consumer>
 #   up      start the server (127.0.0.1 only, restart always, health check) and ensure the stream and every consumer
 #   down    stop and remove the container; the JetStream store stays
-#   status  container health, the stream, every consumer with its pending and unacked counts
+#   status  container state, live health, the stream, every consumer with its pending and unacked counts
+#   health  run each configured container's podman healthcheck, print and publish HEALTHY|UNHEALTHY|ABSENT|HEALTHCHECK-NOT-RUN; exit 3 unless all HEALTHY
+#   health-loop  health every .health.interval seconds forever (the bus monitor's foreground)
 #   clean   down, then delete the store (retention already drops events older than max_age)
 #   pub     publish one event
 #   next    fetch one message without acking: prints "<ack-subject>\t<payload>", nothing when the queue is empty
@@ -71,6 +73,31 @@ ensure() { # the stream and every configured consumer, created only when missing
   done
 }
 
+# BREADCRUMB - health_of runs the healthcheck itself; State.Health is never trusted.
+# What broke: bus.sh status printed State.Health.Status from `podman inspect`, and that value only moves when podman's
+#   transient systemd timer fires `podman healthcheck run`. This WSL host has no such timer (0 timers for the container id),
+#   so zenith-nats ran its check once since 04:43Z (interval 30s): a fresh container read "starting" forever and a dead
+#   server kept its last "healthy". Evidence: ~/.local/state/zenith/evidence/2026/10/20261016-103641-podman-health-no-timer.txt
+# Why this fix: run `podman healthcheck run <name>` ourselves each tick and map the exit code (0 HEALTHY, 1 UNHEALTHY, absent
+#   container ABSENT, anything else such as 125 = no healthcheck defined HEALTHCHECK-NOT-RUN), so health reflects reality.
+#   Rejected: a systemd --user timer per container - systemd timers are absent on this host, which is the bug itself.
+# Cost: one podman exec per container per tick (.health.interval seconds).
+health_of() { # $1 container name -> one code on stdout
+  podman container exists "$1" >/dev/null 2>&1 || { echo ABSENT; return; }
+  podman healthcheck run "$1" >/dev/null 2>&1; case $? in 0) echo HEALTHY ;; 1) echo UNHEALTHY ;; *) echo HEALTHCHECK-NOT-RUN ;; esac
+}
+health_once() { # print and publish every configured container's code; exit 0 only when all are HEALTHY
+  local n code rc=0 at
+  for n in $(c '.health.containers // [] | .[]'); do
+    code="$(health_of "$n")"; at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "$code $n"
+    bash "$HERE/bus.sh" pub "line.${LINE:-system}.health.$n" "$(jq -nc --arg at "$at" --arg n "$n" --arg s "$code" '{at:$at,container:$n,status_code:$s}')" >/dev/null 2>&1 \
+      || echo "BUS-PUB-FAILED line.${LINE:-system}.health.$n"
+    [ "$code" = HEALTHY ] || rc=3
+  done
+  return $rc
+}
+
 cmd="${1:-status}"; shift || true
 case "$cmd" in
   up)
@@ -97,7 +124,7 @@ case "$cmd" in
       *) wf_die "refusing to delete $STORE: not under ~/.local/state" ;; esac
     ;;
   status)
-    printf 'container %s: %s\n' "$NAME" "$(podman inspect -f '{{.State.Status}} health={{.State.Health.Status}}' "$NAME" 2>/dev/null || echo absent)"
+    printf 'container %s: %s\n' "$NAME" "$(st="$(podman inspect -f '{{.State.Status}}' "$NAME" 2>/dev/null)" && echo "$st health=$(health_of "$NAME")" || echo absent)"
     healthy && echo "healthz: ok" || echo "healthz: not ok"
     nats_ stream info "$STREAM" -j 2>/dev/null | jq -r '"stream \(.config.name): subjects \(.config.subjects|join(",")), max_age \(.config.max_age/1e9/86400)d, messages \(.state.messages)"'
     for con in $(c '.consumers | keys[]'); do
@@ -105,6 +132,8 @@ case "$cmd" in
         || echo "consumer $con: missing"
     done
     ;;
+  health) health_once; exit $? ;;
+  health-loop) while :; do health_once; sleep "$(c '.health.interval // 30')"; done ;;   # a non-zero tick never ends the loop
   pub) [ $# -eq 2 ] || wf_die "usage: bus.sh pub <subject> <json>"; retry3 nats_ pub "$1" "$2" >/dev/null 2>&1 || wf_die "publish to $1 failed after 3 tries" ;;
   next)
     [ $# -eq 1 ] || wf_die "usage: bus.sh next <consumer>"
@@ -124,5 +153,5 @@ case "$cmd" in
     ;;
   tail) # a core subscription sees every published event without touching any durable consumer
     nats_ sub 'line.>' --raw 2>/dev/null | jq -rc --unbuffered '"\(.at // "-") \(.status_code // .code // "-") \(.seat // .from // "-") \(.subject // .do // "" | tostring | .[0:120])"' ;;
-  *) sed -n '4,14p' "$HERE/bus.sh" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
+  *) sed -n '4,16p' "$HERE/bus.sh" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
 esac
