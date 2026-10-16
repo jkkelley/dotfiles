@@ -4,15 +4,15 @@
   "slug": "close-the-merged-work-order-skill-tickets-wo-202",
   "title": "Close the merged work-order skill tickets WO-20261016-1c04, WO-20261016-565d and WO-20261016-6e76 (PRs 204, 207, 271)",
   "type": "chore",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T12:19:39+00:00",
   "parent": "WO-20261016-0272",
   "branch": "feat/5f4f-close-the-merged-work-order-skill-tickets-wo-202",
-  "pr": null,
-  "closed": null,
+  "pr": 362,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design21 cut DESIGN-GAP d38a and ORD-1140 S3 (brief BR-20261016-infra-design21); design approvals ruled done, ORD-0550 O4; Claude seats never use lavish (global owner rule)",
@@ -116,15 +116,20 @@ Found by infra-design21 inventory: work-order.sh stale-merged lists WO-20261016-
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* WO-20261016-1c04 is done
+- [x] `AC-H1` *(human)* WO-20261016-1c04 is done
+  - observed `2026-10-16` show --json status is done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-1c04 --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H2` *(human)* WO-20261016-565d is done
+- [x] `AC-H2` *(human)* WO-20261016-565d is done
+  - observed `2026-10-16` show --json status is done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-565d --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H3` *(human)* WO-20261016-6e76 is done
+- [x] `AC-H3` *(human)* WO-20261016-6e76 is done
+  - observed `2026-10-16` show --json status is done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-6e76 --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H4` *(human)* the merged code is green on main (TP-1)
+- [x] `AC-H4` *(human)* the merged code is green on main (TP-1)
+  - observed `2026-10-16` ok plan writes nothing; TP-1 exit 0, TP-2 work-order suite 465 checks 0 failed
   - check: `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash scripts/tests/test_wo_untrack_generated.sh'` exit 0 expect /plan writes nothing/
-- [ ] `AC-H5` *(human)* the diff holds only work-orders files
+- [x] `AC-H5` *(human)* the diff holds only work-orders files
+  - observed `2026-10-16` grep -vE work-orders/ prints nothing, exit 1
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan
