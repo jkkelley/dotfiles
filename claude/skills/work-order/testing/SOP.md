@@ -34,6 +34,7 @@
 - [290-generated-views-untracked](#290-generated-views-untracked)
 - [410-start-branch-id](#410-start-branch-id)
 - [The wo defaults](#the-wo-defaults)
+- [430-approve-make-wildcard-include](#430-approve-make-wildcard-include)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
