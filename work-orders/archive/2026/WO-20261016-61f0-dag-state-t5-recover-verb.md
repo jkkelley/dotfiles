@@ -4,15 +4,15 @@
   "slug": "dag-state-t5-recover-verb",
   "title": "dag-state T5 - recover verb",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:07:05+00:00",
   "parent": "WO-20261016-41d0",
   "branch": "feat/dag-state-t5-recover-verb",
-  "pr": null,
-  "closed": null,
+  "pr": 254,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -75,7 +75,8 @@ Owner, 2026-10-16 UTC: "DAG SHOULD BE EFFORTLESS WITH EASY MIGRATION PLANS FOR U
   - observed `2026-10-16` exit 0; pass=25 fail=0, every case ok (podman localhost/dotfiles-workflow-test:1)
 - [x] `AC-H2` *(human)* `make spec-check` exits 0 (the specs were read, not edited) (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
   - observed `2026-10-16` make spec-check exit 0: 'spec-check: nothing in scope' (specs unedited)
-- [ ] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H3` *(human)* `git diff --name-only origin/main` lists only the files under In (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` git diff --name-only origin/main: dag-recover.sh, test_dag_recover.sh, plus this work-order file only
 
 ## Test plan
 
