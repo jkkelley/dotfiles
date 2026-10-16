@@ -99,6 +99,15 @@ mk_tab1 a b c d e f
 : > "$T/log"; $G seat-up L g >/dev/null 2>&1
 has   "full tab opens 'L 2'"                    '--label L 2'
 hasnt "full tab never renames a held pane"      'pane rename wT:p1 g'
+# two tabs, each with a free slot: the finder must stop at the first hit and still succeed. Under pipefail a
+# `while ... | head -1` died of SIGPIPE on tab 2 once head had tab 1's slot, so every seat-up on a two-tab line failed.
+mk_tab1 a b c d e free
+echo '{"result":{"tabs":[{"tab_id":"wT:t1","label":"L 1"},{"tab_id":"wT:t2","label":"L 2"}]}}' > "$T/fx/tabs.json"
+jq -n '{result:{layout:{panes:[{pane_id:"wT:q1",rect:{x:0,y:0,width:100,height:20}},{pane_id:"wT:q2",rect:{x:0,y:20,width:100,height:20}}]}}}' > "$T/fx/layout-wT_t2.json"
+jq '.result.panes += [{pane_id:"wT:q1",tab_id:"wT:t2",label:"free",agent:null,agent_status:"idle"},{pane_id:"wT:q2",tab_id:"wT:t2",label:"free",agent:null,agent_status:"idle"}]' "$T/fx/panes.json" > "$T/fx/p2" && mv "$T/fx/p2" "$T/fx/panes.json"
+: > "$T/log"; $G seat-up L g >/dev/null 2>&1; rc=$?
+[ "$rc" = 0 ] && ok "two tabs with free slots: seat-up succeeds" || bad "two tabs with free slots: seat-up succeeds" "rc=$rc"
+has   "and takes tab 1's free slot first"        'pane rename wT:p6 g'
 
 # ---- seat-down: refuse unfinished, close finished, never the architect
 mk_tab1 a b c free free free

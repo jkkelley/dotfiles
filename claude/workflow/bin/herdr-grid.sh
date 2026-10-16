@@ -201,13 +201,19 @@ open_overflow() {
 }
 
 # find_free <line>: prints "<tab> <pane>" of the first free slot in tab order then slot order, else nothing.
+# What broke: the loop was piped into `head -1`. Under `set -o pipefail`, once head took tab 1's slot and exited, the
+# loop's jq for tab 2 died of SIGPIPE, the pipeline returned 141, and seat-up failed on every line with two or more
+# tabs holding free slots (live on inbox-triage, 2026-10-16). Returning at the first hit reads no further tabs, so
+# there is no pipe to break; `|| true` on the pipe was rejected because it would also swallow a real herdr failure.
 find_free() {
-  local n tab slots
+  local n tab slots hit
   while read -r n tab; do
     [ -n "$n" ] || continue
     slots="$(seat_slots "$n" "$(tab_slots "$tab")")" || return 1
-    jq -r --arg t "$tab" --arg f "$FREE" 'first(.[] | select(.label == $f) | "\($t) \(.pane)") // empty' <<<"$slots"
-  done < <(line_tabs "$1") | head -1
+    hit="$(jq -r --arg t "$tab" --arg f "$FREE" 'first(.[] | select(.label == $f) | "\($t) \(.pane)") // empty' <<<"$slots")"
+    [ -n "$hit" ] && { printf '%s\n' "$hit"; return 0; }
+  done < <(line_tabs "$1")
+  return 0 # no free slot is an empty answer, not an error: the caller opens an overflow tab
 }
 
 # find_seat <seat> [line]: prints "<n> <tab> <pane> <line>" of the pane labelled <seat>, if any.
