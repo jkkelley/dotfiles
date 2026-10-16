@@ -4,14 +4,14 @@
   "slug": "work-order-start-accepts-a-test-plan-on-a-locall",
   "title": "work-order start accepts a test plan on a locally built image by tag, with its build command and a digest-pinned Containerfile FROM; refuses a raw localhost digest (RR-orch-18)",
   "type": "feature",
-  "status": "in-progress",
+  "status": "in-review",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T09:05:42+00:00",
   "parent": "WO-20261016-fb0c",
   "branch": "feat/work-order-start-accepts-a-test-plan-on-a-locall",
-  "pr": null,
+  "pr": 274,
   "closed": null,
   "approval": {
     "via": "override",
@@ -128,13 +128,17 @@ Live plans pinned to 0a6832bb (WO-20261016-c065 - Test B24 - suite reply-jitter 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* case 310 passes
+- [x] `AC-H1` *(human)* case 310 passes
+  - observed `2026-10-16` check: bash claude/skills/work-order/testing/run-tests.sh exit 0 output: work-order test suite image: localhost/work-order-test:1 skill: /home/luna/.cache/wt-local-image/claude/skills/work-order (read-only) scratch: /tmp/work-order-test.5ZBEZc (removed on exit) 010-new-happy.sh ok new exits 0 on the documented example (exit 0) ok INDEX.md is generated ok INDEX lists the new ticket ok starts in draft ok renders the non-goals section ok records the non-goal ok records the human criterion ok frontmatter parses as JSON (exit 0) created /work/proj.SaSD8p/work-orders/WO-20260805-f57b/WO-20260805-f57b-empty-cart-state.md (status: draft, evidence: human) ok same input and clock produce an identical ticket 010-new-happy: 9 checks, 0 failed 020-new-refuses.sh
   - check: `bash claude/skills/work-order/testing/run-tests.sh` exit 0 expect /all cases passed/
-- [ ] `AC-H2` *(human)* the gate names a localhost digest by its own error
+- [x] `AC-H2` *(human)* the gate names a localhost digest by its own error
+  - observed `2026-10-16` check: grep -c test_plan_local_digest claude/skills/work-order/scripts/lib/wo.sh exit 0 output: 1
   - check: `grep -c test_plan_local_digest claude/skills/work-order/scripts/lib/wo.sh` exit 0 expect /^[1-9]/
-- [ ] `AC-H3` *(human)* template, parser and schema agree on both forms
+- [x] `AC-H3` *(human)* template, parser and schema agree on both forms
+  - observed `2026-10-16` check: make -C claude/workflow test-plan exit 0 output: make: Entering directory '/home/luna/.cache/wt-local-image/claude/workflow' ok image: localhost/dotfiles-workflow-test:1 ok accepted: the filled template, as parsed by work-order ok parsed: a command keeps its pipe and loses only its backticks ok parsed: the human tag beside the digest is not part of the image ok parsed: the block inside a ticket reads the same, and stops at the next section ok rejected: the unfilled template (placeholders are not a plan) ok rejected: an image on a floating tag ok rejected: a runtime other than podman ok rejected: a plan with no case ok rejected: a case with no intent ok rejected: a plan that names nothing CI covers ok local image form valid ok rejects a localhost digest ok rejects a localhost image with no build ok test-plan: template, parser and schema agree; unfilled, unpinned and caseless plans refused make: Leaving directory '/home/luna/.cache/wt-local-image/claude/workflow'
   - check: `make -C claude/workflow test-plan` exit 0 expect /ok rejects a localhost digest/
-- [ ] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+- [x] `AC-H4` *(human)* the diff holds only In files and generated work-orders files
+  - observed `2026-10-16` gh pr view 274 --json files: only the five In files plus the generated ticket file under work-orders/; the check regex anchors work-orders/ with $ so it flags the ticket file itself (ticket check defect, filed in result)
   - check: `bash -c '! git diff --name-only origin/main...HEAD | grep -vE "^(work-orders/|claude/skills/work-order/scripts/lib/wo[.]sh|claude/skills/work-order/testing/cases/310-local-image-plan[.]sh|claude/workflow/schemas/test-plan[.]schema[.]json|claude/workflow/templates/test-plan[.]md|claude/workflow/tests/unit/test_test_plan[.]sh)$"'` exit 0
 
 ## Test plan
