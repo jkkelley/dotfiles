@@ -4,15 +4,15 @@
   "slug": "line-build-l1-design-drift-check",
   "title": "Line build L1 - design-drift check",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T05:38:52+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/line-build-l1-design-drift-check",
+  "pr": 179,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner-ordered line build order, ORD-0537 O4",
@@ -61,7 +61,8 @@ Node drift of the inbox-triage line build order, layer L1. State: in wire-rev2 b
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* Node drift merged on main with CI green
+- [x] `AC-H1` *(human)* Node drift merged on main with CI green
+  - observed `2026-10-16` PR 179 feat(workflow): make design-drift merged 2026-10-16T05:41:23Z as f9f65c1; checks SUCCESS=8 SKIPPED=2; on main: scripts/design-drift.sh, make design-drift, design-drift-stamp, design-drift-test, reusable .github/workflows/design-drift.yml
 
 ## Test plan
 
