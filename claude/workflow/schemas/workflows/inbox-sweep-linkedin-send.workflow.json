@@ -1,0 +1,157 @@
+{
+  "schema_version": "1.0.0",
+  "id": "inbox-sweep-linkedin-send",
+  "version": "1.0.0",
+  "title": "Send one owner-approved LinkedIn reply from the owner's Chrome, once, after the owner's own line",
+  "why": "Prevents a send seat from typing or clicking anything but the one approved text in the one approved thread. The seat shows the exact text and waits for the owner's own line in its pane before it touches LinkedIn (docs/design/linkedin-reply.spec.xml approval-delivery), types only from the approval file, clicks Send once after reply-verify.sh writes the token, and never retries the click. A classifier denial is RP-DENIED-CLASSIFIER and stops the seat; nothing works around it.",
+  "trigger": {
+    "on": "manual",
+    "condition": "make reply-send starts one send seat per approved reply file; the seat is per reply and blocks no other reply."
+  },
+  "agent": {
+    "role": "operator",
+    "effort": "medium",
+    "context_threshold_percent": 30,
+    "denied_commands": [
+      "gh",
+      "git",
+      "sudo",
+      "rm",
+      "curl"
+    ],
+    "allowed_paths": [],
+    "models": [
+      {
+        "id": "claude-win-chrome",
+        "launcher": "claude.exe",
+        "herdr_kind": "claude",
+        "model": "sonnet",
+        "surface": "artifact"
+      }
+    ],
+    "allowed_tools": [
+      "Read",
+      "Write",
+      "mcp__claude-in-chrome__*"
+    ],
+    "denied_tools": [
+      "Agent",
+      "Task",
+      "Edit",
+      "WebFetch",
+      "WebSearch"
+    ]
+  },
+  "gates": [
+    {
+      "id": "send-result-valid",
+      "command": "bash claude/workflow/tools/validate-schema.sh claude/workflow/inbox-sweep/schemas/send-result.schema.json \"$REPLY_RESULT_PATH\"",
+      "expect": "exit-zero",
+      "why": "Completion is a result file that validates against the send-result schema, which refuses a second send; no script reads a pane to decide it."
+    }
+  ],
+  "exit": {
+    "condition": "The seat has written send-result-<id>.json that validates against the send-result schema and has passed the status to bin/seat-record.sh.",
+    "verified_by": "bash claude/workflow/tools/validate-schema.sh claude/workflow/inbox-sweep/schemas/send-result.schema.json \"$REPLY_RESULT_PATH\""
+  },
+  "on_failure": [
+    {
+      "case": "the result does not validate",
+      "action": "reply-send.sh asks the seat to rewrite it, up to 3 times",
+      "outcome": "RP-FAILED-SEAT after the third refusal"
+    },
+    {
+      "case": "the seat dies before the Send click",
+      "action": "reply-send.sh respawns it up to 3 times, each starting with the ledger check",
+      "outcome": "RP-FAILED-SEAT after 3"
+    },
+    {
+      "case": "the seat dies after the Send click",
+      "action": "never resent; a read-only seat re-checks the thread",
+      "outcome": "RP-UNPROVEN"
+    },
+    {
+      "case": "the classifier refuses a browser step",
+      "action": "stop; no retry, no other tool, no setting change",
+      "outcome": "RP-DENIED-CLASSIFIER"
+    }
+  ],
+  "record": {
+    "emitted_to": "state:records/inbox-sweep-linkedin-send.jsonl",
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "workflow",
+        "workflow_version",
+        "at",
+        "role",
+        "outcome",
+        "status",
+        "result_path",
+        "reply_id",
+        "sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "workflow": {
+          "const": "inbox-sweep-linkedin-send"
+        },
+        "workflow_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "role": {
+          "const": "operator"
+        },
+        "outcome": {
+          "enum": [
+            "passed",
+            "failed",
+            "blocked"
+          ]
+        },
+        "ticket": {
+          "type": "string",
+          "minLength": 2
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "status": {
+          "enum": [
+            "RP-SENT",
+            "RP-ALREADY-SENT",
+            "RP-TEXT-MISMATCH",
+            "RP-NO-BROWSER",
+            "RP-NO-RECIPIENT",
+            "RP-SIGNED-OUT",
+            "RP-DENIED-CLASSIFIER",
+            "RP-UNPROVEN",
+            "RP-FAILED-SEAT"
+          ]
+        },
+        "result_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reply_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,63}$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}

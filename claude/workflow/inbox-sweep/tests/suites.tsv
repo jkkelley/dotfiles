@@ -18,3 +18,4 @@ reply-cards	bin/reply-cards.sh,bin/sweep-lib.sh,tests/lib/,tests/unit/test_reply
 migrate	bin/migrate.sh,bin/node-lib.sh,migrations/,schemas/records/,tests/fixtures/migrations/,tests/unit/test_migrate.sh	bash tests/unit/test_migrate.sh
 reply-approve	bin/reply-approve.sh,bin/sweep-lib.sh,tests/lib/,tests/unit/test_reply_approve.sh	bash tests/unit/test_reply_approve.sh
 reply-verify	bin/reply-verify.sh,bin/sweep-lib.sh,tests/unit/test_reply_verify.sh	bash tests/unit/test_reply_verify.sh
+send-seat	templates/brief-linkedin-send.md,schemas/send-result.schema.json,tests/fixtures/send-results/,tests/unit/test_send_seat.sh	bash tests/unit/test_send_seat.sh

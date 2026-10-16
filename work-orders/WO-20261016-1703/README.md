@@ -10,8 +10,7 @@ One level down only. A child of a child is listed in its own directory, not here
 |---|---|---|---|---|
 | `WO-20261016-e2e8` | draft | p1 | WO-20261016-61ae | [Inbox sweep B11 - live end-to-end run](WO-20261016-e2e8-inbox-sweep-b11-live-end-to-end-run.md) |
 | `WO-20261016-5328` | draft | p1 | - | [Inbox sweep B12 - spike, can the extension be woken without the owner](WO-20261016-5328-inbox-sweep-b12-spike-can-the-extension-be-woken.md) |
-| `WO-20261016-24c5` | ready | p1 | - | [Inbox sweep B16 - send seat brief, declaration and send-result schema](WO-20261016-24c5-inbox-sweep-b16-send-seat-brief-declaration-and-.md) |
-| `WO-20261016-4682` | ready | p1 | WO-20261016-24c5 | [Inbox sweep B17b - reply-send.sh controller and make reply targets](WO-20261016-4682-inbox-sweep-b17b-reply-send-sh-controller-and-ma.md) |
+| `WO-20261016-4682` | ready | p1 | - | [Inbox sweep B17b - reply-send.sh controller and make reply targets](WO-20261016-4682-inbox-sweep-b17b-reply-send-sh-controller-and-ma.md) |
 | `WO-20261016-80aa` | draft | p1 | WO-20261016-4682 | [Inbox sweep B18 - live first LinkedIn send](WO-20261016-80aa-inbox-sweep-b18-live-first-linkedin-send.md) |
 | `WO-20261016-41f2` | ready | p1 | WO-20261016-61ae | [Inbox sweep B21b - integer schema_version on every built record with migrations](WO-20261016-41f2-inbox-sweep-b21b-integer-schema-version-on-every.md) |
 | `WO-20261016-b1b6` | ready | p1 | - | [Inbox sweep B22 - lead-ledger.sh and lead-qualify.sh](WO-20261016-b1b6-inbox-sweep-b22-lead-ledger-sh-and-lead-qualify-.md) |

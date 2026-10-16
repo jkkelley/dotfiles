@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "d1",
+  "thread_url": "https://www.linkedin.com/messaging/thread/2-EXAMPLE/",
+  "approval_file": "C:\\Users\\<user>\\inbox-triage-20261016\\send-d1.txt",
+  "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "RP-SENT",
+  "started_at": "2026-10-16T12:00:00Z",
+  "finished_at": "2026-10-16T12:05:00Z",
+  "confirmed_at": "2026-10-16T12:01:00Z",
+  "send_clicks": 1,
+  "send_clicked_at": "2026-10-16T12:02:00Z",
+  "typed_attempts": 1,
+  "box_empty_at_end": false,
+  "readback_equals_file": true,
+  "proof": {
+    "readback_path": "readback-d1.txt",
+    "token_path": "verified-d1.token",
+    "screenshot_path": "proof/d1.png"
+  },
+  "errors": [],
+  "tab_closed": true,
+  "tab_group": {
+    "anchor_reused": true,
+    "tabs_opened": 1,
+    "closed_anchor_last": true
+  }
+}
