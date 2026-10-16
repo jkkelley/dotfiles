@@ -4,14 +4,14 @@
   "slug": "local-nats-binds-127-0-0-1-only-bus-sh-refuses-a",
   "title": "Local NATS binds 127.0.0.1 only: bus.sh refuses any other bind host",
   "type": "feature",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:08:32+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/local-nats-binds-127-0-0-1-only-bus-sh-refuses-a",
+  "pr": 198,
   "closed": null,
   "approval": {
     "via": "override",
@@ -70,8 +70,10 @@ ORD-0553 R1 ruling, bus security: "local NATS binds 127.0.0.1 only, never the LA
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/tests/unit/test_bus_bind.sh'` exits 0 and its output matches /ok bus-up publishes only on 127.0.0.1/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/tests/unit/test_bus_bind.sh'` exits 0 and its output matches /ok bind 0.0.0.0 is BUS-BIND-REFUSED/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/tests/unit/test_bus_bind.sh'` exits 0 and its output matches /ok bus-up publishes only on 127.0.0.1/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -C claude/workflow image && podman run ... test_bus_bind.sh: exit 0; output: ok bus-up publishes only on 127.0.0.1 / ok bind 0.0.0.0 is BUS-BIND-REFUSED
+- [x] `AC-H2` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/tests/unit/test_bus_bind.sh'` exits 0 and its output matches /ok bind 0.0.0.0 is BUS-BIND-REFUSED/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -C claude/workflow image && podman run ... test_bus_bind.sh: exit 0; output: ok bus-up publishes only on 127.0.0.1 / ok bind 0.0.0.0 is BUS-BIND-REFUSED
 
 ## Test plan
 
