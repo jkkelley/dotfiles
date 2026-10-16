@@ -62,7 +62,7 @@ mkdir -p "$RUN_DIR/logs" "$(dirname "$CARDS")" "$(dirname "$LEDGER")"
 LOG="$RUN_DIR/logs/reply-cards.log"
 log() { printf '%s %s\n' "$(sweep_now)" "$*" >>"$LOG"; }
 touch "$DECISIONS" "$LEDGER"
-[ -f "$CARDS" ] || echo '{"title":"Inbox sweep","items":[]}' >"$CARDS"
+[ -f "$CARDS" ] || echo '[]' | bash "$HERE/sweep-cards.sh" add >/dev/null
 SCRATCH="$(mktemp -d)"
 trap 'rm -rf "$SCRATCH"' EXIT
 
@@ -94,9 +94,8 @@ for f in "$REPLY"/drafts/*.txt; do
 done
 
 before="$(jq '.items | length' "$CARDS")"
-# Existing items are never edited or removed, so an answered card keeps its id and its text.
-sweep_json_set "$CARDS" '.items += ([$c[] | select(.id as $i | ($cur | index($i)) == null)] | map(. + {asked:$at}))' \
-  --argjson c "$candidates" --argjson cur "$(jq -c '[.items[].id]' "$CARDS")" --arg at "$(sweep_now)"
+# Existing items are never edited or removed, so an answered card keeps its id and its text. sweep-cards.sh owns the write (B21e).
+bash "$HERE/sweep-cards.sh" add <<<"$candidates" >/dev/null
 after="$(jq '.items | length' "$CARDS")"
 log "drafts $(jq length <<<"$candidates"), items before $before, after $after, added $((after - before))"
 
