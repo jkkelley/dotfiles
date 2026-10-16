@@ -28,6 +28,7 @@
 - [230-scratch-dir](#230-scratch-dir)
 - [240-test-plan-gate](#240-test-plan-gate)
 - [250-degrees-of-freedom](#250-degrees-of-freedom)
+- [290-generated-views-untracked](#290-generated-views-untracked)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -194,3 +195,8 @@ Why: the tester runs exactly the plan the architect wrote, so a plan that cannot
 Two `--freedom` lines render as `[free]` lines in order between Scope and Acceptance criteria; none renders exactly the one `[fixed]` line; the Contents list equals the body's own H2 headings in order; `repair` and `reindex --check` leave both alone; `amend --freedom` replaces wholesale on a draft, withdraws to the fixed line on `""`, and is refused on a ready ticket with exit 3; an unwired `%%DEGREES_OF_FREEDOM%%` refuses the write.
 Why: a ticket that is silent about what the implementer may decide reads as "use your judgement", and a Contents list typed by hand drifts the first time a section is added.
 The Contents reference is computed from the rendered body, never typed into the test, so the assertion is that the map agrees with the territory whatever the territory is.
+
+## 290-generated-views-untracked
+
+`next` and `tree` rebuild `INDEX.md` when it is absent, and `reindex --check` passes without it but still fails on a loose top-level ticket.
+Why: the generated views are untracked, so a fresh clone has none and two parallel ticket PRs must never conflict on a shared file.

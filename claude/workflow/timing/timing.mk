@@ -5,7 +5,7 @@ TM_HOME := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 TM_BOX  := $(shell jq -r .nats_box_image $(TM_HOME)/../herdr-bus/config.json)
 TM_NATS := podman run --rm --network=host $(TM_BOX) nats --server nats://$(shell jq -r .nats_url $(TM_HOME)/../stuck-watch/config.json)
 TM_BUCKET := $(shell jq -r .kv_bucket $(TM_HOME)/../config/time-budgets.json)
-.PHONY: timing-up timing-down node-timing-loop line-timing morning-audit timed-run timing-test timing-dev timing-uat
+.PHONY: ci-events timing-up timing-down node-timing-loop line-timing morning-audit timed-run timing-test timing-dev timing-uat
 
 timing-up: ## make timing-up: the TIMING KV bucket (idempotent); node-timing creates its own consumer
 	@$(TM_NATS) kv info $(TM_BUCKET) >/dev/null 2>&1 || $(TM_NATS) kv add $(TM_BUCKET) --history 1 --ttl 30d >/dev/null
@@ -14,7 +14,9 @@ timing-down: ## make timing-down: remove the node-timing consumer (the bucket an
 	@$(TM_NATS) consumer rm LINE $(shell jq -r .consumer $(TM_HOME)/../config/time-budgets.json) -f >/dev/null 2>&1 || true
 	@echo "node-timing consumer removed"
 node-timing-loop: timing-up ## the monitors.json entry: durable pull consumer, KV writes, SLOW and work orders
-	@bash $(TM_HOME)/node-timing.sh
+	@while :; do bash $(TM_HOME)/ci-events.sh --once || true; bash $(TM_HOME)/node-timing.sh --once; done
+ci-events: ## make ci-events ONCE=1: poll GitHub Actions runs onto the bus (one poll; the loop runs it before each tick)
+	@bash $(TM_HOME)/ci-events.sh --once
 line-timing: ## make line-timing LINE= [SINCE=]: durations vs budgets and the top 5 bottlenecks, report in the artifact store
 	$(if $(LINE),,$(error LINE= is required))
 	@bash $(TM_HOME)/line-timing.sh --line "$(LINE)" $(if $(SINCE),--since "$(SINCE)")
