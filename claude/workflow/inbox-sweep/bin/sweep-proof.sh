@@ -100,7 +100,9 @@ read_verdict() {
 live_browser_panes() {
   local pane
   [ -f "$SWEEP_RUN_DIR/run.json" ] || return 0
-  jq -r '.seats[]? | select(.source != "gmail" and (.pane // "") != "") | .pane' "$SWEEP_RUN_DIR/run.json" |
+  # Panes are in controller.json .panes (WO-20261016-002d); run.json declares the seats and their sources only.
+  jq -r --slurpfile c <(cat "$SWEEP_RUN_DIR/controller.json" 2>/dev/null || echo '{}') \
+    '.seats[]? | select(.source != "gmail") | $c[0].panes[.seat]? // empty | select(. != "")' "$SWEEP_RUN_DIR/run.json" |
     while IFS= read -r pane; do
       herdr agent get "$pane" >/dev/null 2>&1 && printf '%s\n' "$pane"
     done

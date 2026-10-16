@@ -26,7 +26,9 @@ fresh() { # a run dir with one live browser seat and one gmail seat
   rm -rf "$T/run" "$T/out"; mkdir -p "$T/run" "$TEST_OUT"; : >"$TEST_OUT/calls.log"
   export SWEEP_RUN_DIR="$T/run" SWEEP_CARDS_FILE="$T/cards/questions.json"
   rm -rf "$T/cards"
-  echo '{"run_id":"'"$RUN"'","seats":[{"seat":"sweep-proton-1","source":"proton","pane":"wS:p7"},{"seat":"sweep-gmail","source":"gmail","pane":"wS:p8"}]}' >"$T/run/run.json"
+  echo '{"run_id":"'"$RUN"'","seats":[{"seat":"sweep-proton-1","source":"proton"},{"seat":"sweep-gmail","source":"gmail"}]}' >"$T/run/run.json"
+  # panes live in controller.json, written by sweep.sh (WO-20261016-002d)
+  echo '{"schema_version":1,"panes":{"sweep-proton-1":"wS:p7","sweep-gmail":"wS:p8"}}' >"$T/run/controller.json"
   unset STUB_PS_FAIL STUB_PS_BAD STUB_VERDICT STUB_VERDICT_SEQ
 }
 proof() { bash "$R/bin/sweep-proof.sh" "$@"; }

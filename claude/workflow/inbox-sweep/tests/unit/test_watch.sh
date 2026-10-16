@@ -38,9 +38,13 @@ fresh() {
       '. + [{seat:$s, source:$src, account:$s, status:"RUN-RUNNING", pane:("wS:" + $s), deadline_at:$dl, attempts:1}]' <<<"$seats")"
   done
   jq -n --arg rid "$RID" --argjson seats "$seats" '{schema_version:"1.0.0", run_id:$rid, status:"RUN-RUNNING", started_at:"2026-10-16T01:00:00Z", seats:$seats}' >"$SWEEP_RUN_DIR/run.json"
+  # The controller records each seat's pane (WO-20261016-002d); the watcher reads it from there, not from run.json.
+  jq -n --argjson seats "$seats" '{schema_version:1, run_id:"x", status:"RUN-RUNNING", finished_at:null, panes:($seats | map({key:.seat, value:.pane}) | from_entries)}' >"$SWEEP_RUN_DIR/controller.json"
+  mkdir -p "$SWEEP_RUN_DIR/seats"
+  RUN_SHA="$(sha256sum "$SWEEP_RUN_DIR/run.json" | cut -d' ' -f1)"
 }
 rows() { [ -f "$TEST_OUT/records.jsonl" ] && wc -l <"$TEST_OUT/records.jsonl" || echo 0; }
-status_of() { jq -r --arg s "$1" '.seats[] | select(.seat==$s) | .status' "$SWEEP_RUN_DIR/run.json"; }
+status_of() { jq -r '.status' "$SWEEP_RUN_DIR/seats/$1.status.json"; }
 # fake_sleep runs $T/hook (a function name set by the case) with the number of this sleep, instead of waiting.
 fake_sleep() { nsleep=$((${nsleep:-0} + 1)); "$(cat "$T/hook")" "$nsleep"; }
 export SWEEP_SLEEP=fake_sleep T FIX
@@ -61,7 +65,8 @@ check 1 "$(rows)" "valid result: exactly one record row"
 check "passed inbox-sweep-gmail IS-$RID OK" "$(jq -r '[.outcome,.workflow,.ticket,.status] | join(" ")' "$TEST_OUT/records.jsonl")" "the row carries the outcome, the declaration, the ticket and the seat code"
 check "$SWEEP_RUN_DIR/results/gmail.json" "$(jq -r .result_path "$TEST_OUT/records.jsonl")" "the row points at the result file"
 check wS:gmail "$(jq -r .pane "$TEST_OUT/records.jsonl")" "the row names the seat's pane so seat-watch.sh retires it"
-check OK "$(status_of gmail)" "run.json carries the seat's final status"
+check OK "$(status_of gmail)" "AC-H2: seats/gmail.status.json carries the seat's final status"
+check "$RUN_SHA" "$(sha256sum "$SWEEP_RUN_DIR/run.json" | cut -d' ' -f1)" "AC-H1: the watcher leaves run.json byte-identical"
 run_watch; check 1 "$(rows)" "a second watcher run adds no second row for a final seat"
 
 # 2. each seat code maps to an outcome the declarations' record schema accepts, and bridges once
@@ -144,10 +149,10 @@ check "failed FAILED-SEAT 1" "$(jq -r '"\(.outcome) \(.status)"' "$TEST_OUT/reco
 # 7. several seats: each gets exactly one row, a skipped seat none
 fresh "gmail:gmail:$FUTURE" "proton-first:proton:$PAST" "linkedin:linkedin:$FUTURE"
 cp "$FIX/OK.json" "$SWEEP_RUN_DIR/results/gmail.json"
-jq '(.seats[] | select(.seat=="linkedin")) |= (.status="SKIPPED")' "$SWEEP_RUN_DIR/run.json" >"$T/rj" && mv "$T/rj" "$SWEEP_RUN_DIR/run.json"
+echo '{"schema_version":1,"seat":"linkedin","status":"SKIPPED"}' >"$SWEEP_RUN_DIR/seats/linkedin.status.json"
 run_watch
 check "gmail OK|proton-first TIMEOUT" "$(jq -r '"\(.pane|sub("wS:";"")) \(.status)"' "$TEST_OUT/records.jsonl" | sort | paste -sd'|')" "mixed run: one row each for the two live seats"
-check 0 "$(jq '[.seats[] | select(.status=="RUN-RUNNING")] | length' "$SWEEP_RUN_DIR/run.json")" "no seat is left running"
+check 0 "$(jq -s '[.[] | select(.status=="RUN-RUNNING")] | length' "$SWEEP_RUN_DIR"/seats/*.status.json)" "no seat is left running"
 check 2 "$(cat "$SWEEP_RUN_DIR"/checklist/*.jsonl | grep -c 'R4')" "the two R4 checklist boxes were ticked"
 
 # 8. a record write that fails 3 times does not loop

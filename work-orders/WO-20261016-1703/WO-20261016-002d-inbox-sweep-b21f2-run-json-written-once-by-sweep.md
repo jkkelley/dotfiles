@@ -4,13 +4,13 @@
   "slug": "inbox-sweep-b21f2-run-json-written-once-by-sweep",
   "title": "Inbox sweep B21f2 - run.json written once by sweep-init.sh; controller, seat status and clean get their own records",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:31+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/inbox-sweep-b21f2-run-json-written-once-by-sweep",
   "pr": null,
   "closed": null,
   "approval": {
@@ -69,9 +69,12 @@ Ruling R3: run.json is rewritten by sweep.sh, sweep-watch.sh and sweep-clean.sh 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* after init, run.json is byte-identical at the end of a stubbed full run (test)
-- [ ] `AC-H2` *(human)* run status and panes are in controller.json (sweep.sh), seat status in seats/<seat>.status.json (sweep-watch.sh), cleaned_at in clean.json (sweep-clean.sh) (test)
-- [ ] `AC-H3` *(human)* sweep-collect.sh and sweep-proof.sh read the new records and the stubbed full run still reaches RUN-OK (test)
+- [x] `AC-H1` *(human)* after init, run.json is byte-identical at the end of a stubbed full run (test)
+  - observed `2026-10-16` make -C claude/workflow/inbox-sweep test (8 changed suites, Podman) ok; test_controller: sha256 of run.json taken after init equals sha256 at the end of the stubbed full run (RUN-OK); test_watch and test_clean also assert run.json byte-identical
+- [x] `AC-H2` *(human)* run status and panes are in controller.json (sweep.sh), seat status in seats/<seat>.status.json (sweep-watch.sh), cleaned_at in clean.json (sweep-clean.sh) (test)
+  - observed `2026-10-16` test_controller: controller.json status RUN-OK and .panes.gmail; seats/*.status.json all OK (sweep-watch.sh); clean.json cleaned_at set (sweep-clean.sh), absent when a tab is left; test_watch/test_clean pass
+- [x] `AC-H3` *(human)* sweep-collect.sh and sweep-proof.sh read the new records and the stubbed full run still reaches RUN-OK (test)
+  - observed `2026-10-16` test_collect, test_proof pass reading seats/<seat>.status.json and controller.json .panes; stubbed full run still reaches RUN-OK in summary.json (test_controller)
 
 ## Test plan
 

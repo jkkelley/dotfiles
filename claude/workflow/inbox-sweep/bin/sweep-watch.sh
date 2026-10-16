@@ -4,7 +4,7 @@
 #
 # Runs in the foreground of the sweep-ctl pane, called by sweep.sh run (Rule 18: no backgrounding, here or by the caller).
 # Every POLL seconds (default 15) it visits each seat of the run that has no final status yet, in this order:
-#   1. results/<seat>.json parses and validates   -> seat-record.sh <outcome> ..., run.json seat status = the result's status
+#   1. results/<seat>.json parses and validates   -> seat-record.sh <outcome> ..., seats/<seat>.status.json = the result's status
 #   2. <seats dir>/<pane>/failover-stopped exists  -> FAILED-SEAT result on the seat's behalf, then the same bridge
 #   3. the seat's deadline_at has passed           -> TIMEOUT result on the seat's behalf, then the same bridge
 #   4. a result exists but is invalid              -> herdr agent prompt <pane> with the validator's errors; the 3rd failure
@@ -77,9 +77,25 @@ is_final() { [[ $FINAL == *" $1 "* ]]; }
 # ISO UTC to epoch seconds, for comparing a deadline with now.
 epoch() { date -u -d "$1" +%s 2>/dev/null; }
 
-seat_field() { jq -r --arg s "$1" --arg f "$2" '.seats[] | select(.seat==$s) | .[$f] // empty' "$RUN/run.json"; }
+# BREADCRUMB - this script no longer writes run.json (WO-20261016-002d, ruling R3; see sweep.sh).
+# What broke: set_seat rewrote run.json .seats[].status on every seat change, so run.json had a second writer after init.
+# Why this fix: a seat's status is its own record, seats/<seat>.status.json, written only here. The pane the controller
+#   recorded is read from controller.json .panes. run.json still supplies source, account, deadline_at and started_at.
+#   A seat with no record yet is what init declared (run.json .status, RUN-RUNNING).
+# Cost: seat_field reads up to three files for one field.
+seat_field() { # <seat> <field>: status from the seat record, pane from controller.json, the rest from run.json
+  local v=""
+  case "$2" in
+    status) v="$(jq -r '.status // empty' "$RUN/seats/$1.status.json" 2>/dev/null)" ;;
+    pane) v="$(jq -r --arg s "$1" '.panes[$s] // empty' "$RUN/controller.json" 2>/dev/null)"; printf '%s\n' "$v"; return 0 ;;
+  esac
+  [ -n "$v" ] || v="$(jq -r --arg s "$1" --arg f "$2" '.seats[] | select(.seat==$s) | .[$f] // empty' "$RUN/run.json")"
+  printf '%s\n' "$v"
+}
 set_seat() { # <seat> <status>
-  sweep_json_set "$RUN/run.json" '(.seats[] | select(.seat==$s)) |= (.status=$st)' --arg s "$1" --arg st "$2"
+  mkdir -p "$RUN/seats"
+  jq -n --arg s "$1" --arg st "$2" '{schema_version:1, seat:$s, status:$st}' >"$RUN/seats/$1.status.json.tmp" \
+    && mv "$RUN/seats/$1.status.json.tmp" "$RUN/seats/$1.status.json"
 }
 
 # outcome in the declaration's record schema (passed|failed|blocked) from the seat code
@@ -210,7 +226,7 @@ while :; do
   "$SLEEP" "$POLL"
 done
 
-sweep_check R4 "every seat final" "run.json .seats[].status has no non-final seat" || true
+sweep_check R4 "every seat final" "seats/<seat>.status.json has no non-final seat" || true
 sweep_check R4 "no seat past deadline" "TIMEOUT rows in logs/watch.log for late seats" || true
 log "watch ended: every seat final"
 exit "$rec_failed"

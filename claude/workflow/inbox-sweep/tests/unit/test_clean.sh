@@ -26,7 +26,7 @@ chmod +x "$T/bin/herdr"
 export SWEEP_RUNS_ROOT="$T/runs" SWEEP_LATEST="$T/latest" SWEEP_EXEC_DIR="$T/exec" SWEEP_TEST_OUT="$T/test-out"
 S="$R/bin/sweep-clean.sh"
 stamp() { date -u -d "$1 days ago" +%Y%m%dT%H%M%SZ; }
-mkrun() { mkdir -p "$SWEEP_RUNS_ROOT/$1/briefs"; echo x >"$SWEEP_RUNS_ROOT/$1/briefs/b.md"; printf '{"run_id":"%s","status":"%s"}\n' "$1" "$2" >"$SWEEP_RUNS_ROOT/$1/run.json"; }
+mkrun() { mkdir -p "$SWEEP_RUNS_ROOT/$1/briefs"; echo x >"$SWEEP_RUNS_ROOT/$1/briefs/b.md"; printf '{"run_id":"%s"}\n' "$1" >"$SWEEP_RUNS_ROOT/$1/run.json"; printf '{"run_id":"%s","status":"%s"}\n' "$1" "$2" >"$SWEEP_RUNS_ROOT/$1/controller.json"; }
 mkseat() { mkdir -p "$SWEEP_EXEC_DIR/seats/$1"; printf '{"seat":"%s","ticket":"%s","pane":"%s"}\n' "$2" "$3" "$1" >"$SWEEP_EXEC_DIR/seats/$1/seat-link"; }
 
 # prune
@@ -54,7 +54,8 @@ check yes "$([ -d "$SWEEP_RUNS_ROOT/$run/briefs" ] && echo yes || echo no)" "AC-
 # clean closes only this run's tabs
 other="$(stamp 1)"; mkrun "$other" RUN-OK
 mkseat wS_p2 gmail "IS-$run"; mkseat wS_p3 linkedin "IS-$other"
-jq '.status="RUN-OK"' "$SWEEP_RUNS_ROOT/$run/run.json" >"$T/j" && mv "$T/j" "$SWEEP_RUNS_ROOT/$run/run.json"
+jq '.status="RUN-OK"' "$SWEEP_RUNS_ROOT/$run/controller.json" >"$T/j" && mv "$T/j" "$SWEEP_RUNS_ROOT/$run/controller.json"
+sha_before="$(sha256sum "$SWEEP_RUNS_ROOT/$run/run.json" | cut -d' ' -f1)"
 : >"$TEST_OUT/calls.log"
 bash "$S" clean --run "$run" >/dev/null; rc=$?
 check 0 "$rc" "clean on a finished run exits 0"
@@ -62,7 +63,8 @@ check "herdr tab close t2" "$(grep 'tab close' "$TEST_OUT/calls.log")" "AC-H3: o
 check no "$([ -d "$SWEEP_RUNS_ROOT/$run/briefs" ] && echo yes || echo no)" "briefs are removed"
 check no "$([ -d "$SWEEP_EXEC_DIR/seats/wS_p2" ] && echo yes || echo no)" "this run's seat dir is removed"
 check yes "$([ -d "$SWEEP_EXEC_DIR/seats/wS_p3" ] && echo yes || echo no)" "another run's seat dir stays"
-check yes "$(jq -r '.cleaned_at | test("Z$") | if . then "yes" else "no" end' "$SWEEP_RUNS_ROOT/$run/run.json")" "cleaned_at is set"
+check yes "$(jq -r '.cleaned_at | test("Z$") | if . then "yes" else "no" end' "$SWEEP_RUNS_ROOT/$run/clean.json")" "AC-H2: cleaned_at is set in clean.json"
+check "$sha_before" "$(sha256sum "$SWEEP_RUNS_ROOT/$run/run.json" | cut -d' ' -f1)" "AC-H1: clean leaves run.json byte-identical"
 check yes "$([ -f "$SWEEP_RUNS_ROOT/$run/logs/clean.log" ] && grep -q 'tab list after close' "$SWEEP_RUNS_ROOT/$run/logs/clean.log" && echo yes || echo no)" "clean.log holds the tab list taken after close"
 
 # a tab that will not close is reported, not looped on, and the run is not marked cleaned
@@ -70,7 +72,8 @@ mkrun "$(stamp 2)" RUN-OK; f2="$(stamp 2)"; mkseat wS_p4 gmail "IS-$f2"
 : >"$TEST_OUT/calls.log"
 STUB_HERDR_FAIL=1 bash "$S" clean --run "$f2" >/dev/null 2>&1; rc=$?
 check 1 "$rc" "a tab that will not close gives exit 1"
-check 0 "$(jq -r 'has("cleaned_at") | if . then 1 else 0 end' "$SWEEP_RUNS_ROOT/$f2/run.json")" "no cleaned_at when a tab is left"
+check 0 "$(jq -r 'has("cleaned_at") | if . then 1 else 0 end' "$SWEEP_RUNS_ROOT/$f2/clean.json" 2>/dev/null || echo 0)" "no cleaned_at when a tab is left"
+check no "$([ -e "$SWEEP_RUNS_ROOT/$f2/clean.json" ] && echo yes || echo no)" "no clean.json when a tab is left"
 
 # no runs: test output goes
 rm -rf "$SWEEP_RUNS_ROOT"; mkdir -p "$SWEEP_TEST_OUT"; echo x >"$SWEEP_TEST_OUT/f"
