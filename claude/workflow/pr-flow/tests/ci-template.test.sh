@@ -26,6 +26,10 @@ for t in ci merge-on-green; do
 done
 grep -q 'cancel-in-progress: true' "$tmp/ci.yml" && ok "ci cancels a superseded run" || no "ci concurrency"
 grep -q 'needs: \[check\]' "$tmp/ci.yml" && grep -q 'if: always()' "$tmp/ci.yml" && ok "ci-ok always runs after check" || no "ci-ok"
+python3 -c 'import sys, yaml; d = yaml.safe_load(open(sys.argv[1])); sys.exit(0 if "before" in d[True]["workflow_dispatch"]["inputs"] else 1)' "$tmp/ci.yml" \
+  && ok "ci accepts workflow_dispatch with input before" || no "ci workflow_dispatch before"
+grep -q "github.event_name == 'pull_request' &&" "$tmp/ci.yml" && ok "dispatch and push run the main targets" || no "dispatch main targets"
+[ "$(jq -r .defaults.ci.dispatch "$here/config/pr-flow.json")" = ci.yml ] && ok "default dispatch is ci.yml" || no "default dispatch"
 if grep -E 'uses: [^ ]+@' "$tmp/ci.yml" | grep -vqE '@[0-9a-f]{40} #'; then no "an action is not SHA-pinned"; else ok "every action SHA-pinned"; fi
 grep -hv '^ *#' "$tmp/ci.yml" "$tmp/merge-on-green.yml" | grep -q 'ubuntu-latest' && no "ubuntu-latest used" || ok "no ubuntu-latest"
 grep -v '^ *#' "$tmp/merge-on-green.yml" | grep -q -- '--auto' && no "merge-on-green uses --auto" || ok "never gh pr merge --auto"

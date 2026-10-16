@@ -48,7 +48,7 @@
       "workflows": [
         "ci"
       ],
-      "dispatch": "",
+      "dispatch": "ci.yml",
       "pr_targets": [
         "lint",
         "test"
@@ -85,6 +85,29 @@
     },
     "jkkelley/ypconsult-01-src": {
       "clone": "~/projects/ypconsult-01-src",
+      "ci": {
+        "pr_targets": [
+          "lint",
+          "typecheck",
+          "test",
+          "validate"
+        ],
+        "main_targets": [
+          "lint-all",
+          "typecheck-all",
+          "test-all",
+          "validate"
+        ],
+        "setup": "setup",
+        "cache_paths": "~/.cache/uv",
+        "installed": [
+          "ci",
+          "merge-on-green"
+        ]
+      }
+    },
+    "jkkelley/ypli-01-src": {
+      "clone": "~/projects/ypli-01-src",
       "ci": {
         "pr_targets": [
           "lint",
