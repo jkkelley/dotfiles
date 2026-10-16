@@ -6,6 +6,7 @@
 # Environment the helpers read:
 #   SWEEP_RUN_DIR     the run directory; run.json and checklist.jsonl live in it. Unset means "no run", and the
 #                     helpers that record into a run skip recording rather than fail.
+#   SWEEP_NODE       the node a sweep_retry step belongs to; names its steps/<node>.jsonl (default "run").
 #   SWEEP_RETRY_WAITS seconds to wait after the 1st, 2nd, 3rd... failed attempt (default "10 30 90"); the last value
 #                     repeats if there are more attempts than values. Tests override it.
 #   SWEEP_SLEEP       the command that waits (default `sleep`); tests point it at a recorder so no test really waits.
@@ -35,8 +36,14 @@ sweep_json_set() {
 # last attempt: nothing is gained by waiting 90 seconds and then giving up, so the third failure returns at once.
 # With the default 3 attempts the waits actually taken are therefore 10 and 30; 90 is used only by a caller that asks
 # for 4 attempts. Rejected alternative: sleeping after the final failure too, which only delays the report.
-# Appends {step,status,attempts,at} to $SWEEP_RUN_DIR/run.json .steps (status ok|failed) and returns the last exit code,
-# so the controller can record the step's status code and move on rather than loop.
+# Appends {schema_version,step,status,attempts,at} to $SWEEP_RUN_DIR/steps/$SWEEP_NODE.jsonl (status ok|failed) and
+# returns the last exit code, so the controller can record the step's status code and move on rather than loop.
+# BREADCRUMB (WO-20261016-824b, architect ruling R3, 2026-10-16T04:25Z, design 18.3): this used to append to run.json
+# .steps, a file every script rewrote through sweep_json_set, so a read-modify-write by one script could drop another's
+# row and no one script owned the record. One file per node means each node's script is the only writer of its file and
+# an append is a single line, so no rewrite and no lost row. Rejected: keeping .steps and adding a lock (still one
+# record with many writers, which fails migration). Cost: callers that never export SWEEP_NODE share steps/run.jsonl
+# until their own tickets set it; sweep-collect.sh reads every steps/ file, so no row is lost either way.
 sweep_retry() {
   local attempts="${1:-}" step="${2:-}"
   if ! [[ $attempts =~ ^[1-9][0-9]*$ ]] || [ -z "$step" ] || [ $# -lt 3 ]; then
@@ -59,22 +66,27 @@ sweep_retry() {
     [ "$n" -lt "$attempts" ] || break
     "$sleeper" "${waits[$((n - 1))]:-${waits[-1]}}"
   done
-  if [ -n "${SWEEP_RUN_DIR:-}" ] && [ -f "$SWEEP_RUN_DIR/run.json" ]; then
-    sweep_json_set "$SWEEP_RUN_DIR/run.json" '.steps = ((.steps // []) + [{step:$s, status:$st, attempts:$n, at:$at}])' \
-      --arg s "$step" --arg st "$status" --argjson n "$n" --arg at "$(sweep_now)" || true
+  if [ -n "${SWEEP_RUN_DIR:-}" ] && [ -d "$SWEEP_RUN_DIR" ]; then
+    local node="${SWEEP_NODE:-run}"
+    if mkdir -p "$SWEEP_RUN_DIR/steps"; then
+      jq -cn --arg s "$step" --arg st "$status" --argjson n "$n" --arg at "$(sweep_now)" \
+        '{schema_version:1, step:$s, status:$st, attempts:$n, at:$at}' >>"$SWEEP_RUN_DIR/steps/$node.jsonl" || true
+    fi
   fi
   return "$rc"
 }
 
 # sweep_check <node> <box> <proof>
-# One checklist row per call: a node is done only when each of its boxes has a row with its proof (design section 10).
+# One checklist row per call, appended to $SWEEP_RUN_DIR/checklist/<node>.jsonl: a node is done only when each of its
+# boxes has a row with its proof (design section 10). Per-node files since WO-20261016-824b (ruling R3): see sweep_retry.
 sweep_check() {
   if [ $# -ne 3 ] || [ -z "${SWEEP_RUN_DIR:-}" ]; then
     echo "sweep_check: usage: sweep_check <node> <box> <proof> (with SWEEP_RUN_DIR set)" >&2
     return 2
   fi
+  mkdir -p "$SWEEP_RUN_DIR/checklist" || return 1
   jq -cn --arg at "$(sweep_now)" --arg node "$1" --arg box "$2" --arg proof "$3" \
-    '{at:$at, node:$node, box:$box, proof:$proof}' >>"$SWEEP_RUN_DIR/checklist.jsonl"
+    '{schema_version:1, at:$at, node:$node, box:$box, proof:$proof}' >>"$SWEEP_RUN_DIR/checklist/$1.jsonl"
 }
 
 # sweep_win_home

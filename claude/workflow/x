@@ -1,0 +1,48 @@
+make: Entering directory '/home/luna/.cache/wt-dotfiles-sweep-b21f1/claude/workflow/inbox-sweep'
+ok  lib
+ok  herdr-first
+ok  lint
+ok  clean
+ok  cards
+FAIL collect
+     ok  derive 1: --controller-error beats an all-OK clean run
+     ok  derive 1: PF-NO-HERDR beats an all-OK clean run
+     ok  derive 1: PF-NO-OWNER-WORDS beats an all-OK clean run
+     ok  derive 2: every seat OK and CLEAN-OK is RUN-OK
+     ok  derive 2: all OK with no verdict is not RUN-OK (tab bar unproven)
+     ok  derive 2: all OK with CLEAN-TABS-LEFT is not RUN-OK
+     ok  derive 3: one OK beside a BLOCKED and a TIMEOUT is RUN-PARTIAL
+     ok  derive 4: BLOCKED-* with no OK is RUN-BLOCKED
+     ok  derive 4: SKIPPED with no OK is RUN-BLOCKED
+     ok  derive 5: no OK and nothing blocked is RUN-FAILED
+     ok  summary.json has a row for every run.json seat
+     ok  a seat with no result and no code is FAILED-SEAT
+     ok  a seat with no result keeps the SKIPPED code run.json holds
+     ok  OK seat carries before, processed, after, flagged
+     ok  a seat row has exactly seat, status, before, after, processed, flagged
+     ok  summary.json carries schema_version
+     ok  finished_at is UTC
+     ok  two R5 checklist rows, in checklist/R5.jsonl
+     FAIL AC-H3: counts span every steps/ and checklist/ file (R5 rows included)
+          wanted [2 1 3] got [2 1 1]
+     ok  AC-H3: per-node files do not change the derived run code
+     ok  AC-H2: summary.md has no em dash, though the result's text did
+     ok  AC-H2: summary.md has a contents heading
+     ok  AC-H2: contents lists each source
+     ok  items are sorted newest first
+     ok  a pipe in a subject is escaped and the dash replaced
+     ok  one section per source
+     ok  a rerun gives the same seats
+     ok  no arguments exits 2
+     ok  a bad run id exits 2
+     ok  no run.json exits 2 and writes nothing
+ok  reply-cards
+ok  reply-approve
+ok  reply-verify
+ok  lead
+make: *** [Makefile:29: test] Terminated
+ok  reply-send
+ok  followup
+ok  reply-send
+ok  seats
+ran 14 suites, 1 failed

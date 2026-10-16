@@ -74,7 +74,17 @@ check "1 1 0 0" "$(jq -r '.seats[] | select(.seat=="gmail") | "\(.before) \(.pro
 check "6" "$(jq -r '.seats[0] | keys | length' "$SWEEP_RUN_DIR/summary.json")" "a seat row has exactly seat, status, before, after, processed, flagged"
 check 1.0.0 "$(jq -r .schema_version "$SWEEP_RUN_DIR/summary.json")" "summary.json carries schema_version"
 check yes "$(jq -r '.finished_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$") | if . then "yes" else "no" end' "$SWEEP_RUN_DIR/summary.json")" "finished_at is UTC"
-check 2 "$(jq -s 'map(select(.node=="R5")) | length' "$SWEEP_RUN_DIR/checklist.jsonl")" "two R5 checklist rows"
+check 2 "$(jq -s 'map(select(.node=="R5")) | length' "$SWEEP_RUN_DIR/checklist/R5.jsonl")" "two R5 checklist rows, in checklist/R5.jsonl"
+
+# AC-H3: collect reads every steps/ and checklist/ file; the counts do not move the run code
+fresh pn gmail:OK; verdict CLEAN-OK
+mkdir -p "$SWEEP_RUN_DIR/steps" "$SWEEP_RUN_DIR/checklist"
+echo '{"schema_version":1,"step":"a","status":"failed","attempts":3,"at":"x"}' >"$SWEEP_RUN_DIR/steps/R2.jsonl"
+echo '{"schema_version":1,"step":"b","status":"ok","attempts":1,"at":"x"}' >"$SWEEP_RUN_DIR/steps/R4.jsonl"
+echo '{"schema_version":1,"node":"R2","box":"b","proof":"p"}' >"$SWEEP_RUN_DIR/checklist/R2.jsonl"
+collect
+check "2 1 1" "$(jq -r '"\(.steps) \(.steps_failed) \(.checklist_rows)"' "$SWEEP_RUN_DIR/summary.json")" "AC-H3: counts span every steps/ and checklist/ file (R5 rows are written after summary.json, so not counted)"
+check RUN-OK "$(run_status)" "AC-H3: per-node files do not change the derived run code"
 
 # AC-H2: contents list, no em dash, table-safe cells, newest item first
 fresh md gmail:OK proton-first:PARTIAL
