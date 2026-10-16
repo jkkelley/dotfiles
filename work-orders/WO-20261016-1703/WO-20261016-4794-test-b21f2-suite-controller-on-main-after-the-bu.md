@@ -4,13 +4,13 @@
   "slug": "test-b21f2-suite-controller-on-main-after-the-bu",
   "title": "Test B21f2 - suite controller on main after the build merges",
   "type": "test",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:46:32+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
+  "branch": "feat/test-b21f2-suite-controller-on-main-after-the-bu",
   "pr": null,
   "closed": null,
   "approval": {
@@ -61,7 +61,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+- [x] `AC-H1` *(human)* every case in the plan passes on main, output captured to the artifact store (item 31)
+  - observed `2026-10-16` controller suite on main 0fade0f: exit 0, output 'ok controller' / 'ran 1 suite'; artifact: ~/.local/state/zenith/artifacts/test-evidence/2026/10/*-t21f2-controller-suite.txt
 
 ## Test plan
 
