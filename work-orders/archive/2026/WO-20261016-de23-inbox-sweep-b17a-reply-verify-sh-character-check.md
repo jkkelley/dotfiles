@@ -4,15 +4,15 @@
   "slug": "inbox-sweep-b17a-reply-verify-sh-character-check",
   "title": "Inbox sweep B17a - reply-verify.sh character check and token",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T03:03:21+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/inbox-sweep-b17a-reply-verify-sh-character-check",
+  "pr": 127,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner approved the reply DAG design on Bearings card D-18, 2026-10-16 UTC; Claude seats never use lavish (global owner rule)",
@@ -66,8 +66,10 @@ Send must never be clicked unless a script proved the typed text equals the appr
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a one-character mismatch writes no token and gives RP-TEXT-MISMATCH (test)
-- [ ] `AC-H2` *(human)* an exact match writes verified-<id>.token (test)
+- [x] `AC-H1` *(human)* a one-character mismatch writes no token and gives RP-TEXT-MISMATCH (test)
+  - observed `2026-10-16` test_reply_verify.sh: 11 one-character/near-match cases (changed, dropped, added char, case, curly apostrophe, trailing space...) each exit 1, print RP-TEXT-MISMATCH, and remove a planted stale token; suite ok in make test-all (20 suites)
+- [x] `AC-H2` *(human)* an exact match writes verified-<id>.token (test)
+  - observed `2026-10-16` test_reply_verify.sh: exact match exits 0, prints RP-VERIFIED <id> <sha256>, writes verified-m1.token with integer schema_version 1; CRLF, lone CR and one final LF also pass
 
 ## Test plan
 
