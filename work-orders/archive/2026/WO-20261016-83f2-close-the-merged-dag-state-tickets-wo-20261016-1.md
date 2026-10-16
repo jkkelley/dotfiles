@@ -4,15 +4,15 @@
   "slug": "close-the-merged-dag-state-tickets-wo-20261016-1",
   "title": "Close the merged dag-state tickets WO-20261016-1e26, WO-20261016-3f4f, WO-20261016-bf7f and WO-20261016-f3a5 (PRs 212, 256, 255, 267)",
   "type": "chore",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T12:19:25+00:00",
   "parent": "WO-20261016-41d0",
   "branch": "feat/83f2-close-the-merged-dag-state-tickets-wo-20261016-1",
-  "pr": null,
-  "closed": null,
+  "pr": 360,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "infra-design21 cut DESIGN-GAP d38a and ORD-1140 S3 (brief BR-20261016-infra-design21); design approvals ruled done, ORD-0550 O4; Claude seats never use lavish (global owner rule)",
@@ -121,17 +121,23 @@ Found by infra-design21 inventory: work-order.sh stale-merged lists WO-20261016-
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* WO-20261016-1e26 is done
+- [x] `AC-H1` *(human)* WO-20261016-1e26 is done
+  - observed `2026-10-16` show status: done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-1e26 --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H2` *(human)* WO-20261016-3f4f is done
+- [x] `AC-H2` *(human)* WO-20261016-3f4f is done
+  - observed `2026-10-16` show status: done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-3f4f --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H3` *(human)* WO-20261016-bf7f is done
+- [x] `AC-H3` *(human)* WO-20261016-bf7f is done
+  - observed `2026-10-16` show status: done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-bf7f --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H4` *(human)* WO-20261016-f3a5 is done
+- [x] `AC-H4` *(human)* WO-20261016-f3a5 is done
+  - observed `2026-10-16` show status: done
   - check: `bash claude/skills/work-order/scripts/work-order.sh show --id WO-20261016-f3a5 --json | jq -r .status` exit 0 expect /^done$/
-- [ ] `AC-H5` *(human)* the merged code is green on main (TP-1)
+- [x] `AC-H5` *(human)* the merged code is green on main (TP-1)
+  - observed `2026-10-16` TP-1 test_dag_migrate pass=51 fail=0; TP-2 drift pass=36 fail=0; TP-3 merge pass=30 fail=0; TP-4 md-contents-check exit 0
   - check: `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash claude/workflow/dag/tests/unit/test_dag_migrate.sh'` exit 0 expect /fail=0/
-- [ ] `AC-H6` *(human)* the diff holds only work-orders files
+- [x] `AC-H6` *(human)* the diff holds only work-orders files
+  - observed `2026-10-16` git diff names grep -v work-orders exit 1, empty
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(work-orders/.*)$'` exit 1
 
 ## Test plan
