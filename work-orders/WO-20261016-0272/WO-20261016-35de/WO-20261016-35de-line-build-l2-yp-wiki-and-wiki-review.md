@@ -21,7 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261016-4b96"
+    "WO-20261016-4b96",
+    "WO-20261016-d304"
   ],
   "blocks": [
     "WO-20261016-a8eb"

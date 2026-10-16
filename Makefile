@@ -123,3 +123,14 @@ home-migrate-dev:       ## dev gate on a mirror of CONF's real tree: manifest re
 	podman build -q -t $(SPEC_IMAGE) -f claude/workflow/tests/container/Containerfile claude/workflow >/dev/null && \
 	podman run --rm --network=none --userns=keep-id -v "$(CURDIR):/work:Z" -v "$$m:/in/manifest.tsv:ro,Z" -v "$$c:/in/conf.json:ro,Z" \
 	  -w /work -e HOME=/tmp $(SPEC_IMAGE) bash -c 'shellcheck scripts/tests/home_migrate_dev.sh && bash scripts/tests/home_migrate_dev.sh run /in/manifest.tsv /in/conf.json'
+
+# Migration verb (WO-20261016-1c04): untrack the generated work-order views in any repo. Plan first, APPLY=1 to apply.
+# Inputs passed as VAR=value: REPO= target repo (required), APPLY=1, BRANCH= (default chore/wo-untrack-generated).
+.PHONY: wo-untrack-generated wo-untrack-generated-test
+
+wo-untrack-generated:   ## make wo-untrack-generated REPO=<dir> [APPLY=1]
+	bash scripts/wo-untrack-generated.sh --repo "$(REPO)" $(if $(APPLY),--apply) $(if $(BRANCH),--branch $(BRANCH))
+
+wo-untrack-generated-test: ## run scripts/tests/test_wo_untrack_generated.sh in the pinned workflow test image (Rule 14)
+	podman build -q -t $(SPEC_IMAGE) -f claude/workflow/tests/container/Containerfile claude/workflow >/dev/null
+	podman run --rm --network=none --userns=keep-id -v "$(CURDIR):/work:Z" -w /work -e HOME=/tmp $(SPEC_IMAGE) bash scripts/tests/test_wo_untrack_generated.sh

@@ -4,14 +4,14 @@
   "slug": "make-wo-untrack-generated-repo-untrack-the-gener",
   "title": "make wo-untrack-generated REPO=: untrack the generated work-order views, plan before apply",
   "type": "feature",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p0",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:05:19+00:00",
   "parent": "WO-20261016-0272",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/make-wo-untrack-generated-repo-untrack-the-gener",
+  "pr": 204,
   "closed": null,
   "approval": {
     "via": "override",
@@ -76,8 +76,10 @@ ORD-0554 U2: "migration verb make wo-untrack-generated REPO=<dir>: git rm --cach
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash scripts/tests/test_wo_untrack_generated.sh'` exits 0 and its output matches /ok plan writes nothing/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash scripts/tests/test_wo_untrack_generated.sh'` exits 0 and its output matches /ok a second apply is WO-UNTRACK-NOCHANGE/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash scripts/tests/test_wo_untrack_generated.sh'` exits 0 and its output matches /ok plan writes nothing/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` command: make -C claude/workflow image && podman run ... bash scripts/tests/test_wo_untrack_generated.sh; exit 0; output: ok plan writes nothing / ok apply untracks INDEX.md and READMEs and adds the ignore lines / ok a second apply is WO-UNTRACK-NOCHANGE
+- [x] `AC-H2` *(human)* `make -C claude/workflow image && podman run --rm --network=none --userns=keep-id -v "$PWD:/work:Z" -w /work -e HOME=/tmp localhost/dotfiles-workflow-test:1 bash -c 'bash scripts/tests/test_wo_untrack_generated.sh'` exits 0 and its output matches /ok a second apply is WO-UNTRACK-NOCHANGE/ (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` command: make -C claude/workflow image && podman run ... bash scripts/tests/test_wo_untrack_generated.sh; exit 0; output: ok plan writes nothing / ok apply untracks INDEX.md and READMEs and adds the ignore lines / ok a second apply is WO-UNTRACK-NOCHANGE
 
 ## Test plan
 
