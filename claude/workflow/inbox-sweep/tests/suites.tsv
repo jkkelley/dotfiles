@@ -16,3 +16,4 @@ spec-lint	bin/spec-lint.sh,tests/unit/test_spec_lint.sh	bash tests/unit/test_spe
 nodes	bin/node-lib.sh,nodes/,schemas/node.schema.json,tests/fixtures/nodes/,tests/unit/test_nodes.sh	bash tests/unit/test_nodes.sh
 reply-cards	bin/reply-cards.sh,bin/sweep-lib.sh,tests/lib/,tests/unit/test_reply_cards.sh	bash tests/unit/test_reply_cards.sh
 migrate	bin/migrate.sh,bin/node-lib.sh,migrations/,schemas/records/,tests/fixtures/migrations/,tests/unit/test_migrate.sh	bash tests/unit/test_migrate.sh
+reply-approve	bin/reply-approve.sh,bin/sweep-lib.sh,tests/lib/,tests/unit/test_reply_approve.sh	bash tests/unit/test_reply_approve.sh
