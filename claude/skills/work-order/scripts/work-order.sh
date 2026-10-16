@@ -46,7 +46,7 @@ Usage:
                         --answer T [--json]
   work-order.sh evidence [--project DIR] --id WO-... (--index N | --match TEXT)
                         --observed T [--json]
-  work-order.sh check   [--project DIR] --id WO-... [--index N] [--json]
+  work-order.sh check   [--project DIR] --id WO-... [--index N] [--code-dir DIR] [--json]
   work-order.sh next    [--project DIR] [--json]
   work-order.sh tree    [--project DIR] [--json]
   work-order.sh reindex [--project DIR] [--check] [--json]
@@ -55,7 +55,7 @@ Usage:
   work-order.sh approve [--project DIR] --id WO-... [--code-dir DIR] [--no-lavish --reason T] [--json]
   work-order.sh start   [--project DIR] --id WO-... [--json]
   work-order.sh submit  [--project DIR] --id WO-... --pr N [--json]
-  work-order.sh done    [--project DIR] --id WO-... [--json]
+  work-order.sh done    [--project DIR] --id WO-... [--code-dir DIR] [--json]
   work-order.sh cleanup [--project DIR] --id WO-... [--dry-run] [--json]
   work-order.sh cancel  [--project DIR] --id WO-... --reason T
                         [--superseded-by WO-...] [--json]
@@ -1235,6 +1235,7 @@ cmd_submit() {
 cmd_done() {
   wo_require_jq; require_id
   local file; file=$(wo_find "$project" "$id")
+  require_code_dir "$file"
   wo_require_status "$file" in-review
 
   # Scripted checks run first; a failing one refuses the close-out outright,
@@ -1927,6 +1928,26 @@ tick_criterion() {
 # made here carries the command, its exit code and its output.
 # ---------------------------------------------------------------------------
 
+# BREADCRUMB (WO-20261016-1099). What broke: run_checks ran every ac_check with
+# the ticket project as cwd, so a ticket whose .repo names another repo ran its git
+# diff and make checks in the wrong tree: WO-20261016-2d63 (business ticket, code
+# in ypconsult-01-src PR 63) passed AC-H1..H5 in the src worktree but done failed
+# in business and the ticket sat in-review (seats/ypc-2d63.result.json).
+# Fix: check and done take --code-dir DIR, proven by its origin remote like approve
+# (WO-20261016-e297), and run_checks cds there. Rejected: guessing the checkout
+# from treehouse or ~/projects, which is nondeterministic. Cost: a cross-repo
+# close-out names one more flag.
+# require_code_dir <file> - sets code_dir for a cross-repo ticket, refuses without it.
+require_code_dir() {
+  local trepo; trepo=$(wo_field "$1" '.repo')
+  if [[ -z $trepo ]]; then code_dir=""; return 0; fi
+  [[ -n $code_dir ]] || ps_die "$PS_USAGE" "code_dir_required" \
+    "code_dir_required: $id names repo $trepo; pass --code-dir <checkout of that repo>"
+  local actual; actual=$(code_repo_slug "$code_dir")
+  [[ $actual == "$trepo" ]] || ps_die "$PS_VALIDATION" "code_dir_mismatch" \
+    "code_dir_mismatch: ticket repo is $trepo, --code-dir origin is ${actual:-none}"
+}
+
 # run_checks <file> [only-index] [notick] - runs the checks, ticking passes
 # unless the third argument is "notick" (the done gate verifies, it does not
 # tick: a box is ticked by `check` or `evidence`, never as a side effect of
@@ -1944,7 +1965,7 @@ run_checks() {
     want=$(jq -r .exit <<<"$rec"); expect=$(jq -r '.expect // ""' <<<"$rec")
     [[ -z $only || $only == "$i" ]] || continue
     rc=0
-    out=$(cd "$project" && timeout 600 bash -c "$cmd" 2>&1) || rc=$?
+    out=$(cd "${code_dir:-$project}" && timeout 600 bash -c "$cmd" 2>&1) || rc=$?
     ok=0
     if [[ $rc == "$want" ]]; then
       ok=1
@@ -1971,6 +1992,7 @@ cmd_check() {
   if [[ -n $index ]]; then
     [[ $index =~ ^[0-9]+$ ]] || ps_die "$PS_USAGE" "bad_index" "--index must be a whole number (got: $index)"
   fi
+  require_code_dir "$file"
   run_checks "$file" "$index" || exit 1
 }
 

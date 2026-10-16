@@ -34,6 +34,7 @@
 - [290-generated-views-untracked](#290-generated-views-untracked)
 - [410-start-branch-id](#410-start-branch-id)
 - [The wo defaults](#the-wo-defaults)
+- [420-code-dir-checks](#420-code-dir-checks)
 - [430-approve-make-wildcard-include](#430-approve-make-wildcard-include)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -233,6 +234,11 @@ Why: the slug is cut to 48 chars, so a shared title prefix gave one branch name 
 `assert.sh`'s `wo` adds inert defaults to `new` and `amend`: `--owner-words 'test owner words'` and `--context 'test context'` on `new` when absent, and `--ac-check true --ac-exit 0` after every non-empty `--ac` not already followed by `--ac-check`.
 Why: the older cases test other behaviour, so the required flags must not change what they prove.
 Cases 150 and 250 call `work-order.sh` directly and so pass the flags themselves; 260 and 270 do too, for every refusal they assert.
+
+## 420-code-dir-checks
+
+`check` and `done` run a cross-repo ticket's checks in `--code-dir`, exit 2 `code_dir_required` without it, and exit 3 `code_dir_mismatch` when the checkout's origin is another repo; a ticket without a repo checks in the project as before.
+Why: WO-20261016-2d63 passed in its code worktree but `done` ran in the business tree and failed (WO-20261016-1099).
 
 ## 430-approve-make-wildcard-include
 
