@@ -153,7 +153,8 @@ while IFS= read -r row; do
   printf '%s\n' "$new" >>"$SCRATCH/out.jsonl"
 done <"$LEADS"
 
-mv "$SCRATCH/out.jsonl" "$LEADS.tmp" && mv "$LEADS.tmp" "$LEADS"
+# leads.jsonl has one writer (design 18, R3, node B21d): lead-ledger.sh. Unchanged rows are no-ops there.
+bash "$HERE/lead-ledger.sh" append --run "$run" <"$SCRATCH/out.jsonl"
 # The card is the whole point of the draft: raise it now so the draft never sits unseen. reply-cards.sh is idempotent.
 if [ "$drafted" = 1 ]; then bash "$HERE/reply-cards.sh" --run "$run" >/dev/null; fi
 cat "$SCRATCH/moved.txt"
