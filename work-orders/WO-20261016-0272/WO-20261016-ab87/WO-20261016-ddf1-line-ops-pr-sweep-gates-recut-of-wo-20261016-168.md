@@ -4,14 +4,14 @@
   "slug": "line-ops-pr-sweep-gates-recut-of-wo-20261016-168",
   "title": "line-ops pr-sweep gates, recut of WO-20261016-168e: finish homelab-gitops PR 105 with U2 counting the repos of dotfiles pr-flow.json, under a runnable markdown test plan",
   "type": "test",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T11:33:04+00:00",
   "parent": "WO-20261016-ab87",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/ddf1-line-ops-pr-sweep-gates-recut-of-wo-20261016-168",
+  "pr": 105,
   "closed": null,
   "approval": {
     "via": "override",
@@ -149,19 +149,26 @@ Lifecycle, because the code lives in homelab-gitops and check and done --code-di
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the gate script passes shellcheck at warning
+- [x] `AC-H1` *(human)* the gate script passes shellcheck at warning
+  - observed `2026-10-16` shellcheck -S warning gate-uat-pr-sweep.sh exit 0
   - check: `podman run --rm -v "$PWD":/mnt:ro,Z -w /mnt docker.io/koalaman/shellcheck@sha256:0fa384f2a6171aef8aab2999a531c8c8158727d54a8f20157a5c3c51a734d6b2 -S warning apps/line-ops/scripts/gate-uat-pr-sweep.sh` exit 0
-- [ ] `AC-H2` *(human)* both Make targets exist and call their scripts
+- [x] `AC-H2` *(human)* both Make targets exist and call their scripts
+  - observed `2026-10-16` make -n -C apps/line-ops test-pr-sweep gate-uat-pr-sweep exit 0
   - check: `make -n -C apps/line-ops test-pr-sweep gate-uat-pr-sweep` exit 0 expect /scripts/test-pr-sweep\.sh[\s\S]*scripts/gate-uat-pr-sweep\.sh/
-- [ ] `AC-H3` *(human)* U0 refuses an absent app, read-only against the real cluster
+- [x] `AC-H3` *(human)* U0 refuses an absent app, read-only against the real cluster
+  - observed `2026-10-16` gate-uat-pr-sweep.sh APP=no-such-app-gate exit 2: GATE-FAIL uat U0 app=no-such-app-gate absent
   - check: `podman run --rm -v "$PWD":/w:ro,Z -v "$HOME/.kube":/root/.kube:ro,Z -w /w -e APP=no-such-app-gate docker.io/alpine/k8s@sha256:9c4976d47656d78cf53a92b0203fc54ac45eae18a2b45001ac221c27da4c8036 bash apps/line-ops/scripts/gate-uat-pr-sweep.sh` exit 2 expect /GATE-FAIL uat U0 app=no-such-app-gate absent/
-- [ ] `AC-H4` *(human)* U2 counts the repos of dotfiles pr-flow.json
+- [x] `AC-H4` *(human)* U2 counts the repos of dotfiles pr-flow.json
+  - observed `2026-10-16` grep -c pr-flow/config/pr-flow.json exit 0: 2
   - check: `grep -c 'pr-flow/config/pr-flow.json' apps/line-ops/scripts/gate-uat-pr-sweep.sh` exit 0 expect /^[1-9]/
-- [ ] `AC-H5` *(human)* no configmap name is assumed any more
+- [x] `AC-H5` *(human)* no configmap name is assumed any more
+  - observed `2026-10-16` grep -c pr-sweep-config exit 1: 0
   - check: `grep -c 'pr-sweep-config' apps/line-ops/scripts/gate-uat-pr-sweep.sh` exit 1 expect /^0$/
-- [ ] `AC-H6` *(human)* the test plan opens with its contents list, names every gate and the U2 repo source
+- [x] `AC-H6` *(human)* the test plan opens with its contents list, names every gate and the U2 repo source
+  - observed `2026-10-16` grep -c test-plan-pr-sweep.md exit 0: 14
   - check: `grep -c -iE 'contents|dev|uat|stable|rollback|pr-flow\.json' docs/line-ops/test-plan-pr-sweep.md` exit 0 expect /^([6-9]|[1-9][0-9])/
-- [ ] `AC-H7` *(human)* the PR diff holds only In files
+- [x] `AC-H7` *(human)* the PR diff holds only In files
+  - observed `2026-10-16` git diff --name-only origin/main...HEAD | grep -vE In-files exit 1
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(apps/line-ops/(Makefile|scripts/gate-uat-pr-sweep\.sh)|docs/line-ops/test-plan-pr-sweep\.md)$'` exit 1
 
 ## Test plan
