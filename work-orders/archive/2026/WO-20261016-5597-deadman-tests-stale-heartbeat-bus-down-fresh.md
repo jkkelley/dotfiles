@@ -1,18 +1,18 @@
 ---
 {
-  "id": "WO-20261016-218b",
-  "slug": "stuck-audit-test-rows-from-a-stream-dump",
-  "title": "Stuck-audit test: rows from a stream dump",
+  "id": "WO-20261016-5597",
+  "slug": "deadman-tests-stale-heartbeat-bus-down-fresh",
+  "title": "Deadman tests: stale heartbeat, bus down, fresh",
   "type": "test",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
-  "created_at": "2026-10-16T04:52:02+00:00",
+  "created_at": "2026-10-16T04:52:01+00:00",
   "parent": "WO-20261016-3570",
-  "branch": "feat/stuck-audit-test-rows-from-a-stream-dump",
-  "pr": null,
-  "closed": null,
+  "branch": "feat/deadman-tests-stale-heartbeat-bus-down-fresh",
+  "pr": 170,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat: lavish is prohibited outside firstmate (~/AGENTS.md owner interaction surface); brief BR-20261016-stuck-watch from the architect is the approval",
@@ -21,13 +21,13 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261016-7ce0"
+    "WO-20261016-2d3e"
   ],
   "blocks": []
 }
 ---
 
-# WO-20261016-218b - Stuck-audit test: rows from a stream dump
+# WO-20261016-5597 - Deadman tests: stale heartbeat, bus down, fresh
 
 ## Contents
 
@@ -43,7 +43,7 @@
 
 ## Problem
 
-stuck-audit.sh has no plan a tester can run
+deadman.sh has no plan a tester can run
 
 ## Scope
 
@@ -53,7 +53,7 @@ _none_
 
 **Out - non-goals**
 
-- live NATS
+- live systemd
 
 ## Degrees of freedom
 
@@ -61,7 +61,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case in the plan passes
+- [x] `AC-H1` *(human)* every case in the plan passes
+  - observed `2026-10-16` make stuck-watch-test CASE='deadman-stale deadman-bus-down deadman-fresh' in podman --network=none: pass=6 fail=0 (2026-10-16)
 
 ## Test plan
 
@@ -69,14 +70,22 @@ _Test plan from claude/workflow/templates/test-plan.md, shaped by claude/workflo
 
 **Scope under test**
 
-claude/workflow/stuck-watch/stuck-audit.sh against a stub nats stream dump
+claude/workflow/stuck-watch/deadman.sh against a stub nats and stub ntfy
 
 **Cases**
 
 - `TP-1`
-  - intent: the morning audit must list every stuck node with duration and evidence, or the night is unaccounted for
-  - command: `make -C claude/workflow stuck-watch-test CASE=audit`
-  - expected: exit 0; one row per seat+code with first, last, duration and evidence path
+  - intent: a dead stuck-watch must still reach the phone, or a silent watcher reads as a healthy line (AC2)
+  - command: `make -C claude/workflow stuck-watch-test CASE=deadman-stale`
+  - expected: exit 0; heartbeat 4 min old gives one priority high POST titled stuck-watch dead
+- `TP-2`
+  - intent: a down bus must also page, since the watcher cannot publish through it
+  - command: `make -C claude/workflow stuck-watch-test CASE=deadman-bus-down`
+  - expected: exit 0; unreachable nats gives one priority high POST
+- `TP-3`
+  - intent: a fresh heartbeat must stay silent
+  - command: `make -C claude/workflow stuck-watch-test CASE=deadman-fresh`
+  - expected: exit 0; zero POSTs
 
 **Isolation**
 

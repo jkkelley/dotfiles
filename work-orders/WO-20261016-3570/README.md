@@ -6,8 +6,5 @@ This ticket: [Stuck-watch: no-model stuck detection to the bus and the owner's p
 
 One level down only. A child of a child is listed in its own directory, not here.
 
-| ID | status | pri | waiting on | title |
-|---|---|---|---|---|
-| `WO-20261016-5597` | in-progress | p2 | - | [Deadman tests: stale heartbeat, bus down, fresh](WO-20261016-5597-deadman-tests-stale-heartbeat-bus-down-fresh.md) |
-| `WO-20261016-218b` | in-progress | p2 | - | [Stuck-audit test: rows from a stream dump](WO-20261016-218b-stuck-audit-test-rows-from-a-stream-dump.md) |
-| `WO-20261016-c840` | in-progress | p2 | - | [Stuck-watch tick tests: idle, done-unmerged, dedupe, no-leak](WO-20261016-c840-stuck-watch-tick-tests-idle-done-unmerged-dedupe.md) |
+_No children yet. This ticket sits at the top level, so it holds the directory
+on its own until work is filed underneath it._

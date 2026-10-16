@@ -4,15 +4,15 @@
   "slug": "stuck-watch-tick-tests-idle-done-unmerged-dedupe",
   "title": "Stuck-watch tick tests: idle, done-unmerged, dedupe, no-leak",
   "type": "test",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T04:51:59+00:00",
   "parent": "WO-20261016-3570",
   "branch": "feat/stuck-watch-tick-tests-idle-done-unmerged-dedupe",
-  "pr": null,
-  "closed": null,
+  "pr": 170,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Claude seat: lavish is prohibited outside firstmate (~/AGENTS.md owner interaction surface); brief BR-20261016-stuck-watch from the architect is the approval",
@@ -61,7 +61,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* every case in the plan passes
+- [x] `AC-H1` *(human)* every case in the plan passes
+  - observed `2026-10-16` make stuck-watch-test CASE='idle done-unmerged dedupe no-leak' in podman --network=none: pass=18 fail=0 (2026-10-16)
 
 ## Test plan
 
