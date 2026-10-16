@@ -4,15 +4,15 @@
   "slug": "inbox-sweep-b6-sweep-watch-sh-result-bridge-to-r",
   "title": "Inbox sweep B6 - sweep-watch.sh result bridge to record rows",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T01:19:11+00:00",
   "parent": "WO-20261016-1703",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/inbox-sweep-b6-sweep-watch-sh-result-bridge-to-r",
+  "pr": 117,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner approved the design on Bearings card D-04, 2026-10-16 UTC; Claude seats never use lavish (global owner rule)",
@@ -66,10 +66,14 @@ Seat completion must be decided by a validated result file, never by reading a p
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* truncated JSON is not accepted (test)
-- [ ] `AC-H2` *(human)* a deadline in the past gives a TIMEOUT row (test)
-- [ ] `AC-H3` *(human)* a valid result gives exactly one record row (test)
-- [ ] `AC-H4` *(human)* calls.log has no pane read or wait-output
+- [x] `AC-H1` *(human)* truncated JSON is not accepted (test)
+  - observed `2026-10-16` test_watch.sh: 'a truncated result produced no row on any poll before it was fixed' ok; 'the seat was asked once to rewrite' ok; a mutation making the size check eager failed 4 checks
+- [x] `AC-H2` *(human)* a deadline in the past gives a TIMEOUT row (test)
+  - observed `2026-10-16` test_watch.sh: 'no result at the deadline gives one TIMEOUT row' ok; TIMEOUT results for gmail, proton and linkedin validate against result.schema.json
+- [x] `AC-H3` *(human)* a valid result gives exactly one record row (test)
+  - observed `2026-10-16` test_watch.sh: 'valid result: exactly one record row' ok; 'a second watcher run adds no second row for a final seat' ok; every non-OK code bridges once
+- [x] `AC-H4` *(human)* calls.log has no pane read or wait-output
+  - observed `2026-10-16` test_watch.sh: 'calls.log has no pane read or wait-output' ok; 'no other herdr call of any kind' ok (only agent prompt)
 
 ## Test plan
 
