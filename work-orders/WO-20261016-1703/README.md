@@ -10,5 +10,22 @@ One level down only. A child of a child is listed in its own directory, not here
 |---|---|---|---|---|
 | `WO-20261016-e2e8` | draft | p1 | - | [Inbox sweep B11 - live end-to-end run](WO-20261016-e2e8-inbox-sweep-b11-live-end-to-end-run.md) |
 | `WO-20261016-5328` | draft | p1 | - | [Inbox sweep B12 - spike, can the extension be woken without the owner](WO-20261016-5328-inbox-sweep-b12-spike-can-the-extension-be-woken.md) |
-| `WO-20261016-80aa` | draft | p1 | - | [Inbox sweep B18 - live first LinkedIn send](WO-20261016-80aa-inbox-sweep-b18-live-first-linkedin-send.md) |
-| `WO-20261016-41f2` | ready | p1 | - | [Inbox sweep B21b - integer schema_version on every built record with migrations](WO-20261016-41f2-inbox-sweep-b21b-integer-schema-version-on-every.md) |
+| `WO-20261016-c606` | ready | p1 | - | [Inbox sweep B17d - one Send them line per batch in reply-send.sh](WO-20261016-c606-inbox-sweep-b17d-one-send-them-line-per-batch-in.md) |
+| `WO-20261016-80aa` | draft | p1 | WO-20261016-c606 | [Inbox sweep B18 - live first LinkedIn send](WO-20261016-80aa-inbox-sweep-b18-live-first-linkedin-send.md) |
+| `WO-20261016-6242` | ready | p1 | WO-20261016-c606 WO-20261016-ae19 | [Inbox sweep B21c - reply-ledger.sh owns ledger.jsonl with an append verb](WO-20261016-6242-inbox-sweep-b21c-reply-ledger-sh-owns-ledger-jso.md) |
+| `WO-20261016-ae19` | ready | p1 | - | [Inbox sweep B21d - lead-ledger.sh owns leads.jsonl with an append verb](WO-20261016-ae19-inbox-sweep-b21d-lead-ledger-sh-owns-leads-jsonl.md) |
+| `WO-20261016-5b59` | ready | p1 | WO-20261016-6242 | [Inbox sweep B21e - sweep-cards.sh owns questions.json with an add verb](WO-20261016-5b59-inbox-sweep-b21e-sweep-cards-sh-owns-questions-j.md) |
+| `WO-20261016-824b` | ready | p1 | - | [Inbox sweep B21f1 - steps and checklist rows go to per-node files](WO-20261016-824b-inbox-sweep-b21f1-steps-and-checklist-rows-go-to.md) |
+| `WO-20261016-002d` | ready | p1 | WO-20261016-824b WO-20261016-5b59 | [Inbox sweep B21f2 - run.json written once by sweep-init.sh; controller, seat status and clean get their own records](WO-20261016-002d-inbox-sweep-b21f2-run-json-written-once-by-sweep.md) |
+| `WO-20261016-5f8d` | ready | p1 | WO-20261016-002d | [Inbox sweep V1 - integer schema_version for run.json with its migration](WO-20261016-5f8d-inbox-sweep-v1-integer-schema-version-for-run-js.md) |
+| `WO-20261016-67ab` | ready | p1 | WO-20261016-002d | [Inbox sweep V2 - integer schema_version for summary.json with its migration](WO-20261016-67ab-inbox-sweep-v2-integer-schema-version-for-summar.md) |
+| `WO-20261016-870d` | ready | p1 | WO-20261016-002d | [Inbox sweep V3 - integer schema_version for R7-verdict.json with its migration](WO-20261016-870d-inbox-sweep-v3-integer-schema-version-for-r7-ver.md) |
+| `WO-20261016-ab00` | ready | p1 | WO-20261016-c606 | [Test B17d - suite reply-send on main after the build merges](WO-20261016-ab00-test-b17d-suite-reply-send-on-main-after-the-bui.md) |
+| `WO-20261016-8aed` | ready | p1 | WO-20261016-6242 | [Test B21c - suite reply-ledger on main after the build merges](WO-20261016-8aed-test-b21c-suite-reply-ledger-on-main-after-the-b.md) |
+| `WO-20261016-fc28` | ready | p1 | WO-20261016-ae19 | [Test B21d - suite lead on main after the build merges](WO-20261016-fc28-test-b21d-suite-lead-on-main-after-the-build-mer.md) |
+| `WO-20261016-cbb4` | ready | p1 | WO-20261016-5b59 | [Test B21e - suite cards on main after the build merges](WO-20261016-cbb4-test-b21e-suite-cards-on-main-after-the-build-me.md) |
+| `WO-20261016-bd17` | ready | p1 | WO-20261016-824b | [Test B21f1 - suite lib on main after the build merges](WO-20261016-bd17-test-b21f1-suite-lib-on-main-after-the-build-mer.md) |
+| `WO-20261016-4794` | ready | p1 | WO-20261016-002d | [Test B21f2 - suite controller on main after the build merges](WO-20261016-4794-test-b21f2-suite-controller-on-main-after-the-bu.md) |
+| `WO-20261016-56c1` | ready | p1 | WO-20261016-5f8d | [Test V1 - suite migrate on main after the build merges](WO-20261016-56c1-test-v1-suite-migrate-on-main-after-the-build-me.md) |
+| `WO-20261016-aaa0` | ready | p1 | WO-20261016-67ab | [Test V2 - suite migrate on main after the build merges](WO-20261016-aaa0-test-v2-suite-migrate-on-main-after-the-build-me.md) |
+| `WO-20261016-657b` | ready | p1 | WO-20261016-870d | [Test V3 - suite migrate on main after the build merges](WO-20261016-657b-test-v3-suite-migrate-on-main-after-the-build-me.md) |

@@ -4,7 +4,7 @@
   "slug": "inbox-sweep-b21b-integer-schema-version-on-every",
   "title": "Inbox sweep B21b - integer schema_version on every built record with migrations",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
@@ -12,7 +12,7 @@
   "parent": "WO-20261016-1703",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "Owner approved the reply DAG design on Bearings card D-18, 2026-10-16 UTC; Claude seats never use lavish (global owner rule)",
@@ -25,7 +25,8 @@
     "WO-20261016-dd0c",
     "WO-20261016-61ae"
   ],
-  "blocks": []
+  "blocks": [],
+  "superseded_by": "WO-20261016-5f8d"
 }
 ---
 
@@ -89,4 +90,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-16` - nothing shipped.
+
+- reason: Superseded by architect ruling R3 (design 18.3): one owner per record first (B21c, B21d, B21e, B21f1, B21f2), then one version ticket per record (V1 run.json, V2 summary.json, V3 R7-verdict.json). Seat results and config.json need an ownership ruling before a version ticket can be cut.
+- superseded by: `WO-20261016-5f8d`
+
+No branch, no PR and no merge commit exist for this work order.
+
