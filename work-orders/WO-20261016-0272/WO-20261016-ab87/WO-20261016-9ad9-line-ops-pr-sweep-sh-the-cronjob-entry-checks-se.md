@@ -4,14 +4,14 @@
   "slug": "line-ops-pr-sweep-sh-the-cronjob-entry-checks-se",
   "title": "line-ops pr-sweep.sh: the CronJob entry checks secrets, syncs the dotfiles tools and the swept clones on the work volume, then runs one pr-flow sweep against the cluster bus",
   "type": "feature",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T10:54:05+00:00",
   "parent": "WO-20261016-ab87",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/9ad9-line-ops-pr-sweep-sh-the-cronjob-entry-checks-se",
+  "pr": 106,
   "closed": null,
   "approval": {
     "via": "override",
@@ -131,13 +131,17 @@ New file apps/line-ops/scripts/test-pr-sweep.sh (dev gate, item 34): runs pr-swe
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the 7 pr-sweep cases pass in podman against fakes
+- [x] `AC-H1` *(human)* the 7 pr-sweep cases pass in podman against fakes
+  - observed `2026-10-16` ok pr-sweep: 7 cases, exit 0, homelab-gitops PR 106
   - check: `bash apps/line-ops/scripts/test-pr-sweep.sh` exit 0 expect /ok pr-sweep: 7 cases/
-- [ ] `AC-H2` *(human)* both scripts pass shellcheck at warning
+- [x] `AC-H2` *(human)* both scripts pass shellcheck at warning
+  - observed `2026-10-16` shellcheck -S warning exit 0, no output
   - check: `shellcheck -S warning apps/line-ops/base/pr-sweep.sh apps/line-ops/scripts/test-pr-sweep.sh` exit 0
-- [ ] `AC-H3` *(human)* the script never prints a token
+- [x] `AC-H3` *(human)* the script never prints a token
+  - observed `2026-10-16` grep exit 1, no match
   - check: `grep -nE 'echo.*(GH_TOKEN|NATS_TOKEN|NATS_URL)\}?"?$|printf.*\$\{?(GH_TOKEN|NATS_TOKEN)' apps/line-ops/base/pr-sweep.sh` exit 1
-- [ ] `AC-H4` *(human)* the diff holds only In files
+- [x] `AC-H4` *(human)* the diff holds only In files
+  - observed `2026-10-16` diff vs origin/main on PR 106 holds only the two In files, grep exit 1
   - check: `git diff --name-only origin/main...HEAD | grep -vE '^(apps/line-ops/(base/pr-sweep\.sh|scripts/test-pr-sweep\.sh))$'` exit 1
 
 ## Test plan
