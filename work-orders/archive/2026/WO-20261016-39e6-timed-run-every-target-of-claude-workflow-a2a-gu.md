@@ -4,15 +4,15 @@
   "slug": "timed-run-every-target-of-claude-workflow-a2a-gu",
   "title": "timed-run: every target of claude/workflow/a2a-guard/a2a-guard.mk runs through the timing wrapper",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "created_at": "2026-10-16T06:06:02+00:00",
   "parent": "WO-20261016-af17",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/timed-run-every-target-of-claude-workflow-a2a-gu",
+  "pr": 298,
+  "closed": "2026-10-16",
   "approval": {
     "via": "override",
     "reason": "architect ruled design approvals done, ORD-0550 O4",
@@ -71,9 +71,12 @@ Item 37 amended, owner 2026-10-16 UTC: "time out everything logically, you'll ID
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* `grep -c '$(TIMED)' claude/workflow/a2a-guard/a2a-guard.mk` equals the number of wrapped targets listed in the PR body (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H2` *(human)* `make -n` of every wrapped target of claude/workflow/a2a-guard/a2a-guard.mk prints `timed-run.sh --node <target> --kind make` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
-- [ ] `AC-H3` *(human)* with the bus down (no NATS on the port) a wrapped target exits with its own exit code and prints only a WARN line (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+- [x] `AC-H1` *(human)* `grep -c '$(TIMED)' claude/workflow/a2a-guard/a2a-guard.mk` equals the number of wrapped targets listed in the PR body (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` 0 exit 0: 6 $(TIMED) lines = 6 wrapped targets: a2a-send a2a-deliver a2a-lint repo-settings-check a2a-guard-test a2a-uat
+- [x] `AC-H2` *(human)* `make -n` of every wrapped target of claude/workflow/a2a-guard/a2a-guard.mk prints `timed-run.sh --node <target> --kind make` (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` make -n -f claude/workflow/a2a-guard/a2a-guard.mk <target> exit 0 for all 6, each prints 'timed-run.sh --node <target> --kind make'
+- [x] `AC-H3` *(human)* with the bus down (no NATS on the port) a wrapped target exits with its own exit code and prints only a WARN line (proof: command, exit code and output pasted by work-order.sh evidence; ORD-0552 O2)
+  - observed `2026-10-16` SW_NATS_URL=127.0.0.1:1 make a2a-lint in podman: WARN bus unreachable x2, A2A-LINT-OK, rc=0; timed-run -- false: rc=1 own code
 
 ## Test plan
 
