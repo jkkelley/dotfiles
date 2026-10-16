@@ -5,7 +5,7 @@
 #   sweep-collect.sh --run <run-id> [--controller-error]
 #
 # Input:  <run>/run.json (the seat list), <run>/steps/*.jsonl, <run>/checklist/*.jsonl, <run>/results/*.json, <run>/preflight.json, <run>/proof/R7-verdict.json
-# Output: <run>/summary.json {schema_version, run_id, status, seats:[{seat, status, before, after, processed, flagged}], finished_at}
+# Output: <run>/summary.json {schema_version (integer 2; schemas/records/summary.v2.schema.json), run_id, status, seats:[{seat, status, before, after, processed, flagged}], finished_at}
 #         <run>/summary.md      a contents list, a run section, then one table per source, newest item first
 #         <run>/checklist/R5.jsonl two R5 rows (status derived, every seat counted)
 # Also reads every <run>/steps/*.jsonl and <run>/checklist/*.jsonl (ruling R3: one file per node, no shared writer) and
@@ -113,7 +113,7 @@ check_rows="$(read_rows "$RUN/checklist")"
 # --- summary.json ----------------------------------------------------------------------------------------------------
 tmp="$(mktemp "$RUN/.summary.XXXXXX")"
 jq --arg run "$run_id" --arg st "$status" --arg at "$finished_at" --argjson steps "$step_rows" --argjson checks "$check_rows" \
-  '{schema_version:"1.0.0", run_id:$run, status:$st,
+  '{schema_version:2, run_id:$run, status:$st,
     seats:map({seat, status, before, after, processed, flagged}), finished_at:$at,
     steps:($steps | length), steps_failed:([$steps[] | select(.status == "failed")] | length), checklist_rows:($checks | length)}' <<<"$recs" >"$tmp"
 mv "$tmp" "$RUN/summary.json"
