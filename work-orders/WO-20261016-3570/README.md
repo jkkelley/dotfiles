@@ -9,7 +9,7 @@ One level down only. A child of a child is listed in its own directory, not here
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
 | `WO-20261016-02d3` | ready | p2 | - | [line-timing test: report from a KV dump](WO-20261016-02d3-line-timing-test-report-from-a-kv-dump.md) |
-| `WO-20261016-db0f` | ready | p2 | - | [line-timing.sh and timing.mk: make line-timing LINE= SINCE= report of durations vs budgets and top 5 bottlenecks to the artifact store](WO-20261016-db0f-line-timing-sh-and-timing-mk-make-line-timing-li.md) |
+| `WO-20261016-db0f` | in-progress | p2 | - | [line-timing.sh and timing.mk: make line-timing LINE= SINCE= report of durations vs budgets and top 5 bottlenecks to the artifact store](WO-20261016-db0f-line-timing-sh-and-timing-mk-make-line-timing-li.md) |
 | `WO-20261016-7d69` | ready | p2 | - | [node-timing tests: slow and fast](WO-20261016-7d69-node-timing-tests-slow-and-fast.md) |
 | `WO-20261016-2f31` | in-progress | p2 | - | [node-timing.sh: start and end events from the bus to a TIMING KV bucket, SLOW and a bottleneck work order over budget](WO-20261016-2f31-node-timing-sh-start-and-end-events-from-the-bus.md) |
 | `WO-20261016-460b` | ready | p2 | - | [timed-run tests: timeout with 3 retries, start and end](WO-20261016-460b-timed-run-tests-timeout-with-3-retries-start-and.md) |
