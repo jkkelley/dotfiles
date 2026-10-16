@@ -979,8 +979,23 @@ provided() {
 # make_has_target <ref> <makefile-path> <dir> <target> <depth> - the target is
 # defined in the makefile or in one it includes (paths relative to <dir>, where
 # make runs).
+#
+# Breadcrumb, WO-20261016-0f38: the 168d close-out's approve refused
+# "tool_missing wiki-process" although `make -n wiki-process` exits 0 on main.
+# The target lives in claude/tools/wiki/mk/process.mk, reached from the root
+# Makefile through wiki.mk's `-include $(wildcard $(WIKI_DIR)mk/*.mk)`, and the
+# include loop skipped every path holding a `$`, so the file was never read and
+# approve sent the build seat nowhere. Fix: map each `NAME := $(dir $(lastword
+# $(MAKEFILE_LIST)))` line to the including makefile's own directory, substitute
+# $(NAME) in include paths, and expand a `$(wildcard GLOB)` over the ref's files.
+# Rejected: running `make -n`, because that executes the project's makefile at
+# approve time, which approve must not do. Cost: only the self-dir idiom and
+# wildcard are understood; any include still holding `$` is skipped as before.
 make_has_target() {
-  local ref="$1" mf="$2" dir="$3" target="$4" depth="$5" text inc
+  local ref="$1" mf="$2" dir="$3" target="$4" depth="$5" text inc sd name val f g full
+  local selfpat='^([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*:?=[[:space:]]*\$\(dir[[:space:]]+\$\(lastword[[:space:]]+\$\(MAKEFILE_LIST\)\)\)'
+  local -a selfnames=() selfvals=() hits=()
+  local -i i
   text=$(tool_cat "$ref" "$mf") || return 1
   if printf '%s\n' "$text" | awk -v t="$target" '
       /^[^[:space:]#][^=]*:($|[^=])/ {
@@ -991,10 +1006,43 @@ make_has_target() {
     return 0
   fi
   ((depth < 5)) || return 1
+  # The including makefile's own directory, relative to <dir>, with a trailing /.
+  sd=$(dirname -- "$mf")
+  if [[ -n $dir && $sd == "$dir" ]]; then sd=""
+  elif [[ -n $dir && $sd == "$dir"/* ]]; then sd="${sd#"$dir"/}"
+  fi
+  [[ $sd == . ]] && sd=""
+  [[ -z $sd ]] || sd="$sd/"
+  while IFS= read -r f; do
+    if [[ $f =~ $selfpat ]]; then selfnames+=("${BASH_REMATCH[1]}"); selfvals+=("$sd"); fi
+  done <<<"$text"
   while IFS= read -r inc; do
-    [[ -n $inc && $inc != *'$'* && $inc != *'*'* ]] || continue
+    [[ -n $inc ]] || continue
+    for i in "${!selfnames[@]}"; do inc="${inc//\$\(${selfnames[i]}\)/${selfvals[i]}}"; done
+    hits=()
+    if [[ $inc =~ ^\$\(wildcard[[:space:]]+([^[:space:]]*)\)([[:space:]]|$) ]]; then
+      g="${BASH_REMATCH[1]}"
+      [[ $g != *'$'* && -n $g ]] || continue
+      full="${dir:+$dir/}$g"
+      if [[ -n $ref ]]; then
+        while IFS= read -r f; do
+          # shellcheck disable=SC2053
+          [[ $f == $full ]] && hits+=("$f")
+        done < <(git -C "$project" ls-tree --name-only "$ref" -- "$(dirname -- "$full")/" 2>/dev/null)
+      else
+        for f in "$project"/$full; do
+          [[ -f $f ]] && hits+=("${f#"$project"/}")
+        done
+      fi
+      for f in "${hits[@]+"${hits[@]}"}"; do
+        make_has_target "$ref" "$f" "$dir" "$target" $((depth + 1)) && return 0
+      done
+      continue
+    fi
+    inc="${inc%%[[:space:]]*}"
+    [[ $inc != *'$'* && $inc != *'*'* ]] || continue
     make_has_target "$ref" "${dir:+$dir/}$inc" "$dir" "$target" $((depth + 1)) && return 0
-  done < <(printf '%s\n' "$text" | sed -nE 's/^-?include[[:space:]]+([^[:space:]]+).*/\1/p')
+  done < <(printf '%s\n' "$text" | sed -nE 's/^-?include[[:space:]]+(.*)$/\1/p')
   return 1
 }
 

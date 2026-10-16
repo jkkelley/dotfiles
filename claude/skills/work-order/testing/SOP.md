@@ -232,3 +232,8 @@ Why: the slug is cut to 48 chars, so a shared title prefix gave one branch name 
 `assert.sh`'s `wo` adds inert defaults to `new` and `amend`: `--owner-words 'test owner words'` and `--context 'test context'` on `new` when absent, and `--ac-check true --ac-exit 0` after every non-empty `--ac` not already followed by `--ac-check`.
 Why: the older cases test other behaviour, so the required flags must not change what they prove.
 Cases 150 and 250 call `work-order.sh` directly and so pass the flags themselves; 260 and 270 do too, for every refusal they assert.
+
+## 430-approve-make-wildcard-include
+
+`approve` passes a make target defined in a file reached through `-include $(wildcard $(D)mk/*.mk)` where `D` is the including makefile's own directory, and still refuses (exit 3) a target that is not defined.
+Why: wiki-process was refused as tool_missing although `make -n wiki-process` exits 0 on main (WO-20261016-0f38).
